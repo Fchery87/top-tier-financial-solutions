@@ -4,10 +4,9 @@ import "./globals.css";
 import { StackProvider } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
 import { TooltipWrapper } from "./providers";
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { Analytics } from '@/components/Analytics';
 import { SkipLink } from '@/components/SkipLink';
+import { LayoutWrapper } from '@/components/LayoutWrapper';
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -59,11 +58,9 @@ export default function RootLayout({
         <SkipLink />
         <TooltipWrapper>
           <StackProvider app={stackServerApp}>
-            <Header />
-            <main id="main-content" role="main" tabIndex={-1}>
+            <LayoutWrapper>
               {children}
-            </main>
-            <Footer />
+            </LayoutWrapper>
           </StackProvider>
         </TooltipWrapper>
       </body>

@@ -3,12 +3,13 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Sparkles } from 'lucide-react';
+import { Menu, X, Sparkles, User, LogOut, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
+import { useUser } from '@stackframe/stack';
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -21,7 +22,9 @@ const navigation = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
+  const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const pathname = usePathname();
+  const user = useUser();
 
   React.useEffect(() => {
     setMobileMenuOpen(false);
@@ -81,6 +84,69 @@ export function Header() {
           ))}
           <div className="flex items-center gap-3 ml-6 pl-6 border-l border-border/50">
             <ThemeToggle />
+            {user ? (
+              <div className="relative">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-secondary/10 hover:bg-secondary/20 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                    <User className="w-4 h-4 text-secondary-foreground" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
+                    {user.displayName || 'User'}
+                  </span>
+                </motion.button>
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50"
+                    >
+                      <Link
+                        href="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <User className="w-4 h-4" />
+                        Profile
+                      </Link>
+                      <Link
+                        href="/handler/account-settings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </Link>
+                      <div className="border-t border-border" />
+                      <Link
+                        href="/handler/sign-out"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </Link>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button asChild variant="outline" className="rounded-full px-4">
+                  <Link href="/handler/sign-in">Sign In</Link>
+                </Button>
+              </motion.div>
+            )}
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -144,8 +210,49 @@ export function Header() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="pt-4 mt-2 border-t border-border"
+                className="pt-4 mt-2 border-t border-border space-y-3"
               >
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-3 px-4 py-2">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-5 h-5 text-secondary-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{user.displayName || 'User'}</p>
+                        <p className="text-sm text-muted-foreground">Signed in</p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-2 px-4 py-3 text-foreground hover:bg-muted rounded-lg transition-colors"
+                    >
+                      <User className="w-5 h-5" />
+                      Profile
+                    </Link>
+                    <Link
+                      href="/handler/account-settings"
+                      className="flex items-center gap-2 px-4 py-3 text-foreground hover:bg-muted rounded-lg transition-colors"
+                    >
+                      <Settings className="w-5 h-5" />
+                      Account Settings
+                    </Link>
+                    <Link
+                      href="/handler/sign-out"
+                      className="flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Sign Out
+                    </Link>
+                  </>
+                ) : (
+                  <Button className="w-full h-12 text-lg rounded-full" variant="outline" asChild>
+                    <Link href="/handler/sign-in" className="flex items-center justify-center gap-2">
+                      <User className="w-5 h-5" />
+                      Sign In
+                    </Link>
+                  </Button>
+                )}
                 <Button className="w-full bg-secondary text-secondary-foreground h-12 text-lg rounded-full shadow-lg shadow-secondary/20" asChild>
                   <Link href="/contact" className="flex items-center justify-center gap-2">
                     <Sparkles className="w-5 h-5" />

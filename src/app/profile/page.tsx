@@ -4,8 +4,6 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { useUser } from '@stackframe/stack';
 
-export const dynamic = 'force-dynamic';
-
 function ProfileContent() {
   const user = useUser();
 

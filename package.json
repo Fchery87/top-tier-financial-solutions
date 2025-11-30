@@ -24,7 +24,7 @@
     "@calcom/embed-react": "^1.5.3",
     "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@stackframe/stack": "^2.4.8",
+    "@stackframe/stack": "^2.8.54",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
