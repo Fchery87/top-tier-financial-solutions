@@ -62,13 +62,13 @@ export function NewsletterSignup({
   if (variant === 'footer') {
     return (
       <div className={className}>
-        <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground mb-4">{description}</p>
+        <h4 className="text-secondary font-bold mb-4 font-serif tracking-wide text-lg">{title}</h4>
+        <p className="text-sm text-primary-foreground/70 mb-4">{description}</p>
         
         {isSuccess ? (
           <div className="flex items-center gap-2 text-green-400">
             <CheckCircle className="w-5 h-5" />
-            <span>Thank you for subscribing!</span>
+            <span className="text-sm">Thank you for subscribing!</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -78,9 +78,9 @@ export function NewsletterSignup({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-background/50"
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
             />
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-red-400">{error}</p>}
             <Button 
               type="submit" 
               disabled={isLoading}
