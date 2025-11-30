@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import { StackProvider } from "@stackframe/stack";
-import { stackServerApp } from "@/stack";
 import { TooltipWrapper } from "./providers";
 import { Analytics } from '@/components/Analytics';
 import { SkipLink } from '@/components/SkipLink';
 import { LayoutWrapper } from '@/components/LayoutWrapper';
+import { AuthProvider } from '@/components/AuthProvider';
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -57,11 +56,11 @@ export default function RootLayout({
         <Analytics />
         <SkipLink />
         <TooltipWrapper>
-          <StackProvider app={stackServerApp}>
+          <AuthProvider>
             <LayoutWrapper>
               {children}
             </LayoutWrapper>
-          </StackProvider>
+          </AuthProvider>
         </TooltipWrapper>
       </body>
     </html>

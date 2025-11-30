@@ -1,17 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense } from 'react';
-import { useUser } from '@stackframe/stack';
+import { useAuth } from '@/components/AuthProvider';
+import { Loader2 } from 'lucide-react';
 
-function ProfileContent() {
-  const user = useUser();
+export default function ProfilePage() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-8 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-secondary" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (
       <div className="min-h-screen bg-background p-8">
         <div className="max-w-2xl mx-auto">
-          <p className="text-lg">Not signed in. Go to <Link href="/handler/sign-up" className="text-primary hover:underline">/handler/sign-up</Link> to create an account.</p>
+          <p className="text-lg">Not signed in. Go to <Link href="/sign-up" className="text-primary hover:underline">/sign-up</Link> to create an account.</p>
         </div>
       </div>
     );
@@ -27,11 +35,11 @@ function ProfileContent() {
           <dl className="space-y-3">
             <div>
               <dt className="text-sm font-medium text-muted-foreground">Name</dt>
-              <dd className="text-foreground">{user.displayName || 'Not set'}</dd>
+              <dd className="text-foreground">{user.name || 'Not set'}</dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-muted-foreground">ID</dt>
-              <dd className="text-foreground text-sm">{user.id}</dd>
+              <dt className="text-sm font-medium text-muted-foreground">Email</dt>
+              <dd className="text-foreground">{user.email}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-muted-foreground">Auth Status</dt>
@@ -45,7 +53,7 @@ function ProfileContent() {
           <ul className="space-y-2">
             <li>
               <Link
-                href="/handler/account-settings"
+                href="/settings"
                 className="text-primary hover:underline"
               >
                 Account Settings
@@ -60,13 +68,5 @@ function ProfileContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function ProfilePage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-background p-8"><div className="max-w-2xl mx-auto">Loading...</div></div>}>
-      <ProfileContent />
-    </Suspense>
   );
 }

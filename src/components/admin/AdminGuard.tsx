@@ -1,31 +1,34 @@
 'use client';
 
-import { useUser } from '@stackframe/stack';
+import { useAuth } from '@/components/AuthProvider';
+import { signOut } from '@/lib/auth-client';
 import { useEffect, useState } from 'react';
 import { ShieldX, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface AdminGuardProps {
   children: React.ReactNode;
 }
 
 export function AdminGuard({ children }: AdminGuardProps) {
-  const user = useUser();
+  const { user, isLoading: authLoading } = useAuth();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     async function checkAccess() {
-      // Not logged in
-      if (user === null) {
-        setIsAuthorized(false);
-        setIsLoading(false);
+      // Still loading auth
+      if (authLoading) {
         return;
       }
 
-      // Still loading user
-      if (user === undefined) {
+      // Not logged in
+      if (!user) {
+        setIsAuthorized(false);
+        setIsLoading(false);
         return;
       }
 
@@ -34,7 +37,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
         const response = await fetch('/api/admin/check-access', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.primaryEmail }),
+          body: JSON.stringify({ email: user.email }),
         });
 
         if (response.ok) {
@@ -52,10 +55,16 @@ export function AdminGuard({ children }: AdminGuardProps) {
     }
 
     checkAccess();
-  }, [user]);
+  }, [user, authLoading]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+    router.refresh();
+  };
 
   // Loading state
-  if (isLoading || user === undefined) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -80,7 +89,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild>
-              <Link href="/handler/sign-in">Sign In</Link>
+              <Link href="/sign-in">Sign In</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/">Back to Home</Link>
@@ -108,8 +117,8 @@ export function AdminGuard({ children }: AdminGuardProps) {
             <Button variant="outline" asChild>
               <Link href="/">Back to Home</Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link href="/handler/sign-out">Sign Out</Link>
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign Out
             </Button>
           </div>
         </div>

@@ -2,14 +2,15 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Menu, X, Sparkles, User, LogOut, Settings } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Menu, X, Sparkles, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
-import { useUser } from '@stackframe/stack';
+import { useAuth } from '@/components/AuthProvider';
+import { signOut } from '@/lib/auth-client';
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -23,8 +24,22 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const pathname = usePathname();
-  const user = useUser();
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
+
+  // Prevent hydration mismatch by only showing auth-dependent UI after mount
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    setUserMenuOpen(false);
+    router.push('/');
+    router.refresh();
+  };
 
   React.useEffect(() => {
     setMobileMenuOpen(false);
@@ -84,7 +99,7 @@ export function Header() {
           ))}
           <div className="flex items-center gap-3 ml-6 pl-6 border-l border-border/50">
             <ThemeToggle />
-            {user ? (
+            {mounted && user ? (
               <div className="relative">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -96,7 +111,7 @@ export function Header() {
                     <User className="w-4 h-4 text-secondary-foreground" />
                   </div>
                   <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
-                    {user.displayName || 'User'}
+                    {user.name || 'User'}
                   </span>
                 </motion.button>
                 <AnimatePresence>
@@ -108,6 +123,19 @@ export function Header() {
                       transition={{ duration: 0.15 }}
                       className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50"
                     >
+                      {(user.role === 'super_admin' || user.role === 'admin') && (
+                        <>
+                          <Link
+                            href="/admin"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-3 text-sm text-secondary font-medium hover:bg-secondary/10 transition-colors"
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                            Admin Dashboard
+                          </Link>
+                          <div className="border-t border-border" />
+                        </>
+                      )}
                       <Link
                         href="/profile"
                         onClick={() => setUserMenuOpen(false)}
@@ -117,7 +145,7 @@ export function Header() {
                         Profile
                       </Link>
                       <Link
-                        href="/handler/account-settings"
+                        href="/settings"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
                       >
@@ -125,27 +153,21 @@ export function Header() {
                         Settings
                       </Link>
                       <div className="border-t border-border" />
-                      <Link
-                        href="/handler/sign-out"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 transition-colors w-full text-left"
                       >
                         <LogOut className="w-4 h-4" />
                         Sign Out
-                      </Link>
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
             ) : (
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button asChild variant="outline" className="rounded-full px-4">
-                  <Link href="/handler/sign-in">Sign In</Link>
-                </Button>
-              </motion.div>
+              <Button asChild variant="outline" className="rounded-full px-4">
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
             )}
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -212,17 +234,26 @@ export function Header() {
                 transition={{ delay: 0.3 }}
                 className="pt-4 mt-2 border-t border-border space-y-3"
               >
-                {user ? (
+                {mounted && user ? (
                   <>
                     <div className="flex items-center gap-3 px-4 py-2">
                       <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                         <User className="w-5 h-5 text-secondary-foreground" />
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">{user.displayName || 'User'}</p>
+                        <p className="font-medium text-foreground">{user.name || 'User'}</p>
                         <p className="text-sm text-muted-foreground">Signed in</p>
                       </div>
                     </div>
+                    {(user.role === 'super_admin' || user.role === 'admin') && (
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 px-4 py-3 text-secondary font-medium hover:bg-secondary/10 rounded-lg transition-colors"
+                      >
+                        <LayoutDashboard className="w-5 h-5" />
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <Link
                       href="/profile"
                       className="flex items-center gap-2 px-4 py-3 text-foreground hover:bg-muted rounded-lg transition-colors"
@@ -231,23 +262,23 @@ export function Header() {
                       Profile
                     </Link>
                     <Link
-                      href="/handler/account-settings"
+                      href="/settings"
                       className="flex items-center gap-2 px-4 py-3 text-foreground hover:bg-muted rounded-lg transition-colors"
                     >
                       <Settings className="w-5 h-5" />
                       Account Settings
                     </Link>
-                    <Link
-                      href="/handler/sign-out"
-                      className="flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors w-full text-left"
                     >
                       <LogOut className="w-5 h-5" />
                       Sign Out
-                    </Link>
+                    </button>
                   </>
                 ) : (
                   <Button className="w-full h-12 text-lg rounded-full" variant="outline" asChild>
-                    <Link href="/handler/sign-in" className="flex items-center justify-center gap-2">
+                    <Link href="/sign-in" className="flex items-center justify-center gap-2">
                       <User className="w-5 h-5" />
                       Sign In
                     </Link>

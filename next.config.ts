@@ -1,15 +1,16 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // API Rewrites
+  // API Rewrites - proxy to FastAPI backend except for Next.js API routes
   rewrites: async () => {
     return [
       {
-        source: '/api/:path*',
+        // Exclude auth and admin routes - these are handled by Next.js
+        source: '/api/v1/:path*',
         destination:
           process.env.NODE_ENV === 'development'
-            ? 'http://127.0.0.1:8000/api/:path*'
-            : '/api/',
+            ? 'http://127.0.0.1:8000/api/v1/:path*'
+            : '/api/v1/:path*',
       },
     ];
   },

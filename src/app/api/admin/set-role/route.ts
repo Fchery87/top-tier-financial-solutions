@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { users } from '@/db/schema';
+import { user } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 // This endpoint allows setting user roles
@@ -18,16 +18,16 @@ export async function POST(request: NextRequest) {
 
     // Check if requester is super_admin (skip for first super_admin setup)
     const requesterRole = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.email, requesterEmail))
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.email, requesterEmail))
       .limit(1);
 
     // Count existing super_admins
     const superAdminCount = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.role, 'super_admin'));
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.role, 'super_admin'));
 
     // Allow first super_admin to be created without authorization
     const isFirstSuperAdmin = superAdminCount.length === 0;
@@ -58,17 +58,17 @@ export async function POST(request: NextRequest) {
 
     // Update user role
     const result = await db
-      .update(users)
+      .update(user)
       .set({ role })
-      .where(eq(users.email, email))
-      .returning({ email: users.email, role: users.role });
+      .where(eq(user.email, email))
+      .returning({ email: user.email, role: user.role });
 
     if (result.length === 0) {
       // User doesn't exist, create them
       const newUser = await db
-        .insert(users)
-        .values({ email, role })
-        .returning({ email: users.email, role: users.role });
+        .insert(user)
+        .values({ id: crypto.randomUUID(), name: email.split('@')[0], email, role })
+        .returning({ email: user.email, role: user.role });
 
       return NextResponse.json({
         success: true,

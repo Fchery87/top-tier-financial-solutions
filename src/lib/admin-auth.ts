@@ -1,5 +1,5 @@
 import { db } from '@/db/client';
-import { users } from '@/db/schema';
+import { user } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export type UserRole = 'user' | 'admin' | 'super_admin';
@@ -7,9 +7,9 @@ export type UserRole = 'user' | 'admin' | 'super_admin';
 export async function getUserRole(email: string): Promise<UserRole | null> {
   try {
     const result = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.email, email))
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.email, email))
       .limit(1);
 
     if (result.length === 0) {

@@ -1,18 +1,5 @@
-// interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-//   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link';
-//   size?: 'sm' | 'md' | 'lg' | 'icon';
-//   asChild?: boolean;
-// }
-
-// const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-//   ({ className, variant = 'primary', size = 'md', asChild = false, ...props }, ref) => {
-
-// Actually, I should just use the variables or remove them.
-// Since I want to keep the API for future use, I will just suppress the warning or use them in a way that satisfies the linter.
-// But wait, I am not using `cva` or `VariantProps` or `Slot` yet.
-// I'll remove the unused imports and the unused `Comp` variable.
-
 import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
 import { cn } from '@/lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -40,19 +27,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       icon: "h-10 w-10",
     };
 
-    if (asChild) {
-      // Placeholder for Slot behavior if I install it later
-      return (
-         <button
-          className={cn(baseStyles, variants[variant], sizes[size], className)}
-          ref={ref}
-          {...props}
-        />
-      );
-    }
+    const Comp = asChild ? Slot : 'button';
     
     return (
-      <button
+      <Comp
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         ref={ref}
         {...props}
