@@ -12,8 +12,8 @@ interface MotionProps extends HTMLMotionProps<"div"> {
 }
 
 // Smooth easing curves
-const smoothEase = [0.25, 0.1, 0.25, 1];
-const bounceEase = [0.68, -0.55, 0.265, 1.55];
+const smoothEase: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+const bounceEase: [number, number, number, number] = [0.68, -0.55, 0.265, 1.55];
 
 export function FadeIn({ children, delay = 0, duration = 0.6, className, ...props }: MotionProps) {
   return (

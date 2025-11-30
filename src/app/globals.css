@@ -642,11 +642,147 @@ body {
   );
 }
 
-/* Focus Visible Styles */
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* Screen Reader Only - for skip links and hidden labels */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sr-only:focus,
+.sr-only:focus-visible {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Focus Visible Styles - Enhanced for accessibility */
 .focus-ring {
   outline: none;
 }
 
 .focus-ring:focus-visible {
   box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--secondary));
+}
+
+/* Global focus styles */
+*:focus-visible {
+  outline: 2px solid hsl(var(--secondary));
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for mouse users, keep for keyboard */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 220 13% 50%;
+    --muted-foreground: 220 8% 30%;
+  }
+  
+  .dark {
+    --border: 223 20% 40%;
+    --muted-foreground: 215 15% 80%;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-float,
+  .animate-float-slow,
+  .animate-float-delayed,
+  .animate-pulse-glow,
+  .animate-orb,
+  .animate-orb-delayed,
+  .animate-morph,
+  .animate-glow-pulse,
+  .animate-shine,
+  .animate-breathe,
+  .animate-ripple,
+  .shimmer,
+  .text-shimmer {
+    animation: none !important;
+  }
+}
+
+/* Improved link visibility */
+a:not([class]) {
+  color: hsl(var(--secondary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:not([class]):hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Ensure minimum touch target size (44x44px) on mobile */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Visible focus for interactive elements */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid hsl(var(--secondary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link enhancement - visible when focused */
+.skip-link:focus {
+  position: fixed !important;
+  top: 1rem;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.75rem 1rem;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Ensure text is readable against backgrounds */
+.text-muted-foreground {
+  color: hsl(var(--muted-foreground));
 }
