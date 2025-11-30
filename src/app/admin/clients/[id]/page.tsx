@@ -494,18 +494,24 @@ export default function ClientDetailPage() {
                   {creditReports.map((report) => (
                     <div
                       key={report.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      className="p-3 rounded-lg bg-muted/50 space-y-2"
                     >
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">{report.file_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {report.bureau?.toUpperCase() || 'Combined'} • {new Date(report.uploaded_at).toLocaleDateString()}
-                          </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{report.file_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {report.bureau?.toUpperCase() || 'Combined'} • {new Date(report.uploaded_at).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
+                        <StatusBadge 
+                          status={report.parse_status} 
+                          variant={report.parse_status === 'completed' ? 'success' : report.parse_status === 'failed' ? 'danger' : 'warning'}
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 pl-8">
                         {(report.parse_status === 'pending' || report.parse_status === 'failed') && (
                           <Button
                             variant="outline"
@@ -514,11 +520,11 @@ export default function ClientDetailPage() {
                             disabled={analyzing === report.id || deleting === report.id}
                           >
                             {analyzing === report.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
                             ) : (
-                              <Play className="w-4 h-4" />
+                              <Play className="w-3 h-3 mr-1" />
                             )}
-                            <span className="ml-1">Analyze</span>
+                            Analyze
                           </Button>
                         )}
                         {report.parse_status === 'completed' && (
@@ -529,30 +535,27 @@ export default function ClientDetailPage() {
                             disabled={analyzing === report.id || deleting === report.id}
                           >
                             {analyzing === report.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
                             ) : (
-                              <RefreshCw className="w-4 h-4" />
+                              <RefreshCw className="w-3 h-3 mr-1" />
                             )}
-                            <span className="ml-1">Re-analyze</span>
+                            Re-analyze
                           </Button>
                         )}
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleDeleteReport(report.id)}
                           disabled={deleting === report.id || analyzing === report.id}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-200"
                         >
                           {deleting === report.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
                           ) : (
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3 mr-1" />
                           )}
+                          Delete
                         </Button>
-                        <StatusBadge 
-                          status={report.parse_status} 
-                          variant={report.parse_status === 'completed' ? 'success' : report.parse_status === 'failed' ? 'danger' : 'warning'}
-                        />
                       </div>
                     </div>
                   ))}
