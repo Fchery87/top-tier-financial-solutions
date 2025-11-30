@@ -10,66 +10,14 @@ import {
   Eye, 
   Trash2,
   Filter,
-  Download,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
 import type { ContactFormSubmission, ConsultationStatus } from '@/lib/admin-api';
-
-// Mock data for demonstration
-const mockLeads: ContactFormSubmission[] = [
-  {
-    id: '1',
-    first_name: 'John',
-    last_name: 'Anderson',
-    email: 'john.anderson@email.com',
-    phone_number: '+1 (555) 123-4567',
-    message: 'I need help with my credit score. I have several collections that I would like to dispute.',
-    source_page_slug: 'contact',
-    status: 'new',
-    requested_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    first_name: 'Sarah',
-    last_name: 'Mitchell',
-    email: 'sarah.m@email.com',
-    phone_number: '+1 (555) 987-6543',
-    message: 'Looking to improve my credit before applying for a mortgage.',
-    source_page_slug: 'services',
-    status: 'contacted',
-    requested_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    first_name: 'Michael',
-    last_name: 'Chen',
-    email: 'mchen@email.com',
-    phone_number: null,
-    message: 'Interested in your credit repair services. Please contact me.',
-    source_page_slug: 'contact',
-    status: 'qualified',
-    requested_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    first_name: 'Emily',
-    last_name: 'Rodriguez',
-    email: 'emily.r@email.com',
-    phone_number: '+1 (555) 456-7890',
-    message: null,
-    source_page_slug: 'how-it-works',
-    status: 'archived',
-    requested_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(), // 1 week ago
-    updated_at: new Date().toISOString(),
-  },
-];
 
 const statusOptions: { value: ConsultationStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All Leads' },
@@ -80,14 +28,65 @@ const statusOptions: { value: ConsultationStatus | 'all'; label: string }[] = [
 ];
 
 export default function LeadsPage() {
-  const [leads] = React.useState<ContactFormSubmission[]>(mockLeads);
-  const [loading] = React.useState(false);
+  const [leads, setLeads] = React.useState<ContactFormSubmission[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [selectedStatus, setSelectedStatus] = React.useState<ConsultationStatus | 'all'>('all');
   const [selectedLead, setSelectedLead] = React.useState<ContactFormSubmission | null>(null);
+  const [updating, setUpdating] = React.useState(false);
 
-  const filteredLeads = selectedStatus === 'all' 
-    ? leads 
-    : leads.filter(l => l.status === selectedStatus);
+  const fetchLeads = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const statusParam = selectedStatus !== 'all' ? `&status=${selectedStatus}` : '';
+      const response = await fetch(`/api/admin/leads?page=1&limit=100${statusParam}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLeads(data.items);
+      }
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStatus]);
+
+  React.useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  const handleStatusUpdate = async (id: string, newStatus: ConsultationStatus) => {
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/leads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (response.ok) {
+        fetchLeads();
+        setSelectedLead(null);
+      }
+    } catch (error) {
+      console.error('Error updating lead:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this lead?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/leads/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        fetchLeads();
+      }
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -176,7 +175,15 @@ export default function LeadsPage() {
           >
             <Eye className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(item.id);
+            }}
+          >
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
@@ -215,12 +222,8 @@ export default function LeadsPage() {
           transition={{ delay: 0.2 }}
           className="flex items-center gap-2"
         >
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={fetchLeads} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </motion.div>
@@ -315,7 +318,7 @@ export default function LeadsPage() {
       >
         <DataTable
           columns={columns}
-          data={filteredLeads}
+          data={leads}
           loading={loading}
           onRowClick={(item) => setSelectedLead(item)}
           emptyMessage="No leads found. Leads will appear here when visitors submit the contact form."
@@ -373,6 +376,26 @@ export default function LeadsPage() {
                   <span>Source: /{selectedLead.source_page_slug || 'unknown'}</span>
                   <span>Received: {new Date(selectedLead.requested_at).toLocaleString()}</span>
                 </div>
+                
+                {/* Status Update Buttons */}
+                <div className="space-y-2 pt-4 border-t border-border">
+                  <p className="text-sm font-medium">Update Status:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(['new', 'contacted', 'qualified', 'archived'] as ConsultationStatus[]).map((status) => (
+                      <Button
+                        key={status}
+                        variant={selectedLead.status === status ? 'secondary' : 'outline'}
+                        size="sm"
+                        disabled={updating || selectedLead.status === status}
+                        onClick={() => handleStatusUpdate(selectedLead.id, status)}
+                      >
+                        {updating ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex gap-2 pt-4">
                   <Button 
                     variant="outline" 
@@ -380,9 +403,6 @@ export default function LeadsPage() {
                     onClick={() => setSelectedLead(null)}
                   >
                     Close
-                  </Button>
-                  <Button className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                    Update Status
                   </Button>
                 </div>
               </CardContent>

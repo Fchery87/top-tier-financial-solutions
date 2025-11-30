@@ -27,49 +27,62 @@ CREATE TABLE "bookings" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "contact_forms" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
+CREATE TABLE "consultation_requests" (
+	"id" text PRIMARY KEY NOT NULL,
+	"first_name" text NOT NULL,
+	"last_name" text NOT NULL,
 	"email" text NOT NULL,
-	"phone" text,
-	"subject" text,
-	"message" text NOT NULL,
-	"status" text DEFAULT 'new',
-	"created_at" timestamp DEFAULT now(),
+	"phone_number" text,
+	"message" text,
+	"source_page_slug" text,
+	"status" text DEFAULT 'pending',
+	"requested_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "disclaimers" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"title" text NOT NULL,
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
 	"content" text NOT NULL,
-	"type" text,
+	"display_hint" text,
 	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "faqs" (
-	"id" serial PRIMARY KEY NOT NULL,
+CREATE TABLE "faq_items" (
+	"id" text PRIMARY KEY NOT NULL,
 	"question" text NOT NULL,
 	"answer" text NOT NULL,
-	"category" text,
-	"sort_order" integer DEFAULT 0,
+	"display_order" integer DEFAULT 0,
 	"is_published" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "pages" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" text PRIMARY KEY NOT NULL,
 	"slug" text NOT NULL,
 	"title" text NOT NULL,
-	"content" text,
+	"hero_headline" text,
+	"hero_subheadline" text,
+	"main_content_json" text,
+	"cta_text" text,
+	"cta_link" text,
+	"meta_title" text,
 	"meta_description" text,
 	"is_published" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "pages_slug_unique" UNIQUE("slug")
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "services" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"order_index" integer DEFAULT 0,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "session" (
@@ -86,15 +99,12 @@ CREATE TABLE "session" (
 );
 --> statement-breakpoint
 CREATE TABLE "testimonials" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"role" text,
-	"company" text,
-	"content" text NOT NULL,
-	"rating" integer DEFAULT 5,
-	"image_url" text,
+	"id" text PRIMARY KEY NOT NULL,
+	"author_name" text NOT NULL,
+	"author_location" text,
+	"quote" text NOT NULL,
+	"order_index" integer DEFAULT 0,
 	"is_approved" boolean DEFAULT false,
-	"is_featured" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );

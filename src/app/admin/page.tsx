@@ -12,7 +12,8 @@ import {
   Calendar,
   ArrowRight,
   TrendingUp,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -26,14 +27,41 @@ const quickLinks = [
   { name: 'Bookings', href: '/admin/bookings', icon: Calendar, description: 'Manage consultation bookings', color: 'bg-cyan-500/10 text-cyan-500' },
 ];
 
-const stats = [
-  { label: 'New Leads', value: '—', icon: Users, trend: 'View all', href: '/admin/leads' },
-  { label: 'Pending Testimonials', value: '—', icon: MessageSquareQuote, trend: 'Review', href: '/admin/testimonials' },
-  { label: 'Published FAQs', value: '—', icon: HelpCircle, trend: 'Manage', href: '/admin/faqs' },
-  { label: 'Active Pages', value: '—', icon: FileText, trend: 'Edit', href: '/admin/content' },
-];
+interface DashboardStats {
+  newLeads: number;
+  pendingTestimonials: number;
+  publishedFaqs: number;
+  activePages: number;
+}
 
 export default function AdminDashboard() {
+  const [stats, setStats] = React.useState<DashboardStats | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/admin/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
+  }, []);
+
+  const statCards = [
+    { label: 'New Leads', value: stats?.newLeads ?? '—', icon: Users, trend: 'View all', href: '/admin/leads' },
+    { label: 'Pending Testimonials', value: stats?.pendingTestimonials ?? '—', icon: MessageSquareQuote, trend: 'Review', href: '/admin/testimonials' },
+    { label: 'Published FAQs', value: stats?.publishedFaqs ?? '—', icon: HelpCircle, trend: 'Manage', href: '/admin/faqs' },
+    { label: 'Active Pages', value: stats?.activePages ?? '—', icon: FileText, trend: 'Edit', href: '/admin/content' },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -62,7 +90,7 @@ export default function AdminDashboard() {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <Card key={stat.label} className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -78,7 +106,11 @@ export default function AdminDashboard() {
                 </Link>
               </div>
               <div className="mt-4">
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                {loading ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                )}
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </div>
             </CardContent>
@@ -114,7 +146,7 @@ export default function AdminDashboard() {
         </div>
       </motion.div>
 
-      {/* Recent Activity Placeholder */}
+      {/* Recent Activity */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -124,18 +156,18 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="font-serif flex items-center gap-2">
               <Clock className="w-5 h-5 text-secondary" />
-              Recent Activity
+              Quick Start
             </CardTitle>
             <CardDescription>
-              Latest updates and submissions
+              Get started managing your website
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8 text-muted-foreground">
               <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Activity tracking will appear here once the backend is connected.</p>
+              <p>Your admin dashboard is ready. Use the quick actions above to manage your content.</p>
               <Button asChild variant="outline" className="mt-4">
-                <Link href="/admin/leads">View All Leads</Link>
+                <Link href="/admin/leads">View Contact Leads</Link>
               </Button>
             </div>
           </CardContent>

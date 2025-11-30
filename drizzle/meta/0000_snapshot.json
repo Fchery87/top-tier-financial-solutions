@@ -1,5 +1,5 @@
 {
-  "id": "f807702b-7c9a-4131-82ec-6bf83161cddb",
+  "id": "18545338-d320-41b2-803a-b1a4efc735b2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -202,18 +202,24 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.contact_forms": {
-      "name": "contact_forms",
+    "public.consultation_requests": {
+      "name": "consultation_requests",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "text",
           "primaryKey": true,
           "notNull": true
         },
-        "name": {
-          "name": "name",
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -224,14 +230,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "phone": {
-          "name": "phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subject": {
-          "name": "subject",
+        "phone_number": {
+          "name": "phone_number",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -240,17 +240,23 @@
           "name": "message",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "source_page_slug": {
+          "name": "source_page_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "default": "'new'"
+          "default": "'pending'"
         },
-        "created_at": {
-          "name": "created_at",
+        "requested_at": {
+          "name": "requested_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,
@@ -278,12 +284,12 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "text",
           "primaryKey": true,
           "notNull": true
         },
-        "title": {
-          "name": "title",
+        "name": {
+          "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -294,8 +300,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "type": {
-          "name": "type",
+        "display_hint": {
+          "name": "display_hint",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -330,13 +336,13 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.faqs": {
-      "name": "faqs",
+    "public.faq_items": {
+      "name": "faq_items",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "text",
           "primaryKey": true,
           "notNull": true
         },
@@ -352,14 +358,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sort_order": {
-          "name": "sort_order",
+        "display_order": {
+          "name": "display_order",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -401,7 +401,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "text",
           "primaryKey": true,
           "notNull": true
         },
@@ -417,8 +417,38 @@
           "primaryKey": false,
           "notNull": true
         },
-        "content": {
-          "name": "content",
+        "hero_headline": {
+          "name": "hero_headline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hero_subheadline": {
+          "name": "hero_subheadline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "main_content_json": {
+          "name": "main_content_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cta_text": {
+          "name": "cta_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cta_link": {
+          "name": "cta_link",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "meta_title": {
+          "name": "meta_title",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -454,15 +484,59 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "pages_slug_unique": {
-          "name": "pages_slug_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.services": {
+      "name": "services",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "order_index": {
+          "name": "order_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
         }
       },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -579,56 +653,37 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "text",
           "primaryKey": true,
           "notNull": true
         },
-        "name": {
-          "name": "name",
+        "author_name": {
+          "name": "author_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "role": {
-          "name": "role",
+        "author_location": {
+          "name": "author_location",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "company": {
-          "name": "company",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "content": {
-          "name": "content",
+        "quote": {
+          "name": "quote",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "rating": {
-          "name": "rating",
+        "order_index": {
+          "name": "order_index",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "default": 5
-        },
-        "image_url": {
-          "name": "image_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "default": 0
         },
         "is_approved": {
           "name": "is_approved",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "is_featured": {
-          "name": "is_featured",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
