@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     if (lead_id) {
       await db
         .update(consultationRequests)
-        .set({ status: 'converted', updatedAt: now })
+        .set({ status: 'archived', updatedAt: now }) // Mark as archived when converted to client
         .where(eq(consultationRequests.id, lead_id));
     }
 

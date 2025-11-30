@@ -103,7 +103,7 @@ export default function ClientsPage() {
       const response = await fetch('/api/admin/leads?page=1&limit=100&status=qualified');
       if (response.ok) {
         const data = await response.json();
-        setLeads(data.items.filter((l: Lead) => l.status !== 'converted'));
+        setLeads(data.items.filter((l: Lead) => l.status !== 'archived'));
       }
     } catch (error) {
       console.error('Error fetching leads:', error);

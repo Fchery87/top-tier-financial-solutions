@@ -32,14 +32,19 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '10');
-  const status = searchParams.get('status');
+  const statusParam = searchParams.get('status');
   const offset = (page - 1) * limit;
+
+  // Valid status values for the enum
+  const validStatuses = ['new', 'contacted', 'qualified', 'archived'] as const;
+  type ConsultationStatus = typeof validStatuses[number];
 
   try {
     let query = db.select().from(consultationRequests);
     let countQuery = db.select({ count: count() }).from(consultationRequests);
     
-    if (status && status !== 'all') {
+    if (statusParam && statusParam !== 'all' && validStatuses.includes(statusParam as ConsultationStatus)) {
+      const status = statusParam as ConsultationStatus;
       query = query.where(eq(consultationRequests.status, status)) as typeof query;
       countQuery = countQuery.where(eq(consultationRequests.status, status)) as typeof countQuery;
     }

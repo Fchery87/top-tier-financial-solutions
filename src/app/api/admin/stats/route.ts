@@ -36,7 +36,7 @@ export async function GET() {
       publishedFaqsResult,
       activePagesResult,
     ] = await Promise.all([
-      db.select({ count: count() }).from(consultationRequests).where(eq(consultationRequests.status, 'pending')),
+      db.select({ count: count() }).from(consultationRequests).where(eq(consultationRequests.status, 'new')),
       db.select({ count: count() }).from(testimonials).where(eq(testimonials.isApproved, false)),
       db.select({ count: count() }).from(faqItems).where(eq(faqItems.isPublished, true)),
       db.select({ count: count() }).from(pages).where(eq(pages.isPublished, true)),

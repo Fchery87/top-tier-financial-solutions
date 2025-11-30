@@ -1,5 +1,8 @@
-import { pgTable, serial, text, timestamp, unique, boolean, integer, index } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, serial, text, timestamp, unique, boolean, integer, index } from 'drizzle-orm/pg-core';
 import { relations } from "drizzle-orm";
+
+// Enums
+export const consultationStatusEnum = pgEnum('consultationstatus', ['new', 'contacted', 'qualified', 'archived']);
 
 // Better Auth - User table
 export const user = pgTable("user", {
@@ -111,7 +114,7 @@ export const consultationRequests = pgTable('consultation_requests', {
   phoneNumber: text('phone_number'),
   message: text('message'),
   sourcePageSlug: text('source_page_slug'),
-  status: text('status').default('pending'), // 'pending' | 'contacted' | 'converted' | 'closed'
+  status: consultationStatusEnum('status').default('new'), // 'new' | 'contacted' | 'qualified' | 'archived'
   requestedAt: timestamp('requested_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
