@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Mail, MapPin, ArrowUpRight } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 
 const footerLinks = {
   company: [
@@ -113,39 +114,34 @@ export function Footer() {
             </ul>
           </motion.div>
 
-          {/* Contact Info */}
+          {/* Newsletter */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <h4 className="text-secondary font-bold mb-6 font-serif tracking-wide text-lg">Contact</h4>
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <MapPin className="w-4 h-4 text-secondary" />
-                </div>
-                <div>
-                  <span className="text-sm font-medium block mb-1">Headquarters</span>
-                  <span className="text-sm text-primary-foreground/70">New York, NY</span>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Mail className="w-4 h-4 text-secondary" />
-                </div>
-                <div>
-                  <span className="text-sm font-medium block mb-1">Email</span>
-                  <a 
-                    href="mailto:info@toptierfinancial.com" 
-                    className="text-sm text-primary-foreground/70 hover:text-secondary transition-colors duration-300"
-                  >
-                    info@toptierfinancial.com
-                  </a>
-                </div>
-              </li>
-            </ul>
+            <NewsletterSignup 
+              variant="footer"
+              title="Stay Updated"
+              description="Get credit tips and financial insights delivered to your inbox."
+              source="footer"
+            />
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center gap-3 text-sm text-primary-foreground/70">
+                <MapPin className="w-4 h-4 text-secondary" />
+                <span>New York, NY</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-primary-foreground/70">
+                <Mail className="w-4 h-4 text-secondary" />
+                <a 
+                  href="mailto:info@toptierfinancial.com" 
+                  className="hover:text-secondary transition-colors"
+                >
+                  info@toptierfinancial.com
+                </a>
+              </div>
+            </div>
           </motion.div>
         </div>
         

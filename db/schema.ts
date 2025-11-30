@@ -190,3 +190,169 @@ export const bookings = pgTable('bookings', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// ============================================
+// CLIENT PORTAL TABLES
+// ============================================
+
+// Client cases for credit repair tracking
+export const clientCases = pgTable('client_cases', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  caseNumber: text('case_number').notNull().unique(),
+  status: text('status').default('active'), // 'pending' | 'active' | 'in_review' | 'completed' | 'closed'
+  currentPhase: text('current_phase').default('initial_review'), // 'initial_review' | 'dispute_preparation' | 'disputes_sent' | 'awaiting_response' | 'follow_up' | 'completed'
+  creditScoreStart: integer('credit_score_start'),
+  creditScoreCurrent: integer('credit_score_current'),
+  negativeItemsStart: integer('negative_items_start'),
+  negativeItemsRemoved: integer('negative_items_removed').default(0),
+  notes: text('notes'),
+  startedAt: timestamp('started_at').defaultNow(),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [index("client_cases_userId_idx").on(table.userId)]);
+
+// Case updates/timeline
+export const caseUpdates = pgTable('case_updates', {
+  id: text('id').primaryKey(),
+  caseId: text('case_id').notNull().references(() => clientCases.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  updateType: text('update_type').default('general'), // 'general' | 'milestone' | 'dispute_sent' | 'dispute_resolved' | 'score_update' | 'document_added'
+  isVisibleToClient: boolean('is_visible_to_client').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [index("case_updates_caseId_idx").on(table.caseId)]);
+
+// Client documents
+export const clientDocuments = pgTable('client_documents', {
+  id: text('id').primaryKey(),
+  caseId: text('case_id').notNull().references(() => clientCases.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  fileType: text('file_type'), // 'credit_report' | 'id_document' | 'dispute_letter' | 'correspondence' | 'other'
+  fileUrl: text('file_url').notNull(),
+  fileSize: integer('file_size'),
+  uploadedBy: text('uploaded_by').default('client'), // 'client' | 'admin'
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("client_documents_caseId_idx").on(table.caseId),
+  index("client_documents_userId_idx").on(table.userId)
+]);
+
+// Client portal relations
+export const clientCasesRelations = relations(clientCases, ({ one, many }) => ({
+  user: one(user, {
+    fields: [clientCases.userId],
+    references: [user.id],
+  }),
+  updates: many(caseUpdates),
+  documents: many(clientDocuments),
+}));
+
+export const caseUpdatesRelations = relations(caseUpdates, ({ one }) => ({
+  case: one(clientCases, {
+    fields: [caseUpdates.caseId],
+    references: [clientCases.id],
+  }),
+}));
+
+export const clientDocumentsRelations = relations(clientDocuments, ({ one }) => ({
+  case: one(clientCases, {
+    fields: [clientDocuments.caseId],
+    references: [clientCases.id],
+  }),
+  user: one(user, {
+    fields: [clientDocuments.userId],
+    references: [user.id],
+  }),
+}));
+
+// ============================================
+// BLOG / EDUCATION HUB TABLES
+// ============================================
+
+// Blog categories
+export const blogCategories = pgTable('blog_categories', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  orderIndex: integer('order_index').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Blog posts
+export const blogPosts = pgTable('blog_posts', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  slug: text('slug').notNull().unique(),
+  excerpt: text('excerpt'),
+  content: text('content').notNull(),
+  featuredImage: text('featured_image'),
+  categoryId: text('category_id').references(() => blogCategories.id, { onDelete: 'set null' }),
+  authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+  metaTitle: text('meta_title'),
+  metaDescription: text('meta_description'),
+  isPublished: boolean('is_published').default(false),
+  isFeatured: boolean('is_featured').default(false),
+  publishedAt: timestamp('published_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("blog_posts_slug_idx").on(table.slug),
+  index("blog_posts_categoryId_idx").on(table.categoryId),
+]);
+
+// Blog relations
+export const blogCategoriesRelations = relations(blogCategories, ({ many }) => ({
+  posts: many(blogPosts),
+}));
+
+export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
+  category: one(blogCategories, {
+    fields: [blogPosts.categoryId],
+    references: [blogCategories.id],
+  }),
+  author: one(user, {
+    fields: [blogPosts.authorId],
+    references: [user.id],
+  }),
+}));
+
+// ============================================
+// EMAIL MARKETING / NEWSLETTER TABLES
+// ============================================
+
+// Email subscribers
+export const emailSubscribers = pgTable('email_subscribers', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  source: text('source').default('website'), // 'website' | 'contact_form' | 'blog' | 'manual'
+  status: text('status').default('active'), // 'active' | 'unsubscribed' | 'bounced'
+  subscribedAt: timestamp('subscribed_at').defaultNow(),
+  unsubscribedAt: timestamp('unsubscribed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [index("email_subscribers_email_idx").on(table.email)]);
+
+// Email campaigns/sequences
+export const emailCampaigns = pgTable('email_campaigns', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  subject: text('subject').notNull(),
+  content: text('content').notNull(),
+  campaignType: text('campaign_type').default('newsletter'), // 'newsletter' | 'welcome' | 'nurture' | 'promotional'
+  status: text('status').default('draft'), // 'draft' | 'scheduled' | 'sent' | 'cancelled'
+  scheduledAt: timestamp('scheduled_at'),
+  sentAt: timestamp('sent_at'),
+  recipientCount: integer('recipient_count').default(0),
+  openCount: integer('open_count').default(0),
+  clickCount: integer('click_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});

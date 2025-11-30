@@ -53,6 +53,14 @@ export default function ProfilePage() {
           <ul className="space-y-2">
             <li>
               <Link
+                href="/portal"
+                className="text-primary hover:underline"
+              >
+                Client Portal
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/settings"
                 className="text-primary hover:underline"
               >

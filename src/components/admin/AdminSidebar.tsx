@@ -15,17 +15,23 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  Mail,
+  Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Pages', href: '/admin/content', icon: FileText },
+  { name: 'Services', href: '/admin/services', icon: Briefcase },
+  { name: 'Blog Posts', href: '/admin/blog', icon: BookOpen },
   { name: 'Testimonials', href: '/admin/testimonials', icon: MessageSquareQuote },
   { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle },
   { name: 'Disclaimers', href: '/admin/disclaimers', icon: Scale },
   { name: 'Contact Leads', href: '/admin/leads', icon: Users },
+  { name: 'Subscribers', href: '/admin/subscribers', icon: Mail },
   { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
 ];
 
