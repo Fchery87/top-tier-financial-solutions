@@ -25,6 +25,10 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     .where(eq(creditReports.id, reportId));
 
   try {
+    // Clear existing parsed data for re-analysis
+    await db.delete(negativeItems).where(eq(negativeItems.creditReportId, reportId));
+    await db.delete(creditAccounts).where(eq(creditAccounts.creditReportId, reportId));
+
     // Get file from R2
     const fileBuffer = await getFileFromR2(report.fileUrl);
     

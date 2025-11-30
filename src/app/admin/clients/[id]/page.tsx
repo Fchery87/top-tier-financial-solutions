@@ -132,6 +132,7 @@ export default function ClientDetailPage() {
   const [saving, setSaving] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [analyzing, setAnalyzing] = React.useState<string | null>(null);
+  const [deleting, setDeleting] = React.useState<string | null>(null);
   const [client, setClient] = React.useState<ClientDetail | null>(null);
   const [creditReports, setCreditReports] = React.useState<CreditReport[]>([]);
   const [latestAnalysis, setLatestAnalysis] = React.useState<CreditAnalysisWithRecs | null>(null);
@@ -266,6 +267,31 @@ export default function ClientDetailPage() {
       alert('Analysis failed');
     } finally {
       setAnalyzing(null);
+    }
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    if (!confirm('Are you sure you want to delete this credit report? This will also delete all associated accounts and negative items.')) {
+      return;
+    }
+
+    setDeleting(reportId);
+    try {
+      const response = await fetch(`/api/admin/credit-reports/${reportId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchClientData();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Delete failed');
+      }
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      alert('Delete failed');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -480,12 +506,12 @@ export default function ClientDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {report.parse_status === 'pending' && (
+                        {(report.parse_status === 'pending' || report.parse_status === 'failed') && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleAnalyzeReport(report.id)}
-                            disabled={analyzing === report.id}
+                            disabled={analyzing === report.id || deleting === report.id}
                           >
                             {analyzing === report.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -495,6 +521,34 @@ export default function ClientDetailPage() {
                             <span className="ml-1">Analyze</span>
                           </Button>
                         )}
+                        {report.parse_status === 'completed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAnalyzeReport(report.id)}
+                            disabled={analyzing === report.id || deleting === report.id}
+                          >
+                            {analyzing === report.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4" />
+                            )}
+                            <span className="ml-1">Re-analyze</span>
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteReport(report.id)}
+                          disabled={deleting === report.id || analyzing === report.id}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                        >
+                          {deleting === report.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
                         <StatusBadge 
                           status={report.parse_status} 
                           variant={report.parse_status === 'completed' ? 'success' : report.parse_status === 'failed' ? 'danger' : 'warning'}
