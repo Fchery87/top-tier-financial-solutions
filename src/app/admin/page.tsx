@@ -13,13 +13,15 @@ import {
   ArrowRight,
   TrendingUp,
   Clock,
-  Loader2
+  Loader2,
+  Briefcase,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
 const quickLinks = [
   { name: 'Manage Pages', href: '/admin/content', icon: FileText, description: 'Edit website content and pages', color: 'bg-blue-500/10 text-blue-500' },
+  { name: 'Services', href: '/admin/services', icon: Briefcase, description: 'Manage services displayed on website', color: 'bg-indigo-500/10 text-indigo-500' },
   { name: 'Testimonials', href: '/admin/testimonials', icon: MessageSquareQuote, description: 'Approve and manage client testimonials', color: 'bg-green-500/10 text-green-500' },
   { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle, description: 'Update frequently asked questions', color: 'bg-purple-500/10 text-purple-500' },
   { name: 'Disclaimers', href: '/admin/disclaimers', icon: Scale, description: 'Manage legal disclaimers', color: 'bg-orange-500/10 text-orange-500' },

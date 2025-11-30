@@ -53,6 +53,15 @@ export interface Disclaimer {
   updated_at: string;
 }
 
+export interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ConsultationStatus = 'new' | 'contacted' | 'qualified' | 'archived';
 
 export interface ContactFormSubmission {

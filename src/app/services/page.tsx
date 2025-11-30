@@ -1,12 +1,22 @@
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
-import { Check, FileSearch, FileText, TrendingUp, GraduationCap, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, FileSearch, FileText, TrendingUp, GraduationCap, ArrowRight, Sparkles, Briefcase } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { FadeIn, SlideUp, StaggerContainer, StaggerItem, TiltCard, ScaleIn } from '@/components/ui/Motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay, AuroraBackground, ParticleField } from '@/components/ui/AnimatedBackground';
+import { db } from '@/db/client';
+import { services as servicesTable } from '@/db/schema';
+import { asc } from 'drizzle-orm';
 
-const services = [
+interface ServiceData {
+  id: string;
+  name: string;
+  description: string | null;
+  order_index: number;
+}
+
+const fallbackServices = [
   {
     icon: FileSearch,
     title: "Credit Report Analysis",
@@ -33,7 +43,39 @@ const services = [
   }
 ];
 
-export default function ServicesPage() {
+const iconMap: Record<number, typeof FileSearch> = {
+  0: FileSearch,
+  1: FileText,
+  2: TrendingUp,
+  3: GraduationCap,
+};
+
+async function getServices(): Promise<ServiceData[]> {
+  try {
+    const items = await db.select().from(servicesTable).orderBy(asc(servicesTable.orderIndex));
+    return items.map(s => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      order_index: s.orderIndex ?? 0,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export default async function ServicesPage() {
+  const dbServices = await getServices();
+  const useDynamicServices = dbServices.length > 0;
+  
+  const services = useDynamicServices 
+    ? dbServices.map((s, index) => ({
+        icon: iconMap[index % 4] || Briefcase,
+        title: s.name,
+        description: s.description || '',
+        features: [] as string[],
+      }))
+    : fallbackServices;
   return (
     <div className="flex flex-col">
       <PageHeader
@@ -70,16 +112,18 @@ export default function ServicesPage() {
                             <p className="text-muted-foreground leading-relaxed text-lg">{service.description}</p>
                           </div>
                         </div>
-                        <ul className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-border/50">
-                          {service.features.map((feature, i) => (
-                            <li key={i} className="flex items-center gap-3 text-foreground/80">
-                              <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 group-hover:bg-secondary/30 transition-colors">
-                                <Check className="w-3.5 h-3.5 text-secondary" />
-                              </div>
-                              <span className="font-medium">{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        {service.features && service.features.length > 0 && (
+                          <ul className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-border/50">
+                            {service.features.map((feature, i) => (
+                              <li key={i} className="flex items-center gap-3 text-foreground/80">
+                                <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 group-hover:bg-secondary/30 transition-colors">
+                                  <Check className="w-3.5 h-3.5 text-secondary" />
+                                </div>
+                                <span className="font-medium">{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     </Card>
                   </TiltCard>
