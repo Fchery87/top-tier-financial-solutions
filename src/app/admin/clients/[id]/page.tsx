@@ -142,6 +142,10 @@ export default function ClientDetailPage() {
   const [disputes, setDisputes] = React.useState<Dispute[]>([]);
   const [showDisputeModal, setShowDisputeModal] = React.useState(false);
   const [selectedNegativeItem, setSelectedNegativeItem] = React.useState<NegativeItem | null>(null);
+  const [creatingDispute, setCreatingDispute] = React.useState(false);
+  const [disputeBureau, setDisputeBureau] = React.useState('transunion');
+  const [disputeReason, setDisputeReason] = React.useState('');
+  const [disputeType, setDisputeType] = React.useState('standard');
   
   const [editMode, setEditMode] = React.useState(false);
   const [editedClient, setEditedClient] = React.useState<Partial<ClientDetail>>({});
@@ -297,7 +301,44 @@ export default function ClientDetailPage() {
 
   const handleCreateDispute = (item: NegativeItem) => {
     setSelectedNegativeItem(item);
+    setDisputeBureau(item.bureau || 'transunion');
+    setDisputeReason(item.dispute_reason || `This ${formatItemType(item.item_type).toLowerCase()} is inaccurate and should be removed.`);
+    setDisputeType('standard');
     setShowDisputeModal(true);
+  };
+
+  const handleSubmitDispute = async () => {
+    if (!client || !selectedNegativeItem) return;
+
+    setCreatingDispute(true);
+    try {
+      const response = await fetch('/api/admin/disputes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: client.id,
+          negativeItemId: selectedNegativeItem.id,
+          bureau: disputeBureau,
+          disputeReason: disputeReason,
+          disputeType: disputeType,
+        }),
+      });
+
+      if (response.ok) {
+        setShowDisputeModal(false);
+        setSelectedNegativeItem(null);
+        setDisputeReason('');
+        fetchClientData();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to create dispute');
+      }
+    } catch (error) {
+      console.error('Error creating dispute:', error);
+      alert('Failed to create dispute');
+    } finally {
+      setCreatingDispute(false);
+    }
   };
 
   const getRiskSeverityColor = (severity: string) => {
@@ -982,7 +1023,8 @@ export default function ClientDetailPage() {
                     <div>
                       <label className="text-sm font-medium">Bureau to Dispute</label>
                       <select
-                        defaultValue={selectedNegativeItem.bureau || 'transunion'}
+                        value={disputeBureau}
+                        onChange={(e) => setDisputeBureau(e.target.value)}
                         className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm mt-1"
                       >
                         <option value="transunion">TransUnion</option>
@@ -993,7 +1035,8 @@ export default function ClientDetailPage() {
                     <div>
                       <label className="text-sm font-medium">Dispute Reason</label>
                       <textarea
-                        defaultValue={selectedNegativeItem.dispute_reason || `This ${formatItemType(selectedNegativeItem.item_type).toLowerCase()} is inaccurate and should be removed.`}
+                        value={disputeReason}
+                        onChange={(e) => setDisputeReason(e.target.value)}
                         className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background mt-1"
                         placeholder="Explain why this item is inaccurate..."
                       />
@@ -1001,7 +1044,8 @@ export default function ClientDetailPage() {
                     <div>
                       <label className="text-sm font-medium">Dispute Type</label>
                       <select
-                        defaultValue="standard"
+                        value={disputeType}
+                        onChange={(e) => setDisputeType(e.target.value)}
                         className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm mt-1"
                       >
                         <option value="standard">Standard Dispute</option>
@@ -1020,19 +1064,23 @@ export default function ClientDetailPage() {
                       setShowDisputeModal(false);
                       setSelectedNegativeItem(null);
                     }}
+                    disabled={creatingDispute}
                   >
                     Cancel
                   </Button>
                   <Button 
                     className="flex-1" 
-                    disabled={!selectedNegativeItem}
-                    onClick={() => {
-                      alert('Dispute creation will be implemented with full letter generation');
-                      setShowDisputeModal(false);
-                      setSelectedNegativeItem(null);
-                    }}
+                    disabled={!selectedNegativeItem || creatingDispute || !disputeReason.trim()}
+                    onClick={handleSubmitDispute}
                   >
-                    Create Dispute
+                    {creatingDispute ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Dispute'
+                    )}
                   </Button>
                 </div>
               </CardContent>
