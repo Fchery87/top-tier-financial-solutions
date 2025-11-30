@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
 import { Search, FileText, TrendingUp, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { FadeIn, SlideUp, SlideIn, StaggerContainer, StaggerItem, ScaleIn, TiltCard } from '@/components/ui/Motion';
+import { SlideUp, SlideIn, StaggerContainer, StaggerItem, ScaleIn, TiltCard } from '@/components/ui/Motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay, AuroraBackground, ParticleField } from '@/components/ui/AnimatedBackground';
 
 export default function HowItWorksPage() {

@@ -5,6 +5,15 @@ import Script from 'next/script';
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
 
+type GtagCommand = 'config' | 'event' | 'js' | 'set';
+type GtagFunction = (command: GtagCommand, targetId: string | Date, config?: Record<string, unknown>) => void;
+
+declare global {
+  interface Window {
+    gtag?: GtagFunction;
+  }
+}
+
 export function GoogleAnalytics() {
   if (!GA_MEASUREMENT_ID) return null;
 
@@ -52,8 +61,8 @@ export function Analytics() {
 
 // Event tracking helper for Google Analytics
 export function trackEvent(action: string, category: string, label?: string, value?: number) {
-  if (typeof window !== 'undefined' && GA_MEASUREMENT_ID && (window as typeof window & { gtag?: Function }).gtag) {
-    (window as typeof window & { gtag: Function }).gtag('event', action, {
+  if (typeof window !== 'undefined' && GA_MEASUREMENT_ID && window.gtag) {
+    window.gtag('event', action, {
       event_category: category,
       event_label: label,
       value: value,
@@ -63,8 +72,8 @@ export function trackEvent(action: string, category: string, label?: string, val
 
 // Page view tracking (for client-side navigation)
 export function trackPageView(url: string) {
-  if (typeof window !== 'undefined' && GA_MEASUREMENT_ID && (window as typeof window & { gtag?: Function }).gtag) {
-    (window as typeof window & { gtag: Function }).gtag('config', GA_MEASUREMENT_ID, {
+  if (typeof window !== 'undefined' && GA_MEASUREMENT_ID && window.gtag) {
+    window.gtag('config', GA_MEASUREMENT_ID, {
       page_path: url,
     });
   }

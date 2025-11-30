@@ -62,7 +62,7 @@ export default function AdminDashboard() {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        {stats.map((stat, index) => (
+        {stats.map((stat) => (
           <Card key={stat.label} className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
       >
         <h2 className="text-xl font-serif font-bold text-foreground mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {quickLinks.map((link, index) => (
+          {quickLinks.map((link) => (
             <Link key={link.name} href={link.href}>
               <Card className="h-full bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 hover:shadow-lg hover:shadow-secondary/5 transition-all duration-300 group cursor-pointer">
                 <CardContent className="p-6">

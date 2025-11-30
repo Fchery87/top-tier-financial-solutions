@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
 import { Check, FileSearch, FileText, TrendingUp, GraduationCap, ArrowRight, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { FadeIn, SlideUp, StaggerContainer, StaggerItem, GlowCard, TiltCard, ScaleIn } from '@/components/ui/Motion';
+import { FadeIn, SlideUp, StaggerContainer, StaggerItem, TiltCard, ScaleIn } from '@/components/ui/Motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay, AuroraBackground, ParticleField } from '@/components/ui/AnimatedBackground';
 
 const services = [

@@ -1,10 +1,9 @@
 import { sql } from 'drizzle-orm';
 import { db } from './client';
-import { users } from './schema';
 
 export async function syncNeonAuthUsers() {
   try {
-    const result = await db.execute(
+    await db.execute(
       sql`
         INSERT INTO users (name, email, created_at)
         SELECT name, email, created_at FROM neon_auth.users_sync

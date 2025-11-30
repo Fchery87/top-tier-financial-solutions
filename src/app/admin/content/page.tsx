@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Plus, FileText, Eye, EyeOff, Pencil, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';

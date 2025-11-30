@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Star, Shield, TrendingUp, Users, ArrowRight, CheckCircle, Sparkles, ChevronRight, Zap, Award } from 'lucide-react';
 import { getTestimonials, Testimonial } from '@/lib/api';
-import { FadeIn, SlideUp, SlideIn, StaggerContainer, StaggerItem, ScaleIn, BlurIn, TiltCard, GlowCard, Float, MagneticHover } from '@/components/ui/Motion';
+import { FadeIn, SlideUp, SlideIn, StaggerContainer, StaggerItem, ScaleIn, BlurIn, TiltCard, GlowCard, MagneticHover } from '@/components/ui/Motion';
 import { GradientOrbs, AnimatedGrid, ParticleField, NoiseOverlay, AuroraBackground } from '@/components/ui/AnimatedBackground';
 
 const fallbackTestimonials = [

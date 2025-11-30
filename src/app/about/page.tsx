@@ -1,6 +1,6 @@
 import { Users, Target, ShieldCheck, Award, Heart, Zap, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { FadeIn, SlideUp, SlideIn, StaggerContainer, StaggerItem, GlowCard, TiltCard, ScaleIn } from '@/components/ui/Motion';
+import { FadeIn, SlideUp, SlideIn, StaggerContainer, StaggerItem, TiltCard, ScaleIn } from '@/components/ui/Motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay } from '@/components/ui/AnimatedBackground';
 import { Card } from '@/components/ui/Card';
 

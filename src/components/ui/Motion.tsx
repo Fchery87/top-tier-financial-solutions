@@ -236,7 +236,7 @@ export function TextReveal({ children, className, delay = 0 }: { children: strin
 // Counter animation
 export function CountUp({ 
   target, 
-  duration = 2, 
+  duration: _duration = 2, 
   delay = 0, 
   suffix = "", 
   className 
@@ -247,6 +247,7 @@ export function CountUp({
   suffix?: string, 
   className?: string 
 }) {
+  void _duration; // Reserved for future animation timing
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => Math.round(latest));
   
@@ -297,7 +298,8 @@ export function Float({ children, className, duration = 6, distance = 20 }: { ch
 }
 
 // Parallax scroll effect
-export function ParallaxSection({ children, className, speed = 0.5 }: { children: ReactNode, className?: string, speed?: number }) {
+export function ParallaxSection({ children, className, speed: _speed = 0.5 }: { children: ReactNode, className?: string, speed?: number }) {
+  void _speed; // Reserved for future parallax implementation
   return (
     <motion.div
       initial={{ y: 0 }}
