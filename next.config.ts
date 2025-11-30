@@ -43,6 +43,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
 
+  // Server external packages - keep these out of the bundle
+  serverExternalPackages: ['pdf-parse', 'canvas', '@napi-rs/canvas'],
+
   // Headers for caching and security
   headers: async () => {
     return [

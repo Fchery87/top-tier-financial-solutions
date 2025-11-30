@@ -356,3 +356,234 @@ export const emailCampaigns = pgTable('email_campaigns', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// ============================================
+// CREDIT ANALYSIS SYSTEM TABLES
+// ============================================
+
+// Clients table (central client management - converted from leads)
+export const clients = pgTable('clients', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+  leadId: text('lead_id').references(() => consultationRequests.id, { onDelete: 'set null' }),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone'),
+  status: text('status').default('active'), // 'pending' | 'active' | 'paused' | 'completed' | 'cancelled'
+  notes: text('notes'),
+  convertedAt: timestamp('converted_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("clients_userId_idx").on(table.userId),
+  index("clients_email_idx").on(table.email),
+]);
+
+// Credit reports (uploaded files)
+export const creditReports = pgTable('credit_reports', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  fileType: text('file_type').notNull(), // 'pdf' | 'html' | 'txt'
+  fileUrl: text('file_url').notNull(),
+  fileSize: integer('file_size'),
+  bureau: text('bureau'), // 'transunion' | 'experian' | 'equifax' | 'combined'
+  reportDate: timestamp('report_date'),
+  parsedAt: timestamp('parsed_at'),
+  parseStatus: text('parse_status').default('pending'), // 'pending' | 'processing' | 'completed' | 'failed'
+  parseError: text('parse_error'),
+  rawData: text('raw_data'), // JSON string of parsed raw data
+  uploadedAt: timestamp('uploaded_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("credit_reports_clientId_idx").on(table.clientId),
+]);
+
+// Credit accounts/tradelines (parsed from reports)
+export const creditAccounts = pgTable('credit_accounts', {
+  id: text('id').primaryKey(),
+  creditReportId: text('credit_report_id').notNull().references(() => creditReports.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  creditorName: text('creditor_name').notNull(),
+  accountNumber: text('account_number'), // masked
+  accountType: text('account_type'), // 'credit_card' | 'auto_loan' | 'mortgage' | 'personal_loan' | 'student_loan' | 'collection' | 'other'
+  accountStatus: text('account_status'), // 'open' | 'closed' | 'collection' | 'charge_off' | 'paid'
+  balance: integer('balance'),
+  creditLimit: integer('credit_limit'),
+  highCredit: integer('high_credit'),
+  monthlyPayment: integer('monthly_payment'),
+  pastDueAmount: integer('past_due_amount'),
+  paymentStatus: text('payment_status'), // 'current' | '30_days_late' | '60_days_late' | '90_days_late' | '120_days_late' | 'collection'
+  dateOpened: timestamp('date_opened'),
+  dateReported: timestamp('date_reported'),
+  bureau: text('bureau'), // 'transunion' | 'experian' | 'equifax'
+  isNegative: boolean('is_negative').default(false),
+  riskLevel: text('risk_level'), // 'low' | 'medium' | 'high' | 'severe'
+  remarks: text('remarks'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("credit_accounts_creditReportId_idx").on(table.creditReportId),
+  index("credit_accounts_clientId_idx").on(table.clientId),
+]);
+
+// Negative items (collections, charge-offs, derogatory marks)
+export const negativeItems = pgTable('negative_items', {
+  id: text('id').primaryKey(),
+  creditReportId: text('credit_report_id').notNull().references(() => creditReports.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  creditAccountId: text('credit_account_id').references(() => creditAccounts.id, { onDelete: 'set null' }),
+  itemType: text('item_type').notNull(), // 'late_payment' | 'collection' | 'charge_off' | 'repossession' | 'foreclosure' | 'bankruptcy' | 'judgment' | 'tax_lien' | 'inquiry'
+  creditorName: text('creditor_name').notNull(),
+  originalCreditor: text('original_creditor'),
+  amount: integer('amount'),
+  dateReported: timestamp('date_reported'),
+  dateOfLastActivity: timestamp('date_of_last_activity'),
+  bureau: text('bureau'), // 'transunion' | 'experian' | 'equifax'
+  riskSeverity: text('risk_severity').default('medium'), // 'low' | 'medium' | 'high' | 'severe'
+  scoreImpact: text('score_impact'), // estimated impact description
+  recommendedAction: text('recommended_action'), // 'dispute' | 'pay_for_delete' | 'settle' | 'goodwill_letter' | 'wait' | 'none'
+  disputeReason: text('dispute_reason'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("negative_items_creditReportId_idx").on(table.creditReportId),
+  index("negative_items_clientId_idx").on(table.clientId),
+]);
+
+// Credit analysis summaries
+export const creditAnalyses = pgTable('credit_analyses', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  scoreTransunion: integer('score_transunion'),
+  scoreExperian: integer('score_experian'),
+  scoreEquifax: integer('score_equifax'),
+  totalAccounts: integer('total_accounts').default(0),
+  openAccounts: integer('open_accounts').default(0),
+  closedAccounts: integer('closed_accounts').default(0),
+  totalDebt: integer('total_debt').default(0),
+  totalCreditLimit: integer('total_credit_limit').default(0),
+  utilizationPercent: integer('utilization_percent'),
+  derogatoryCount: integer('derogatory_count').default(0),
+  collectionsCount: integer('collections_count').default(0),
+  latePaymentCount: integer('late_payment_count').default(0),
+  inquiryCount: integer('inquiry_count').default(0),
+  oldestAccountAge: integer('oldest_account_age'), // in months
+  averageAccountAge: integer('average_account_age'), // in months
+  analysisSummary: text('analysis_summary'), // JSON with detailed breakdown
+  recommendations: text('recommendations'), // JSON with action items
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("credit_analyses_clientId_idx").on(table.clientId),
+]);
+
+// Disputes (action plan / tracking)
+export const disputes = pgTable('disputes', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  negativeItemId: text('negative_item_id').references(() => negativeItems.id, { onDelete: 'set null' }),
+  bureau: text('bureau').notNull(), // 'transunion' | 'experian' | 'equifax'
+  disputeReason: text('dispute_reason').notNull(),
+  disputeType: text('dispute_type').default('standard'), // 'standard' | 'method_of_verification' | 'direct_creditor' | 'goodwill'
+  status: text('status').default('draft'), // 'draft' | 'ready' | 'sent' | 'in_progress' | 'responded' | 'resolved' | 'escalated'
+  round: integer('round').default(1),
+  letterContent: text('letter_content'),
+  letterTemplateId: text('letter_template_id'),
+  trackingNumber: text('tracking_number'),
+  sentAt: timestamp('sent_at'),
+  responseDeadline: timestamp('response_deadline'),
+  responseReceivedAt: timestamp('response_received_at'),
+  outcome: text('outcome'), // 'deleted' | 'verified' | 'updated' | 'pending' | 'no_response'
+  responseNotes: text('response_notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("disputes_clientId_idx").on(table.clientId),
+  index("disputes_negativeItemId_idx").on(table.negativeItemId),
+]);
+
+// Dispute letter templates
+export const disputeLetterTemplates = pgTable('dispute_letter_templates', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  disputeType: text('dispute_type').notNull(), // 'standard' | 'method_of_verification' | 'direct_creditor' | 'goodwill' | 'debt_validation' | 'cease_desist'
+  targetRecipient: text('target_recipient').default('bureau'), // 'bureau' | 'creditor' | 'collector'
+  content: text('content').notNull(), // Template with placeholders like {{client_name}}, {{account_number}}, etc.
+  variables: text('variables'), // JSON array of available variables
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Credit Analysis System Relations
+export const clientsRelations = relations(clients, ({ one, many }) => ({
+  user: one(user, {
+    fields: [clients.userId],
+    references: [user.id],
+  }),
+  lead: one(consultationRequests, {
+    fields: [clients.leadId],
+    references: [consultationRequests.id],
+  }),
+  creditReports: many(creditReports),
+  creditAccounts: many(creditAccounts),
+  negativeItems: many(negativeItems),
+  analyses: many(creditAnalyses),
+  disputes: many(disputes),
+}));
+
+export const creditReportsRelations = relations(creditReports, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [creditReports.clientId],
+    references: [clients.id],
+  }),
+  accounts: many(creditAccounts),
+  negativeItems: many(negativeItems),
+}));
+
+export const creditAccountsRelations = relations(creditAccounts, ({ one, many }) => ({
+  creditReport: one(creditReports, {
+    fields: [creditAccounts.creditReportId],
+    references: [creditReports.id],
+  }),
+  client: one(clients, {
+    fields: [creditAccounts.clientId],
+    references: [clients.id],
+  }),
+  negativeItems: many(negativeItems),
+}));
+
+export const negativeItemsRelations = relations(negativeItems, ({ one }) => ({
+  creditReport: one(creditReports, {
+    fields: [negativeItems.creditReportId],
+    references: [creditReports.id],
+  }),
+  client: one(clients, {
+    fields: [negativeItems.clientId],
+    references: [clients.id],
+  }),
+  creditAccount: one(creditAccounts, {
+    fields: [negativeItems.creditAccountId],
+    references: [creditAccounts.id],
+  }),
+}));
+
+export const creditAnalysesRelations = relations(creditAnalyses, ({ one }) => ({
+  client: one(clients, {
+    fields: [creditAnalyses.clientId],
+    references: [clients.id],
+  }),
+}));
+
+export const disputesRelations = relations(disputes, ({ one }) => ({
+  client: one(clients, {
+    fields: [disputes.clientId],
+    references: [clients.id],
+  }),
+  negativeItem: one(negativeItems, {
+    fields: [disputes.negativeItemId],
+    references: [negativeItems.id],
+  }),
+}));
