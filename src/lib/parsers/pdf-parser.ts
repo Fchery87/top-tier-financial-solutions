@@ -1,9 +1,10 @@
-// PDF parsing utility
+// PDF parsing utility - using pdf-parse v1.x simple API
 async function parsePdf(buffer: Buffer): Promise<{ text: string; numpages: number }> {
   // Dynamic require to avoid build-time bundling issues
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const pdfParse = require('pdf-parse');
-  return pdfParse(buffer);
+  const result = await pdfParse(buffer);
+  return { text: result.text, numpages: result.numpages };
 }
 
 export interface ParsedCreditData {

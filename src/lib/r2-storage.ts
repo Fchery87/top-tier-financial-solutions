@@ -89,16 +89,11 @@ export async function getFileFromR2(key: string): Promise<Buffer> {
   });
 
   const response = await s3Client.send(command);
-  const stream = response.Body as ReadableStream;
   
-  const chunks: Uint8Array[] = [];
-  const reader = stream.getReader();
-  
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
+  if (!response.Body) {
+    throw new Error('Empty response body from R2');
   }
   
-  return Buffer.concat(chunks);
+  const byteArray = await response.Body.transformToByteArray();
+  return Buffer.from(byteArray);
 }
