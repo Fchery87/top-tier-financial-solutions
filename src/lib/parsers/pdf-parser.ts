@@ -170,7 +170,7 @@ function extractConsumerProfile(text: string): ParsedConsumerProfile {
   // Extract names - look for patterns like "Name: John Doe" or "Consumer: John Doe"
   const namePatterns = [
     /(?:Name|Consumer|Applicant)[:\s]+([A-Z][a-zA-Z]+)\s+([A-Z]\.?\s+)?([A-Z][a-zA-Z]+)(?:\s+(JR|SR|II|III|IV))?/gi,
-    /(?:Personal\s+Information)[\s\S]*?([A-Z][a-zA-Z]+)\s+([A-Z]\.?\s+)?([A-Z][a-zA-Z]+)/i,
+    /(?:Personal\s+Information)[\s\S]*?([A-Z][a-zA-Z]+)\s+([A-Z]\.?\s+)?([A-Z][a-zA-Z]+)/gi,
   ];
 
   for (const pattern of namePatterns) {
