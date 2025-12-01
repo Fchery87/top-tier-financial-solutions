@@ -22,13 +22,21 @@ import {
   UserCheck,
   CheckSquare,
   Wand2,
-  Library
+  Library,
+  FileSignature,
+  MessageCircle,
+  CreditCard,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Clients', href: '/admin/clients', icon: UserCheck },
+  { name: 'Agreements', href: '/admin/agreements', icon: FileSignature },
+  { name: 'Messages', href: '/admin/messages', icon: MessageCircle },
+  { name: 'Billing', href: '/admin/billing', icon: CreditCard },
+  { name: 'Compliance', href: '/admin/compliance', icon: ShieldCheck },
   { name: 'Dispute Wizard', href: '/admin/disputes/wizard', icon: Wand2 },
   { name: 'Letter Templates', href: '/admin/dispute-templates', icon: Library },
   { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },

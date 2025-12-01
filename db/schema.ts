@@ -733,3 +733,310 @@ export const disputesRelations = relations(disputes, ({ one }) => ({
     references: [negativeItems.id],
   }),
 }));
+
+// ============================================
+// CROA/TSR COMPLIANCE TABLES
+// ============================================
+
+// Enums for compliance
+export const agreementStatusEnum = pgEnum('agreement_status', ['draft', 'pending', 'signed', 'cancelled', 'expired']);
+export const disclosureTypeEnum = pgEnum('disclosure_type', ['right_to_cancel', 'no_guarantee', 'credit_bureau_rights', 'written_contract', 'fee_disclosure']);
+export const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'pending', 'paid', 'void', 'refunded']);
+export const feeModelEnum = pgEnum('fee_model', ['subscription', 'pay_per_delete', 'milestone', 'flat_fee']);
+export const messageThreadStatusEnum = pgEnum('message_thread_status', ['open', 'closed', 'archived']);
+export const senderTypeEnum = pgEnum('sender_type', ['admin', 'client']);
+
+// ============================================
+// CLIENT AGREEMENTS MODULE (CROA Compliance)
+// ============================================
+
+// Agreement templates (reusable contract templates)
+export const agreementTemplates = pgTable('agreement_templates', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  version: text('version').notNull().default('1.0'),
+  content: text('content').notNull(), // HTML content with placeholders
+  requiredDisclosures: text('required_disclosures'), // JSON array of disclosure types required
+  cancellationPeriodDays: integer('cancellation_period_days').default(3), // CROA requires 3 business days
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Client agreements (signed contracts)
+export const clientAgreements = pgTable('client_agreements', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  templateId: text('template_id').references(() => agreementTemplates.id, { onDelete: 'set null' }),
+  templateVersion: text('template_version'), // Snapshot of version at signing
+  status: agreementStatusEnum('status').default('draft'),
+  content: text('content').notNull(), // Rendered HTML with client info filled in
+  signedAt: timestamp('signed_at'),
+  signatureData: text('signature_data'), // Base64 signature image or typed name
+  signatureType: text('signature_type'), // 'drawn' | 'typed'
+  signerIpAddress: text('signer_ip_address'),
+  signerUserAgent: text('signer_user_agent'),
+  cancellationDeadline: timestamp('cancellation_deadline'), // 3 business days after signing per CROA
+  cancelledAt: timestamp('cancelled_at'),
+  cancellationReason: text('cancellation_reason'),
+  sentAt: timestamp('sent_at'), // When agreement was sent to client
+  sentById: text('sent_by_id').references(() => user.id, { onDelete: 'set null' }),
+  expiresAt: timestamp('expires_at'), // When unsigned agreement expires
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("client_agreements_clientId_idx").on(table.clientId),
+  index("client_agreements_status_idx").on(table.status),
+]);
+
+// Disclosure acknowledgments (tracking CROA required disclosures)
+export const disclosureAcknowledgments = pgTable('disclosure_acknowledgments', {
+  id: text('id').primaryKey(),
+  agreementId: text('agreement_id').notNull().references(() => clientAgreements.id, { onDelete: 'cascade' }),
+  disclosureType: disclosureTypeEnum('disclosure_type').notNull(),
+  disclosureText: text('disclosure_text').notNull(), // The actual text shown to client
+  acknowledged: boolean('acknowledged').default(false),
+  acknowledgedAt: timestamp('acknowledged_at'),
+  acknowledgerIpAddress: text('acknowledger_ip_address'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("disclosure_acknowledgments_agreementId_idx").on(table.agreementId),
+]);
+
+// ============================================
+// BILLING & INVOICING MODULE (No Advance Fees)
+// ============================================
+
+// Fee configurations (pricing plans)
+export const feeConfigurations = pgTable('fee_configurations', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  feeModel: feeModelEnum('fee_model').notNull(),
+  amount: integer('amount').notNull(), // Amount in cents
+  frequency: text('frequency'), // 'monthly' | 'per_item' | 'one_time' | null
+  setupFee: integer('setup_fee').default(0), // Initial fee in cents (charged after first service)
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Client billing profiles
+export const clientBillingProfiles = pgTable('client_billing_profiles', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  feeConfigId: text('fee_config_id').references(() => feeConfigurations.id, { onDelete: 'set null' }),
+  // Payment processor fields (generic - not Stripe specific)
+  externalCustomerId: text('external_customer_id'), // ID from payment processor
+  paymentProcessor: text('payment_processor'), // 'nmi' | 'authorize_net' | 'other'
+  paymentMethodLast4: text('payment_method_last4'),
+  paymentMethodType: text('payment_method_type'), // 'card' | 'ach'
+  billingStatus: text('billing_status').default('active'), // 'active' | 'paused' | 'cancelled'
+  nextBillingDate: timestamp('next_billing_date'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("client_billing_profiles_clientId_idx").on(table.clientId),
+]);
+
+// Invoices
+export const invoices = pgTable('invoices', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  billingProfileId: text('billing_profile_id').references(() => clientBillingProfiles.id, { onDelete: 'set null' }),
+  invoiceNumber: text('invoice_number').notNull().unique(),
+  amount: integer('amount').notNull(), // Amount in cents
+  status: invoiceStatusEnum('status').default('draft'),
+  // CROA Compliance: Services must be rendered BEFORE charging
+  servicesRendered: text('services_rendered'), // JSON describing what services were completed
+  servicesRenderedAt: timestamp('services_rendered_at'), // When services were marked complete
+  description: text('description'),
+  dueDate: timestamp('due_date'),
+  paidAt: timestamp('paid_at'),
+  // Payment processor reference
+  externalPaymentId: text('external_payment_id'), // Transaction ID from processor
+  paymentProcessor: text('payment_processor'),
+  paymentMethod: text('payment_method'), // 'card' | 'ach' | 'check' | 'cash'
+  // Refund tracking
+  refundedAt: timestamp('refunded_at'),
+  refundAmount: integer('refund_amount'),
+  refundReason: text('refund_reason'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("invoices_clientId_idx").on(table.clientId),
+  index("invoices_status_idx").on(table.status),
+  index("invoices_invoiceNumber_idx").on(table.invoiceNumber),
+]);
+
+// Payment audit log (compliance trail)
+export const paymentAuditLog = pgTable('payment_audit_log', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').references(() => clients.id, { onDelete: 'set null' }),
+  invoiceId: text('invoice_id').references(() => invoices.id, { onDelete: 'set null' }),
+  action: text('action').notNull(), // 'invoice_created' | 'payment_attempted' | 'payment_success' | 'payment_failed' | 'refund_issued' | 'services_verified'
+  details: text('details'), // JSON with action-specific details
+  performedById: text('performed_by_id').references(() => user.id, { onDelete: 'set null' }),
+  ipAddress: text('ip_address'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("payment_audit_log_clientId_idx").on(table.clientId),
+  index("payment_audit_log_invoiceId_idx").on(table.invoiceId),
+  index("payment_audit_log_createdAt_idx").on(table.createdAt),
+]);
+
+// ============================================
+// SECURE CLIENT MESSAGING MODULE
+// ============================================
+
+// Message threads
+export const messageThreads = pgTable('message_threads', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  subject: text('subject').notNull(),
+  status: messageThreadStatusEnum('status').default('open'),
+  lastMessageAt: timestamp('last_message_at'),
+  unreadByAdmin: integer('unread_by_admin').default(0),
+  unreadByClient: integer('unread_by_client').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("message_threads_clientId_idx").on(table.clientId),
+  index("message_threads_status_idx").on(table.status),
+  index("message_threads_lastMessageAt_idx").on(table.lastMessageAt),
+]);
+
+// Messages
+export const messages = pgTable('messages', {
+  id: text('id').primaryKey(),
+  threadId: text('thread_id').notNull().references(() => messageThreads.id, { onDelete: 'cascade' }),
+  senderId: text('sender_id').references(() => user.id, { onDelete: 'set null' }),
+  senderType: senderTypeEnum('sender_type').notNull(),
+  content: text('content').notNull(),
+  isRead: boolean('is_read').default(false),
+  readAt: timestamp('read_at'),
+  // Audit fields
+  senderIpAddress: text('sender_ip_address'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("messages_threadId_idx").on(table.threadId),
+  index("messages_senderId_idx").on(table.senderId),
+  index("messages_createdAt_idx").on(table.createdAt),
+]);
+
+// Message attachments
+export const messageAttachments = pgTable('message_attachments', {
+  id: text('id').primaryKey(),
+  messageId: text('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  fileUrl: text('file_url').notNull(),
+  fileSize: integer('file_size'),
+  fileType: text('file_type'), // MIME type
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("message_attachments_messageId_idx").on(table.messageId),
+]);
+
+// ============================================
+// CROA/TSR COMPLIANCE RELATIONS
+// ============================================
+
+// Agreement relations
+export const agreementTemplatesRelations = relations(agreementTemplates, ({ many }) => ({
+  agreements: many(clientAgreements),
+}));
+
+export const clientAgreementsRelations = relations(clientAgreements, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [clientAgreements.clientId],
+    references: [clients.id],
+  }),
+  template: one(agreementTemplates, {
+    fields: [clientAgreements.templateId],
+    references: [agreementTemplates.id],
+  }),
+  sentBy: one(user, {
+    fields: [clientAgreements.sentById],
+    references: [user.id],
+  }),
+  disclosures: many(disclosureAcknowledgments),
+}));
+
+export const disclosureAcknowledgmentsRelations = relations(disclosureAcknowledgments, ({ one }) => ({
+  agreement: one(clientAgreements, {
+    fields: [disclosureAcknowledgments.agreementId],
+    references: [clientAgreements.id],
+  }),
+}));
+
+// Billing relations
+export const feeConfigurationsRelations = relations(feeConfigurations, ({ many }) => ({
+  billingProfiles: many(clientBillingProfiles),
+}));
+
+export const clientBillingProfilesRelations = relations(clientBillingProfiles, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [clientBillingProfiles.clientId],
+    references: [clients.id],
+  }),
+  feeConfig: one(feeConfigurations, {
+    fields: [clientBillingProfiles.feeConfigId],
+    references: [feeConfigurations.id],
+  }),
+  invoices: many(invoices),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [invoices.clientId],
+    references: [clients.id],
+  }),
+  billingProfile: one(clientBillingProfiles, {
+    fields: [invoices.billingProfileId],
+    references: [clientBillingProfiles.id],
+  }),
+  auditLogs: many(paymentAuditLog),
+}));
+
+export const paymentAuditLogRelations = relations(paymentAuditLog, ({ one }) => ({
+  client: one(clients, {
+    fields: [paymentAuditLog.clientId],
+    references: [clients.id],
+  }),
+  invoice: one(invoices, {
+    fields: [paymentAuditLog.invoiceId],
+    references: [invoices.id],
+  }),
+  performedBy: one(user, {
+    fields: [paymentAuditLog.performedById],
+    references: [user.id],
+  }),
+}));
+
+// Messaging relations
+export const messageThreadsRelations = relations(messageThreads, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [messageThreads.clientId],
+    references: [clients.id],
+  }),
+  messages: many(messages),
+}));
+
+export const messagesRelations = relations(messages, ({ one, many }) => ({
+  thread: one(messageThreads, {
+    fields: [messages.threadId],
+    references: [messageThreads.id],
+  }),
+  sender: one(user, {
+    fields: [messages.senderId],
+    references: [user.id],
+  }),
+  attachments: many(messageAttachments),
+}));
+
+export const messageAttachmentsRelations = relations(messageAttachments, ({ one }) => ({
+  message: one(messages, {
+    fields: [messageAttachments.messageId],
+    references: [messages.id],
+  }),
+}));
