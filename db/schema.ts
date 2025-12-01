@@ -481,18 +481,40 @@ export const creditAnalyses = pgTable('credit_analyses', {
   index("credit_analyses_clientId_idx").on(table.clientId),
 ]);
 
+// Dispute batches (for grouping multiple disputes)
+export const disputeBatches = pgTable('dispute_batches', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  round: integer('round').default(1),
+  targetRecipient: text('target_recipient').default('bureau'), // 'bureau' | 'creditor' | 'furnisher' | 'collector'
+  itemsCount: integer('items_count').default(0),
+  lettersGenerated: integer('letters_generated').default(0),
+  status: text('status').default('draft'), // 'draft' | 'ready' | 'sent' | 'completed'
+  generationMethod: text('generation_method').default('ai'), // 'ai' | 'template'
+  sentAt: timestamp('sent_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("dispute_batches_clientId_idx").on(table.clientId),
+  index("dispute_batches_status_idx").on(table.status),
+]);
+
 // Disputes (action plan / tracking)
 export const disputes = pgTable('disputes', {
   id: text('id').primaryKey(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  batchId: text('batch_id').references(() => disputeBatches.id, { onDelete: 'set null' }),
   negativeItemId: text('negative_item_id').references(() => negativeItems.id, { onDelete: 'set null' }),
   bureau: text('bureau').notNull(), // 'transunion' | 'experian' | 'equifax'
   disputeReason: text('dispute_reason').notNull(),
   disputeType: text('dispute_type').default('standard'), // 'standard' | 'method_of_verification' | 'direct_creditor' | 'goodwill'
   status: text('status').default('draft'), // 'draft' | 'ready' | 'sent' | 'in_progress' | 'responded' | 'resolved' | 'escalated'
   round: integer('round').default(1),
+  reasonCodes: text('reason_codes'), // JSON array of reason codes
+  escalationPath: text('escalation_path'), // 'bureau' | 'creditor' | 'furnisher' | 'collector' | 'cfpb'
   letterContent: text('letter_content'),
   letterTemplateId: text('letter_template_id'),
+  generatedByAi: boolean('generated_by_ai').default(false),
   trackingNumber: text('tracking_number'),
   sentAt: timestamp('sent_at'),
   responseDeadline: timestamp('response_deadline'),
@@ -503,6 +525,7 @@ export const disputes = pgTable('disputes', {
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
   index("disputes_clientId_idx").on(table.clientId),
+  index("disputes_batchId_idx").on(table.batchId),
   index("disputes_negativeItemId_idx").on(table.negativeItemId),
 ]);
 
@@ -562,6 +585,38 @@ export const clientNotes = pgTable('client_notes', {
   index("client_notes_authorId_idx").on(table.authorId),
 ]);
 
+// Credit Audit Reports (generated diagnostic reports for sales)
+export const auditReports = pgTable('audit_reports', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  generatedById: text('generated_by_id').references(() => user.id, { onDelete: 'set null' }),
+  reportHtml: text('report_html').notNull(),
+  scoreTransunion: integer('score_transunion'),
+  scoreExperian: integer('score_experian'),
+  scoreEquifax: integer('score_equifax'),
+  negativeItemsCount: integer('negative_items_count').default(0),
+  totalDebt: integer('total_debt'),
+  projectedScoreIncrease: integer('projected_score_increase'),
+  sentViaEmail: boolean('sent_via_email').default(false),
+  emailSentAt: timestamp('email_sent_at'),
+  generatedAt: timestamp('generated_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("audit_reports_clientId_idx").on(table.clientId),
+]);
+
+// Audit reports relations
+export const auditReportsRelations = relations(auditReports, ({ one }) => ({
+  client: one(clients, {
+    fields: [auditReports.clientId],
+    references: [clients.id],
+  }),
+  generatedBy: one(user, {
+    fields: [auditReports.generatedById],
+    references: [user.id],
+  }),
+}));
+
 // Tasks relations
 export const tasksRelations = relations(tasks, ({ one }) => ({
   client: one(clients, {
@@ -607,8 +662,10 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   negativeItems: many(negativeItems),
   analyses: many(creditAnalyses),
   disputes: many(disputes),
+  disputeBatches: many(disputeBatches),
   tasks: many(tasks),
   notes: many(clientNotes),
+  auditReports: many(auditReports),
 }));
 
 export const creditReportsRelations = relations(creditReports, ({ one, many }) => ({
@@ -654,10 +711,22 @@ export const creditAnalysesRelations = relations(creditAnalyses, ({ one }) => ({
   }),
 }));
 
+export const disputeBatchesRelations = relations(disputeBatches, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [disputeBatches.clientId],
+    references: [clients.id],
+  }),
+  disputes: many(disputes),
+}));
+
 export const disputesRelations = relations(disputes, ({ one }) => ({
   client: one(clients, {
     fields: [disputes.clientId],
     references: [clients.id],
+  }),
+  batch: one(disputeBatches, {
+    fields: [disputes.batchId],
+    references: [disputeBatches.id],
   }),
   negativeItem: one(negativeItems, {
     fields: [disputes.negativeItemId],

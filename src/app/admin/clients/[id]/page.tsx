@@ -28,7 +28,10 @@ import {
   MessageSquare,
   CheckSquare,
   Clock,
-  User
+  User,
+  FileBarChart,
+  ExternalLink,
+  Printer
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -193,6 +196,10 @@ export default function ClientDetailPage() {
   });
   const [addingTask, setAddingTask] = React.useState(false);
 
+  // Audit report state
+  const [generatingReport, setGeneratingReport] = React.useState(false);
+  const [showReportModal, setShowReportModal] = React.useState(false);
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchClientData = React.useCallback(async () => {
@@ -353,6 +360,31 @@ export default function ClientDetailPage() {
   const isTaskOverdue = (dueDate: string | null, status: string) => {
     if (!dueDate || status === 'done') return false;
     return new Date(dueDate) < new Date();
+  };
+
+  // Audit Report handlers
+  const handleGenerateReport = async (openInNewTab: boolean = true) => {
+    setGeneratingReport(true);
+    try {
+      if (openInNewTab) {
+        // Open report in new tab for viewing/printing
+        window.open(`/api/admin/clients/${clientId}/audit-report`, '_blank');
+      } else {
+        // Save report to database
+        const response = await fetch(`/api/admin/clients/${clientId}/audit-report`, {
+          method: 'POST',
+        });
+        if (response.ok) {
+          alert('Audit report saved successfully!');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert('Failed to generate report');
+    } finally {
+      setGeneratingReport(false);
+      setShowReportModal(false);
+    }
   };
 
   const handleSave = async () => {
@@ -584,6 +616,14 @@ export default function ClientDetailPage() {
           <Button variant="outline" onClick={fetchClientData}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
+          </Button>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowReportModal(true)}
+            disabled={!latestAnalysis}
+          >
+            <FileBarChart className="w-4 h-4 mr-2" />
+            Audit Report
           </Button>
           <Button onClick={() => setShowUploadModal(true)}>
             <Upload className="w-4 h-4 mr-2" />
@@ -1244,6 +1284,97 @@ export default function ClientDetailPage() {
                   <Button className="flex-1" onClick={handleAddTask} disabled={addingTask || !newTask.title.trim()}>
                     {addingTask && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                     Add Task
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Audit Report Modal */}
+      {showReportModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowReportModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md"
+          >
+            <Card className="bg-card border-border shadow-2xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileBarChart className="w-5 h-5 text-secondary" />
+                  Generate Audit Report
+                </CardTitle>
+                <CardDescription>
+                  Create a professional credit audit report for {client?.first_name} {client?.last_name}.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Negative Items:</span>
+                    <span className="font-medium">{negativeItemsCount}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Credit Scores:</span>
+                    <span className="font-medium">
+                      {latestAnalysis?.score_transunion || '---'} / {latestAnalysis?.score_experian || '---'} / {latestAnalysis?.score_equifax || '---'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleGenerateReport(true)}
+                    disabled={generatingReport}
+                  >
+                    {generatingReport ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                    )}
+                    View Report in New Tab
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      handleGenerateReport(true);
+                      setTimeout(() => {
+                        // Trigger print dialog after opening
+                      }, 500);
+                    }}
+                    disabled={generatingReport}
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Open for Printing / PDF
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleGenerateReport(false)}
+                    disabled={generatingReport}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Report to History
+                  </Button>
+                </div>
+
+                <div className="pt-2">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full" 
+                    onClick={() => setShowReportModal(false)}
+                  >
+                    Cancel
                   </Button>
                 </div>
               </CardContent>

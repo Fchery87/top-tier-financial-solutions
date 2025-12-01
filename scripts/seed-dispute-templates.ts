@@ -1,248 +1,309 @@
+import 'dotenv/config';
 import { db } from '../db/client';
 import { disputeLetterTemplates } from '../db/schema';
 import { randomUUID } from 'crypto';
 
-const DEFAULT_TEMPLATES = [
+const DISPUTE_TEMPLATES = [
+  // Standard Bureau Disputes
   {
-    name: 'Standard Bureau Dispute',
-    description: 'General dispute letter for inaccurate information on credit report',
+    name: 'Standard Bureau Dispute - Round 1',
+    description: 'Initial dispute letter to credit bureaus citing FCRA Section 611',
     disputeType: 'standard',
     targetRecipient: 'bureau',
-    content: `{{current_date}}
-
-{{bureau_name}}
-{{bureau_address}}
-
-Re: Dispute of Inaccurate Information
-SSN: {{ssn_last_four}}
-DOB: {{date_of_birth}}
-
-To Whom It May Concern:
-
-I am writing to dispute the following inaccurate information on my credit report. I have reviewed my credit report and found the following item(s) to be inaccurate:
-
-Account Name: {{creditor_name}}
-Account Number: {{account_number}}
-Reason for Dispute: {{dispute_reason}}
-
-Under the Fair Credit Reporting Act (FCRA) Section 611 (15 U.S.C. § 1681i), you are required to investigate this dispute within 30 days of receiving this letter. If the information cannot be verified, it must be removed from my credit report.
-
-Please investigate this matter and provide me with the results of your investigation in writing.
-
-Sincerely,
-
-{{client_name}}
-{{client_address}}
-{{client_city}}, {{client_state}} {{client_zip}}`,
-    variables: ['current_date', 'bureau_name', 'bureau_address', 'ssn_last_four', 'date_of_birth', 'creditor_name', 'account_number', 'dispute_reason', 'client_name', 'client_address', 'client_city', 'client_state', 'client_zip'],
+    variables: ['client_name', 'client_address', 'creditor_name', 'account_number', 'item_type', 'amount', 'dispute_reason'],
   },
   {
     name: 'Method of Verification Request',
-    description: 'Request for method of verification after initial dispute',
+    description: 'Request for verification method after "verified" response per FCRA 611(a)(7)',
     disputeType: 'method_of_verification',
     targetRecipient: 'bureau',
-    content: `{{current_date}}
-
-{{bureau_name}}
-{{bureau_address}}
-
-Re: Request for Method of Verification
-SSN: {{ssn_last_four}}
-
-To Whom It May Concern:
-
-I recently disputed the following account on my credit report:
-
-Account Name: {{creditor_name}}
-Account Number: {{account_number}}
-
-I received your response indicating that the account was "verified." However, under the Fair Credit Reporting Act (FCRA) Section 611(a)(7), I am entitled to a description of the procedure used to determine the accuracy of the disputed information.
-
-Please provide me with:
-1. The name, address, and telephone number of each person contacted in connection with such verification
-2. A description of the method of verification used
-3. Copies of any documentation used to verify the disputed information
-
-If you cannot provide this information within 15 days, I request that this account be immediately removed from my credit report.
-
-Sincerely,
-
-{{client_name}}
-{{client_address}}
-{{client_city}}, {{client_state}} {{client_zip}}`,
-    variables: ['current_date', 'bureau_name', 'bureau_address', 'ssn_last_four', 'creditor_name', 'account_number', 'client_name', 'client_address', 'client_city', 'client_state', 'client_zip'],
+    variables: ['client_name', 'creditor_name', 'account_number', 'original_dispute_date'],
   },
   {
-    name: 'Goodwill Letter',
-    description: 'Request for removal of late payment as a gesture of goodwill',
-    disputeType: 'goodwill',
+    name: 'Round 2 - Bureau Re-Dispute',
+    description: 'Follow-up dispute after initial investigation with stronger language',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'creditor_name', 'account_number', 'previous_dispute_date', 'round_number'],
+  },
+  
+  // Direct to Creditor
+  {
+    name: 'Direct Creditor Dispute - FCRA 623',
+    description: 'Dispute sent directly to creditor/furnisher citing FCRA Section 623',
+    disputeType: 'direct_creditor',
     targetRecipient: 'creditor',
-    content: `{{current_date}}
-
-{{creditor_name}}
-{{creditor_address}}
-
-Re: Goodwill Adjustment Request
-Account Number: {{account_number}}
-
-Dear Customer Service Department:
-
-I am writing to request a goodwill adjustment on my account referenced above. I have been a loyal customer and have maintained a positive payment history, except for a late payment that occurred on {{late_payment_date}}.
-
-At the time of the late payment, I was experiencing {{hardship_reason}}. Since then, I have resolved the situation and have made all subsequent payments on time.
-
-I am requesting that you consider removing the late payment notation from my credit report as a gesture of goodwill. This negative mark is preventing me from {{impact_statement}}.
-
-I value my relationship with {{creditor_name}} and hope you will consider my request. I am committed to maintaining a positive payment history going forward.
-
-Thank you for your time and consideration.
-
-Sincerely,
-
-{{client_name}}
-{{client_address}}
-{{client_city}}, {{client_state}} {{client_zip}}
-Phone: {{client_phone}}`,
-    variables: ['current_date', 'creditor_name', 'creditor_address', 'account_number', 'late_payment_date', 'hardship_reason', 'impact_statement', 'client_name', 'client_address', 'client_city', 'client_state', 'client_zip', 'client_phone'],
+    variables: ['client_name', 'creditor_name', 'account_number', 'dispute_reason'],
   },
   {
-    name: 'Debt Validation Letter',
-    description: 'Request for debt validation from collection agency',
+    name: 'Round 2 Creditor Follow-up',
+    description: 'Escalation letter to creditor after bureau verification',
+    disputeType: 'direct_creditor',
+    targetRecipient: 'creditor',
+    variables: ['client_name', 'creditor_name', 'account_number', 'bureau_response_date'],
+  },
+  
+  // Debt Validation
+  {
+    name: 'Debt Validation Request - FDCPA',
+    description: 'Request for debt validation under FDCPA Section 809',
     disputeType: 'debt_validation',
     targetRecipient: 'collector',
-    content: `{{current_date}}
-
-{{collector_name}}
-{{collector_address}}
-
-Re: Debt Validation Request
-Reference/Account Number: {{account_number}}
-
-To Whom It May Concern:
-
-I am writing in response to your communication regarding the above-referenced account. I dispute this debt and request validation pursuant to the Fair Debt Collection Practices Act (FDCPA) Section 809(b).
-
-Please provide the following:
-1. The amount of the debt and an explanation of how that amount was calculated
-2. The name and address of the original creditor
-3. Copies of any documents bearing my signature showing I agreed to pay the alleged debt
-4. Proof that the Statute of Limitations has not expired on this debt
-5. Proof that you are licensed to collect debts in my state
-
-Until you provide proper validation of this debt, you must cease all collection activities, including reporting this account to the credit bureaus.
-
-Be advised that I am documenting all communication regarding this matter. Any continued collection activity without proper validation may be considered harassment and a violation of the FDCPA.
-
-Sincerely,
-
-{{client_name}}
-{{client_address}}
-{{client_city}}, {{client_state}} {{client_zip}}`,
-    variables: ['current_date', 'collector_name', 'collector_address', 'account_number', 'client_name', 'client_address', 'client_city', 'client_state', 'client_zip'],
-  },
-  {
-    name: 'Pay for Delete Request',
-    description: 'Offer to pay debt in exchange for deletion from credit report',
-    disputeType: 'direct_creditor',
-    targetRecipient: 'collector',
-    content: `{{current_date}}
-
-{{collector_name}}
-{{collector_address}}
-
-Re: Settlement Offer - Pay for Delete
-Account Number: {{account_number}}
-Original Creditor: {{original_creditor}}
-
-To Whom It May Concern:
-
-I am writing regarding the above-referenced account that appears on my credit report. I am prepared to resolve this matter and would like to propose a settlement.
-
-I am offering to pay {{settlement_amount}} as payment in full for this account. In exchange, I request that you:
-
-1. Accept this amount as payment in full satisfaction of the debt
-2. Delete all references to this account from all three credit bureaus (TransUnion, Experian, and Equifax)
-3. Provide written confirmation of the deletion within 30 days of payment
-
-If you agree to these terms, please respond in writing. Upon receipt of your written agreement, I will send payment via certified funds.
-
-Please note that this is not an acknowledgment of the debt, but rather an attempt to resolve this matter efficiently.
-
-Sincerely,
-
-{{client_name}}
-{{client_address}}
-{{client_city}}, {{client_state}} {{client_zip}}`,
-    variables: ['current_date', 'collector_name', 'collector_address', 'account_number', 'original_creditor', 'settlement_amount', 'client_name', 'client_address', 'client_city', 'client_state', 'client_zip'],
+    variables: ['client_name', 'collector_name', 'account_number', 'alleged_amount'],
   },
   {
     name: 'Cease and Desist Letter',
-    description: 'Demand to stop all contact and collection activities',
+    description: 'Demand to stop collection activity under FDCPA',
     disputeType: 'cease_desist',
     targetRecipient: 'collector',
-    content: `{{current_date}}
+    variables: ['client_name', 'collector_name', 'account_number'],
+  },
+  
+  // Goodwill Letters
+  {
+    name: 'Goodwill Adjustment Request',
+    description: 'Request for goodwill removal of negative mark based on payment history',
+    disputeType: 'goodwill',
+    targetRecipient: 'creditor',
+    variables: ['client_name', 'creditor_name', 'account_number', 'explanation'],
+  },
+  {
+    name: 'Pay for Delete Offer',
+    description: 'Offer to pay collection in exchange for deletion',
+    disputeType: 'goodwill',
+    targetRecipient: 'collector',
+    variables: ['client_name', 'collector_name', 'account_number', 'offer_amount'],
+  },
+  
+  // Specialized Disputes
+  {
+    name: 'Identity Theft Affidavit Cover Letter',
+    description: 'Cover letter for FTC Identity Theft Affidavit submission',
+    disputeType: 'identity_theft',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'creditor_name', 'account_number', 'police_report_number'],
+  },
+  {
+    name: 'Mixed File / Wrong Person Dispute',
+    description: 'Dispute for accounts belonging to another consumer',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'creditor_name', 'account_number'],
+  },
+  {
+    name: 'Obsolete Debt Removal (7-Year Rule)',
+    description: 'Demand removal of accounts exceeding 7-year reporting period',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'creditor_name', 'account_number', 'original_delinquency_date'],
+  },
+  {
+    name: 'Re-aging Dispute',
+    description: 'Dispute for accounts that have been illegally re-aged',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'creditor_name', 'account_number', 'original_date', 'current_date_reported'],
+  },
+  {
+    name: 'Duplicate Entry Removal',
+    description: 'Request removal of duplicate account entries',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'creditor_name', 'account_numbers'],
+  },
+  
+  // Inquiry Disputes
+  {
+    name: 'Unauthorized Inquiry Removal',
+    description: 'Dispute for hard inquiries made without permissible purpose',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'inquiry_company', 'inquiry_date'],
+  },
+  {
+    name: 'Hard Inquiry to Soft Conversion Request',
+    description: 'Request to convert hard inquiry to soft inquiry',
+    disputeType: 'standard',
+    targetRecipient: 'creditor',
+    variables: ['client_name', 'creditor_name', 'inquiry_date'],
+  },
+  
+  // Bankruptcy and Judgments
+  {
+    name: 'Bankruptcy Removal Request',
+    description: 'Request removal of discharged bankruptcy accounts',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'bankruptcy_case_number', 'discharge_date'],
+  },
+  {
+    name: 'Judgment Satisfaction Letter',
+    description: 'Request update/removal after judgment satisfaction',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'judgment_creditor', 'case_number', 'satisfaction_date'],
+  },
+  {
+    name: 'Tax Lien Withdrawal Request',
+    description: 'Request removal after tax lien has been released',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'lien_number', 'release_date'],
+  },
+  
+  // Specific Account Types
+  {
+    name: 'Medical Debt Dispute',
+    description: 'Specialized dispute for medical collection accounts',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'medical_provider', 'collection_agency', 'account_number', 'amount'],
+  },
+  {
+    name: 'Student Loan Rehabilitation Letter',
+    description: 'Request removal of late payments after loan rehabilitation',
+    disputeType: 'goodwill',
+    targetRecipient: 'creditor',
+    variables: ['client_name', 'loan_servicer', 'account_number', 'rehabilitation_date'],
+  },
+  {
+    name: 'Authorized User Removal',
+    description: 'Request removal of authorized user account',
+    disputeType: 'standard',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'creditor_name', 'account_number', 'primary_holder_name'],
+  },
+  
+  // Regulatory Escalation
+  {
+    name: 'CFPB Complaint Letter',
+    description: 'Formal complaint to Consumer Financial Protection Bureau',
+    disputeType: 'cfpb_complaint',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'bureau_name', 'dispute_history', 'violations'],
+  },
+  {
+    name: 'State Attorney General Complaint',
+    description: 'Complaint to state AG for FCRA violations',
+    disputeType: 'cfpb_complaint',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'state', 'bureau_name', 'violations'],
+  },
+  
+  // Credit Freeze and Fraud
+  {
+    name: 'Fraud Alert Request',
+    description: 'Request to place fraud alert on credit file',
+    disputeType: 'identity_theft',
+    targetRecipient: 'bureau',
+    variables: ['client_name', 'phone_number'],
+  },
+  {
+    name: 'Credit Freeze Request',
+    description: 'Request to freeze credit file',
+    disputeType: 'identity_theft',
+    targetRecipient: 'bureau',
+    variables: ['client_name'],
+  },
+];
 
-{{collector_name}}
-{{collector_address}}
+function generateTemplateContent(template: typeof DISPUTE_TEMPLATES[0]): string {
+  const baseContent = `{{current_date}}
 
-Re: Cease and Desist Demand
-Account Number: {{account_number}}
+{{recipient_address}}
 
-CEASE AND DESIST NOTICE
+Re: {{subject_line}}
+{{#if account_number}}Account Number: ****{{account_number_last4}}{{/if}}
 
-This letter is to inform you that I am exercising my rights under the Fair Debt Collection Practices Act (FDCPA) Section 805(c) to demand that you cease all communication with me regarding the alleged debt referenced above.
+To Whom It May Concern:
 
-Effective immediately, you must:
-1. Stop all telephone calls to my home, work, and cell phone
-2. Stop all written correspondence
-3. Stop all contact with third parties regarding this alleged debt
-4. Stop all attempts to collect this alleged debt
+I am writing to formally dispute information appearing on my credit report. After careful review of my credit file, I have identified inaccurate, unverifiable, or incomplete information that violates federal reporting standards.
 
-Any further communication from you, except to notify me that collection efforts are being terminated or that you intend to take specific legal action, will be considered harassment and a violation of federal law.
+COMPLIANCE FRAMEWORK VIOLATIONS:
 
-I am documenting all communications and will pursue all available legal remedies if you continue to contact me.
+FAIR CREDIT REPORTING ACT (FCRA):
+- Section 611 (15 U.S.C. § 1681i): Requires reasonable investigation within 30 days
+- Section 623 (15 U.S.C. § 1681s-2): Furnishers must report accurate information
+- Section 609 (15 U.S.C. § 1681g): Consumer's right to disclosure
+- Section 605 (15 U.S.C. § 1681c): Prohibits reporting obsolete information
+
+METRO 2 FORMAT COMPLIANCE:
+- Data furnishers must report complete and accurate information in Metro 2 format
+- Account status codes, payment history, and balance information must be verified
+- Failure to maintain Metro 2 compliance constitutes willful non-compliance
+
+CREDIT REPAIR SERVICES ACT (CRSA):
+- Consumers have the right to dispute any inaccurate information
+- Credit bureaus cannot report unverifiable information
+- Failure to delete unverifiable items is a violation
+
+DISPUTED INFORMATION:
+Creditor/Company: {{creditor_name}}
+{{#if account_number}}Account Number: ****{{account_number_last4}}{{/if}}
+{{#if item_type}}Item Type: {{item_type}}{{/if}}
+{{#if amount}}Amount: {{amount}}{{/if}}
+
+REASON FOR DISPUTE:
+{{dispute_reason}}
+
+DEMAND FOR ACTION:
+I am NOT requesting a simple "correction" or "update." The information is fundamentally inaccurate and unverifiable. I am demanding its COMPLETE DELETION from my credit file pursuant to my rights under the FCRA.
+
+You are required to:
+1. Conduct a thorough and reasonable investigation
+2. Contact the original data furnisher to verify accuracy
+3. Provide documentation of your investigation method
+4. DELETE this item if it cannot be fully verified with documentation
+
+You have 30 days from receipt of this letter to complete your investigation per FCRA requirements. Failure to investigate and respond, or continued reporting of unverifiable information, may result in legal action for willful non-compliance under 15 U.S.C. § 1681n, which provides for statutory damages of $100-$1,000 per violation plus punitive damages.
+
+I expect written confirmation of deletion or detailed verification documentation.
 
 Sincerely,
 
 {{client_name}}
 {{client_address}}
-{{client_city}}, {{client_state}} {{client_zip}}
 
-Sent via Certified Mail: {{tracking_number}}`,
-    variables: ['current_date', 'collector_name', 'collector_address', 'account_number', 'client_name', 'client_address', 'client_city', 'client_state', 'client_zip', 'tracking_number'],
-  },
-];
+Enclosures:
+- Copy of identification
+- Proof of address`;
 
-async function seedDisputeTemplates() {
-  console.log('Seeding dispute letter templates...');
-  
-  const now = new Date();
-  
-  for (const template of DEFAULT_TEMPLATES) {
-    const id = randomUUID();
-    
-    await db.insert(disputeLetterTemplates).values({
-      id,
-      name: template.name,
-      description: template.description,
-      disputeType: template.disputeType,
-      targetRecipient: template.targetRecipient,
-      content: template.content,
-      variables: JSON.stringify(template.variables),
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    }).onConflictDoNothing();
-    
-    console.log(`  Created template: ${template.name}`);
-  }
-  
-  console.log('Done seeding dispute templates!');
+  return baseContent;
 }
 
-seedDisputeTemplates()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('Error seeding templates:', error);
-    process.exit(1);
-  });
+async function seedTemplates() {
+  console.log('Seeding dispute letter templates...');
+
+  const now = new Date();
+  
+  for (const template of DISPUTE_TEMPLATES) {
+    const id = randomUUID();
+    const content = generateTemplateContent(template);
+    
+    try {
+      await db.insert(disputeLetterTemplates).values({
+        id,
+        name: template.name,
+        description: template.description,
+        disputeType: template.disputeType,
+        targetRecipient: template.targetRecipient,
+        content,
+        variables: JSON.stringify(template.variables),
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      console.log(`  ✓ Created: ${template.name}`);
+    } catch (error) {
+      console.error(`  ✗ Failed: ${template.name}`, error);
+    }
+  }
+
+  console.log(`\nSeeded ${DISPUTE_TEMPLATES.length} dispute letter templates.`);
+  process.exit(0);
+}
+
+seedTemplates().catch((error) => {
+  console.error('Seed failed:', error);
+  process.exit(1);
+});

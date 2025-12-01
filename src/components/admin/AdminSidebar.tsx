@@ -20,13 +20,17 @@ import {
   Mail,
   Briefcase,
   UserCheck,
-  CheckSquare
+  CheckSquare,
+  Wand2,
+  Library
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Clients', href: '/admin/clients', icon: UserCheck },
+  { name: 'Dispute Wizard', href: '/admin/disputes/wizard', icon: Wand2 },
+  { name: 'Letter Templates', href: '/admin/dispute-templates', icon: Library },
   { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
   { name: 'Contact Leads', href: '/admin/leads', icon: Users },
   { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
