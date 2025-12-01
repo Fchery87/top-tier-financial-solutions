@@ -1,10 +1,25 @@
 import { db } from '@/db/client';
-import { creditReports, creditAccounts, negativeItems, creditAnalyses } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { 
+  creditReports, 
+  creditAccounts, 
+  negativeItems, 
+  creditAnalyses,
+  consumerProfiles,
+  bureauDiscrepancies,
+  fcraComplianceItems,
+} from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getFileFromR2 } from './r2-storage';
-import { parsePdfCreditReport, type ParsedCreditData } from './parsers/pdf-parser';
+import { parsePdfCreditReport, type ParsedCreditData, type ParsedConsumerProfile } from './parsers/pdf-parser';
 import { parseHtmlCreditReport } from './parsers/html-parser';
+import {
+  calculateCompletenessScore,
+  calculateFcraComplianceDate,
+  FCRA_REPORTING_LIMITS,
+  isAccountNegative,
+  calculateRiskLevel,
+} from './parsers/metro2-mapping';
 
 export async function analyzeCreditReport(reportId: string): Promise<void> {
   // Get the report
@@ -28,6 +43,8 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     // Clear existing parsed data for re-analysis
     await db.delete(negativeItems).where(eq(negativeItems.creditReportId, reportId));
     await db.delete(creditAccounts).where(eq(creditAccounts.creditReportId, reportId));
+    await db.delete(consumerProfiles).where(eq(consumerProfiles.creditReportId, reportId));
+    await db.delete(fcraComplianceItems).where(eq(fcraComplianceItems.clientId, report.clientId));
 
     // Get file from R2
     const fileBuffer = await getFileFromR2(report.fileUrl);
@@ -46,10 +63,45 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       parsedData = parseHtmlCreditReport(`<pre>${textContent}</pre>`);
     }
 
-    // Store parsed accounts
+    // Store consumer profile if available
+    if (parsedData.consumerProfile) {
+      await saveConsumerProfile(report.clientId, reportId, report.bureau, parsedData.consumerProfile);
+    }
+
+    // Store parsed accounts with completeness scoring
+    const storedAccountIds: string[] = [];
     for (const account of parsedData.accounts) {
+      const accountId = randomUUID();
+      storedAccountIds.push(accountId);
+      
+      // Calculate completeness score
+      const { score: completenessScore, missingFields } = calculateCompletenessScore({
+        creditorName: account.creditorName,
+        accountNumber: account.accountNumber,
+        accountType: account.accountType,
+        accountStatus: account.accountStatus as any,
+        balance: account.balance,
+        creditLimit: account.creditLimit,
+        highCredit: account.highCredit,
+        dateOpened: account.dateOpened,
+        dateReported: account.dateReported,
+        paymentStatus: account.paymentStatus as any,
+      });
+      
+      // Re-calculate negative status and risk using metro2 functions
+      const isNegativeCalc = isAccountNegative({
+        accountStatus: account.accountStatus as any,
+        paymentStatus: account.paymentStatus as any,
+        pastDueAmount: account.pastDueAmount,
+      });
+      const riskLevelCalc = calculateRiskLevel({
+        accountStatus: account.accountStatus as any,
+        paymentStatus: account.paymentStatus as any,
+        accountCategory: account.accountType as any,
+      });
+      
       await db.insert(creditAccounts).values({
-        id: randomUUID(),
+        id: accountId,
         creditReportId: reportId,
         clientId: report.clientId,
         creditorName: account.creditorName,
@@ -65,17 +117,21 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         dateOpened: account.dateOpened,
         dateReported: account.dateReported,
         bureau: report.bureau,
-        isNegative: account.isNegative,
-        riskLevel: account.riskLevel,
-        remarks: account.remarks,
+        isNegative: isNegativeCalc,
+        riskLevel: riskLevelCalc,
+        remarks: missingFields.length > 0 
+          ? `Completeness: ${completenessScore}%. Missing: ${missingFields.join(', ')}`
+          : account.remarks,
         createdAt: new Date(),
       });
     }
 
-    // Store negative items
+    // Store negative items and calculate FCRA compliance
     for (const item of parsedData.negativeItems) {
+      const negativeItemId = randomUUID();
+      
       await db.insert(negativeItems).values({
-        id: randomUUID(),
+        id: negativeItemId,
         creditReportId: reportId,
         clientId: report.clientId,
         itemType: item.itemType,
@@ -88,7 +144,18 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         recommendedAction: getRecommendedAction(item),
         createdAt: new Date(),
       });
+      
+      // Calculate and store FCRA compliance for this item
+      await saveFcraComplianceItem(
+        report.clientId,
+        negativeItemId,
+        item,
+        report.bureau
+      );
     }
+    
+    // Run cross-bureau discrepancy detection
+    await detectBureauDiscrepancies(report.clientId);
 
     // Create or update analysis
     const analysisId = randomUUID();
@@ -229,4 +296,367 @@ function generateRecommendations(data: ParsedCreditData): string[] {
   }
   
   return recommendations;
+}
+
+// ============================================
+// CONSUMER PROFILE MANAGEMENT
+// ============================================
+
+async function saveConsumerProfile(
+  clientId: string,
+  creditReportId: string,
+  bureau: string | null,
+  profile: ParsedConsumerProfile
+): Promise<void> {
+  // Save each name variation
+  for (const name of profile.names) {
+    await db.insert(consumerProfiles).values({
+      id: randomUUID(),
+      clientId,
+      creditReportId,
+      bureau: name.bureau || bureau,
+      firstName: name.firstName,
+      middleName: name.middleName,
+      lastName: name.lastName,
+      suffix: name.suffix,
+      ssnLast4: profile.ssnLast4,
+      dateOfBirth: profile.dateOfBirth,
+      createdAt: new Date(),
+    });
+  }
+  
+  // Save addresses
+  for (const address of profile.addresses) {
+    await db.insert(consumerProfiles).values({
+      id: randomUUID(),
+      clientId,
+      creditReportId,
+      bureau: address.bureau || bureau,
+      addressStreet: address.street,
+      addressCity: address.city,
+      addressState: address.state,
+      addressZip: address.zipCode,
+      addressType: address.addressType,
+      ssnLast4: profile.ssnLast4,
+      dateOfBirth: profile.dateOfBirth,
+      createdAt: new Date(),
+    });
+  }
+  
+  // Save employers
+  for (const employer of profile.employers) {
+    await db.insert(consumerProfiles).values({
+      id: randomUUID(),
+      clientId,
+      creditReportId,
+      bureau: employer.bureau || bureau,
+      employer: employer.name,
+      ssnLast4: profile.ssnLast4,
+      dateOfBirth: profile.dateOfBirth,
+      createdAt: new Date(),
+    });
+  }
+}
+
+// ============================================
+// FCRA COMPLIANCE CHECKING
+// ============================================
+
+async function saveFcraComplianceItem(
+  clientId: string,
+  negativeItemId: string,
+  item: { itemType: string; creditorName: string; dateReported?: Date },
+  bureau: string | null
+): Promise<void> {
+  // Determine reporting limit based on item type
+  let reportingLimitYears = FCRA_REPORTING_LIMITS.general;
+  const itemTypeLower = item.itemType.toLowerCase();
+  
+  if (itemTypeLower.includes('bankruptcy')) {
+    reportingLimitYears = itemTypeLower.includes('chapter_7') || itemTypeLower.includes('chapter7')
+      ? FCRA_REPORTING_LIMITS.bankruptcy_chapter7
+      : FCRA_REPORTING_LIMITS.bankruptcy_chapter13;
+  } else if (itemTypeLower === 'collection') {
+    reportingLimitYears = FCRA_REPORTING_LIMITS.collections;
+  } else if (itemTypeLower === 'charge_off') {
+    reportingLimitYears = FCRA_REPORTING_LIMITS.charge_offs;
+  } else if (itemTypeLower === 'late_payment') {
+    reportingLimitYears = FCRA_REPORTING_LIMITS.late_payments;
+  } else if (itemTypeLower === 'foreclosure') {
+    reportingLimitYears = FCRA_REPORTING_LIMITS.foreclosures;
+  } else if (itemTypeLower === 'repossession') {
+    reportingLimitYears = FCRA_REPORTING_LIMITS.repossessions;
+  }
+  
+  // Calculate FCRA expiration date
+  const dateOfFirstDelinquency = item.dateReported; // Using dateReported as proxy
+  let fcraExpirationDate: Date | null = null;
+  let daysUntilExpiration: number | null = null;
+  let isPastLimit = false;
+  
+  if (dateOfFirstDelinquency) {
+    fcraExpirationDate = new Date(dateOfFirstDelinquency);
+    fcraExpirationDate.setFullYear(fcraExpirationDate.getFullYear() + reportingLimitYears);
+    
+    const now = new Date();
+    daysUntilExpiration = Math.ceil((fcraExpirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    isPastLimit = daysUntilExpiration <= 0;
+  }
+  
+  await db.insert(fcraComplianceItems).values({
+    id: randomUUID(),
+    clientId,
+    negativeItemId,
+    itemType: item.itemType,
+    creditorName: item.creditorName,
+    dateOfFirstDelinquency,
+    fcraExpirationDate,
+    reportingLimitYears,
+    daysUntilExpiration,
+    isPastLimit,
+    bureau,
+    disputeStatus: isPastLimit ? 'pending' : null,
+    notes: isPastLimit 
+      ? `FCRA VIOLATION: Item past ${reportingLimitYears}-year reporting limit. Immediate dispute recommended.`
+      : daysUntilExpiration && daysUntilExpiration < 180
+        ? `Item expires in ${daysUntilExpiration} days. Consider waiting or disputing.`
+        : null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+}
+
+// ============================================
+// CROSS-BUREAU DISCREPANCY DETECTION
+// ============================================
+
+async function detectBureauDiscrepancies(clientId: string): Promise<void> {
+  // Get all accounts for this client grouped by creditor
+  const allAccounts = await db
+    .select()
+    .from(creditAccounts)
+    .where(eq(creditAccounts.clientId, clientId));
+  
+  // Get all consumer profiles for comparison
+  const allProfiles = await db
+    .select()
+    .from(consumerProfiles)
+    .where(eq(consumerProfiles.clientId, clientId));
+  
+  // Clear existing discrepancies for this client
+  await db.delete(bureauDiscrepancies).where(eq(bureauDiscrepancies.clientId, clientId));
+  
+  // Group accounts by creditor name (normalized)
+  const accountsByCreditor = new Map<string, typeof allAccounts>();
+  for (const account of allAccounts) {
+    const normalizedName = account.creditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!accountsByCreditor.has(normalizedName)) {
+      accountsByCreditor.set(normalizedName, []);
+    }
+    accountsByCreditor.get(normalizedName)!.push(account);
+  }
+  
+  // Check for account discrepancies
+  for (const [creditorKey, accounts] of accountsByCreditor) {
+    if (accounts.length < 2) continue; // Need at least 2 bureaus to compare
+    
+    // Get values by bureau
+    const byBureau: Record<string, typeof accounts[0]> = {};
+    for (const acc of accounts) {
+      if (acc.bureau) byBureau[acc.bureau] = acc;
+    }
+    
+    const bureaus = Object.keys(byBureau);
+    if (bureaus.length < 2) continue;
+    
+    // Compare balances
+    const balances = bureaus.map(b => byBureau[b].balance).filter(b => b !== null);
+    if (balances.length > 1) {
+      const uniqueBalances = new Set(balances);
+      if (uniqueBalances.size > 1) {
+        await db.insert(bureauDiscrepancies).values({
+          id: randomUUID(),
+          clientId,
+          discrepancyType: 'account_balance',
+          field: 'balance',
+          creditorName: accounts[0].creditorName,
+          accountNumber: accounts[0].accountNumber,
+          valueTransunion: byBureau['transunion']?.balance?.toString() || null,
+          valueExperian: byBureau['experian']?.balance?.toString() || null,
+          valueEquifax: byBureau['equifax']?.balance?.toString() || null,
+          severity: 'medium',
+          isDisputable: true,
+          disputeRecommendation: 'Balance differs across bureaus. Request verification from all three bureaus.',
+          createdAt: new Date(),
+        });
+      }
+    }
+    
+    // Compare account status
+    const statuses = bureaus.map(b => byBureau[b].accountStatus).filter(s => s !== null);
+    if (statuses.length > 1) {
+      const uniqueStatuses = new Set(statuses);
+      if (uniqueStatuses.size > 1) {
+        await db.insert(bureauDiscrepancies).values({
+          id: randomUUID(),
+          clientId,
+          discrepancyType: 'account_status',
+          field: 'accountStatus',
+          creditorName: accounts[0].creditorName,
+          accountNumber: accounts[0].accountNumber,
+          valueTransunion: byBureau['transunion']?.accountStatus || null,
+          valueExperian: byBureau['experian']?.accountStatus || null,
+          valueEquifax: byBureau['equifax']?.accountStatus || null,
+          severity: 'high',
+          isDisputable: true,
+          disputeRecommendation: 'Account status differs across bureaus. This is a strong dispute basis under FCRA.',
+          createdAt: new Date(),
+        });
+      }
+    }
+    
+    // Compare payment status
+    const payStatuses = bureaus.map(b => byBureau[b].paymentStatus).filter(s => s !== null);
+    if (payStatuses.length > 1) {
+      const uniquePayStatuses = new Set(payStatuses);
+      if (uniquePayStatuses.size > 1) {
+        await db.insert(bureauDiscrepancies).values({
+          id: randomUUID(),
+          clientId,
+          discrepancyType: 'payment_history',
+          field: 'paymentStatus',
+          creditorName: accounts[0].creditorName,
+          accountNumber: accounts[0].accountNumber,
+          valueTransunion: byBureau['transunion']?.paymentStatus || null,
+          valueExperian: byBureau['experian']?.paymentStatus || null,
+          valueEquifax: byBureau['equifax']?.paymentStatus || null,
+          severity: 'high',
+          isDisputable: true,
+          disputeRecommendation: 'Payment history differs across bureaus. Request method of verification.',
+          createdAt: new Date(),
+        });
+      }
+    }
+  }
+  
+  // Check for PII discrepancies
+  await detectPiiDiscrepancies(clientId, allProfiles);
+}
+
+async function detectPiiDiscrepancies(
+  clientId: string, 
+  profiles: Array<{
+    bureau: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    addressStreet: string | null;
+    addressCity: string | null;
+    addressState: string | null;
+    addressZip: string | null;
+    ssnLast4: string | null;
+    dateOfBirth: Date | null;
+  }>
+): Promise<void> {
+  // Group profiles by bureau
+  const byBureau: Record<string, typeof profiles> = {};
+  for (const profile of profiles) {
+    const bureau = profile.bureau || 'unknown';
+    if (!byBureau[bureau]) byBureau[bureau] = [];
+    byBureau[bureau].push(profile);
+  }
+  
+  const bureaus = Object.keys(byBureau).filter(b => b !== 'unknown');
+  if (bureaus.length < 2) return;
+  
+  // Check name variations
+  const namesByBureau: Record<string, Set<string>> = {};
+  for (const bureau of bureaus) {
+    namesByBureau[bureau] = new Set();
+    for (const profile of byBureau[bureau]) {
+      if (profile.firstName && profile.lastName) {
+        namesByBureau[bureau].add(`${profile.firstName} ${profile.lastName}`.toLowerCase());
+      }
+    }
+  }
+  
+  // Find names that appear on one bureau but not others
+  const allNames = new Set<string>();
+  for (const names of Object.values(namesByBureau)) {
+    for (const name of names) allNames.add(name);
+  }
+  
+  for (const name of allNames) {
+    const presentOn: string[] = [];
+    const missingFrom: string[] = [];
+    
+    for (const bureau of bureaus) {
+      if (namesByBureau[bureau].has(name)) {
+        presentOn.push(bureau);
+      } else {
+        missingFrom.push(bureau);
+      }
+    }
+    
+    if (presentOn.length > 0 && missingFrom.length > 0) {
+      await db.insert(bureauDiscrepancies).values({
+        id: randomUUID(),
+        clientId,
+        discrepancyType: 'pii_name',
+        field: 'name',
+        valueTransunion: namesByBureau['transunion']?.has(name) ? name : null,
+        valueExperian: namesByBureau['experian']?.has(name) ? name : null,
+        valueEquifax: namesByBureau['equifax']?.has(name) ? name : null,
+        severity: 'low',
+        isDisputable: true,
+        disputeRecommendation: `Name "${name}" appears on ${presentOn.join(', ')} but not on ${missingFrom.join(', ')}. May indicate identity issue.`,
+        createdAt: new Date(),
+      });
+    }
+  }
+  
+  // Check address variations similarly
+  const addressesByBureau: Record<string, Set<string>> = {};
+  for (const bureau of bureaus) {
+    addressesByBureau[bureau] = new Set();
+    for (const profile of byBureau[bureau]) {
+      if (profile.addressStreet) {
+        const addr = `${profile.addressStreet}, ${profile.addressCity}, ${profile.addressState} ${profile.addressZip}`.toLowerCase();
+        addressesByBureau[bureau].add(addr);
+      }
+    }
+  }
+  
+  const allAddresses = new Set<string>();
+  for (const addrs of Object.values(addressesByBureau)) {
+    for (const addr of addrs) allAddresses.add(addr);
+  }
+  
+  for (const addr of allAddresses) {
+    const presentOn: string[] = [];
+    const missingFrom: string[] = [];
+    
+    for (const bureau of bureaus) {
+      if (addressesByBureau[bureau].has(addr)) {
+        presentOn.push(bureau);
+      } else {
+        missingFrom.push(bureau);
+      }
+    }
+    
+    if (presentOn.length > 0 && missingFrom.length > 0 && missingFrom.length < bureaus.length) {
+      await db.insert(bureauDiscrepancies).values({
+        id: randomUUID(),
+        clientId,
+        discrepancyType: 'pii_address',
+        field: 'address',
+        valueTransunion: addressesByBureau['transunion']?.has(addr) ? addr : null,
+        valueExperian: addressesByBureau['experian']?.has(addr) ? addr : null,
+        valueEquifax: addressesByBureau['equifax']?.has(addr) ? addr : null,
+        severity: 'low',
+        isDisputable: false,
+        disputeRecommendation: `Address discrepancy found across bureaus. Review for accuracy.`,
+        createdAt: new Date(),
+      });
+    }
+  }
 }

@@ -16,6 +16,7 @@ export interface AuditReportData {
     riskSeverity: string;
     recommendedAction: string | null;
     bureau: string | null;
+    dateReported?: Date | null;
   }>;
   accounts: Array<{
     creditorName: string;
@@ -23,6 +24,7 @@ export interface AuditReportData {
     balance: number | null;
     creditLimit: number | null;
     isNegative: boolean;
+    remarks?: string | null;
   }>;
   summary: {
     totalAccounts: number;
@@ -42,6 +44,36 @@ export interface AuditReportData {
     email: string;
     website?: string;
   };
+  // Phase 4: Enhanced sections
+  fcraComplianceItems?: Array<{
+    itemType: string;
+    creditorName: string;
+    fcraExpirationDate: Date | null;
+    daysUntilExpiration: number | null;
+    isPastLimit: boolean;
+    reportingLimitYears: number | null;
+    bureau: string | null;
+    notes: string | null;
+  }>;
+  bureauDiscrepancies?: Array<{
+    discrepancyType: string;
+    field: string | null;
+    creditorName: string | null;
+    valueTransunion: string | null;
+    valueExperian: string | null;
+    valueEquifax: string | null;
+    severity: string | null;
+    disputeRecommendation: string | null;
+  }>;
+  round1Strategy?: Array<{
+    priority: number;
+    itemType: string;
+    creditorName: string;
+    bureau: string | null;
+    reason: string;
+    fcraCode: string;
+    disputeType: string;
+  }>;
 }
 
 function formatCurrency(cents: number | null): string {
@@ -101,6 +133,164 @@ function calculateProjectedIncrease(negativeItems: AuditReportData['negativeItem
     }
   }
   return Math.min(increase, 150); // Cap at 150 points
+}
+
+// FCRA Citation codes for dispute reasons
+const FCRA_DISPUTE_CODES: Record<string, { code: string; citation: string; description: string }> = {
+  past_reporting_limit: {
+    code: 'FCRA-605',
+    citation: '15 U.S.C. § 1681c',
+    description: 'Item exceeds maximum reporting period under FCRA Section 605',
+  },
+  inaccurate_information: {
+    code: 'FCRA-623',
+    citation: '15 U.S.C. § 1681s-2',
+    description: 'Furnisher duty to provide accurate information under FCRA Section 623',
+  },
+  unverifiable: {
+    code: 'FCRA-611',
+    citation: '15 U.S.C. § 1681i',
+    description: 'Bureau must reinvestigate and delete unverifiable information under FCRA Section 611',
+  },
+  incomplete_information: {
+    code: 'FCRA-623(a)(2)',
+    citation: '15 U.S.C. § 1681s-2(a)(2)',
+    description: 'Duty to correct and update incomplete information',
+  },
+  identity_theft: {
+    code: 'FCRA-605B',
+    citation: '15 U.S.C. § 1681c-2',
+    description: 'Block of information resulting from identity theft',
+  },
+  cross_bureau_discrepancy: {
+    code: 'FCRA-611(a)(1)',
+    citation: '15 U.S.C. § 1681i(a)(1)',
+    description: 'Reinvestigation required when information differs across bureaus',
+  },
+  obsolete_information: {
+    code: 'FCRA-605(a)',
+    citation: '15 U.S.C. § 1681c(a)',
+    description: 'Obsolete information must not be reported',
+  },
+};
+
+function getFcraCodeForItem(item: { itemType: string; isPastLimit?: boolean; hasDiscrepancy?: boolean }): { code: string; citation: string; description: string } {
+  if (item.isPastLimit) {
+    return FCRA_DISPUTE_CODES.past_reporting_limit;
+  }
+  if (item.hasDiscrepancy) {
+    return FCRA_DISPUTE_CODES.cross_bureau_discrepancy;
+  }
+  // Default based on item type
+  return FCRA_DISPUTE_CODES.inaccurate_information;
+}
+
+function getDisputeTypeForItem(itemType: string, isPastLimit: boolean): string {
+  if (isPastLimit) return 'Obsolete Information - Request Immediate Deletion';
+  
+  switch (itemType.toLowerCase()) {
+    case 'collection':
+      return 'Debt Validation + Method of Verification';
+    case 'charge_off':
+      return 'Balance/Status Verification';
+    case 'late_payment':
+      return 'Payment History Accuracy Dispute';
+    case 'bankruptcy':
+      return 'Status/Discharge Date Verification';
+    case 'inquiry':
+      return 'Unauthorized Inquiry Removal';
+    default:
+      return 'General Accuracy Dispute';
+  }
+}
+
+// Generate prioritized Round 1 strategy
+export function generateRound1Strategy(data: AuditReportData): AuditReportData['round1Strategy'] {
+  const strategy: NonNullable<AuditReportData['round1Strategy']> = [];
+  
+  // Priority 1: FCRA violations (past reporting limit)
+  if (data.fcraComplianceItems) {
+    for (const item of data.fcraComplianceItems) {
+      if (item.isPastLimit) {
+        const fcraInfo = getFcraCodeForItem({ itemType: item.itemType, isPastLimit: true });
+        strategy.push({
+          priority: 1,
+          itemType: item.itemType,
+          creditorName: item.creditorName,
+          bureau: item.bureau,
+          reason: `Past ${item.reportingLimitYears}-year FCRA limit - IMMEDIATE DELETION REQUIRED`,
+          fcraCode: `${fcraInfo.code} - ${fcraInfo.citation}`,
+          disputeType: 'Obsolete Information Dispute',
+        });
+      }
+    }
+  }
+  
+  // Priority 2: Cross-bureau discrepancies (high severity)
+  if (data.bureauDiscrepancies) {
+    for (const disc of data.bureauDiscrepancies) {
+      if (disc.severity === 'high') {
+        const fcraInfo = FCRA_DISPUTE_CODES.cross_bureau_discrepancy;
+        strategy.push({
+          priority: 2,
+          itemType: disc.discrepancyType,
+          creditorName: disc.creditorName || 'Multiple Items',
+          bureau: 'All Three Bureaus',
+          reason: `${formatItemType(disc.discrepancyType)} differs across bureaus`,
+          fcraCode: `${fcraInfo.code} - ${fcraInfo.citation}`,
+          disputeType: 'Method of Verification Request',
+        });
+      }
+    }
+  }
+  
+  // Priority 3: Collections (high-value targets)
+  const collections = data.negativeItems.filter(i => i.itemType === 'collection');
+  for (const item of collections.slice(0, 5)) {
+    const fcraInfo = FCRA_DISPUTE_CODES.unverifiable;
+    strategy.push({
+      priority: 3,
+      itemType: item.itemType,
+      creditorName: item.creditorName,
+      bureau: item.bureau,
+      reason: 'Collection account - request debt validation',
+      fcraCode: `${fcraInfo.code} - ${fcraInfo.citation}`,
+      disputeType: getDisputeTypeForItem(item.itemType, false),
+    });
+  }
+  
+  // Priority 4: Charge-offs
+  const chargeOffs = data.negativeItems.filter(i => i.itemType === 'charge_off');
+  for (const item of chargeOffs.slice(0, 3)) {
+    const fcraInfo = FCRA_DISPUTE_CODES.inaccurate_information;
+    strategy.push({
+      priority: 4,
+      itemType: item.itemType,
+      creditorName: item.creditorName,
+      bureau: item.bureau,
+      reason: 'Charge-off - verify balance and status accuracy',
+      fcraCode: `${fcraInfo.code} - ${fcraInfo.citation}`,
+      disputeType: getDisputeTypeForItem(item.itemType, false),
+    });
+  }
+  
+  // Priority 5: Late payments (if room in round)
+  const latePayments = data.negativeItems.filter(i => i.itemType === 'late_payment');
+  const remainingSlots = Math.max(0, 15 - strategy.length); // Cap total at 15 items
+  for (const item of latePayments.slice(0, remainingSlots)) {
+    const fcraInfo = FCRA_DISPUTE_CODES.incomplete_information;
+    strategy.push({
+      priority: 5,
+      itemType: item.itemType,
+      creditorName: item.creditorName,
+      bureau: item.bureau,
+      reason: 'Late payment - verify payment history accuracy',
+      fcraCode: `${fcraInfo.code} - ${fcraInfo.citation}`,
+      disputeType: getDisputeTypeForItem(item.itemType, false),
+    });
+  }
+  
+  return strategy.slice(0, 15); // Max 15 items per round
 }
 
 export function generateAuditReportHTML(data: AuditReportData): string {
@@ -542,6 +732,12 @@ export function generateAuditReportHTML(data: AuditReportData): string {
     </div>
     ` : ''}
 
+    ${renderFcraComplianceSection(data)}
+    
+    ${renderDiscrepanciesSection(data)}
+    
+    ${renderRound1StrategySection(data)}
+
     <div class="cta-section">
       <div class="cta-title">Ready to Improve Your Credit?</div>
       <div class="cta-subtitle">Our team is ready to help you dispute inaccuracies and repair your credit.</div>
@@ -563,4 +759,218 @@ export function generateAuditReportHTML(data: AuditReportData): string {
 
 export function calculateProjectedScoreIncrease(negativeItems: AuditReportData['negativeItems']): number {
   return calculateProjectedIncrease(negativeItems);
+}
+
+// ============================================
+// PHASE 4: ENHANCED REPORT SECTIONS
+// ============================================
+
+function renderFcraComplianceSection(data: AuditReportData): string {
+  if (!data.fcraComplianceItems || data.fcraComplianceItems.length === 0) {
+    return '';
+  }
+  
+  const pastLimitItems = data.fcraComplianceItems.filter(i => i.isPastLimit);
+  const nearExpiryItems = data.fcraComplianceItems.filter(i => 
+    !i.isPastLimit && i.daysUntilExpiration !== null && i.daysUntilExpiration < 365
+  );
+  
+  if (pastLimitItems.length === 0 && nearExpiryItems.length === 0) {
+    return '';
+  }
+  
+  return `
+    <div class="section" style="background: #fef2f2; border: 2px solid #fecaca;">
+      <div class="section-title" style="color: #dc2626;">
+        ⚠️ FCRA Compliance Issues Found
+      </div>
+      
+      ${pastLimitItems.length > 0 ? `
+      <div style="margin-bottom: 20px;">
+        <h4 style="color: #dc2626; margin-bottom: 12px;">🚨 Items Past Reporting Limit (Immediate Action Required)</h4>
+        <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
+          Under FCRA Section 605 (15 U.S.C. § 1681c), these items have exceeded the maximum reporting period and must be removed.
+        </p>
+        <table class="items-table" style="background: white;">
+          <thead>
+            <tr>
+              <th>Creditor</th>
+              <th>Type</th>
+              <th>Bureau</th>
+              <th>Limit</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pastLimitItems.map(item => `
+              <tr>
+                <td><strong>${item.creditorName}</strong></td>
+                <td>${formatItemType(item.itemType)}</td>
+                <td>${item.bureau || 'All'}</td>
+                <td>${item.reportingLimitYears} years</td>
+                <td><span style="color: #dc2626; font-weight: 600;">⛔ VIOLATION</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+      
+      ${nearExpiryItems.length > 0 ? `
+      <div>
+        <h4 style="color: #d97706; margin-bottom: 12px;">⏰ Items Expiring Soon</h4>
+        <table class="items-table" style="background: white;">
+          <thead>
+            <tr>
+              <th>Creditor</th>
+              <th>Type</th>
+              <th>Expires In</th>
+              <th>Strategy</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${nearExpiryItems.slice(0, 5).map(item => `
+              <tr>
+                <td><strong>${item.creditorName}</strong></td>
+                <td>${formatItemType(item.itemType)}</td>
+                <td>${item.daysUntilExpiration} days</td>
+                <td>${item.daysUntilExpiration && item.daysUntilExpiration < 180 ? 'Wait or Dispute' : 'Dispute Now'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderDiscrepanciesSection(data: AuditReportData): string {
+  if (!data.bureauDiscrepancies || data.bureauDiscrepancies.length === 0) {
+    return '';
+  }
+  
+  const highSeverity = data.bureauDiscrepancies.filter(d => d.severity === 'high');
+  const mediumSeverity = data.bureauDiscrepancies.filter(d => d.severity === 'medium');
+  const piiDiscrepancies = data.bureauDiscrepancies.filter(d => 
+    d.discrepancyType === 'pii_name' || d.discrepancyType === 'pii_address'
+  );
+  
+  return `
+    <div class="section">
+      <div class="section-title">
+        🔍 Cross-Bureau Discrepancies Detected
+      </div>
+      <p style="font-size: 13px; color: #6b7280; margin-bottom: 16px;">
+        Under FCRA Section 611 (15 U.S.C. § 1681i), bureaus must reinvestigate disputed information. Discrepancies across bureaus provide strong dispute grounds.
+      </p>
+      
+      ${highSeverity.length > 0 ? `
+      <div style="margin-bottom: 20px;">
+        <h4 style="color: #dc2626; margin-bottom: 12px;">High-Priority Discrepancies (Strong Dispute Basis)</h4>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Issue</th>
+              <th>Creditor</th>
+              <th>TransUnion</th>
+              <th>Experian</th>
+              <th>Equifax</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${highSeverity.slice(0, 5).map(disc => `
+              <tr>
+                <td><strong>${formatItemType(disc.discrepancyType)}</strong></td>
+                <td>${disc.creditorName || '---'}</td>
+                <td>${disc.valueTransunion || '---'}</td>
+                <td>${disc.valueExperian || '---'}</td>
+                <td>${disc.valueEquifax || '---'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+      
+      ${piiDiscrepancies.length > 0 ? `
+      <div style="margin-bottom: 20px;">
+        <h4 style="color: #d97706; margin-bottom: 12px;">Personal Information Discrepancies</h4>
+        <div style="background: #fffbeb; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+          <p style="font-size: 13px; margin-bottom: 8px;">
+            <strong>Note:</strong> Different names or addresses across bureaus may indicate:
+          </p>
+          <ul style="font-size: 13px; margin-left: 20px; color: #6b7280;">
+            <li>Data entry errors by creditors</li>
+            <li>Mixed files with another consumer</li>
+            <li>Potential identity theft indicators</li>
+          </ul>
+        </div>
+      </div>
+      ` : ''}
+      
+      ${mediumSeverity.length > 0 ? `
+      <div>
+        <h4 style="color: #6b7280; margin-bottom: 12px;">Other Discrepancies</h4>
+        <p style="font-size: 13px; color: #6b7280;">
+          ${mediumSeverity.length} additional discrepancies found (balance differences, dates, etc.)
+        </p>
+      </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderRound1StrategySection(data: AuditReportData): string {
+  const strategy = data.round1Strategy || generateRound1Strategy(data);
+  
+  if (!strategy || strategy.length === 0) {
+    return '';
+  }
+  
+  return `
+    <div class="section" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6;">
+      <div class="section-title" style="color: #1d4ed8;">
+        📋 Round 1 Dispute Strategy
+      </div>
+      <p style="font-size: 13px; color: #6b7280; margin-bottom: 16px;">
+        Prioritized items for your first round of disputes. Each item includes the FCRA citation for your dispute letter.
+      </p>
+      
+      <table class="items-table" style="background: white;">
+        <thead>
+          <tr>
+            <th style="width: 30px;">#</th>
+            <th>Creditor</th>
+            <th>Type</th>
+            <th>Dispute Reason</th>
+            <th>FCRA Code</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${strategy.map((item, idx) => `
+            <tr>
+              <td style="text-align: center; font-weight: 700; color: ${item.priority === 1 ? '#dc2626' : item.priority === 2 ? '#ea580c' : '#3b82f6'};">
+                ${idx + 1}
+              </td>
+              <td><strong>${item.creditorName}</strong><br><span style="font-size: 11px; color: #6b7280;">${item.bureau || 'All Bureaus'}</span></td>
+              <td>${formatItemType(item.itemType)}</td>
+              <td style="font-size: 12px;">${item.reason}</td>
+              <td style="font-size: 11px; font-family: monospace;">${item.fcraCode}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <div style="margin-top: 16px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <p style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">💡 Dispute Strategy Tips:</p>
+        <ul style="font-size: 12px; color: #6b7280; margin-left: 16px;">
+          <li>Priority 1 items (FCRA violations) should be disputed immediately</li>
+          <li>Include FCRA citations in all dispute letters for legal weight</li>
+          <li>Send disputes via certified mail with return receipt requested</li>
+          <li>Bureaus have 30 days to investigate (45 days if you submit additional info)</li>
+        </ul>
+      </div>
+    </div>
+  `;
 }

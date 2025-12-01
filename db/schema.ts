@@ -454,6 +454,75 @@ export const negativeItems = pgTable('negative_items', {
   index("negative_items_clientId_idx").on(table.clientId),
 ]);
 
+// Consumer profiles (PII data extracted from credit reports)
+export const consumerProfiles = pgTable('consumer_profiles', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  creditReportId: text('credit_report_id').references(() => creditReports.id, { onDelete: 'set null' }),
+  bureau: text('bureau'), // 'transunion' | 'experian' | 'equifax'
+  firstName: text('first_name'),
+  middleName: text('middle_name'),
+  lastName: text('last_name'),
+  suffix: text('suffix'),
+  ssnLast4: text('ssn_last_4'),
+  dateOfBirth: timestamp('date_of_birth'),
+  addressStreet: text('address_street'),
+  addressCity: text('address_city'),
+  addressState: text('address_state'),
+  addressZip: text('address_zip'),
+  addressType: text('address_type'), // 'current' | 'previous'
+  employer: text('employer'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("consumer_profiles_clientId_idx").on(table.clientId),
+  index("consumer_profiles_creditReportId_idx").on(table.creditReportId),
+]);
+
+// Bureau discrepancies (cross-bureau comparison findings)
+export const bureauDiscrepancies = pgTable('bureau_discrepancies', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  discrepancyType: text('discrepancy_type').notNull(), // 'pii_name' | 'pii_address' | 'account_status' | 'account_balance' | 'account_missing' | 'payment_history' | 'date_mismatch'
+  field: text('field'), // The specific field with discrepancy
+  creditorName: text('creditor_name'), // For account-related discrepancies
+  accountNumber: text('account_number'), // Masked account number
+  valueTransunion: text('value_transunion'),
+  valueExperian: text('value_experian'),
+  valueEquifax: text('value_equifax'),
+  severity: text('severity').default('medium'), // 'low' | 'medium' | 'high'
+  isDisputable: boolean('is_disputable').default(true),
+  disputeRecommendation: text('dispute_recommendation'),
+  notes: text('notes'),
+  resolvedAt: timestamp('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("bureau_discrepancies_clientId_idx").on(table.clientId),
+  index("bureau_discrepancies_type_idx").on(table.discrepancyType),
+]);
+
+// FCRA compliance tracking (items past reporting limits)
+export const fcraComplianceItems = pgTable('fcra_compliance_items', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  negativeItemId: text('negative_item_id').references(() => negativeItems.id, { onDelete: 'set null' }),
+  creditAccountId: text('credit_account_id').references(() => creditAccounts.id, { onDelete: 'set null' }),
+  itemType: text('item_type').notNull(), // 'collection' | 'charge_off' | 'bankruptcy' | 'late_payment' | etc.
+  creditorName: text('creditor_name').notNull(),
+  dateOfFirstDelinquency: timestamp('date_of_first_delinquency'),
+  fcraExpirationDate: timestamp('fcra_expiration_date'), // When item should fall off
+  reportingLimitYears: integer('reporting_limit_years'), // 7 or 10 years
+  daysUntilExpiration: integer('days_until_expiration'), // Calculated field
+  isPastLimit: boolean('is_past_limit').default(false), // True if past FCRA limit
+  bureau: text('bureau'), // 'transunion' | 'experian' | 'equifax'
+  disputeStatus: text('dispute_status'), // 'pending' | 'disputed' | 'removed' | 'verified'
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("fcra_compliance_items_clientId_idx").on(table.clientId),
+  index("fcra_compliance_items_expiration_idx").on(table.fcraExpirationDate),
+]);
+
 // Credit analysis summaries
 export const creditAnalyses = pgTable('credit_analyses', {
   id: text('id').primaryKey(),
@@ -666,6 +735,45 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   tasks: many(tasks),
   notes: many(clientNotes),
   auditReports: many(auditReports),
+  consumerProfiles: many(consumerProfiles),
+  bureauDiscrepancies: many(bureauDiscrepancies),
+  fcraComplianceItems: many(fcraComplianceItems),
+}));
+
+// Consumer profiles relations
+export const consumerProfilesRelations = relations(consumerProfiles, ({ one }) => ({
+  client: one(clients, {
+    fields: [consumerProfiles.clientId],
+    references: [clients.id],
+  }),
+  creditReport: one(creditReports, {
+    fields: [consumerProfiles.creditReportId],
+    references: [creditReports.id],
+  }),
+}));
+
+// Bureau discrepancies relations
+export const bureauDiscrepanciesRelations = relations(bureauDiscrepancies, ({ one }) => ({
+  client: one(clients, {
+    fields: [bureauDiscrepancies.clientId],
+    references: [clients.id],
+  }),
+}));
+
+// FCRA compliance items relations
+export const fcraComplianceItemsRelations = relations(fcraComplianceItems, ({ one }) => ({
+  client: one(clients, {
+    fields: [fcraComplianceItems.clientId],
+    references: [clients.id],
+  }),
+  negativeItem: one(negativeItems, {
+    fields: [fcraComplianceItems.negativeItemId],
+    references: [negativeItems.id],
+  }),
+  creditAccount: one(creditAccounts, {
+    fields: [fcraComplianceItems.creditAccountId],
+    references: [creditAccounts.id],
+  }),
 }));
 
 export const creditReportsRelations = relations(creditReports, ({ one, many }) => ({

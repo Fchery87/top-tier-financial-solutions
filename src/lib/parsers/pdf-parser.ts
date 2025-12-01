@@ -1,4 +1,13 @@
 // PDF parsing utility - using pdf-parse v1.x simple API
+import { detectPdfSource, type SourceDetectionResult } from './detect-source';
+import {
+  isAccountNegative,
+  calculateRiskLevel,
+  calculateCompletenessScore,
+  calculateFcraComplianceDate,
+  FCRA_REPORTING_LIMITS,
+} from './metro2-mapping';
+
 async function parsePdf(buffer: Buffer): Promise<{ text: string; numpages: number }> {
   // Dynamic require to avoid build-time bundling issues
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -25,6 +34,34 @@ export interface ParsedCreditData {
     utilizationPercent: number;
   };
   rawText: string;
+  detectedSource?: SourceDetectionResult;
+  consumerProfile?: ParsedConsumerProfile;
+}
+
+export interface ParsedConsumerProfile {
+  names: Array<{
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    suffix?: string;
+    bureau?: string;
+  }>;
+  addresses: Array<{
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    addressType?: string;
+    dateReported?: Date;
+    bureau?: string;
+  }>;
+  ssnLast4?: string;
+  dateOfBirth?: Date;
+  employers: Array<{
+    name: string;
+    dateReported?: Date;
+    bureau?: string;
+  }>;
 }
 
 export interface ParsedAccount {
@@ -100,7 +137,12 @@ export async function parsePdfCreditReport(buffer: Buffer): Promise<ParsedCredit
   const data = await parsePdf(buffer);
   const text = data.text;
   
+  // Detect source service
+  const detectedSource = detectPdfSource(text);
+  console.log(`[PDF Parser] Detected source: ${detectedSource.source} (confidence: ${detectedSource.confidence})`);
+  
   const scores = extractScores(text);
+  const consumerProfile = extractConsumerProfile(text);
   const accounts = extractAccounts(text);
   const negativeItems = extractNegativeItems(text, accounts);
   const inquiries = extractInquiries(text);
@@ -113,7 +155,85 @@ export async function parsePdfCreditReport(buffer: Buffer): Promise<ParsedCredit
     inquiries,
     summary,
     rawText: text,
+    detectedSource,
+    consumerProfile,
   };
+}
+
+function extractConsumerProfile(text: string): ParsedConsumerProfile {
+  const profile: ParsedConsumerProfile = {
+    names: [],
+    addresses: [],
+    employers: [],
+  };
+
+  // Extract names - look for patterns like "Name: John Doe" or "Consumer: John Doe"
+  const namePatterns = [
+    /(?:Name|Consumer|Applicant)[:\s]+([A-Z][a-zA-Z]+)\s+([A-Z]\.?\s+)?([A-Z][a-zA-Z]+)(?:\s+(JR|SR|II|III|IV))?/gi,
+    /(?:Personal\s+Information)[\s\S]*?([A-Z][a-zA-Z]+)\s+([A-Z]\.?\s+)?([A-Z][a-zA-Z]+)/i,
+  ];
+
+  for (const pattern of namePatterns) {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      const firstName = match[1];
+      const middleName = match[2]?.trim().replace(/\.$/, '');
+      const lastName = match[3];
+      const suffix = match[4];
+      
+      if (firstName && lastName && !profile.names.some(n => n.firstName === firstName && n.lastName === lastName)) {
+        profile.names.push({
+          firstName,
+          middleName: middleName || undefined,
+          lastName,
+          suffix: suffix || undefined,
+        });
+      }
+    }
+  }
+
+  // Extract addresses
+  const addressPattern = /(\d+[^,\n]+),\s*([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/g;
+  const addressMatches = text.matchAll(addressPattern);
+  for (const match of addressMatches) {
+    const address = {
+      street: match[1].trim(),
+      city: match[2].trim(),
+      state: match[3],
+      zipCode: match[4],
+    };
+    
+    if (!profile.addresses.some(a => a.street === address.street && a.zipCode === address.zipCode)) {
+      profile.addresses.push(address);
+    }
+  }
+
+  // Extract SSN last 4
+  const ssnMatch = text.match(/(?:SSN|Social\s*Security)[:\s#]*(?:XXX-XX-|[\d*X]{3}-[\d*X]{2}-)?(\d{4})/i);
+  if (ssnMatch) {
+    profile.ssnLast4 = ssnMatch[1];
+  }
+
+  // Extract DOB
+  const dobMatch = text.match(/(?:DOB|Date\s*of\s*Birth|Birth\s*Date)[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
+  if (dobMatch) {
+    const date = new Date(dobMatch[1].replace(/-/g, '/'));
+    if (!isNaN(date.getTime())) {
+      profile.dateOfBirth = date;
+    }
+  }
+
+  // Extract employers
+  const employerPattern = /(?:Employer|Employment)[:\s]*([A-Z][A-Za-z0-9\s&.,'-]+?)(?:\s+(?:since|from|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})|\n|$)/gi;
+  const employerMatches = text.matchAll(employerPattern);
+  for (const match of employerMatches) {
+    const name = match[1].trim();
+    if (name.length > 2 && name.length < 80 && !profile.employers.some(e => e.name === name)) {
+      profile.employers.push({ name });
+    }
+  }
+
+  return profile;
 }
 
 function extractScores(text: string): ParsedCreditData['scores'] {

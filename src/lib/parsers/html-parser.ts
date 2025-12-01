@@ -1,8 +1,14 @@
 import * as cheerio from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry } from './pdf-parser';
+import { detectHtmlSource, type CreditReportSource, type SourceDetectionResult } from './detect-source';
+import { parseIdentityIQReport } from './identityiq-parser';
+import { parseSmartCreditReport } from './smartcredit-parser';
+import { parsePrivacyGuardReport } from './privacyguard-parser';
+import { parseMyScoreIQReport } from './myscoreiq-parser';
 
 export { type ParsedCreditData, type ParsedAccount, type ParsedNegativeItem, type ParsedInquiry };
+export { type CreditReportSource, type SourceDetectionResult };
 
 const NEGATIVE_KEYWORDS = [
   'collection',
@@ -20,7 +26,63 @@ const NEGATIVE_KEYWORDS = [
   'written off',
 ];
 
+// Parser routing map
+const SERVICE_PARSERS: Partial<Record<CreditReportSource, (html: string) => ParsedCreditData>> = {
+  identityiq: parseIdentityIQReport,
+  smartcredit: parseSmartCreditReport,
+  privacyguard: parsePrivacyGuardReport,
+  myscoreiq: parseMyScoreIQReport,
+};
+
+export interface ParseResult extends ParsedCreditData {
+  detectedSource: SourceDetectionResult;
+}
+
+/**
+ * Main HTML credit report parser with automatic source detection and routing
+ * Detects the monitoring service and routes to the appropriate specialized parser
+ */
 export function parseHtmlCreditReport(html: string): ParsedCreditData {
+  // Detect the source service
+  const detectionResult = detectHtmlSource(html);
+  
+  console.log(`[Credit Parser] Detected source: ${detectionResult.source} (confidence: ${detectionResult.confidence})`);
+  
+  // Route to specialized parser if available and confidence is sufficient
+  if (detectionResult.confidence !== 'low' && SERVICE_PARSERS[detectionResult.source]) {
+    try {
+      const parser = SERVICE_PARSERS[detectionResult.source]!;
+      const result = parser(html);
+      
+      // Add detection metadata
+      return {
+        ...result,
+        detectedSource: detectionResult,
+      } as ParsedCreditData;
+    } catch (error) {
+      console.warn(`[Credit Parser] Specialized parser failed, falling back to generic: ${error}`);
+    }
+  }
+  
+  // Fallback to generic parser
+  return parseGenericHtmlReport(html, detectionResult);
+}
+
+/**
+ * Parse with explicit source override (useful when user knows the source)
+ */
+export function parseHtmlWithSource(html: string, source: CreditReportSource): ParsedCreditData {
+  const parser = SERVICE_PARSERS[source];
+  if (parser) {
+    return parser(html);
+  }
+  return parseGenericHtmlReport(html);
+}
+
+/**
+ * Generic HTML parser - fallback for unknown or low-confidence sources
+ */
+function parseGenericHtmlReport(html: string, detectionResult?: SourceDetectionResult): ParsedCreditData {
   const $ = cheerio.load(html);
   const text = $.text();
   
@@ -37,7 +99,8 @@ export function parseHtmlCreditReport(html: string): ParsedCreditData {
     inquiries,
     summary,
     rawText: text,
-  };
+    detectedSource: detectionResult,
+  } as ParsedCreditData;
 }
 
 function extractScores($: cheerio.CheerioAPI, text: string): ParsedCreditData['scores'] {
