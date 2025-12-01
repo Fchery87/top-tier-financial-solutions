@@ -305,4 +305,4 @@ export const DISPUTE_REASON_CODES = [
   { code: 'unauthorized_inquiry', label: 'Unauthorized Inquiry', description: 'Inquiry made without permission' },
 ];
 
-export { ClientInfo, NegativeItemInfo, GenerateLetterParams };
+export type { ClientInfo, NegativeItemInfo, GenerateLetterParams };

@@ -6,6 +6,10 @@ import { parseIdentityIQReport } from './identityiq-parser';
 import { parseSmartCreditReport } from './smartcredit-parser';
 import { parsePrivacyGuardReport } from './privacyguard-parser';
 import { parseMyScoreIQReport } from './myscoreiq-parser';
+import { parseAnnualCreditReport } from './annualcreditreport-parser';
+import { parseTransUnionReport } from './transunion-parser';
+import { parseExperianReport } from './experian-parser';
+import { parseEquifaxReport } from './equifax-parser';
 
 export { type ParsedCreditData, type ParsedAccount, type ParsedNegativeItem, type ParsedInquiry };
 export { type CreditReportSource, type SourceDetectionResult };
@@ -28,10 +32,16 @@ const NEGATIVE_KEYWORDS = [
 
 // Parser routing map
 const SERVICE_PARSERS: Partial<Record<CreditReportSource, (html: string) => ParsedCreditData>> = {
+  // Monitoring services
   identityiq: parseIdentityIQReport,
   smartcredit: parseSmartCreditReport,
   privacyguard: parsePrivacyGuardReport,
   myscoreiq: parseMyScoreIQReport,
+  // Bureau-direct parsers
+  annualcreditreport: parseAnnualCreditReport,
+  transunion: parseTransUnionReport,
+  experian: parseExperianReport,
+  equifax: parseEquifaxReport,
 };
 
 export interface ParseResult extends ParsedCreditData {
