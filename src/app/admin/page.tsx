@@ -4,36 +4,55 @@ import * as React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { 
+  Users, 
   FileText, 
-  MessageSquareQuote, 
-  HelpCircle, 
   Scale,
-  Users,
-  Calendar,
-  ArrowRight,
   TrendingUp,
   Clock,
   Loader2,
-  Briefcase,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  FileWarning,
+  FileSignature,
+  ListTodo,
+  Activity,
+  BarChart3,
+  Target,
+  Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
-const quickLinks = [
-  { name: 'Manage Pages', href: '/admin/content', icon: FileText, description: 'Edit website content and pages', color: 'bg-blue-500/10 text-blue-500' },
-  { name: 'Services', href: '/admin/services', icon: Briefcase, description: 'Manage services displayed on website', color: 'bg-indigo-500/10 text-indigo-500' },
-  { name: 'Testimonials', href: '/admin/testimonials', icon: MessageSquareQuote, description: 'Approve and manage client testimonials', color: 'bg-green-500/10 text-green-500' },
-  { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle, description: 'Update frequently asked questions', color: 'bg-purple-500/10 text-purple-500' },
-  { name: 'Disclaimers', href: '/admin/disclaimers', icon: Scale, description: 'Manage legal disclaimers', color: 'bg-orange-500/10 text-orange-500' },
-  { name: 'Contact Leads', href: '/admin/leads', icon: Users, description: 'View and manage contact form submissions', color: 'bg-pink-500/10 text-pink-500' },
-  { name: 'Bookings', href: '/admin/bookings', icon: Calendar, description: 'Manage consultation bookings', color: 'bg-cyan-500/10 text-cyan-500' },
-];
-
 interface DashboardStats {
+  activeClients: number;
+  pendingReports: number;
+  disputesSent: number;
+  disputesPending: number;
+  totalNegativeItems: number;
+  avgCreditScore: number;
+  successRate: number;
+  disputePipeline: {
+    round1: number;
+    round2: number;
+    round3: number;
+    awaiting: number;
+  };
+  attentionNeeded: {
+    pendingReports: number;
+    pendingAgreements: number;
+    overdueTasks: number;
+  };
+  recentActivity: Array<{
+    type: 'dispute' | 'report';
+    id: string;
+    clientName: string;
+    action: string;
+    detail: string;
+    timestamp: string;
+  }>;
+  // Legacy
   newLeads: number;
-  pendingTestimonials: number;
-  publishedFaqs: number;
-  activePages: number;
 }
 
 export default function AdminDashboard() {
@@ -57,124 +76,443 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
-  const statCards = [
-    { label: 'New Leads', value: stats?.newLeads ?? '—', icon: Users, trend: 'View all', href: '/admin/leads' },
-    { label: 'Pending Testimonials', value: stats?.pendingTestimonials ?? '—', icon: MessageSquareQuote, trend: 'Review', href: '/admin/testimonials' },
-    { label: 'Published FAQs', value: stats?.publishedFaqs ?? '—', icon: HelpCircle, trend: 'Manage', href: '/admin/faqs' },
-    { label: 'Active Pages', value: stats?.activePages ?? '—', icon: FileText, trend: 'Edit', href: '/admin/content' },
-  ];
+  const formatTimeAgo = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  const totalAttention = stats ? 
+    (stats.attentionNeeded?.pendingReports ?? 0) + 
+    (stats.attentionNeeded?.pendingAgreements ?? 0) + 
+    (stats.attentionNeeded?.overdueTasks ?? 0) : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div>
-        <motion.h1 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-serif font-bold text-foreground"
+      <div className="flex items-center justify-between">
+        <div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-serif font-bold text-foreground"
+          >
+            Credit Repair Command Center
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-muted-foreground mt-1"
+          >
+            Monitor cases, track disputes, and manage your credit repair workflow.
+          </motion.p>
+        </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-2"
         >
-          Admin Dashboard
-        </motion.h1>
-        <motion.p 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-muted-foreground mt-2"
-        >
-          Welcome back! Manage your website content and leads from here.
-        </motion.p>
+          <Button asChild>
+            <Link href="/admin/clients">
+              <Users className="w-4 h-4 mr-2" />
+              View Clients
+            </Link>
+          </Button>
+        </motion.div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Primary Metrics */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"
       >
-        {statCards.map((stat) => (
-          <Card key={stat.label} className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="p-2 rounded-lg bg-secondary/10">
-                  <stat.icon className="w-5 h-5 text-secondary" />
-                </div>
-                <Link 
-                  href={stat.href}
-                  className="text-xs text-muted-foreground hover:text-secondary transition-colors flex items-center gap-1"
-                >
-                  {stat.trend}
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Users className="w-4 h-4 text-blue-500" />
               </div>
-              <div className="mt-4">
-                {loading ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                ) : (
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                )}
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </motion.div>
-
-      {/* Quick Links */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <h2 className="text-xl font-serif font-bold text-foreground mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {quickLinks.map((link) => (
-            <Link key={link.name} href={link.href}>
-              <Card className="h-full bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 hover:shadow-lg hover:shadow-secondary/5 transition-all duration-300 group cursor-pointer">
-                <CardContent className="p-6">
-                  <div className={`w-12 h-12 rounded-xl ${link.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <link.icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground group-hover:text-secondary transition-colors">
-                    {link.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {link.description}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Recent Activity */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardHeader>
-            <CardTitle className="font-serif flex items-center gap-2">
-              <Clock className="w-5 h-5 text-secondary" />
-              Quick Start
-            </CardTitle>
-            <CardDescription>
-              Get started managing your website
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Your admin dashboard is ready. Use the quick actions above to manage your content.</p>
-              <Button asChild variant="outline" className="mt-4">
-                <Link href="/admin/leads">View Contact Leads</Link>
-              </Button>
             </div>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-foreground">{stats?.activeClients ?? 0}</p>
+                <p className="text-xs text-muted-foreground">Active Cases</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-orange-500/10">
+                <FileWarning className="w-4 h-4 text-orange-500" />
+              </div>
+            </div>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-foreground">{stats?.pendingReports ?? 0}</p>
+                <p className="text-xs text-muted-foreground">Pending Reports</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <Scale className="w-4 h-4 text-purple-500" />
+              </div>
+            </div>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-foreground">{stats?.disputesPending ?? 0}</p>
+                <p className="text-xs text-muted-foreground">Active Disputes</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-cyan-500/10">
+                <BarChart3 className="w-4 h-4 text-cyan-500" />
+              </div>
+            </div>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-foreground">{stats?.avgCreditScore || '—'}</p>
+                <p className="text-xs text-muted-foreground">Avg Credit Score</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <Target className="w-4 h-4 text-green-500" />
+              </div>
+            </div>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-foreground">{stats?.successRate ?? 0}%</p>
+                <p className="text-xs text-muted-foreground">Success Rate</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Dispute Pipeline & Attention */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Dispute Pipeline */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-serif flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-secondary" />
+                      Dispute Pipeline
+                    </CardTitle>
+                    <CardDescription>Active disputes by round</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/admin/disputes/wizard">
+                      View All <ArrowRight className="w-4 h-4 ml-1" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
+                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <span className="text-sm font-bold text-blue-500">R1</span>
+                      </div>
+                      <p className="text-2xl font-bold">{stats?.disputePipeline.round1 ?? 0}</p>
+                      <p className="text-xs text-muted-foreground">Round 1</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
+                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-purple-500/10 flex items-center justify-center">
+                        <span className="text-sm font-bold text-purple-500">R2</span>
+                      </div>
+                      <p className="text-2xl font-bold">{stats?.disputePipeline.round2 ?? 0}</p>
+                      <p className="text-xs text-muted-foreground">Round 2</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
+                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-orange-500/10 flex items-center justify-center">
+                        <span className="text-sm font-bold text-orange-500">R3</span>
+                      </div>
+                      <p className="text-2xl font-bold">{stats?.disputePipeline.round3 ?? 0}</p>
+                      <p className="text-xs text-muted-foreground">Round 3</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
+                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                        <Clock className="w-4 h-4 text-yellow-500" />
+                      </div>
+                      <p className="text-2xl font-bold">{stats?.disputePipeline.awaiting ?? 0}</p>
+                      <p className="text-xs text-muted-foreground">Awaiting</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Needs Attention */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <Card className={`bg-card/80 backdrop-blur-sm border-border/50 ${totalAttention > 0 ? 'border-l-4 border-l-orange-500' : ''}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <AlertCircle className={`w-5 h-5 ${totalAttention > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
+                  Needs Attention
+                  {totalAttention > 0 && (
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-orange-500/10 text-orange-500">
+                      {totalAttention}
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : totalAttention === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500/50" />
+                    <p className="text-sm">All caught up! No items need attention.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(stats?.attentionNeeded?.pendingReports ?? 0) > 0 && (
+                      <Link href="/admin/clients" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-orange-500/10">
+                            <FileText className="w-4 h-4 text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Reports to Analyze</p>
+                            <p className="text-xs text-muted-foreground">Credit reports pending analysis</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold">{stats?.attentionNeeded?.pendingReports}</span>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
+                        </div>
+                      </Link>
+                    )}
+                    {(stats?.attentionNeeded?.pendingAgreements ?? 0) > 0 && (
+                      <Link href="/admin/agreements" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-blue-500/10">
+                            <FileSignature className="w-4 h-4 text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Pending Agreements</p>
+                            <p className="text-xs text-muted-foreground">Awaiting client signature</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold">{stats?.attentionNeeded?.pendingAgreements}</span>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
+                        </div>
+                      </Link>
+                    )}
+                    {(stats?.attentionNeeded?.overdueTasks ?? 0) > 0 && (
+                      <Link href="/admin/tasks" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-red-500/10">
+                            <ListTodo className="w-4 h-4 text-red-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Overdue Tasks</p>
+                            <p className="text-xs text-muted-foreground">Tasks past due date</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold">{stats?.attentionNeeded?.overdueTasks}</span>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
+                        </div>
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-secondary" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                    <Link href="/admin/clients">
+                      <Users className="w-5 h-5" />
+                      <span className="text-xs">Clients</span>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                    <Link href="/admin/disputes/wizard">
+                      <Scale className="w-5 h-5" />
+                      <span className="text-xs">Disputes</span>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                    <Link href="/admin/dispute-templates">
+                      <FileText className="w-5 h-5" />
+                      <span className="text-xs">Templates</span>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                    <Link href="/admin/tasks">
+                      <ListTodo className="w-5 h-5" />
+                      <span className="text-xs">Tasks</span>
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Right Column - Activity Timeline */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+        >
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-serif flex items-center gap-2">
+                <Activity className="w-5 h-5 text-secondary" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>Latest updates across all clients</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : !stats?.recentActivity || stats.recentActivity.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Activity className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No recent activity</p>
+                  <p className="text-xs mt-1">Upload a credit report to get started</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {stats.recentActivity.map((item, index) => (
+                    <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className={`mt-0.5 p-1.5 rounded-full ${
+                        item.type === 'dispute' ? 'bg-purple-500/10' : 'bg-blue-500/10'
+                      }`}>
+                        {item.type === 'dispute' ? (
+                          <Scale className="w-3 h-3 text-purple-500" />
+                        ) : (
+                          <FileText className="w-3 h-3 text-blue-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.clientName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.action}
+                          {item.detail && <span className="ml-1 text-secondary">{item.detail}</span>}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {item.timestamp ? formatTimeAgo(item.timestamp) : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Secondary Stats - New Leads */}
+      {(stats?.newLeads ?? 0) > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Link href="/admin/leads">
+            <Card className="bg-gradient-to-r from-secondary/5 to-transparent border-secondary/20 hover:border-secondary/40 transition-all cursor-pointer">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-secondary/10">
+                    <TrendingUp className="w-5 h-5 text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">New Leads Waiting</p>
+                    <p className="text-xs text-muted-foreground">Convert leads into clients</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-secondary">{stats?.newLeads ?? 0}</span>
+                  <ArrowRight className="w-5 h-5 text-secondary" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </motion.div>
+      )}
     </div>
   );
 }
