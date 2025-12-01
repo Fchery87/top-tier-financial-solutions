@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +11,13 @@ interface Column<T> {
   header: string;
   render?: (item: T) => React.ReactNode;
   className?: string;
+  sortable?: boolean;
+  sortKey?: string;
+}
+
+interface SortConfig {
+  key: string;
+  direction: 'asc' | 'desc';
 }
 
 interface DataTableProps<T> {
@@ -22,6 +29,8 @@ interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   onRowClick?: (item: T) => void;
   emptyMessage?: string;
+  sortConfig?: SortConfig;
+  onSort?: (key: string, direction: 'asc' | 'desc') => void;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -33,7 +42,29 @@ export function DataTable<T extends { id: string }>({
   onPageChange,
   onRowClick,
   emptyMessage = 'No data found',
+  sortConfig,
+  onSort,
 }: DataTableProps<T>) {
+  const handleSort = (column: Column<T>) => {
+    if (!column.sortable || !onSort) return;
+    
+    const sortKey = column.sortKey || column.key;
+    const newDirection = sortConfig?.key === sortKey && sortConfig?.direction === 'asc' ? 'desc' : 'asc';
+    onSort(sortKey, newDirection);
+  };
+
+  const getSortIcon = (column: Column<T>) => {
+    if (!column.sortable) return null;
+    
+    const sortKey = column.sortKey || column.key;
+    if (sortConfig?.key !== sortKey) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="w-4 h-4 ml-1" />
+      : <ArrowDown className="w-4 h-4 ml-1" />;
+  };
+
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm">
@@ -45,10 +76,15 @@ export function DataTable<T extends { id: string }>({
                   key={column.key}
                   className={cn(
                     "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                    column.sortable && "cursor-pointer hover:text-foreground transition-colors select-none",
                     column.className
                   )}
+                  onClick={() => handleSort(column)}
                 >
-                  {column.header}
+                  <div className="flex items-center">
+                    {column.header}
+                    {getSortIcon(column)}
+                  </div>
                 </th>
               ))}
             </tr>

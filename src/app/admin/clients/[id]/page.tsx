@@ -24,7 +24,11 @@ import {
   XCircle,
   Lightbulb,
   Scale,
-  Plus
+  Plus,
+  MessageSquare,
+  CheckSquare,
+  Clock,
+  User
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -120,6 +124,26 @@ interface CreditAnalysisWithRecs extends CreditAnalysis {
   recommendations?: string[];
 }
 
+interface ClientNote {
+  id: string;
+  client_id: string;
+  author_id: string | null;
+  author_name: string | null;
+  content: string;
+  created_at: string;
+}
+
+interface Task {
+  id: string;
+  client_id: string | null;
+  title: string;
+  description: string | null;
+  status: 'todo' | 'in_progress' | 'review' | 'done';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  due_date: string | null;
+  created_at: string;
+}
+
 const statusOptions = ['pending', 'active', 'paused', 'completed', 'cancelled'];
 const bureauOptions = ['transunion', 'experian', 'equifax', 'combined'];
 
@@ -155,6 +179,20 @@ export default function ClientDetailPage() {
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [reportDate, setReportDate] = React.useState('');
 
+  // Notes and Tasks state
+  const [clientNotes, setClientNotes] = React.useState<ClientNote[]>([]);
+  const [clientTasks, setClientTasks] = React.useState<Task[]>([]);
+  const [newNote, setNewNote] = React.useState('');
+  const [addingNote, setAddingNote] = React.useState(false);
+  const [showAddTaskModal, setShowAddTaskModal] = React.useState(false);
+  const [newTask, setNewTask] = React.useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    due_date: '',
+  });
+  const [addingTask, setAddingTask] = React.useState(false);
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchClientData = React.useCallback(async () => {
@@ -184,6 +222,138 @@ export default function ClientDetailPage() {
   React.useEffect(() => {
     fetchClientData();
   }, [fetchClientData]);
+
+  // Fetch notes and tasks
+  const fetchNotesAndTasks = React.useCallback(async () => {
+    try {
+      const [notesRes, tasksRes] = await Promise.all([
+        fetch(`/api/admin/notes?client_id=${clientId}&limit=50`),
+        fetch(`/api/admin/tasks?client_id=${clientId}&limit=50`),
+      ]);
+      
+      if (notesRes.ok) {
+        const notesData = await notesRes.json();
+        setClientNotes(notesData.items);
+      }
+      
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setClientTasks(tasksData.items);
+      }
+    } catch (error) {
+      console.error('Error fetching notes/tasks:', error);
+    }
+  }, [clientId]);
+
+  React.useEffect(() => {
+    if (clientId) {
+      fetchNotesAndTasks();
+    }
+  }, [clientId, fetchNotesAndTasks]);
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    
+    setAddingNote(true);
+    try {
+      const response = await fetch('/api/admin/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          content: newNote.trim(),
+        }),
+      });
+      
+      if (response.ok) {
+        setNewNote('');
+        fetchNotesAndTasks();
+      }
+    } catch (error) {
+      console.error('Error adding note:', error);
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Delete this note?')) return;
+    
+    try {
+      await fetch(`/api/admin/notes/${noteId}`, { method: 'DELETE' });
+      fetchNotesAndTasks();
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    }
+  };
+
+  const handleAddTask = async () => {
+    if (!newTask.title.trim()) return;
+    
+    setAddingTask(true);
+    try {
+      const response = await fetch('/api/admin/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          title: newTask.title,
+          description: newTask.description || null,
+          priority: newTask.priority,
+          due_date: newTask.due_date || null,
+        }),
+      });
+      
+      if (response.ok) {
+        setNewTask({ title: '', description: '', priority: 'medium', due_date: '' });
+        setShowAddTaskModal(false);
+        fetchNotesAndTasks();
+      }
+    } catch (error) {
+      console.error('Error adding task:', error);
+    } finally {
+      setAddingTask(false);
+    }
+  };
+
+  const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
+    try {
+      await fetch(`/api/admin/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      fetchNotesAndTasks();
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Delete this task?')) return;
+    
+    try {
+      await fetch(`/api/admin/tasks/${taskId}`, { method: 'DELETE' });
+      fetchNotesAndTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'text-red-500 bg-red-500/10';
+      case 'high': return 'text-orange-500 bg-orange-500/10';
+      case 'medium': return 'text-yellow-500 bg-yellow-500/10';
+      case 'low': return 'text-green-500 bg-green-500/10';
+      default: return 'text-muted-foreground bg-muted';
+    }
+  };
+
+  const isTaskOverdue = (dueDate: string | null, status: string) => {
+    if (!dueDate || status === 'done') return false;
+    return new Date(dueDate) < new Date();
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -867,8 +1037,220 @@ export default function ClientDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Client Tasks */}
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CheckSquare className="w-5 h-5 text-blue-500" />
+                  Tasks
+                </CardTitle>
+                <CardDescription>{clientTasks.length} task(s) for this client</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setShowAddTaskModal(true)}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add Task
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {clientTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No tasks for this client yet.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {clientTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className={`p-3 rounded-lg bg-muted/50 ${isTaskOverdue(task.due_date, task.status) ? 'border border-red-500/30' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${getPriorityColor(task.priority)}`}>
+                              {task.priority}
+                            </span>
+                            {task.due_date && (
+                              <span className={`text-xs flex items-center gap-1 ${isTaskOverdue(task.due_date, task.status) ? 'text-red-500' : 'text-muted-foreground'}`}>
+                                <Clock className="w-3 h-3" />
+                                {new Date(task.due_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={task.status}
+                            onChange={(e) => handleTaskStatusChange(task.id, e.target.value)}
+                            className="h-7 px-2 text-xs rounded border border-input bg-background"
+                          >
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="review">Review</option>
+                            <option value="done">Done</option>
+                          </select>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteTask(task.id)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Client Notes */}
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-green-500" />
+                Notes
+              </CardTitle>
+              <CardDescription>Activity and notes for this client</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Add note input */}
+              <div className="flex gap-2">
+                <textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Add a note..."
+                  className="flex-1 min-h-[60px] px-3 py-2 text-sm rounded-md border border-input bg-background resize-none"
+                />
+                <Button
+                  onClick={handleAddNote}
+                  disabled={addingNote || !newNote.trim()}
+                  className="self-end"
+                >
+                  {addingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
+                </Button>
+              </div>
+              
+              {/* Notes list */}
+              {clientNotes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No notes yet. Add a note above to track client interactions.
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {clientNotes.map((note) => (
+                    <div key={note.id} className="p-3 rounded-lg bg-muted/50 group">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                            <User className="w-3 h-3" />
+                            <span>{note.author_name || 'Unknown'}</span>
+                            <span>•</span>
+                            <span>{new Date(note.created_at).toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive transition-opacity"
+                          onClick={() => handleDeleteNote(note.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Add Task Modal */}
+      {showAddTaskModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowAddTaskModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md"
+          >
+            <Card className="bg-card border-border shadow-2xl">
+              <CardHeader>
+                <CardTitle>Add Task</CardTitle>
+                <CardDescription>Create a new task for this client.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Title *</label>
+                  <Input
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    placeholder="Task title"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <textarea
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    placeholder="Task description..."
+                    className="w-full min-h-[60px] px-3 py-2 text-sm rounded-md border border-input bg-background"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Priority</label>
+                    <select
+                      value={newTask.priority}
+                      onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Due Date</label>
+                    <Input
+                      type="date"
+                      value={newTask.due_date}
+                      onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button variant="outline" className="flex-1" onClick={() => setShowAddTaskModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="flex-1" onClick={handleAddTask} disabled={addingTask || !newTask.title.trim()}>
+                    {addingTask && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Add Task
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (

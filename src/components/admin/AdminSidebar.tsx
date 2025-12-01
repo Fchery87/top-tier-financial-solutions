@@ -19,13 +19,15 @@ import {
   BookOpen,
   Mail,
   Briefcase,
-  UserCheck
+  UserCheck,
+  CheckSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Clients', href: '/admin/clients', icon: UserCheck },
+  { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
   { name: 'Contact Leads', href: '/admin/leads', icon: Users },
   { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
   { name: 'Pages', href: '/admin/content', icon: FileText },

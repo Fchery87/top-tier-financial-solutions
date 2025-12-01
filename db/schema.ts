@@ -520,6 +520,78 @@ export const disputeLetterTemplates = pgTable('dispute_letter_templates', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// ============================================
+// CRM SYSTEM TABLES - Tasks & Notes
+// ============================================
+
+// Task status and priority enums
+export const taskStatusEnum = pgEnum('task_status', ['todo', 'in_progress', 'review', 'done']);
+export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
+
+// Tasks for CRM workflow management
+export const tasks = pgTable('tasks', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').references(() => clients.id, { onDelete: 'cascade' }),
+  assigneeId: text('assignee_id').references(() => user.id, { onDelete: 'set null' }),
+  createdById: text('created_by_id').references(() => user.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: taskStatusEnum('status').default('todo'),
+  priority: taskPriorityEnum('priority').default('medium'),
+  dueDate: timestamp('due_date'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("tasks_clientId_idx").on(table.clientId),
+  index("tasks_assigneeId_idx").on(table.assigneeId),
+  index("tasks_status_idx").on(table.status),
+  index("tasks_dueDate_idx").on(table.dueDate),
+]);
+
+// Client notes for tracking interactions and history
+export const clientNotes = pgTable('client_notes', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("client_notes_clientId_idx").on(table.clientId),
+  index("client_notes_authorId_idx").on(table.authorId),
+]);
+
+// Tasks relations
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  client: one(clients, {
+    fields: [tasks.clientId],
+    references: [clients.id],
+  }),
+  assignee: one(user, {
+    fields: [tasks.assigneeId],
+    references: [user.id],
+    relationName: 'taskAssignee',
+  }),
+  createdBy: one(user, {
+    fields: [tasks.createdById],
+    references: [user.id],
+    relationName: 'taskCreator',
+  }),
+}));
+
+// Client notes relations
+export const clientNotesRelations = relations(clientNotes, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientNotes.clientId],
+    references: [clients.id],
+  }),
+  author: one(user, {
+    fields: [clientNotes.authorId],
+    references: [user.id],
+  }),
+}));
+
 // Credit Analysis System Relations
 export const clientsRelations = relations(clients, ({ one, many }) => ({
   user: one(user, {
@@ -535,6 +607,8 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   negativeItems: many(negativeItems),
   analyses: many(creditAnalyses),
   disputes: many(disputes),
+  tasks: many(tasks),
+  notes: many(clientNotes),
 }));
 
 export const creditReportsRelations = relations(creditReports, ({ one, many }) => ({

@@ -4,7 +4,7 @@ import { clients, consultationRequests, user, creditReports, creditAnalyses } fr
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { desc, count, eq, or, ilike } from 'drizzle-orm';
+import { desc, asc, count, eq, or, ilike, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 async function validateAdmin() {
@@ -35,24 +35,38 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '10');
   const search = searchParams.get('search') || '';
   const status = searchParams.get('status');
+  const sortBy = searchParams.get('sort_by') || 'created_at';
+  const sortOrder = searchParams.get('sort_order') || 'desc';
   const offset = (page - 1) * limit;
 
   try {
-    let whereConditions = [];
+    const conditions = [];
     
     if (search) {
-      whereConditions.push(
+      conditions.push(
         or(
           ilike(clients.firstName, `%${search}%`),
           ilike(clients.lastName, `%${search}%`),
-          ilike(clients.email, `%${search}%`)
+          ilike(clients.email, `%${search}%`),
+          ilike(clients.phone, `%${search}%`)
         )
       );
     }
     
     if (status && status !== 'all') {
-      whereConditions.push(eq(clients.status, status));
+      conditions.push(eq(clients.status, status));
     }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Determine sort column
+    const sortColumn = sortBy === 'name' ? clients.firstName 
+      : sortBy === 'email' ? clients.email
+      : sortBy === 'status' ? clients.status
+      : sortBy === 'converted_at' ? clients.convertedAt
+      : clients.createdAt;
+    
+    const orderDirection = sortOrder === 'asc' ? asc : desc;
 
     const [items, totalResult] = await Promise.all([
       db
@@ -73,11 +87,11 @@ export async function GET(request: NextRequest) {
         })
         .from(clients)
         .leftJoin(user, eq(clients.userId, user.id))
-        .where(whereConditions.length > 0 ? whereConditions[0] : undefined)
-        .orderBy(desc(clients.createdAt))
+        .where(whereClause)
+        .orderBy(orderDirection(sortColumn))
         .limit(limit)
         .offset(offset),
-      db.select({ count: count() }).from(clients),
+      db.select({ count: count() }).from(clients).where(whereClause),
     ]);
 
     return NextResponse.json({
