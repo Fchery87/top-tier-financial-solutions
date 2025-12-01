@@ -31,7 +31,8 @@ import {
   User,
   FileBarChart,
   ExternalLink,
-  Printer
+  Printer,
+  Wand2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -1039,15 +1040,25 @@ export default function ClientDetailPage() {
                 <CardTitle className="text-lg">Disputes</CardTitle>
                 <CardDescription>{disputes.length} dispute(s)</CardDescription>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowDisputeModal(true)}
-                disabled={negativeItems.length === 0}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                New Dispute
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowDisputeModal(true)}
+                  disabled={negativeItems.length === 0}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Quick Dispute
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => router.push('/admin/disputes/wizard')}
+                >
+                  <Wand2 className="w-4 h-4 mr-1" />
+                  Dispute Wizard
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {disputes.length === 0 ? (

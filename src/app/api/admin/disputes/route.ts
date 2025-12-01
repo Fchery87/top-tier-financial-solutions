@@ -6,7 +6,7 @@ import { db } from '@/db/client';
 import { disputes, clients, negativeItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { generateDisputeLetter } from '@/lib/dispute-letters';
+import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -64,16 +64,27 @@ export async function POST(request: NextRequest) {
       negativeItem = item;
     }
 
-    // Generate dispute letter
-    const letterContent = generateDisputeLetter({
-      clientName: `${client.firstName} ${client.lastName}`,
-      creditorName: negativeItem?.creditorName || 'Unknown Creditor',
-      accountNumber: undefined,
-      amount: negativeItem?.amount || undefined,
-      itemType: negativeItem?.itemType || 'unknown',
-      bureau,
-      disputeReason,
+    // Generate dispute letter using AI generator with FCRA/CRSA/Metro2 compliance
+    const letterContent = await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
+      round: 1,
+      targetRecipient: 'bureau',
+      clientData: {
+        name: `${client.firstName} ${client.lastName}`,
+      },
+      itemData: {
+        creditorName: negativeItem?.creditorName || 'Unknown Creditor',
+        originalCreditor: negativeItem?.originalCreditor || undefined,
+        accountNumber: negativeItem?.id?.slice(-8) || undefined,
+        itemType: negativeItem?.itemType || 'unknown',
+        amount: negativeItem?.amount || undefined,
+        dateReported: negativeItem?.dateReported?.toISOString() || undefined,
+        bureau,
+      },
+      reasonCodes: [disputeReason.includes('not mine') ? 'not_mine' : 
+                    disputeReason.includes('never late') ? 'never_late' : 
+                    disputeReason.includes('wrong') ? 'wrong_balance' : 'not_mine'],
+      customReason: disputeReason,
     });
 
     // Create dispute record
