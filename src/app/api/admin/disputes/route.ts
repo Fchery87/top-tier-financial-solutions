@@ -142,14 +142,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get('client_id');
 
-  try {
-    let query = db.select().from(disputes);
-    
-    if (clientId) {
-      query = query.where(eq(disputes.clientId, clientId)) as typeof query;
-    }
+  // SECURITY: client_id is required to prevent cross-client data exposure
+  if (!clientId) {
+    return NextResponse.json(
+      { error: 'client_id is required' },
+      { status: 400 }
+    );
+  }
 
-    const allDisputes = await query;
+  try {
+    const allDisputes = await db
+      .select()
+      .from(disputes)
+      .where(eq(disputes.clientId, clientId));
 
     return NextResponse.json({
       disputes: allDisputes.map(d => ({

@@ -36,14 +36,16 @@ export async function GET(request: NextRequest) {
   const clientId = searchParams.get('client_id');
   const offset = (page - 1) * limit;
 
-  try {
-    const conditions = [];
-    
-    if (clientId) {
-      conditions.push(eq(clientNotes.clientId, clientId));
-    }
+  // SECURITY: client_id is required to prevent cross-client data exposure
+  if (!clientId) {
+    return NextResponse.json(
+      { error: 'client_id is required' },
+      { status: 400 }
+    );
+  }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  try {
+    const whereClause = eq(clientNotes.clientId, clientId);
 
     const [items, totalResult] = await Promise.all([
       db
