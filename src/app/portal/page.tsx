@@ -13,6 +13,17 @@ import {
 import { motion } from 'framer-motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay } from '@/components/ui/AnimatedBackground';
 
+interface AuditReportStatus {
+  has_report: boolean;
+  client_name?: string;
+  report_date?: string;
+  scores?: {
+    transunion: number | null;
+    experian: number | null;
+    equifax: number | null;
+  } | null;
+}
+
 interface CaseUpdate {
   id: string;
   title: string;
@@ -67,6 +78,7 @@ export default function PortalPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [cases, setCases] = React.useState<ClientCase[]>([]);
   const [documents, setDocuments] = React.useState<Document[]>([]);
+  const [auditReport, setAuditReport] = React.useState<AuditReportStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -78,9 +90,10 @@ export default function PortalPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [casesRes, docsRes] = await Promise.all([
+      const [casesRes, docsRes, auditRes] = await Promise.all([
         fetch('/api/portal/cases'),
         fetch('/api/portal/documents'),
+        fetch('/api/portal/audit-report'),
       ]);
 
       if (casesRes.ok) {
@@ -91,6 +104,11 @@ export default function PortalPage() {
       if (docsRes.ok) {
         const docsData = await docsRes.json();
         setDocuments(docsData.documents || []);
+      }
+
+      if (auditRes.ok) {
+        const auditData = await auditRes.json();
+        setAuditReport(auditData);
       }
     } catch (error) {
       console.error('Error fetching portal data:', error);
@@ -409,12 +427,64 @@ export default function PortalPage() {
                   </CardContent>
                 </Card>
 
+                {/* Audit Report Card */}
+                {auditReport?.has_report && (
+                  <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 backdrop-blur-sm border-secondary/30 hover:border-secondary/50 transition-all">
+                    <CardHeader>
+                      <CardTitle className="font-serif text-xl flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-secondary" />
+                        Credit Analysis Report
+                      </CardTitle>
+                      <CardDescription>
+                        Your personalized credit audit is ready
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {auditReport.scores && (
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-2 rounded-lg bg-background/50">
+                            <p className="text-xs text-muted-foreground">TU</p>
+                            <p className="text-lg font-bold text-foreground">{auditReport.scores.transunion || '---'}</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-background/50">
+                            <p className="text-xs text-muted-foreground">EX</p>
+                            <p className="text-lg font-bold text-foreground">{auditReport.scores.experian || '---'}</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-background/50">
+                            <p className="text-xs text-muted-foreground">EQ</p>
+                            <p className="text-lg font-bold text-foreground">{auditReport.scores.equifax || '---'}</p>
+                          </div>
+                        </div>
+                      )}
+                      <Button asChild className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90">
+                        <Link href="/portal/audit-report">
+                          <FileText className="w-4 h-4 mr-2" />
+                          View Full Report
+                        </Link>
+                      </Button>
+                      {auditReport.report_date && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          Generated {new Date(auditReport.report_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Quick Actions */}
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader>
                     <CardTitle className="font-serif text-xl">Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {auditReport?.has_report && (
+                      <Button asChild variant="outline" className="w-full justify-start">
+                        <Link href="/portal/audit-report">
+                          <FileText className="w-4 h-4 mr-2" />
+                          View Audit Report
+                        </Link>
+                      </Button>
+                    )}
                     <Button asChild variant="outline" className="w-full justify-start">
                       <Link href="/contact">
                         <Calendar className="w-4 h-4 mr-2" />
