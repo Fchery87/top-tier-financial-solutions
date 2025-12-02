@@ -473,7 +473,7 @@ export default function AdminDashboard() {
                       </Link>
                     )}
                     {(stats?.attentionNeeded?.responseDueSoon ?? 0) > 0 && (
-                      <Link href="/admin/disputes/wizard" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
+                      <Link href="/admin/disputes?awaiting_response=true" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-yellow-500/10">
                             <Clock className="w-4 h-4 text-yellow-500" />
@@ -490,7 +490,7 @@ export default function AdminDashboard() {
                       </Link>
                     )}
                     {(stats?.attentionNeeded?.overdueResponses ?? 0) > 0 && (
-                      <Link href="/admin/disputes/wizard" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group border border-red-500/30">
+                      <Link href="/admin/disputes?overdue=true" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group border border-red-500/30">
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-red-500/10">
                             <AlertCircle className="w-4 h-4 text-red-500" />
@@ -526,7 +526,7 @@ export default function AdminDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
                     <Link href="/admin/clients">
                       <Users className="w-5 h-5" />
@@ -534,9 +534,15 @@ export default function AdminDashboard() {
                     </Link>
                   </Button>
                   <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
-                    <Link href="/admin/disputes/wizard">
+                    <Link href="/admin/disputes">
                       <Scale className="w-5 h-5" />
                       <span className="text-xs">Disputes</span>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                    <Link href="/admin/disputes/wizard">
+                      <Zap className="w-5 h-5" />
+                      <span className="text-xs">New Dispute</span>
                     </Link>
                   </Button>
                   <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>

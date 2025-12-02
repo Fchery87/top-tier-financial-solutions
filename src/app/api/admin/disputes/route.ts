@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
 import { disputes, clients, negativeItems } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 
@@ -141,25 +141,87 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get('client_id');
-
-  // SECURITY: client_id is required to prevent cross-client data exposure
-  if (!clientId) {
-    return NextResponse.json(
-      { error: 'client_id is required' },
-      { status: 400 }
-    );
-  }
+  const status = searchParams.get('status');
+  const bureau = searchParams.get('bureau');
+  const round = searchParams.get('round');
+  const outcome = searchParams.get('outcome');
+  const awaitingResponse = searchParams.get('awaiting_response');
+  const overdue = searchParams.get('overdue');
 
   try {
-    const allDisputes = await db
-      .select()
+    // Build query with optional filters
+    let query = db
+      .select({
+        dispute: disputes,
+        client: clients,
+      })
       .from(disputes)
-      .where(eq(disputes.clientId, clientId));
+      .leftJoin(clients, eq(disputes.clientId, clients.id));
+
+    const conditions = [];
+
+    if (clientId) {
+      conditions.push(eq(disputes.clientId, clientId));
+    }
+
+    if (status) {
+      conditions.push(eq(disputes.status, status));
+    }
+
+    if (bureau) {
+      conditions.push(eq(disputes.bureau, bureau));
+    }
+
+    if (round) {
+      conditions.push(eq(disputes.round, parseInt(round)));
+    }
+
+    if (outcome) {
+      conditions.push(eq(disputes.outcome, outcome));
+    }
+
+    // Filter for disputes awaiting response (sent but no response yet)
+    if (awaitingResponse === 'true') {
+      conditions.push(eq(disputes.status, 'sent'));
+    }
+
+    // Apply conditions if any
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+
+    const results = await query;
+
+    // Filter overdue in JS (deadline passed, no response)
+    let filteredResults = results;
+    if (overdue === 'true') {
+      const now = new Date();
+      filteredResults = results.filter(r => {
+        const deadline = r.dispute.responseDeadline;
+        return deadline && deadline < now && !r.dispute.responseReceivedAt;
+      });
+    }
+
+    // Sort by response deadline (urgent first), then by created date
+    filteredResults.sort((a, b) => {
+      // Prioritize items with deadlines
+      if (a.dispute.responseDeadline && !b.dispute.responseDeadline) return -1;
+      if (!a.dispute.responseDeadline && b.dispute.responseDeadline) return 1;
+      
+      // Sort by deadline if both have one
+      if (a.dispute.responseDeadline && b.dispute.responseDeadline) {
+        return a.dispute.responseDeadline.getTime() - b.dispute.responseDeadline.getTime();
+      }
+      
+      // Fall back to created date
+      return (b.dispute.createdAt?.getTime() || 0) - (a.dispute.createdAt?.getTime() || 0);
+    });
 
     return NextResponse.json({
-      disputes: allDisputes.map(d => ({
+      disputes: filteredResults.map(({ dispute: d, client: c }) => ({
         id: d.id,
         client_id: d.clientId,
+        client_name: c ? `${c.firstName} ${c.lastName}` : 'Unknown',
         negative_item_id: d.negativeItemId,
         bureau: d.bureau,
         dispute_reason: d.disputeReason,
@@ -169,9 +231,16 @@ export async function GET(request: NextRequest) {
         letter_content: d.letterContent,
         tracking_number: d.trackingNumber,
         sent_at: d.sentAt?.toISOString(),
+        response_deadline: d.responseDeadline?.toISOString(),
+        response_received_at: d.responseReceivedAt?.toISOString(),
         outcome: d.outcome,
+        response_notes: d.responseNotes,
+        creditor_name: d.creditorName,
+        account_number: d.accountNumber,
         created_at: d.createdAt?.toISOString(),
+        updated_at: d.updatedAt?.toISOString(),
       })),
+      total: filteredResults.length,
     });
   } catch (error) {
     console.error('Error fetching disputes:', error);

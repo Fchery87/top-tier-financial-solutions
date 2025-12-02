@@ -70,6 +70,7 @@ const navSections: NavSection[] = [
     name: 'Disputes',
     icon: Scale,
     items: [
+      { name: 'All Disputes', href: '/admin/disputes', icon: Scale },
       { name: 'Dispute Wizard', href: '/admin/disputes/wizard', icon: Wand2 },
       { name: 'Letter Templates', href: '/admin/dispute-templates', icon: Library },
       { name: 'Compliance', href: '/admin/compliance', icon: ShieldCheck },
