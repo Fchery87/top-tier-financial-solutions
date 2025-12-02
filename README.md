@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Top Tier Financial Solutions
 
-## Getting Started
+A comprehensive credit repair management platform built with Next.js 16, featuring client management, credit report analysis, automated dispute generation, and CROA/TSR compliance tracking.
 
-First, run the development server:
+## Tech Stack
+
+- **Frontend:** Next.js 16 (React 19), TypeScript, Tailwind CSS v4, Framer Motion
+- **Backend:** Next.js API Routes + Python FastAPI
+- **Database:** Neon PostgreSQL with Drizzle ORM
+- **Authentication:** Better Auth with email/password and admin roles
+- **Storage:** Cloudflare R2 (S3-compatible)
+- **AI:** Google Gemini for dispute letter generation
+- **Scheduling:** Cal.com integration
+
+## Features
+
+### Admin Dashboard
+- **Client Management** - Track clients through their credit repair journey
+- **Credit Report Analysis** - Multi-bureau parsing (TransUnion, Experian, Equifax, IdentityIQ, MyScoreIQ, SmartCredit, etc.)
+- **Dispute Management** - AI-powered dispute letter generation with batch processing
+- **FCRA Compliance** - Track items past reporting limits
+- **CRM** - Tasks, notes, and client communication
+- **Billing** - Invoice management with CROA-compliant fee structures
+- **Content Management** - Blog, FAQs, testimonials, services, and pages
+
+### Client Portal
+- View case status and progress
+- Sign service agreements (CROA-compliant with 3-day cancellation)
+- Access audit reports
+- Secure document uploads
+- Track credit score history
+
+### Public Website
+- Services information
+- Blog/Education hub
+- FAQ section
+- Contact forms with Cal.com booking integration
+- Newsletter signup
+
+## Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp env.example .env
+# Edit .env with your credentials
+
+# Run database migrations
+npm run db:migrate
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# (Optional) Start FastAPI backend
+npm run fastapi-dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+See `env.example` for all required variables:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `DATABASE_URL` - Neon PostgreSQL connection string
+- `BETTER_AUTH_SECRET` - Auth secret (min 32 chars)
+- `NEXT_PUBLIC_APP_URL` - Application URL
+- `R2_*` - Cloudflare R2 credentials
+- `GOOGLE_AI_API_KEY` - Gemini API for AI features
+- `NEXT_PUBLIC_CAL_*` - Cal.com integration
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev          # Start Next.js development server
+npm run fastapi-dev  # Start FastAPI backend
+npm run build        # Production build
+npm run lint         # Run ESLint
+npm run db:generate  # Generate Drizzle migrations
+npm run db:migrate   # Run migrations
+npm run db:push      # Push schema changes
+npm run db:studio    # Open Drizzle Studio
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+├── api/              # Python FastAPI backend
+├── db/               # Database client and schema
+├── drizzle/          # Database migrations
+├── public/           # Static assets
+├── scripts/          # Utility scripts (seeding, migrations)
+├── src/
+│   ├── app/          # Next.js App Router pages
+│   │   ├── admin/    # Admin dashboard pages
+│   │   ├── portal/   # Client portal pages
+│   │   ├── api/      # API routes
+│   │   └── ...       # Public pages
+│   ├── components/   # React components
+│   └── lib/          # Utilities, parsers, auth
+└── specs/            # Project specifications
+```
 
-## Deploy on Vercel
+## Documentation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [Setup Guide](./SETUP_GUIDE.md) - Detailed setup instructions
+- [Credit Analysis Implementation](./docs/CREDIT-ANALYSIS-IMPLEMENTATION.md)
+- [IdentityIQ Parser Guide](./docs/IDENTITYIQ_PARSER_GUIDE.md)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+Private - All rights reserved

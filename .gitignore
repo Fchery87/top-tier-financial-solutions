@@ -76,8 +76,8 @@ pip-delete-this-directory.txt
 *.db
 *.db-journal
 
-# Drizzle
-drizzle/meta/_journal.json
+# Drizzle (keep migration files tracked)
+# Note: Do NOT ignore drizzle/meta/_journal.json - it tracks migration history
 
 # =============================================================================
 # Debug / Logs

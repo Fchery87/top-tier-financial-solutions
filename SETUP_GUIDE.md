@@ -1,148 +1,288 @@
-# Stack Auth + Neon DB + Drizzle ORM Setup Guide
+# Setup Guide
 
-This project integrates Stack Auth (Neon Auth) with a Next.js app, Drizzle ORM, and Neon PostgreSQL database.
+This guide covers the complete setup for the Top Tier Financial Solutions platform.
 
-## What's Been Set Up
+## Prerequisites
 
-### 1. **Stack Auth (Authentication)**
-- Stack Auth is integrated with Neon Auth, providing a managed authentication solution
-- User data is automatically synced to your Neon PostgreSQL database in the `neon_auth.users_sync` table
-- Authentication routes available at:
-  - `/handler/sign-up` - Create new account
-  - `/handler/sign-in` - Sign in to existing account
-  - `/handler/account-settings` - Manage user profile
+- Node.js 18+ 
+- Python 3.12+ (for FastAPI backend)
+- PostgreSQL database (Neon recommended)
+- Cloudflare R2 account (for file storage)
+- Google AI API key (for Gemini)
+- Cal.com account (optional, for scheduling)
 
-### 2. **Tailwind CSS & UI Styling**
-- Tailwind CSS v4 is configured for styling Stack Auth components
-- Custom color variables in CSS for light/dark mode support
-- Stack Auth Radix UI components are properly styled through Tailwind
+## Installation
 
-### 3. **Database Integration**
-- **Drizzle ORM** configured with Neon PostgreSQL
-- **Schema** in `db/schema.ts`:
-  - `users` table with email uniqueness constraint
-  - Fields: `id`, `name`, `email`, `created_at`
-- **Database client** in `db/client.ts`
-- **Sync function** in `db/sync.ts` to sync Neon Auth users to your custom tables
+### 1. Clone and Install Dependencies
 
-### 4. **API Endpoints**
-- `POST /api/sync-users` - Manual endpoint to sync Neon Auth users to your database
+```bash
+# Clone the repository
+git clone <repository-url>
+cd top-tier-financial-solutions
 
-### 5. **Pages**
-- `/` - Home page
-- `/profile` - User profile (requires authentication)
-- `/handler/[...stack]` - Stack Auth routes
+# Install Node.js dependencies
+npm install
+
+# Set up Python virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Environment Configuration
+
+Copy the example environment file and configure:
+
+```bash
+cp env.example .env
+```
+
+Edit `.env` with your credentials:
+
+```env
+# Database (Neon PostgreSQL)
+DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"
+
+# Authentication (Better Auth)
+BETTER_AUTH_SECRET="your-secret-key-min-32-chars"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# FastAPI Backend
+API_URL="http://127.0.0.1:8000/api/v1"
+SECRET_KEY="your-secret-key-for-jwt-min-32-chars"
+
+# Cloudflare R2 Storage
+R2_ACCOUNT_ID="your-cloudflare-account-id"
+R2_ACCESS_KEY_ID="your-r2-access-key-id"
+R2_SECRET_ACCESS_KEY="your-r2-secret-access-key"
+R2_BUCKET_NAME="credit-reports"
+
+# Google AI (Gemini) for dispute letters
+GOOGLE_AI_API_KEY="your-google-ai-api-key"
+
+# Cal.com Integration (Optional)
+NEXT_PUBLIC_CAL_USERNAME="your-cal-username"
+NEXT_PUBLIC_CAL_EVENT_TYPE="consultation"
+
+# Analytics (Optional)
+NEXT_PUBLIC_GA_MEASUREMENT_ID="G-XXXXXXXXXX"
+NEXT_PUBLIC_PLAUSIBLE_DOMAIN="yourdomain.com"
+
+# Email (Optional)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@example.com"
+SMTP_PASSWORD="your-email-app-password"
+CONTACT_EMAIL="contact@toptierfinancial.com"
+```
+
+### 3. Database Setup
+
+```bash
+# Generate migrations from schema
+npm run db:generate
+
+# Apply migrations to database
+npm run db:migrate
+
+# (Optional) Open Drizzle Studio to view/edit data
+npm run db:studio
+```
+
+### 4. Seed Initial Data (Optional)
+
+```bash
+# Seed dispute letter templates
+npx tsx scripts/seed-dispute-templates.ts
+
+# Seed agreement template
+npx tsx scripts/seed-agreement-template.ts
+```
+
+### 5. Start Development Servers
+
+```bash
+# Terminal 1: Next.js frontend
+npm run dev
+
+# Terminal 2: FastAPI backend (optional)
+npm run fastapi-dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   Next.js App                       │
+│                   Next.js 16 App                    │
 ├─────────────────────────────────────────────────────┤
-│ Stack Auth Provider                                 │
-│ ├─ Authentication UI Components                    │
+│ Better Auth Provider                                │
+│ ├─ Email/Password Authentication                   │
+│ ├─ Admin Role Management                           │
 │ └─ Session Management (Cookies)                    │
 ├─────────────────────────────────────────────────────┤
-│ Neon Auth Backend                                   │
-│ └─ User sync → neon_auth.users_sync table          │
+│ API Routes                                          │
+│ ├─ /api/auth/* - Authentication endpoints          │
+│ ├─ /api/admin/* - Admin dashboard APIs             │
+│ └─ /api/portal/* - Client portal APIs              │
 ├─────────────────────────────────────────────────────┤
-│ Your Drizzle ORM                                    │
-│ └─ Custom users table                              │
+│ Drizzle ORM + Neon PostgreSQL                      │
+│ └─ 35+ tables for comprehensive CRM                │
 ├─────────────────────────────────────────────────────┤
-│ Neon PostgreSQL Database                           │
+│ External Services                                   │
+│ ├─ Cloudflare R2 (File Storage)                    │
+│ ├─ Google Gemini (AI Letter Generation)            │
+│ └─ Cal.com (Appointment Scheduling)                │
 └─────────────────────────────────────────────────────┘
 ```
 
-## How It Works
+## Authentication
 
-1. **User Signs Up**
-   - Navigate to `/handler/sign-up`
-   - Stack Auth UI handles the sign-up form
-   - Neon Auth creates user in `neon_auth.users_sync` table
+### Better Auth Setup
 
-2. **Sync Users to Custom Table**
-   - Call `POST /api/sync-users` to copy users to your `users` table
-   - Or use the `syncNeonAuthUsers()` function directly
+Authentication is handled by [Better Auth](https://better-auth.com) with the following features:
 
-3. **Access User Data**
-   - Use `useUser()` hook in client components to get current user
-   - Use `stackServerApp.getUser()` in server components
+- Email/password registration and login
+- Role-based access control (`user`, `admin`, `super_admin`)
+- Session management with secure cookies
+- Admin plugin for user management
 
-## Key Files
+### Auth Routes
 
-- `src/app/layout.tsx` - Root layout with Stack Auth provider
-- `src/app/providers.tsx` - Tooltip and Stack Auth providers wrapper
-- `src/app/globals.css` - Tailwind CSS with custom color variables
-- `tailwind.config.mjs` - Tailwind configuration
-- `db/schema.ts` - Drizzle ORM schema
-- `db/client.ts` - Database client
-- `db/sync.ts` - User sync function
-- `src/app/api/sync-users/route.ts` - API endpoint for syncing users
+- `/sign-in` - User login
+- `/sign-up` - User registration
+- `/profile` - User profile management (authenticated)
 
-## Environment Variables Required
+### Making a User Admin
 
-Make sure these are in your `.env` file:
+Use the admin API endpoint:
 
-```
-NEXT_PUBLIC_STACK_PROJECT_ID=<your-project-id>
-NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=<your-publishable-key>
-STACK_SECRET_SERVER_KEY=<your-secret-key>
-DATABASE_URL=<your-neon-connection-string>
+```bash
+curl -X POST http://localhost:3000/api/admin/set-role \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "user-id", "role": "admin"}'
 ```
 
-## Next Steps
+Or directly in the database:
 
-1. **Run Development Server**
-   ```bash
-   npm run dev
-   ```
-
-2. **Test Authentication**
-   - Go to http://localhost:3000/handler/sign-up
-   - Create a test user
-   - Check your database: `SELECT * FROM neon_auth.users_sync`
-
-3. **Sync Users**
-   - Make a POST request to `/api/sync-users`
-   - Check your `users` table: `SELECT * FROM users`
-
-4. **Access User Data**
-   - Go to http://localhost:3000/profile
-   - See user information displayed
-
-## Styling
-
-The UI styling comes from Stack Auth's built-in components styled with Tailwind CSS. The color scheme uses CSS variables for easy customization:
-
-- Update CSS variables in `src/app/globals.css` to change colors
-- Supports light/dark mode via `prefers-color-scheme`
-
-## Database Queries
-
-View all authenticated users:
 ```sql
-SELECT * FROM neon_auth.users_sync WHERE deleted_at IS NULL;
+UPDATE "user" SET role = 'admin' WHERE email = 'admin@example.com';
 ```
 
-View synced users in your custom table:
-```sql
-SELECT * FROM users;
-```
+## Key Features Setup
+
+### Credit Report Parsing
+
+The platform supports parsing credit reports from multiple sources:
+
+- TransUnion, Experian, Equifax (direct)
+- IdentityIQ, MyScoreIQ, SmartCredit
+- PrivacyGuard, AnnualCreditReport.com
+
+Upload credit reports via the Admin Dashboard → Clients → [Client] → Upload Report.
+
+### AI Dispute Letter Generation
+
+Requires `GOOGLE_AI_API_KEY` for Google Gemini. The AI generates personalized dispute letters based on:
+
+- Negative item details
+- FCRA/FDCPA compliance requirements
+- Client information
+
+### Cloudflare R2 Storage
+
+Set up an R2 bucket for credit report storage:
+
+1. Create a bucket in Cloudflare dashboard
+2. Generate API tokens with read/write access
+3. Configure CORS if needed for direct uploads
+
+### Cal.com Integration
+
+1. Create a Cal.com account
+2. Set up an event type for consultations
+3. Add your username and event type to `.env`
+
+## Database Schema Overview
+
+The schema (`db/schema.ts`) includes:
+
+**Authentication:**
+- `user`, `session`, `account`, `verification`
+
+**CRM:**
+- `clients`, `consultationRequests`, `tasks`, `clientNotes`
+
+**Credit Analysis:**
+- `creditReports`, `creditAccounts`, `negativeItems`
+- `creditAnalyses`, `consumerProfiles`, `bureauDiscrepancies`
+- `fcraComplianceItems`, `creditScoreHistory`
+
+**Disputes:**
+- `disputes`, `disputeBatches`, `disputeLetterTemplates`
+
+**Compliance (CROA/TSR):**
+- `agreementTemplates`, `clientAgreements`, `disclosureAcknowledgments`
+- `invoices`, `feeConfigurations`, `paymentAuditLog`
+
+**Content:**
+- `blogPosts`, `blogCategories`, `faqItems`, `testimonials`
+- `services`, `pages`, `disclaimers`
+
+**Communication:**
+- `messageThreads`, `messages`, `messageAttachments`
+- `emailSubscribers`, `emailCampaigns`
 
 ## Troubleshooting
 
-**Sign-up page looks wrong**: Make sure Tailwind CSS is loading by checking the browser inspector. Verify `tailwind.config.mjs` includes the correct content paths.
+### Database Connection Issues
 
-**Users not appearing in database**: 
-1. Check that Neon Auth is enabled in your Neon console
-2. Verify DATABASE_URL is correct
-3. Call `/api/sync-users` to manually sync
+```bash
+# Test connection
+npm run db:studio
+```
 
-**"Tooltip must be used within TooltipProvider" error**: This is fixed by the `TooltipWrapper` component in `src/app/providers.tsx`.
+Verify `DATABASE_URL` format: `postgresql://user:password@host:port/database?sslmode=require`
+
+### Authentication Not Working
+
+1. Check `BETTER_AUTH_SECRET` is at least 32 characters
+2. Verify `NEXT_PUBLIC_APP_URL` matches your dev URL
+3. Clear browser cookies and try again
+
+### File Uploads Failing
+
+1. Verify R2 credentials in `.env`
+2. Check bucket CORS configuration
+3. Ensure bucket name matches `R2_BUCKET_NAME`
+
+### AI Features Not Working
+
+1. Verify `GOOGLE_AI_API_KEY` is valid
+2. Check API quota in Google Cloud Console
+3. Review error logs for rate limiting
+
+## Production Deployment
+
+### Vercel (Recommended)
+
+1. Push to GitHub
+2. Import project in Vercel
+3. Configure environment variables
+4. Deploy
+
+### Environment Variables for Production
+
+Ensure all secrets are properly set:
+- Use strong, unique values for `BETTER_AUTH_SECRET` and `SECRET_KEY`
+- Set `NEXT_PUBLIC_APP_URL` to your production domain
+- Configure R2 CORS for your production domain
 
 ## Resources
 
-- [Stack Auth Docs](https://docs.stack-auth.com)
-- [Neon Auth Docs](https://neon.com/docs/neon-auth/overview)
-- [Drizzle ORM Docs](https://orm.drizzle.team)
-- [Tailwind CSS Docs](https://tailwindcss.com)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Better Auth Documentation](https://better-auth.com/docs)
+- [Drizzle ORM Documentation](https://orm.drizzle.team)
+- [Neon Documentation](https://neon.tech/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)

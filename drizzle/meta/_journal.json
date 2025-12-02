@@ -1,0 +1,69 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1764490849233,
+      "tag": "0000_lazy_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764496796379,
+      "tag": "0001_bizarre_gorilla_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764524836469,
+      "tag": "0002_numerous_wonder_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1764547935185,
+      "tag": "0003_omniscient_wither",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1764549929663,
+      "tag": "0004_silly_pepper_potts",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1764551552280,
+      "tag": "0005_cute_rogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1764559546720,
+      "tag": "0006_public_hedge_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1764566734901,
+      "tag": "0007_glorious_captain_universe",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1764647721724,
+      "tag": "0008_gifted_masque",
+      "breakpoints": true
+    }
+  ]
+}
