@@ -550,6 +550,36 @@ export const creditAnalyses = pgTable('credit_analyses', {
   index("credit_analyses_clientId_idx").on(table.clientId),
 ]);
 
+// Credit score history (for tracking progress over time)
+export const creditScoreHistory = pgTable('credit_score_history', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  creditReportId: text('credit_report_id').references(() => creditReports.id, { onDelete: 'set null' }),
+  scoreTransunion: integer('score_transunion'),
+  scoreExperian: integer('score_experian'),
+  scoreEquifax: integer('score_equifax'),
+  averageScore: integer('average_score'), // Calculated average of available scores
+  source: text('source').default('credit_report'), // 'credit_report' | 'manual_entry' | 'client_update'
+  notes: text('notes'),
+  recordedAt: timestamp('recorded_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("credit_score_history_clientId_idx").on(table.clientId),
+  index("credit_score_history_recordedAt_idx").on(table.recordedAt),
+]);
+
+// Credit score history relations
+export const creditScoreHistoryRelations = relations(creditScoreHistory, ({ one }) => ({
+  client: one(clients, {
+    fields: [creditScoreHistory.clientId],
+    references: [clients.id],
+  }),
+  creditReport: one(creditReports, {
+    fields: [creditScoreHistory.creditReportId],
+    references: [creditReports.id],
+  }),
+}));
+
 // Dispute batches (for grouping multiple disputes)
 export const disputeBatches = pgTable('dispute_batches', {
   id: text('id').primaryKey(),
@@ -590,12 +620,20 @@ export const disputes = pgTable('disputes', {
   responseReceivedAt: timestamp('response_received_at'),
   outcome: text('outcome'), // 'deleted' | 'verified' | 'updated' | 'pending' | 'no_response'
   responseNotes: text('response_notes'),
+  // Enhanced tracking fields
+  responseDocumentUrl: text('response_document_url'), // URL to uploaded bureau response document
+  verificationMethod: text('verification_method'), // 'automated' | 'manual' | 'phone' | 'mail' | 'online'
+  escalationReason: text('escalation_reason'), // Reason for escalation to next round
+  creditorName: text('creditor_name'), // Denormalized for quick access
+  accountNumber: text('account_number'), // Masked account number
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
   index("disputes_clientId_idx").on(table.clientId),
   index("disputes_batchId_idx").on(table.batchId),
   index("disputes_negativeItemId_idx").on(table.negativeItemId),
+  index("disputes_status_idx").on(table.status),
+  index("disputes_responseDeadline_idx").on(table.responseDeadline),
 ]);
 
 // Dispute letter templates
@@ -738,6 +776,7 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   consumerProfiles: many(consumerProfiles),
   bureauDiscrepancies: many(bureauDiscrepancies),
   fcraComplianceItems: many(fcraComplianceItems),
+  scoreHistory: many(creditScoreHistory),
 }));
 
 // Consumer profiles relations

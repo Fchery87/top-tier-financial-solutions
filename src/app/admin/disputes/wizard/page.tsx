@@ -107,6 +107,12 @@ export default function DisputeWizardPage() {
   const [generating, setGenerating] = React.useState(false);
   const [generationProgress, setGenerationProgress] = React.useState(0);
 
+  // Bulk Mark as Sent
+  const [bulkTrackingNumber, setBulkTrackingNumber] = React.useState('');
+  const [bulkSendDate, setBulkSendDate] = React.useState('');
+  const [markingAsSent, setMarkingAsSent] = React.useState(false);
+  const [bulkSentSuccess, setBulkSentSuccess] = React.useState(false);
+
   // Fetch clients
   const fetchClients = React.useCallback(async () => {
     setLoadingClients(true);
@@ -269,6 +275,52 @@ export default function DisputeWizardPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleBulkMarkAsSent = async () => {
+    if (!selectedClient || generatedLetters.length === 0) return;
+    
+    setMarkingAsSent(true);
+    setBulkSentSuccess(false);
+    
+    try {
+      const sendDate = bulkSendDate ? new Date(bulkSendDate) : new Date();
+      const responseDeadline = new Date(sendDate);
+      responseDeadline.setDate(responseDeadline.getDate() + 30); // 30-day FCRA deadline
+      
+      // Create disputes for each generated letter
+      for (const letter of generatedLetters) {
+        const item = negativeItems.find(i => i.id === letter.itemId);
+        
+        await fetch('/api/admin/disputes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: selectedClient.id,
+            negativeItemId: letter.itemId,
+            bureau: letter.bureau,
+            disputeReason: selectedReasonCodes.join(', '),
+            disputeType: selectedDisputeType,
+            round: disputeRound,
+            status: 'sent',
+            letterContent: letter.content,
+            trackingNumber: bulkTrackingNumber || null,
+            sentAt: sendDate.toISOString(),
+            responseDeadline: responseDeadline.toISOString(),
+            creditorName: item?.creditor_name,
+            accountNumber: item?.amount ? `****${String(item.amount).slice(-4)}` : null,
+            generatedByAi: generationMethod === 'ai',
+          }),
+        });
+      }
+      
+      setBulkSentSuccess(true);
+    } catch (error) {
+      console.error('Error marking disputes as sent:', error);
+      alert('Failed to save some disputes. Please try again.');
+    } finally {
+      setMarkingAsSent(false);
+    }
   };
 
   const canProceed = () => {
@@ -467,23 +519,48 @@ export default function DisputeWizardPage() {
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                     <span className="text-sm text-muted-foreground">
                       {selectedItems.length} of {negativeItems.length} items selected
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (selectedItems.length === negativeItems.length) {
-                          setSelectedItems([]);
-                        } else {
-                          setSelectedItems(negativeItems.map(i => i.id));
-                        }
-                      }}
-                    >
-                      {selectedItems.length === negativeItems.length ? 'Deselect All' : 'Select All'}
-                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Select by Bureau */}
+                      {['transunion', 'experian', 'equifax'].map((bureau) => {
+                        const bureauItems = negativeItems.filter(i => i.bureau === bureau);
+                        if (bureauItems.length === 0) return null;
+                        const allSelected = bureauItems.every(i => selectedItems.includes(i.id));
+                        return (
+                          <Button
+                            key={bureau}
+                            variant={allSelected ? 'secondary' : 'outline'}
+                            size="sm"
+                            onClick={() => {
+                              if (allSelected) {
+                                setSelectedItems(prev => prev.filter(id => !bureauItems.map(i => i.id).includes(id)));
+                              } else {
+                                setSelectedItems(prev => [...new Set([...prev, ...bureauItems.map(i => i.id)])]);
+                              }
+                            }}
+                          >
+                            {bureau.charAt(0).toUpperCase() + bureau.slice(1)}
+                            <span className="ml-1 text-xs opacity-70">({bureauItems.length})</span>
+                          </Button>
+                        );
+                      })}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedItems.length === negativeItems.length) {
+                            setSelectedItems([]);
+                          } else {
+                            setSelectedItems(negativeItems.map(i => i.id));
+                          }
+                        }}
+                      >
+                        {selectedItems.length === negativeItems.length ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    </div>
                   </div>
 
                   {negativeItems.map((item) => (
@@ -702,6 +779,61 @@ export default function DisputeWizardPage() {
         {/* Step 5: Review */}
         {currentStep === 5 && (
           <div className="space-y-4">
+            {/* Bulk Actions Card */}
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 border-l-4 border-l-secondary">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Mark Disputes as Sent</CardTitle>
+                <CardDescription>
+                  After mailing your letters, enter tracking info to start the 30-day response deadline
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Tracking Number (Optional)</label>
+                    <Input
+                      placeholder="e.g., 9400111899223100034012"
+                      value={bulkTrackingNumber}
+                      onChange={(e) => setBulkTrackingNumber(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">USPS Certified Mail tracking number</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Send Date</label>
+                    <Input
+                      type="date"
+                      value={bulkSendDate}
+                      onChange={(e) => setBulkSendDate(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Defaults to today if not set</p>
+                  </div>
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleBulkMarkAsSent}
+                  disabled={markingAsSent || generatedLetters.length === 0}
+                >
+                  {markingAsSent ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving Disputes...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark All {generatedLetters.length} Disputes as Sent
+                    </>
+                  )}
+                </Button>
+                {bulkSentSuccess && (
+                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-green-500 text-sm flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Successfully saved {generatedLetters.length} disputes. Response deadline set for 30 days.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="bg-card/80 backdrop-blur-sm border-border/50">
               <CardHeader>
                 <CardTitle>Generated Letters</CardTitle>

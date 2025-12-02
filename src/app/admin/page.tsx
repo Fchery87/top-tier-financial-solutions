@@ -42,7 +42,15 @@ interface DashboardStats {
     pendingReports: number;
     pendingAgreements: number;
     overdueTasks: number;
+    responseDueSoon: number;
+    overdueResponses: number;
   };
+  successByBureau: {
+    transunion: { total: number; deleted: number; rate: number };
+    experian: { total: number; deleted: number; rate: number };
+    equifax: { total: number; deleted: number; rate: number };
+  };
+  itemsRemovedThisMonth: number;
   recentActivity: Array<{
     type: 'dispute' | 'report';
     id: string;
@@ -92,7 +100,9 @@ export default function AdminDashboard() {
   const totalAttention = stats ? 
     (stats.attentionNeeded?.pendingReports ?? 0) + 
     (stats.attentionNeeded?.pendingAgreements ?? 0) + 
-    (stats.attentionNeeded?.overdueTasks ?? 0) : 0;
+    (stats.attentionNeeded?.overdueTasks ?? 0) +
+    (stats.attentionNeeded?.responseDueSoon ?? 0) +
+    (stats.attentionNeeded?.overdueResponses ?? 0) : 0;
 
   return (
     <div className="space-y-6">
@@ -135,7 +145,7 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
       >
         <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
           <CardContent className="p-4">
@@ -226,6 +236,24 @@ export default function AdminDashboard() {
             )}
           </CardContent>
         </Card>
+
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+            </div>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
+                <p className="text-xs text-muted-foreground">Removed This Month</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Main Content Grid */}
@@ -290,6 +318,73 @@ export default function AdminDashboard() {
                       <p className="text-2xl font-bold">{stats?.disputePipeline.awaiting ?? 0}</p>
                       <p className="text-xs text-muted-foreground">Awaiting</p>
                     </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Success by Bureau */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.32 }}
+          >
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-secondary" />
+                  Success Rate by Bureau
+                </CardTitle>
+                <CardDescription>Deletion rate across credit bureaus</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-4">
+                    {(['transunion', 'experian', 'equifax'] as const).map((bureau) => {
+                      const data = stats?.successByBureau?.[bureau];
+                      const rate = data?.rate ?? 0;
+                      const color = bureau === 'transunion' ? 'blue' : bureau === 'experian' ? 'purple' : 'red';
+                      return (
+                        <div key={bureau} className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">{bureau}</p>
+                          <div className="relative w-16 h-16 mx-auto mb-2">
+                            <svg className="w-full h-full transform -rotate-90">
+                              <circle
+                                cx="32"
+                                cy="32"
+                                r="28"
+                                stroke="currentColor"
+                                strokeWidth="6"
+                                fill="none"
+                                className="text-muted/30"
+                              />
+                              <circle
+                                cx="32"
+                                cy="32"
+                                r="28"
+                                stroke="currentColor"
+                                strokeWidth="6"
+                                fill="none"
+                                strokeDasharray={`${rate * 1.76} 176`}
+                                className={`text-${color}-500`}
+                                style={{ stroke: `var(--${color}-500, ${color === 'blue' ? '#3b82f6' : color === 'purple' ? '#a855f7' : '#ef4444'})` }}
+                              />
+                            </svg>
+                            <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
+                              {rate}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {data?.deleted ?? 0} of {data?.total ?? 0} deleted
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -373,6 +468,40 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-bold">{stats?.attentionNeeded?.overdueTasks}</span>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
+                        </div>
+                      </Link>
+                    )}
+                    {(stats?.attentionNeeded?.responseDueSoon ?? 0) > 0 && (
+                      <Link href="/admin/disputes/wizard" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-yellow-500/10">
+                            <Clock className="w-4 h-4 text-yellow-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Response Due Soon</p>
+                            <p className="text-xs text-muted-foreground">Bureau responses due within 7 days</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold">{stats?.attentionNeeded?.responseDueSoon}</span>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
+                        </div>
+                      </Link>
+                    )}
+                    {(stats?.attentionNeeded?.overdueResponses ?? 0) > 0 && (
+                      <Link href="/admin/disputes/wizard" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group border border-red-500/30">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-red-500/10">
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-red-500">Overdue Responses</p>
+                            <p className="text-xs text-muted-foreground">Bureaus past 30-day deadline</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-red-500">{stats?.attentionNeeded?.overdueResponses}</span>
                           <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                         </div>
                       </Link>

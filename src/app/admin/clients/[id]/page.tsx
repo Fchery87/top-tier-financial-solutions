@@ -144,6 +144,17 @@ interface Task {
   created_at: string;
 }
 
+interface ScoreHistory {
+  id: string;
+  score_transunion: number | null;
+  score_experian: number | null;
+  score_equifax: number | null;
+  average_score: number | null;
+  source: string;
+  notes: string | null;
+  recorded_at: string;
+}
+
 const statusOptions = ['pending', 'active', 'paused', 'completed', 'cancelled'];
 const bureauOptions = ['transunion', 'experian', 'equifax', 'combined'];
 
@@ -168,6 +179,7 @@ export default function ClientDetailPage() {
   const [negativeItems, setNegativeItems] = React.useState<NegativeItem[]>([]);
   const [negativeItemsCount, setNegativeItemsCount] = React.useState(0);
   const [disputes, setDisputes] = React.useState<Dispute[]>([]);
+  const [scoreHistory, setScoreHistory] = React.useState<ScoreHistory[]>([]);
   
   const [editMode, setEditMode] = React.useState(false);
   const [editedClient, setEditedClient] = React.useState<Partial<ClientDetail>>({});
@@ -218,6 +230,7 @@ export default function ClientDetailPage() {
         setNegativeItems(data.negative_items || []);
         setNegativeItemsCount(data.negative_items_count || 0);
         setDisputes(data.disputes || []);
+        setScoreHistory(data.score_history || []);
         setEditedClient(data.client);
       } else if (response.status === 404) {
         router.push('/admin/clients');
@@ -779,6 +792,72 @@ export default function ClientDetailPage() {
                           </li>
                         ))}
                       </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Score Progress Timeline */}
+                {scoreHistory.length > 0 && (
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-green-500" />
+                        Score Progress
+                      </CardTitle>
+                      <CardDescription>Credit score changes over time</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Score Timeline Chart */}
+                        <div className="h-48 flex items-end gap-1">
+                          {scoreHistory.slice(-12).map((entry, index) => {
+                            const maxScore = 850;
+                            const score = entry.average_score || 0;
+                            const heightPercent = (score / maxScore) * 100;
+                            const prevScore = index > 0 ? (scoreHistory.slice(-12)[index - 1]?.average_score || 0) : score;
+                            const isImprovement = score > prevScore;
+                            
+                            return (
+                              <div key={entry.id} className="flex-1 flex flex-col items-center gap-1">
+                                <div 
+                                  className={`w-full rounded-t transition-all ${
+                                    isImprovement ? 'bg-green-500' : score < prevScore ? 'bg-red-500' : 'bg-blue-500'
+                                  }`}
+                                  style={{ height: `${heightPercent}%`, minHeight: '4px' }}
+                                  title={`${score} - ${new Date(entry.recorded_at).toLocaleDateString()}`}
+                                />
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(entry.recorded_at).toLocaleDateString('en-US', { month: 'short' })}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Score Change Summary */}
+                        {scoreHistory.length >= 2 && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                            <div>
+                              <p className="text-sm font-medium">Score Change</p>
+                              <p className="text-xs text-muted-foreground">
+                                From {scoreHistory[0]?.average_score || '—'} to {scoreHistory[scoreHistory.length - 1]?.average_score || '—'}
+                              </p>
+                            </div>
+                            <div className={`flex items-center gap-1 text-lg font-bold ${
+                              (scoreHistory[scoreHistory.length - 1]?.average_score || 0) > (scoreHistory[0]?.average_score || 0)
+                                ? 'text-green-500'
+                                : 'text-red-500'
+                            }`}>
+                              {(scoreHistory[scoreHistory.length - 1]?.average_score || 0) > (scoreHistory[0]?.average_score || 0) ? (
+                                <TrendingUp className="w-5 h-5" />
+                              ) : (
+                                <TrendingDown className="w-5 h-5" />
+                              )}
+                              {Math.abs((scoreHistory[scoreHistory.length - 1]?.average_score || 0) - (scoreHistory[0]?.average_score || 0))} pts
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 )}

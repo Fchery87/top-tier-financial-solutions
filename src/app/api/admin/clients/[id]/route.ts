@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, user } from '@/db/schema';
+import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, asc } from 'drizzle-orm';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -96,6 +96,13 @@ export async function GET(
       .from(disputes)
       .where(eq(disputes.clientId, id))
       .orderBy(desc(disputes.createdAt));
+
+    // Get score history for timeline
+    const scoreHistoryResult = await db
+      .select()
+      .from(creditScoreHistory)
+      .where(eq(creditScoreHistory.clientId, id))
+      .orderBy(asc(creditScoreHistory.recordedAt));
 
     // Parse recommendations from latest analysis
     let recommendations: string[] = [];
@@ -191,9 +198,28 @@ export async function GET(
         dispute_type: d.disputeType,
         status: d.status,
         round: d.round,
+        tracking_number: d.trackingNumber,
         sent_at: d.sentAt?.toISOString(),
+        response_deadline: d.responseDeadline?.toISOString(),
+        response_received_at: d.responseReceivedAt?.toISOString(),
         outcome: d.outcome,
+        response_notes: d.responseNotes,
+        response_document_url: d.responseDocumentUrl,
+        verification_method: d.verificationMethod,
+        escalation_reason: d.escalationReason,
+        creditor_name: d.creditorName,
+        account_number: d.accountNumber,
         created_at: d.createdAt?.toISOString(),
+      })),
+      score_history: scoreHistoryResult.map(s => ({
+        id: s.id,
+        score_transunion: s.scoreTransunion,
+        score_experian: s.scoreExperian,
+        score_equifax: s.scoreEquifax,
+        average_score: s.averageScore,
+        source: s.source,
+        notes: s.notes,
+        recorded_at: s.recordedAt?.toISOString(),
       })),
     });
   } catch (error) {

@@ -16,7 +16,7 @@ import {
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { count, eq, and, or, sql, desc, isNull, lt, gt } from 'drizzle-orm';
+import { count, eq, and, or, sql, desc, isNull, lt, gt, gte, lte, between } from 'drizzle-orm';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -134,13 +134,57 @@ export async function GET() {
       : 0;
 
     // Calculate success rate (disputes resolved as deleted / total resolved)
-    const resolvedDisputes = await db.select({ outcome: disputes.outcome })
+    const resolvedDisputes = await db.select({ outcome: disputes.outcome, bureau: disputes.bureau })
       .from(disputes)
       .where(eq(disputes.status, 'resolved'));
     
     const successRate = resolvedDisputes.length > 0
       ? Math.round((resolvedDisputes.filter(d => d.outcome === 'deleted').length / resolvedDisputes.length) * 100)
       : 0;
+
+    // Success rate by bureau
+    const bureaus = ['transunion', 'experian', 'equifax'];
+    const successByBureau = bureaus.reduce((acc, bureau) => {
+      const bureauDisputes = resolvedDisputes.filter(d => d.bureau === bureau);
+      const deleted = bureauDisputes.filter(d => d.outcome === 'deleted').length;
+      acc[bureau] = {
+        total: bureauDisputes.length,
+        deleted,
+        rate: bureauDisputes.length > 0 ? Math.round((deleted / bureauDisputes.length) * 100) : 0,
+      };
+      return acc;
+    }, {} as Record<string, { total: number; deleted: number; rate: number }>);
+
+    // Disputes with response deadline in next 7 days
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const responseDueSoon = await db.select({ count: count() })
+      .from(disputes)
+      .where(and(
+        or(eq(disputes.status, 'sent'), eq(disputes.status, 'in_progress')),
+        lte(disputes.responseDeadline, sevenDaysFromNow),
+        gte(disputes.responseDeadline, new Date())
+      ));
+
+    // Overdue responses (past deadline, no response)
+    const overdueResponses = await db.select({ count: count() })
+      .from(disputes)
+      .where(and(
+        or(eq(disputes.status, 'sent'), eq(disputes.status, 'in_progress')),
+        lt(disputes.responseDeadline, new Date()),
+        isNull(disputes.responseReceivedAt)
+      ));
+
+    // Items removed this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const itemsRemovedThisMonth = await db.select({ count: count() })
+      .from(disputes)
+      .where(and(
+        eq(disputes.outcome, 'deleted'),
+        gte(disputes.updatedAt, startOfMonth)
+      ));
 
     // Merge recent activity into timeline
     const recentActivity = [
@@ -188,7 +232,12 @@ export async function GET() {
         pendingReports: pendingReportsResult[0].count,
         pendingAgreements: pendingAgreementsResult[0].count,
         overdueTasks: overdueTasksResult[0].count,
+        responseDueSoon: responseDueSoon[0].count,
+        overdueResponses: overdueResponses[0].count,
       },
+      // Enhanced analytics
+      successByBureau,
+      itemsRemovedThisMonth: itemsRemovedThisMonth[0].count,
       // Recent activity
       recentActivity,
     });

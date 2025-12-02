@@ -4,6 +4,7 @@ import {
   creditAccounts, 
   negativeItems, 
   creditAnalyses,
+  creditScoreHistory,
   consumerProfiles,
   bureauDiscrepancies,
   fcraComplianceItems,
@@ -193,6 +194,26 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       recommendations: JSON.stringify(generateRecommendations(parsedData)),
       createdAt: now,
       updatedAt: now,
+    });
+
+    // Save score history for timeline tracking
+    const validScores = [parsedData.scores.transunion, parsedData.scores.experian, parsedData.scores.equifax]
+      .filter((s): s is number => s !== null && s !== undefined);
+    const averageScore = validScores.length > 0 
+      ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
+      : null;
+
+    await db.insert(creditScoreHistory).values({
+      id: randomUUID(),
+      clientId: report.clientId,
+      creditReportId: reportId,
+      scoreTransunion: parsedData.scores.transunion,
+      scoreExperian: parsedData.scores.experian,
+      scoreEquifax: parsedData.scores.equifax,
+      averageScore,
+      source: 'credit_report',
+      recordedAt: now,
+      createdAt: now,
     });
 
     // Update report status
