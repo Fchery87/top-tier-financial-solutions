@@ -97,6 +97,102 @@ export interface ParsedInquiry {
   creditorName: string;
   inquiryDate?: Date;
   bureau?: string;
+  inquiryType?: string;
+}
+
+// Bureau-specific metrics (matching PHP ParserController output)
+export interface BureauMetrics {
+  creditScore?: number;
+  lenderRank?: string;
+  scoreScale?: string;
+  reportDate?: string;
+  totalAccounts: number;
+  openAccounts: number;
+  closedAccounts: number;
+  delinquent: number;
+  derogatory: number;
+  collection: number;
+  balances: number;
+  payments: number;
+  publicRecords: number;
+  inquiries: number;
+}
+
+export interface BureauSummary {
+  transunion: BureauMetrics;
+  experian: BureauMetrics;
+  equifax: BureauMetrics;
+}
+
+// Credit utilization per bureau
+export interface CreditUtilization {
+  balance: number;
+  limit: number;
+  percent: number;
+  rating: 'excellent' | 'good' | 'fair' | 'poor' | 'very_poor' | 'no_data';
+}
+
+export interface BureauCreditUtilization {
+  transunion: CreditUtilization;
+  experian: CreditUtilization;
+  equifax: CreditUtilization;
+  total: CreditUtilization;
+}
+
+// Derogatory account with per-bureau details
+export interface DerogatoryAccount {
+  creditorName: string;
+  uniqueStatus: string;
+  transunion: {
+    accountStatus?: string;
+    accountDate?: string;
+    paymentStatus?: string;
+  };
+  experian: {
+    accountStatus?: string;
+    accountDate?: string;
+    paymentStatus?: string;
+  };
+  equifax: {
+    accountStatus?: string;
+    accountDate?: string;
+    paymentStatus?: string;
+  };
+}
+
+// Public record item
+export interface PublicRecord {
+  type: string;
+  status: string;
+  transunionFiled?: string;
+  experianFiled?: string;
+  equifaxFiled?: string;
+}
+
+// Personal information per bureau (matching PHP ParserController output)
+export interface PersonalInfoPerBureau {
+  name?: string;
+  alsoKnownAs?: string[];
+  formerName?: string[];
+  dateOfBirth?: string;
+  currentAddress?: string;
+  previousAddresses?: string[];
+  employers?: string[];
+}
+
+export interface BureauPersonalInfo {
+  transunion: PersonalInfoPerBureau;
+  experian: PersonalInfoPerBureau;
+  equifax: PersonalInfoPerBureau;
+}
+
+// Extended parsed data with bureau-specific details
+export interface ExtendedParsedCreditData extends ParsedCreditData {
+  bureauSummary?: BureauSummary;
+  creditUtilization?: BureauCreditUtilization;
+  derogatoryAccounts?: DerogatoryAccount[];
+  publicRecords?: PublicRecord[];
+  bureauPersonalInfo?: BureauPersonalInfo;
 }
 
 const SCORE_PATTERNS = [

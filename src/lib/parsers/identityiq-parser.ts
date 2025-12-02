@@ -1,84 +1,99 @@
 // IdentityIQ Credit Report Parser
 // Handles HTML reports exported from IdentityIQ credit monitoring service
+// Ported from PHP ParserController with IIQ-specific DOM selectors
 
 import * as cheerio from 'cheerio';
-import type { AnyNode, Element } from 'domhandler';
-import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry } from './pdf-parser';
+import type { AnyNode } from 'domhandler';
+import type {
+  ParsedCreditData,
+  ParsedAccount,
+  ParsedNegativeItem,
+  ParsedInquiry,
+  BureauSummary,
+  BureauMetrics,
+  BureauCreditUtilization,
+  CreditUtilization,
+  DerogatoryAccount,
+  PublicRecord,
+  ExtendedParsedCreditData,
+  PersonalInfoPerBureau,
+  BureauPersonalInfo,
+} from './pdf-parser';
 import {
   StandardizedAccount,
   StandardizedConsumerProfile,
-  mapAccountTypeToCategory,
-  calculateCompletenessScore,
   isAccountNegative,
   calculateRiskLevel,
-  calculateFcraComplianceDate,
 } from './metro2-mapping';
 
-// IdentityIQ-specific CSS selectors and patterns
+// IdentityIQ-specific CSS selectors (matching actual HTML structure)
 const IIQ_SELECTORS = {
-  // Score sections
-  scoreContainer: '.score-container, .credit-score, [class*="score"], .iq-score',
-  scoreValue: '.score-value, .score-number, [class*="score-val"]',
-  scoreBureau: '.bureau-name, .score-bureau, [class*="bureau"]',
+  // Main sections
+  creditScoreSection: '#CreditScore',
+  summarySection: '#Summary',
+  accountHistorySection: 'address-history',
+  inquiriesSection: '#Inquiries',
+  publicRecordsSection: '#PublicInformation',
   
-  // Account/Tradeline sections
-  accountSection: '.tradeline, .account-item, .credit-account, [class*="tradeline"], [class*="account-row"]',
-  accountTable: 'table.accounts, table.tradelines, table[class*="account"]',
-  accountRow: 'tr.account, tr.tradeline, tr[class*="account"]',
+  // Table structures
+  fourColumnTable: 'table.rpt_content_table.rpt_table4column',
+  accountTable: 'table.crPrint.ng-scope',
+  dataTable: 'table.rpt_content_table.rpt_content_header.rpt_table4column.ng-scope',
+  contactsTable: 'table.rpt_content_table.rpt_content_header.rpt_content_contacts',
   
-  // Account details
-  creditorName: '.creditor-name, .account-name, .company-name, td:first-child',
-  accountNumber: '.account-number, .acct-num, [class*="account-num"]',
-  accountType: '.account-type, .acct-type, [class*="type"]',
-  accountStatus: '.account-status, .status, [class*="status"]',
-  balance: '.balance, .current-balance, [class*="balance"]',
-  creditLimit: '.credit-limit, .limit, [class*="limit"]',
-  highCredit: '.high-credit, .high-balance, [class*="high"]',
-  payment: '.payment, .monthly-payment, [class*="payment"]',
-  dateOpened: '.date-opened, .open-date, [class*="opened"]',
-  dateReported: '.date-reported, .last-reported, [class*="reported"]',
-  paymentStatus: '.payment-status, .pay-status, [class*="pay-status"]',
+  // Bureau header classes
+  headerTransunion: '.headerTUC',
+  headerExperian: '.headerEXP',
+  headerEquifax: '.headerEQF',
   
-  // Consumer profile
-  consumerSection: '.consumer-info, .personal-info, [class*="consumer"], [class*="personal"]',
-  nameField: '.consumer-name, .full-name, [class*="name"]',
-  addressField: '.address, [class*="address"]',
-  ssnField: '.ssn, [class*="ssn"]',
-  dobField: '.dob, .date-of-birth, [class*="birth"]',
+  // Cell classes
+  labelCell: 'td.label',
+  infoCell: 'td.info',
   
-  // Inquiry sections
-  inquirySection: '.inquiries, .inquiry-section, [class*="inquiry"]',
-  inquiryItem: '.inquiry-item, .inquiry-row, tr[class*="inquiry"]',
+  // Account headers
+  accountHeader: 'div.sub_header.ng-binding.ng-scope',
+  accountHeaderAlt: 'div.sub_header.ng-binding',
   
-  // Negative items / Derogatory
-  negativeSection: '.negative-items, .derogatory, [class*="negative"], [class*="derogatory"]',
-  collectionSection: '.collections, [class*="collection"]',
-  
-  // Public records
-  publicRecordSection: '.public-records, [class*="public-record"]',
+  // Content wrappers
+  contentWrapper: '.rpt_content_wrapper',
+  fullReportHeader: '.rpt_fullReport_header',
 };
 
-// Common IdentityIQ text patterns
-const IIQ_PATTERNS = {
-  bureauScore: /(?:TransUnion|Experian|Equifax)[:\s]*(\d{3})/gi,
-  accountNumber: /(?:Account\s*(?:#|Number|No\.?)[:\s]*)([X\d*#-]+)/i,
-  balance: /(?:Balance|Current\s*Balance|Amount\s*Owed)[:\s]*\$?([\d,]+(?:\.\d{2})?)/i,
-  creditLimit: /(?:Credit\s*Limit|Limit|High\s*Credit)[:\s]*\$?([\d,]+(?:\.\d{2})?)/i,
-  dateOpened: /(?:Date\s*Opened|Opened|Open\s*Date)[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})/i,
-  dateReported: /(?:Date\s*Reported|Last\s*Reported|Reported)[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})/i,
-  paymentHistoryGrid: /Payment\s*History[:\s]*([\d\sOKXL-]+)/i,
+// Derogatory detection patterns (from PHP)
+const DEROGATORY_PATTERNS = [
+  'collection/chargeoff',
+  'chargeoff',
+  'charge off',
+  'late 30',
+  'late 60',
+  'late 90',
+  'late 120',
+  'late 150',
+  'late 180',
+];
+
+// Bureau column indices (0-based, column 0 is label)
+const BUREAU_COLUMNS = {
+  transunion: 1,
+  experian: 2,
+  equifax: 3,
 };
 
-export function parseIdentityIQReport(html: string): ParsedCreditData {
+export function parseIdentityIQReport(html: string): ExtendedParsedCreditData {
   const $ = cheerio.load(html);
   const text = $.text();
 
-  const scores = extractIIQScores($, text);
-  const consumerProfile = extractIIQConsumerProfile($, text);
-  const accounts = extractIIQAccounts($, text);
-  const negativeItems = extractIIQNegativeItems(accounts, $, text);
-  const inquiries = extractIIQInquiries($, text);
-  const summary = calculateIIQSummary(accounts);
+  // Extract all data using IIQ-specific methods
+  const scores = extractIIQScores($);
+  const bureauSummary = extractBureauSummary($);
+  const bureauPersonalInfo = extractBureauPersonalInfo($);
+  const consumerProfile = extractIIQConsumerProfile($);
+  const { accounts, derogatoryAccounts } = extractIIQAccounts($);
+  const creditUtilization = calculateCreditUtilization($);
+  const publicRecords = extractPublicRecords($);
+  const inquiries = extractIIQInquiries($);
+  const negativeItems = buildNegativeItems(derogatoryAccounts, accounts);
+  const summary = calculateIIQSummary(accounts, bureauSummary);
 
   return {
     scores,
@@ -88,210 +103,614 @@ export function parseIdentityIQReport(html: string): ParsedCreditData {
     summary,
     rawText: text,
     consumerProfile,
-  } as ParsedCreditData & { consumerProfile: StandardizedConsumerProfile };
+    bureauSummary,
+    bureauPersonalInfo,
+    creditUtilization,
+    derogatoryAccounts,
+    publicRecords,
+  } as ExtendedParsedCreditData;
 }
 
-function extractIIQScores($: cheerio.CheerioAPI, text: string): ParsedCreditData['scores'] {
+function extractIIQScores($: cheerio.CheerioAPI): ParsedCreditData['scores'] {
   const scores: ParsedCreditData['scores'] = {};
 
-  // Try structured elements first
-  $(IIQ_SELECTORS.scoreContainer).each((_, container) => {
-    const containerEl = $(container);
-    const scoreText = containerEl.find(IIQ_SELECTORS.scoreValue).text() || containerEl.text();
-    const bureauText = containerEl.find(IIQ_SELECTORS.scoreBureau).text() || containerEl.closest('[class*="bureau"]').text();
-    
-    const scoreMatch = scoreText.match(/(\d{3})/);
-    if (scoreMatch) {
-      const score = parseInt(scoreMatch[1]);
-      if (score >= 300 && score <= 850) {
-        const bureauLower = bureauText.toLowerCase();
-        if (bureauLower.includes('transunion') || bureauLower.includes('tu')) {
-          scores.transunion = score;
-        } else if (bureauLower.includes('experian') || bureauLower.includes('ex')) {
-          scores.experian = score;
-        } else if (bureauLower.includes('equifax') || bureauLower.includes('eq')) {
-          scores.equifax = score;
+  // Find the Credit Score section
+  const $creditScoreSection = $(IIQ_SELECTORS.creditScoreSection);
+  
+  if ($creditScoreSection.length > 0) {
+    // Find the 4-column table within the credit score section
+    $creditScoreSection.find(IIQ_SELECTORS.fourColumnTable).each((_, table) => {
+      const $table = $(table);
+      
+      $table.find('tr').each((_, row) => {
+        const $row = $(row);
+        const $cells = $row.find('td');
+        
+        if ($cells.length >= 4) {
+          const labelText = $($cells[0]).text().trim().toLowerCase();
+          
+          if (labelText.includes('credit score')) {
+            // Extract scores from each bureau column
+            const tuScore = parseScore($($cells[BUREAU_COLUMNS.transunion]).text());
+            const expScore = parseScore($($cells[BUREAU_COLUMNS.experian]).text());
+            const eqScore = parseScore($($cells[BUREAU_COLUMNS.equifax]).text());
+            
+            if (tuScore) scores.transunion = tuScore;
+            if (expScore) scores.experian = expScore;
+            if (eqScore) scores.equifax = eqScore;
+          }
         }
-      }
-    }
-  });
+      });
+    });
+  }
 
-  // Fallback to text patterns
-  if (!scores.transunion) {
-    const tuMatch = text.match(/TransUnion[:\s]*(\d{3})/i);
-    if (tuMatch) scores.transunion = parseInt(tuMatch[1]);
-  }
-  if (!scores.experian) {
-    const exMatch = text.match(/Experian[:\s]*(\d{3})/i);
-    if (exMatch) scores.experian = parseInt(exMatch[1]);
-  }
-  if (!scores.equifax) {
-    const eqMatch = text.match(/Equifax[:\s]*(\d{3})/i);
-    if (eqMatch) scores.equifax = parseInt(eqMatch[1]);
+  // Fallback: search all 4-column tables for credit score row
+  if (!scores.transunion && !scores.experian && !scores.equifax) {
+    $(IIQ_SELECTORS.fourColumnTable).each((_, table) => {
+      const $table = $(table);
+      
+      $table.find('tr').each((_, row) => {
+        const $row = $(row);
+        const $cells = $row.find('td');
+        
+        if ($cells.length >= 4) {
+          const labelText = $($cells[0]).text().trim().toLowerCase();
+          
+          if (labelText.includes('credit score') && !labelText.includes('factor')) {
+            const tuScore = parseScore($($cells[1]).text());
+            const expScore = parseScore($($cells[2]).text());
+            const eqScore = parseScore($($cells[3]).text());
+            
+            if (tuScore && !scores.transunion) scores.transunion = tuScore;
+            if (expScore && !scores.experian) scores.experian = expScore;
+            if (eqScore && !scores.equifax) scores.equifax = eqScore;
+          }
+        }
+      });
+    });
   }
 
   return scores;
 }
 
-function extractIIQConsumerProfile($: cheerio.CheerioAPI, text: string): StandardizedConsumerProfile {
+function extractBureauSummary($: cheerio.CheerioAPI): BureauSummary {
+  const createEmptyMetrics = (): BureauMetrics => ({
+    creditScore: undefined,
+    lenderRank: undefined,
+    scoreScale: undefined,
+    reportDate: undefined,
+    totalAccounts: 0,
+    openAccounts: 0,
+    closedAccounts: 0,
+    delinquent: 0,
+    derogatory: 0,
+    collection: 0,
+    balances: 0,
+    payments: 0,
+    publicRecords: 0,
+    inquiries: 0,
+  });
+
+  const summary: BureauSummary = {
+    transunion: createEmptyMetrics(),
+    experian: createEmptyMetrics(),
+    equifax: createEmptyMetrics(),
+  };
+
+  // Extract Credit Score, Lender Rank, Score Scale from Credit Score section
+  extractCreditScoreData($, summary);
+  
+  // Extract Report Date from Personal Information section
+  extractReportDates($, summary);
+
+  // Find the Summary section for account counts
+  const $summarySection = $(IIQ_SELECTORS.summarySection).closest(IIQ_SELECTORS.contentWrapper);
+  
+  if ($summarySection.length === 0) {
+    // Fallback: find by header text
+    $(IIQ_SELECTORS.contentWrapper).each((_, wrapper) => {
+      const headerText = $(wrapper).find(IIQ_SELECTORS.fullReportHeader).text().toLowerCase();
+      if (headerText.includes('summary')) {
+        extractSummaryFromTable($, $(wrapper), summary);
+      }
+    });
+  } else {
+    extractSummaryFromTable($, $summarySection, summary);
+  }
+
+  return summary;
+}
+
+function extractCreditScoreData($: cheerio.CheerioAPI, summary: BureauSummary): void {
+  const $creditScoreSection = $(IIQ_SELECTORS.creditScoreSection).closest(IIQ_SELECTORS.contentWrapper);
+  
+  if ($creditScoreSection.length === 0) return;
+  
+  $creditScoreSection.find(IIQ_SELECTORS.fourColumnTable).each((_, table) => {
+    $(table).find('tr').each((_, row) => {
+      const $cells = $(row).find('td');
+      
+      if ($cells.length >= 4) {
+        const labelText = $($cells[0]).text().trim().toLowerCase();
+        
+        if (labelText.includes('credit score') && !labelText.includes('factor')) {
+          summary.transunion.creditScore = parseScore($($cells[1]).text());
+          summary.experian.creditScore = parseScore($($cells[2]).text());
+          summary.equifax.creditScore = parseScore($($cells[3]).text());
+        } else if (labelText.includes('lender rank')) {
+          summary.transunion.lenderRank = cleanText($($cells[1]).text());
+          summary.experian.lenderRank = cleanText($($cells[2]).text());
+          summary.equifax.lenderRank = cleanText($($cells[3]).text());
+        } else if (labelText.includes('score scale')) {
+          summary.transunion.scoreScale = cleanText($($cells[1]).text());
+          summary.experian.scoreScale = cleanText($($cells[2]).text());
+          summary.equifax.scoreScale = cleanText($($cells[3]).text());
+        }
+      }
+    });
+  });
+}
+
+function extractReportDates($: cheerio.CheerioAPI, summary: BureauSummary): void {
+  // Report dates are in the Personal Information section
+  $(IIQ_SELECTORS.contentWrapper).each((_, wrapper) => {
+    const $wrapper = $(wrapper);
+    const headerText = $wrapper.find(IIQ_SELECTORS.fullReportHeader).text().toLowerCase();
+    
+    if (headerText.includes('personal information')) {
+      $wrapper.find(IIQ_SELECTORS.fourColumnTable).each((_, table) => {
+        $(table).find('tr').each((_, row) => {
+          const $cells = $(row).find('td');
+          
+          if ($cells.length >= 4) {
+            const labelText = $($cells[0]).text().trim().toLowerCase();
+            
+            if (labelText.includes('credit report date') || labelText.includes('report date')) {
+              summary.transunion.reportDate = cleanText($($cells[1]).text());
+              summary.experian.reportDate = cleanText($($cells[2]).text());
+              summary.equifax.reportDate = cleanText($($cells[3]).text());
+            }
+          }
+        });
+      });
+    }
+  });
+}
+
+function extractBureauPersonalInfo($: cheerio.CheerioAPI): BureauPersonalInfo {
+  const createEmptyPersonalInfo = (): PersonalInfoPerBureau => ({
+    name: undefined,
+    alsoKnownAs: [],
+    formerName: [],
+    dateOfBirth: undefined,
+    currentAddress: undefined,
+    previousAddresses: [],
+    employers: [],
+  });
+
+  const personalInfo: BureauPersonalInfo = {
+    transunion: createEmptyPersonalInfo(),
+    experian: createEmptyPersonalInfo(),
+    equifax: createEmptyPersonalInfo(),
+  };
+
+  // Find Personal Information section
+  $(IIQ_SELECTORS.contentWrapper).each((_, wrapper) => {
+    const $wrapper = $(wrapper);
+    const headerText = $wrapper.find(IIQ_SELECTORS.fullReportHeader).text().toLowerCase();
+    
+    if (headerText.includes('personal information')) {
+      $wrapper.find(IIQ_SELECTORS.fourColumnTable).each((_, table) => {
+        $(table).find('tr').each((_, row) => {
+          const $cells = $(row).find('td');
+          
+          if ($cells.length >= 4) {
+            const labelText = $($cells[0]).text().trim().toLowerCase();
+            
+            // Extract Name
+            if (labelText === 'name:') {
+              personalInfo.transunion.name = cleanText($($cells[1]).text());
+              personalInfo.experian.name = cleanText($($cells[2]).text());
+              personalInfo.equifax.name = cleanText($($cells[3]).text());
+            }
+            
+            // Extract Also Known As (AKA)
+            if (labelText.includes('also known as') || labelText === 'aka:') {
+              const tuAka = cleanText($($cells[1]).text());
+              const expAka = cleanText($($cells[2]).text());
+              const eqAka = cleanText($($cells[3]).text());
+              if (tuAka) personalInfo.transunion.alsoKnownAs?.push(tuAka);
+              if (expAka) personalInfo.experian.alsoKnownAs?.push(expAka);
+              if (eqAka) personalInfo.equifax.alsoKnownAs?.push(eqAka);
+            }
+            
+            // Extract Former Name
+            if (labelText.includes('former')) {
+              const tuFormer = cleanText($($cells[1]).text());
+              const expFormer = cleanText($($cells[2]).text());
+              const eqFormer = cleanText($($cells[3]).text());
+              if (tuFormer) personalInfo.transunion.formerName?.push(tuFormer);
+              if (expFormer) personalInfo.experian.formerName?.push(expFormer);
+              if (eqFormer) personalInfo.equifax.formerName?.push(eqFormer);
+            }
+            
+            // Extract Date of Birth
+            if (labelText.includes('date of birth') || labelText.includes('birth')) {
+              personalInfo.transunion.dateOfBirth = cleanText($($cells[1]).text());
+              personalInfo.experian.dateOfBirth = cleanText($($cells[2]).text());
+              personalInfo.equifax.dateOfBirth = cleanText($($cells[3]).text());
+            }
+            
+            // Extract Current Address
+            if (labelText.includes('current address')) {
+              personalInfo.transunion.currentAddress = cleanText($($cells[1]).text());
+              personalInfo.experian.currentAddress = cleanText($($cells[2]).text());
+              personalInfo.equifax.currentAddress = cleanText($($cells[3]).text());
+            }
+            
+            // Extract Previous Addresses
+            if (labelText.includes('previous address')) {
+              const tuPrevAddrs = splitMultipleAddresses($($cells[1]).text());
+              const expPrevAddrs = splitMultipleAddresses($($cells[2]).text());
+              const eqPrevAddrs = splitMultipleAddresses($($cells[3]).text());
+              personalInfo.transunion.previousAddresses?.push(...tuPrevAddrs);
+              personalInfo.experian.previousAddresses?.push(...expPrevAddrs);
+              personalInfo.equifax.previousAddresses?.push(...eqPrevAddrs);
+            }
+            
+            // Extract Employers
+            if (labelText.includes('employer')) {
+              const tuEmp = cleanText($($cells[1]).text());
+              const expEmp = cleanText($($cells[2]).text());
+              const eqEmp = cleanText($($cells[3]).text());
+              if (tuEmp) personalInfo.transunion.employers?.push(tuEmp);
+              if (expEmp) personalInfo.experian.employers?.push(expEmp);
+              if (eqEmp) personalInfo.equifax.employers?.push(eqEmp);
+            }
+          }
+        });
+      });
+    }
+  });
+
+  return personalInfo;
+}
+
+function extractSummaryFromTable(
+  $: cheerio.CheerioAPI,
+  $container: cheerio.Cheerio<AnyNode>,
+  summary: BureauSummary
+): void {
+  const fieldMappings: Record<string, keyof BureauMetrics> = {
+    'total accounts': 'totalAccounts',
+    'open accounts': 'openAccounts',
+    'closed accounts': 'closedAccounts',
+    'delinquent': 'delinquent',
+    'derogatory': 'derogatory',
+    'collection': 'collection',
+    'balances': 'balances',
+    'payments': 'payments',
+    'public records': 'publicRecords',
+    'inquiries': 'inquiries',
+  };
+
+  $container.find(IIQ_SELECTORS.fourColumnTable).each((_, table) => {
+    $(table).find('tr').each((_, row) => {
+      const $cells = $(row).find('td');
+      
+      if ($cells.length >= 4) {
+        const labelText = $($cells[0]).text().trim().toLowerCase();
+        
+        for (const [pattern, field] of Object.entries(fieldMappings)) {
+          if (labelText.includes(pattern)) {
+            // Balance and payment fields need to be converted to cents
+            const isMoney = field === 'balances' || field === 'payments';
+            const tuValue = parseNumericValue($($cells[1]).text(), isMoney);
+            const expValue = parseNumericValue($($cells[2]).text(), isMoney);
+            const eqValue = parseNumericValue($($cells[3]).text(), isMoney);
+            
+            summary.transunion[field] = tuValue as never;
+            summary.experian[field] = expValue as never;
+            summary.equifax[field] = eqValue as never;
+            break;
+          }
+        }
+      }
+    });
+  });
+}
+
+function extractIIQConsumerProfile($: cheerio.CheerioAPI): StandardizedConsumerProfile {
   const profile: StandardizedConsumerProfile = {
     names: [],
     addresses: [],
     employers: [],
   };
 
-  // Extract names from consumer section
-  $(IIQ_SELECTORS.consumerSection).find(IIQ_SELECTORS.nameField).each((_, el) => {
-    const nameText = $(el).text().trim();
-    const nameParts = parseFullName(nameText);
-    if (nameParts.lastName) {
-      profile.names.push({
-        ...nameParts,
-        bureau: detectBureauFromContext($, el),
+  // Find Personal Information section
+  $(IIQ_SELECTORS.contentWrapper).each((_, wrapper) => {
+    const $wrapper = $(wrapper);
+    const headerText = $wrapper.find(IIQ_SELECTORS.fullReportHeader).text().toLowerCase();
+    
+    if (headerText.includes('personal information')) {
+      $wrapper.find(IIQ_SELECTORS.fourColumnTable).each((_, table) => {
+        $(table).find('tr').each((_, row) => {
+          const $cells = $(row).find('td');
+          
+          if ($cells.length >= 4) {
+            const labelText = $($cells[0]).text().trim().toLowerCase();
+            
+            // Extract names
+            if (labelText === 'name:') {
+              for (let i = 1; i <= 3; i++) {
+                // Clean up the text - remove extra whitespace and &nbsp;
+                const nameText = $($cells[i]).text()
+                  .replace(/\u00A0/g, ' ')  // Replace &nbsp; with space
+                  .replace(/\s+/g, ' ')      // Collapse multiple spaces
+                  .trim();
+                if (nameText && nameText !== '-') {
+                  const nameParts = parseFullName(nameText);
+                  if (nameParts.firstName) {
+                    profile.names.push({
+                      ...nameParts,
+                      bureau: getBureauName(i),
+                    });
+                  }
+                }
+              }
+            }
+            
+            // Extract addresses (current)
+            if (labelText.includes('current address')) {
+              for (let i = 1; i <= 3; i++) {
+                const addressText = $($cells[i]).text().trim();
+                if (addressText && addressText !== '-') {
+                  const address = parseAddress(addressText);
+                  if (address) {
+                    profile.addresses.push({
+                      ...address,
+                      addressType: 'current',
+                      bureau: getBureauName(i),
+                    });
+                  }
+                }
+              }
+            }
+            
+            // Extract DOB
+            if (labelText.includes('date of birth') || labelText.includes('birth')) {
+              for (let i = 1; i <= 3; i++) {
+                const dobText = $($cells[i]).text().trim();
+                if (dobText && dobText !== '-' && !profile.dateOfBirth) {
+                  // Try to parse various date formats
+                  const dob = parseDate(dobText);
+                  if (dob) {
+                    profile.dateOfBirth = dob;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            // Extract employers
+            if (labelText.includes('employer')) {
+              for (let i = 1; i <= 3; i++) {
+                const employerText = $($cells[i]).text().trim();
+                if (employerText && employerText !== '-') {
+                  profile.employers.push({
+                    name: employerText,
+                    bureau: getBureauName(i),
+                  });
+                }
+              }
+            }
+          }
+        });
       });
     }
   });
-
-  // Extract addresses
-  $(IIQ_SELECTORS.consumerSection).find(IIQ_SELECTORS.addressField).each((_, el) => {
-    const addressText = $(el).text().trim();
-    const address = parseAddress(addressText);
-    if (address) {
-      profile.addresses.push({
-        ...address,
-        bureau: detectBureauFromContext($, el),
-      });
-    }
-  });
-
-  // Extract SSN last 4
-  const ssnMatch = text.match(/SSN[:\s]*(?:XXX-XX-)?(\d{4})/i);
-  if (ssnMatch) {
-    profile.ssnLast4 = ssnMatch[1];
-  }
-
-  // Extract DOB
-  const dobMatch = text.match(/(?:DOB|Date\s*of\s*Birth|Birth\s*Date)[:\s]*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
-  if (dobMatch) {
-    profile.dateOfBirth = parseDate(dobMatch[1]);
-  }
 
   return profile;
 }
 
-function extractIIQAccounts($: cheerio.CheerioAPI, text: string): ParsedAccount[] {
+function extractIIQAccounts($: cheerio.CheerioAPI): {
+  accounts: ParsedAccount[];
+  derogatoryAccounts: DerogatoryAccount[];
+} {
   const accounts: ParsedAccount[] = [];
+  const derogatoryAccounts: DerogatoryAccount[] = [];
   const processedCreditors = new Set<string>();
 
-  // Try table-based extraction first
-  $(IIQ_SELECTORS.accountTable).each((_, table) => {
-    const headers = extractTableHeaders($, table);
+  // Find all account tables within address-history elements
+  $(IIQ_SELECTORS.accountHistorySection).each((_, historyEl) => {
+    const $history = $(historyEl);
     
-    $(table).find('tbody tr, tr').each((_, row) => {
-      if ($(row).find('th').length > 0) return; // Skip header rows
+    // Find tables with class "crPrint ng-scope"
+    $history.find('table.crPrint.ng-scope, table.crPrint').each((_, accountTable) => {
+      const $accountTable = $(accountTable);
       
-      const account = parseAccountFromTableRow($, row, headers);
-      if (account && account.creditorName) {
-        const key = `${account.creditorName}-${account.accountNumber || ''}`;
-        if (!processedCreditors.has(key)) {
-          processedCreditors.add(key);
+      // Get account/creditor name from header
+      let creditorName = '';
+      $accountTable.find('div.sub_header').each((_, header) => {
+        const headerText = $(header).text().trim();
+        if (headerText && !headerText.toLowerCase().includes('account #')) {
+          creditorName = headerText;
+        }
+      });
+      
+      if (!creditorName) {
+        // Try alternative header location
+        creditorName = $accountTable.prev('div.sub_header').text().trim();
+      }
+      
+      if (!creditorName || processedCreditors.has(creditorName)) return;
+      processedCreditors.add(creditorName);
+
+      // Initialize account data for each bureau
+      const accountData: Record<string, Record<string, string>> = {
+        transunion: {},
+        experian: {},
+        equifax: {},
+      };
+
+      // Find the data table within this account
+      $accountTable.find('table.rpt_content_table.rpt_table4column').each((_, dataTable) => {
+        const $dataTable = $(dataTable);
+        let rowIndex = 0;
+        
+        $dataTable.find('tr').each((_, row) => {
+          const $row = $(row);
+          const $cells = $row.find('td');
+          
+          if ($cells.length >= 4) {
+            const labelText = $($cells[0]).text().trim().toLowerCase();
+            
+            // Extract values for each bureau
+            const tuValue = $($cells[1]).text().trim();
+            const expValue = $($cells[2]).text().trim();
+            const eqValue = $($cells[3]).text().trim();
+            
+            // Map by label text
+            if (labelText.includes('account #')) {
+              accountData.transunion.accountNumber = tuValue;
+              accountData.experian.accountNumber = expValue;
+              accountData.equifax.accountNumber = eqValue;
+            } else if (labelText.includes('account type') && !labelText.includes('detail')) {
+              accountData.transunion.accountType = tuValue;
+              accountData.experian.accountType = expValue;
+              accountData.equifax.accountType = eqValue;
+            } else if (labelText.includes('account status')) {
+              accountData.transunion.accountStatus = tuValue;
+              accountData.experian.accountStatus = expValue;
+              accountData.equifax.accountStatus = eqValue;
+            } else if (labelText === 'balance:') {
+              accountData.transunion.balance = tuValue;
+              accountData.experian.balance = expValue;
+              accountData.equifax.balance = eqValue;
+            } else if (labelText.includes('credit limit')) {
+              accountData.transunion.creditLimit = tuValue;
+              accountData.experian.creditLimit = expValue;
+              accountData.equifax.creditLimit = eqValue;
+            } else if (labelText.includes('high credit')) {
+              accountData.transunion.highCredit = tuValue;
+              accountData.experian.highCredit = expValue;
+              accountData.equifax.highCredit = eqValue;
+            } else if (labelText.includes('date opened')) {
+              accountData.transunion.dateOpened = tuValue;
+              accountData.experian.dateOpened = expValue;
+              accountData.equifax.dateOpened = eqValue;
+            } else if (labelText.includes('payment status')) {
+              accountData.transunion.paymentStatus = tuValue;
+              accountData.experian.paymentStatus = expValue;
+              accountData.equifax.paymentStatus = eqValue;
+            } else if (labelText.includes('monthly payment')) {
+              accountData.transunion.monthlyPayment = tuValue;
+              accountData.experian.monthlyPayment = expValue;
+              accountData.equifax.monthlyPayment = eqValue;
+            } else if (labelText.includes('past due')) {
+              accountData.transunion.pastDue = tuValue;
+              accountData.experian.pastDue = expValue;
+              accountData.equifax.pastDue = eqValue;
+            }
+            
+            rowIndex++;
+          }
+        });
+      });
+
+      // Check if this is a derogatory account
+      const isDerogatoryAccount = checkIfDerogatory(accountData);
+      
+      if (isDerogatoryAccount) {
+        const derogatoryAccount: DerogatoryAccount = {
+          creditorName,
+          uniqueStatus: buildUniqueStatus(accountData),
+          transunion: {
+            accountStatus: accountData.transunion.accountStatus,
+            accountDate: accountData.transunion.dateOpened,
+            paymentStatus: accountData.transunion.paymentStatus,
+          },
+          experian: {
+            accountStatus: accountData.experian.accountStatus,
+            accountDate: accountData.experian.dateOpened,
+            paymentStatus: accountData.experian.paymentStatus,
+          },
+          equifax: {
+            accountStatus: accountData.equifax.accountStatus,
+            accountDate: accountData.equifax.dateOpened,
+            paymentStatus: accountData.equifax.paymentStatus,
+          },
+        };
+        derogatoryAccounts.push(derogatoryAccount);
+      }
+
+      // Create parsed accounts for each bureau that has data
+      for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
+        const data = accountData[bureau];
+        if (Object.keys(data).length > 0) {
+          const account = createParsedAccount(creditorName, data, bureau);
           accounts.push(account);
         }
       }
     });
   });
 
-  // Try div/section-based extraction
-  $(IIQ_SELECTORS.accountSection).each((_, section) => {
-    const account = parseAccountFromSection($, section);
-    if (account && account.creditorName) {
-      const key = `${account.creditorName}-${account.accountNumber || ''}`;
-      if (!processedCreditors.has(key)) {
-        processedCreditors.add(key);
-        accounts.push(account);
-      }
-    }
-  });
-
-  // Fallback to text-based extraction if no structured data found
-  if (accounts.length === 0) {
-    const textAccounts = extractAccountsFromText(text);
-    accounts.push(...textAccounts);
-  }
-
-  return accounts;
+  return { accounts, derogatoryAccounts };
 }
 
-function extractTableHeaders($: cheerio.CheerioAPI, table: AnyNode): Map<string, number> {
-  const headers = new Map<string, number>();
-  const headerRow = $(table).find('thead tr, tr:first-child').first();
-  
-  headerRow.find('th, td').each((index, cell) => {
-    const headerText = $(cell).text().trim().toLowerCase();
+function checkIfDerogatory(accountData: Record<string, Record<string, string>>): boolean {
+  for (const bureau of ['transunion', 'experian', 'equifax']) {
+    const data = accountData[bureau];
+    const status = (data.accountStatus || '').toLowerCase();
+    const paymentStatus = (data.paymentStatus || '').toLowerCase();
     
-    if (headerText.includes('creditor') || headerText.includes('company') || headerText.includes('name')) {
-      headers.set('creditorName', index);
-    } else if (headerText.includes('account') && headerText.includes('number')) {
-      headers.set('accountNumber', index);
-    } else if (headerText.includes('type')) {
-      headers.set('accountType', index);
-    } else if (headerText.includes('status')) {
-      headers.set('status', index);
-    } else if (headerText.includes('balance')) {
-      headers.set('balance', index);
-    } else if (headerText.includes('limit')) {
-      headers.set('creditLimit', index);
-    } else if (headerText.includes('opened')) {
-      headers.set('dateOpened', index);
-    } else if (headerText.includes('reported')) {
-      headers.set('dateReported', index);
-    } else if (headerText.includes('payment')) {
-      headers.set('paymentStatus', index);
+    if (status === 'derogatory') return true;
+    
+    for (const pattern of DEROGATORY_PATTERNS) {
+      if (paymentStatus.includes(pattern)) return true;
     }
-  });
-
-  return headers;
+  }
+  return false;
 }
 
-function parseAccountFromTableRow($: cheerio.CheerioAPI, row: AnyNode, headers: Map<string, number>): ParsedAccount | null {
-  const cells = $(row).find('td');
-  if (cells.length < 2) return null;
-
-  const getCellText = (key: string): string => {
-    const index = headers.get(key);
-    if (index !== undefined && cells[index]) {
-      return $(cells[index]).text().trim();
+function buildUniqueStatus(accountData: Record<string, Record<string, string>>): string {
+  const statuses = new Set<string>();
+  
+  for (const bureau of ['transunion', 'experian', 'equifax']) {
+    const paymentStatus = accountData[bureau].paymentStatus;
+    if (paymentStatus && paymentStatus !== '-') {
+      statuses.add(paymentStatus);
     }
-    return '';
-  };
+  }
+  
+  return Array.from(statuses).join(', ');
+}
 
-  const creditorName = getCellText('creditorName') || $(cells[0]).text().trim();
-  if (!creditorName || creditorName.length < 2) return null;
-
-  const balanceText = getCellText('balance');
-  const limitText = getCellText('creditLimit');
-  const statusText = getCellText('status');
-  const paymentStatusText = getCellText('paymentStatus');
-
-  const balance = parseMoneyValue(balanceText);
-  const creditLimit = parseMoneyValue(limitText);
-  const dateOpened = parseDate(getCellText('dateOpened'));
-  const dateReported = parseDate(getCellText('dateReported'));
-
-  const accountStatus = determineAccountStatus(statusText);
-  const paymentStatus = determinePaymentStatus(paymentStatusText || statusText);
-  const accountType = getCellText('accountType') || 'other';
-
+function createParsedAccount(
+  creditorName: string,
+  data: Record<string, string>,
+  bureau: string
+): ParsedAccount {
+  const balance = parseMoneyValue(data.balance);
+  const creditLimit = parseMoneyValue(data.creditLimit);
+  const highCredit = parseMoneyValue(data.highCredit);
+  
+  const accountStatus = determineAccountStatus(data.accountStatus || '');
+  const paymentStatus = determinePaymentStatus(data.paymentStatus || '');
+  
   const account: ParsedAccount = {
     creditorName: creditorName.substring(0, 100),
-    accountNumber: getCellText('accountNumber') || undefined,
-    accountType,
+    accountNumber: data.accountNumber !== '-' ? data.accountNumber : undefined,
+    accountType: data.accountType !== '-' ? data.accountType : 'other',
     accountStatus,
     balance,
     creditLimit,
+    highCredit,
+    monthlyPayment: parseMoneyValue(data.monthlyPayment),
+    pastDueAmount: parseMoneyValue(data.pastDue),
     paymentStatus,
-    dateOpened,
-    dateReported,
+    dateOpened: parseDate(data.dateOpened),
+    bureau,
     isNegative: false,
     riskLevel: 'low',
   };
@@ -303,95 +722,262 @@ function parseAccountFromTableRow($: cheerio.CheerioAPI, row: AnyNode, headers: 
   return account;
 }
 
-function parseAccountFromSection($: cheerio.CheerioAPI, section: AnyNode): ParsedAccount | null {
-  const sectionEl = $(section);
-  const sectionText = sectionEl.text();
+function calculateCreditUtilization($: cheerio.CheerioAPI): BureauCreditUtilization {
+  const createEmptyUtilization = (): CreditUtilization => ({
+    balance: 0,
+    limit: 0,
+    percent: 0,
+    rating: 'no_data',
+  });
 
-  // Extract creditor name
-  const creditorEl = sectionEl.find(IIQ_SELECTORS.creditorName).first();
-  let creditorName = creditorEl.length ? creditorEl.text().trim() : '';
-  
-  if (!creditorName) {
-    // Try to get first strong/bold text or heading
-    const headingEl = sectionEl.find('strong, b, h3, h4, .title').first();
-    creditorName = headingEl.text().trim();
-  }
-  
-  if (!creditorName || creditorName.length < 2) return null;
-
-  // Extract other fields
-  const accountNumber = extractFieldValue(sectionEl, IIQ_SELECTORS.accountNumber, sectionText, IIQ_PATTERNS.accountNumber);
-  const balance = parseMoneyValue(extractFieldValue(sectionEl, IIQ_SELECTORS.balance, sectionText, IIQ_PATTERNS.balance));
-  const creditLimit = parseMoneyValue(extractFieldValue(sectionEl, IIQ_SELECTORS.creditLimit, sectionText, IIQ_PATTERNS.creditLimit));
-  const dateOpenedStr = extractFieldValue(sectionEl, IIQ_SELECTORS.dateOpened, sectionText, IIQ_PATTERNS.dateOpened);
-  const dateReportedStr = extractFieldValue(sectionEl, IIQ_SELECTORS.dateReported, sectionText, IIQ_PATTERNS.dateReported);
-
-  const statusText = sectionEl.find(IIQ_SELECTORS.accountStatus).text() || '';
-  const paymentStatusText = sectionEl.find(IIQ_SELECTORS.paymentStatus).text() || statusText;
-
-  const account: ParsedAccount = {
-    creditorName: creditorName.substring(0, 100),
-    accountNumber: accountNumber || undefined,
-    accountType: sectionEl.find(IIQ_SELECTORS.accountType).text().trim() || 'other',
-    accountStatus: determineAccountStatus(statusText || sectionText),
-    balance,
-    creditLimit,
-    paymentStatus: determinePaymentStatus(paymentStatusText || sectionText),
-    dateOpened: parseDate(dateOpenedStr),
-    dateReported: parseDate(dateReportedStr),
-    isNegative: false,
-    riskLevel: 'low',
+  const utilization: BureauCreditUtilization = {
+    transunion: createEmptyUtilization(),
+    experian: createEmptyUtilization(),
+    equifax: createEmptyUtilization(),
+    total: createEmptyUtilization(),
   };
 
-  account.isNegative = isAccountNegative(account as unknown as Partial<StandardizedAccount>);
-  account.riskLevel = calculateRiskLevel(account as unknown as Partial<StandardizedAccount>);
-
-  return account;
-}
-
-function extractAccountsFromText(text: string): ParsedAccount[] {
-  const accounts: ParsedAccount[] = [];
-  
-  // Split by common account delimiters
-  const sections = text.split(/(?=(?:Account\s*(?:Name|#|Number)|Creditor|Trade\s*Line)[:\s])/i);
-  
-  for (const section of sections) {
-    if (section.length < 50) continue;
+  // Find all account tables and sum revolving accounts
+  $(IIQ_SELECTORS.accountHistorySection).each((_, historyEl) => {
+    const $history = $(historyEl);
     
-    const creditorMatch = section.match(/(?:Account\s*Name|Creditor|Company)[:\s]*([A-Z][A-Za-z0-9\s&.,'-]+)/i);
-    if (!creditorMatch) continue;
-    
-    const creditorName = creditorMatch[1].trim().substring(0, 100);
-    if (creditorName.length < 2) continue;
+    $history.find('table.crPrint.ng-scope, table.crPrint').each((_, accountTable) => {
+      const $accountTable = $(accountTable);
+      
+      const accountData: Record<string, Record<string, string>> = {
+        transunion: {},
+        experian: {},
+        equifax: {},
+      };
 
-    const account: ParsedAccount = {
-      creditorName,
-      accountNumber: section.match(IIQ_PATTERNS.accountNumber)?.[1],
-      balance: parseMoneyValue(section.match(IIQ_PATTERNS.balance)?.[1]),
-      creditLimit: parseMoneyValue(section.match(IIQ_PATTERNS.creditLimit)?.[1]),
-      dateOpened: parseDate(section.match(IIQ_PATTERNS.dateOpened)?.[1]),
-      dateReported: parseDate(section.match(IIQ_PATTERNS.dateReported)?.[1]),
-      accountStatus: determineAccountStatus(section),
-      paymentStatus: determinePaymentStatus(section),
-      isNegative: false,
-      riskLevel: 'low',
-    };
+      $accountTable.find('table.rpt_content_table.rpt_table4column').each((_, dataTable) => {
+        $(dataTable).find('tr').each((_, row) => {
+          const $cells = $(row).find('td');
+          
+          if ($cells.length >= 4) {
+            const labelText = $($cells[0]).text().trim().toLowerCase();
+            
+            if (labelText.includes('account type') && !labelText.includes('detail')) {
+              accountData.transunion.accountType = $($cells[1]).text().trim();
+              accountData.experian.accountType = $($cells[2]).text().trim();
+              accountData.equifax.accountType = $($cells[3]).text().trim();
+            } else if (labelText.includes('account status')) {
+              accountData.transunion.accountStatus = $($cells[1]).text().trim();
+              accountData.experian.accountStatus = $($cells[2]).text().trim();
+              accountData.equifax.accountStatus = $($cells[3]).text().trim();
+            } else if (labelText === 'balance:') {
+              accountData.transunion.balance = $($cells[1]).text().trim();
+              accountData.experian.balance = $($cells[2]).text().trim();
+              accountData.equifax.balance = $($cells[3]).text().trim();
+            } else if (labelText.includes('credit limit')) {
+              accountData.transunion.creditLimit = $($cells[1]).text().trim();
+              accountData.experian.creditLimit = $($cells[2]).text().trim();
+              accountData.equifax.creditLimit = $($cells[3]).text().trim();
+            }
+          }
+        });
+      });
 
-    account.isNegative = isAccountNegative(account as unknown as Partial<StandardizedAccount>);
-    account.riskLevel = calculateRiskLevel(account as unknown as Partial<StandardizedAccount>);
+      // Sum only revolving accounts that are open (matching PHP logic)
+      for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
+        const data = accountData[bureau];
+        const accountType = (data.accountType || '').toLowerCase();
+        const accountStatus = (data.accountStatus || '').toLowerCase();
+        
+        if (accountType === 'revolving' && accountStatus === 'open') {
+          const balance = parseMoneyValue(data.balance) || 0;
+          const limit = parseMoneyValue(data.creditLimit) || 0;
+          
+          utilization[bureau].balance += balance;
+          utilization[bureau].limit += limit;
+        }
+      }
+    });
+  });
 
-    accounts.push(account);
+  // Calculate percentages and ratings
+  for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
+    if (utilization[bureau].limit > 0) {
+      utilization[bureau].percent = Math.round(
+        (utilization[bureau].balance / utilization[bureau].limit) * 100
+      );
+      utilization[bureau].rating = getUtilizationRating(utilization[bureau].percent);
+    }
   }
 
-  return accounts;
+  // Calculate total (average of all bureaus)
+  const totalBalance = (utilization.transunion.balance + utilization.experian.balance + utilization.equifax.balance) / 3;
+  const totalLimit = (utilization.transunion.limit + utilization.experian.limit + utilization.equifax.limit) / 3;
+  
+  utilization.total.balance = Math.round(totalBalance);
+  utilization.total.limit = Math.round(totalLimit);
+  
+  if (totalLimit > 0) {
+    utilization.total.percent = Math.round((totalBalance / totalLimit) * 100);
+    utilization.total.rating = getUtilizationRating(utilization.total.percent);
+  }
+
+  return utilization;
 }
 
-function extractIIQNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, text: string): ParsedNegativeItem[] {
-  const negativeItems: ParsedNegativeItem[] = [];
+function getUtilizationRating(percent: number): CreditUtilization['rating'] {
+  if (percent >= 75) return 'very_poor';
+  if (percent >= 50) return 'poor';
+  if (percent >= 30) return 'fair';
+  if (percent >= 10) return 'good';
+  if (percent >= 0) return 'excellent';
+  return 'no_data';
+}
 
-  // Add negative items from accounts
+function extractPublicRecords($: cheerio.CheerioAPI): PublicRecord[] {
+  const records: PublicRecord[] = [];
+
+  const $publicRecordsSection = $(IIQ_SELECTORS.publicRecordsSection);
+  
+  if ($publicRecordsSection.length > 0) {
+    $publicRecordsSection.find('table.rpt_content_table.rpt_table4column').each((_, table) => {
+      let recordType = '';
+      let recordStatus = '';
+      let tuFiled = '';
+      let expFiled = '';
+      let eqFiled = '';
+      
+      $(table).find('tr').each((rowIdx, row) => {
+        const $cells = $(row).find('td');
+        
+        if ($cells.length >= 4) {
+          const labelText = $($cells[0]).text().trim().toLowerCase();
+          
+          // Row 1 typically has the type
+          if (rowIdx === 1) {
+            recordType = $($cells[1]).text().trim() || $($cells[2]).text().trim() || $($cells[3]).text().trim();
+          }
+          // Row 2 has status
+          if (rowIdx === 2) {
+            recordStatus = $($cells[1]).text().trim() || $($cells[2]).text().trim() || $($cells[3]).text().trim();
+          }
+          // Row 3 has filing dates per bureau
+          if (rowIdx === 3) {
+            tuFiled = $($cells[1]).text().trim();
+            expFiled = $($cells[2]).text().trim();
+            eqFiled = $($cells[3]).text().trim();
+          }
+        }
+      });
+
+      if (recordType && recordType !== '-') {
+        records.push({
+          type: recordType,
+          status: recordStatus,
+          transunionFiled: tuFiled !== '-' ? tuFiled : undefined,
+          experianFiled: expFiled !== '-' ? expFiled : undefined,
+          equifaxFiled: eqFiled !== '-' ? eqFiled : undefined,
+        });
+      }
+    });
+  }
+
+  return records;
+}
+
+function extractIIQInquiries($: cheerio.CheerioAPI): ParsedInquiry[] {
+  const inquiries: ParsedInquiry[] = [];
+
+  const $inquiriesSection = $(IIQ_SELECTORS.inquiriesSection);
+  
+  if ($inquiriesSection.length === 0) {
+    // Find by section header
+    $(IIQ_SELECTORS.contentWrapper).each((_, wrapper) => {
+      const headerText = $(wrapper).find(IIQ_SELECTORS.fullReportHeader).text().toLowerCase();
+      if (headerText.includes('inquiries')) {
+        extractInquiriesFromTable($, $(wrapper), inquiries);
+      }
+    });
+  } else {
+    extractInquiriesFromTable($, $inquiriesSection.closest(IIQ_SELECTORS.contentWrapper), inquiries);
+  }
+
+  return inquiries;
+}
+
+function extractInquiriesFromTable(
+  $: cheerio.CheerioAPI,
+  $container: cheerio.Cheerio<AnyNode>,
+  inquiries: ParsedInquiry[]
+): void {
+  // Inquiries table has columns: Business, Business Type, Date, Bureau
+  $container.find(IIQ_SELECTORS.contactsTable + ', table.rpt_content_table').each((_, table) => {
+    const $table = $(table);
+    let isInquiryTable = false;
+    
+    // Check if this is the inquiry table by looking at headers
+    $table.find('tr').first().find('th, td').each((_, cell) => {
+      const text = $(cell).text().toLowerCase();
+      if (text.includes('business') || text.includes('inquiry')) {
+        isInquiryTable = true;
+      }
+    });
+    
+    if (!isInquiryTable) return;
+    
+    $table.find('tr').each((rowIdx, row) => {
+      if (rowIdx === 0) return; // Skip header row
+      
+      const $cells = $(row).find('td');
+      
+      if ($cells.length >= 3) {
+        const businessName = $($cells[0]).text().trim();
+        const businessType = $($cells[1]).text().trim();
+        const dateText = $($cells[2]).text().trim();
+        const bureau = $cells.length >= 4 ? $($cells[3]).text().trim() : undefined;
+        
+        if (businessName && businessName !== '-') {
+          inquiries.push({
+            creditorName: businessName,
+            inquiryDate: parseDate(dateText),
+            bureau: bureau !== '-' ? bureau?.toLowerCase() : undefined,
+            inquiryType: businessType !== '-' ? businessType : undefined,
+          });
+        }
+      }
+    });
+  });
+}
+
+function buildNegativeItems(
+  derogatoryAccounts: DerogatoryAccount[],
+  accounts: ParsedAccount[]
+): ParsedNegativeItem[] {
+  const negativeItems: ParsedNegativeItem[] = [];
+  const addedCreditors = new Set<string>();
+
+  // Add from derogatory accounts
+  for (const derog of derogatoryAccounts) {
+    if (!addedCreditors.has(derog.creditorName.toLowerCase())) {
+      addedCreditors.add(derog.creditorName.toLowerCase());
+      
+      let itemType = 'derogatory';
+      const status = derog.uniqueStatus.toLowerCase();
+      
+      if (status.includes('collection') || status.includes('chargeoff')) {
+        itemType = 'collection';
+      } else if (status.includes('late')) {
+        itemType = 'late_payment';
+      }
+
+      negativeItems.push({
+        itemType,
+        creditorName: derog.creditorName,
+        riskSeverity: itemType === 'collection' ? 'high' : 'medium',
+      });
+    }
+  }
+
+  // Add additional negative items from accounts
   for (const account of accounts) {
-    if (account.isNegative) {
+    if (account.isNegative && !addedCreditors.has(account.creditorName.toLowerCase())) {
+      addedCreditors.add(account.creditorName.toLowerCase());
+      
       let itemType = 'derogatory';
       if (account.accountStatus === 'collection') itemType = 'collection';
       else if (account.accountStatus === 'charge_off') itemType = 'charge_off';
@@ -401,75 +987,70 @@ function extractIIQNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAP
         itemType,
         creditorName: account.creditorName,
         amount: account.balance,
-        dateReported: account.dateReported,
+        bureau: account.bureau,
         riskSeverity: account.riskLevel || 'medium',
       });
     }
   }
 
-  // Look for additional collections in dedicated sections
-  $(IIQ_SELECTORS.collectionSection).find('.collection-item, tr').each((_, el) => {
-    const elText = $(el).text();
-    const creditorMatch = elText.match(/([A-Z][A-Za-z0-9\s&.,'-]+)/);
-    const amountMatch = elText.match(/\$?([\d,]+(?:\.\d{2})?)/);
-    
-    if (creditorMatch) {
-      const creditorName = creditorMatch[1].trim().substring(0, 100);
-      if (!negativeItems.some(item => item.creditorName.toLowerCase() === creditorName.toLowerCase())) {
-        negativeItems.push({
-          itemType: 'collection',
-          creditorName,
-          amount: amountMatch ? parseMoneyValue(amountMatch[1]) : undefined,
-          riskSeverity: 'high',
-        });
-      }
-    }
-  });
-
   return negativeItems;
 }
 
-function extractIIQInquiries($: cheerio.CheerioAPI, text: string): ParsedInquiry[] {
-  const inquiries: ParsedInquiry[] = [];
+function calculateIIQSummary(
+  accounts: ParsedAccount[],
+  bureauSummary: BureauSummary
+): ParsedCreditData['summary'] {
+  // Use bureau summary data if available
+  if (bureauSummary.transunion.totalAccounts > 0) {
+    // Average across bureaus
+    const totalAccounts = Math.round(
+      (bureauSummary.transunion.totalAccounts +
+        bureauSummary.experian.totalAccounts +
+        bureauSummary.equifax.totalAccounts) / 3
+    );
+    const openAccounts = Math.round(
+      (bureauSummary.transunion.openAccounts +
+        bureauSummary.experian.openAccounts +
+        bureauSummary.equifax.openAccounts) / 3
+    );
+    const closedAccounts = Math.round(
+      (bureauSummary.transunion.closedAccounts +
+        bureauSummary.experian.closedAccounts +
+        bureauSummary.equifax.closedAccounts) / 3
+    );
+    const totalDebt = Math.round(
+      (bureauSummary.transunion.balances +
+        bureauSummary.experian.balances +
+        bureauSummary.equifax.balances) / 3
+    );
 
-  $(IIQ_SELECTORS.inquirySection).find(IIQ_SELECTORS.inquiryItem + ', tr').each((_, el) => {
-    const elText = $(el).text();
-    const creditorMatch = elText.match(/([A-Z][A-Za-z0-9\s&.,'-]+)/);
-    const dateMatch = elText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
-    
-    if (creditorMatch) {
-      inquiries.push({
-        creditorName: creditorMatch[1].trim(),
-        inquiryDate: dateMatch ? parseDate(dateMatch[1]) : undefined,
-      });
-    }
-  });
+    return {
+      totalAccounts,
+      openAccounts,
+      closedAccounts,
+      totalDebt,
+      totalCreditLimit: 0,
+      utilizationPercent: 0,
+    };
+  }
 
-  // Fallback to text extraction
-  if (inquiries.length === 0) {
-    const inquirySection = text.match(/(?:Inquiries|Credit\s*Inquiries)[\s\S]*?(?=Account|Trade|Public|$)/i);
-    if (inquirySection) {
-      const matches = inquirySection[0].matchAll(/([A-Z][A-Za-z0-9\s&.,'-]+)\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/g);
-      for (const match of matches) {
-        inquiries.push({
-          creditorName: match[1].trim(),
-          inquiryDate: parseDate(match[2]),
-        });
-      }
+  // Fallback to calculating from accounts
+  const uniqueAccounts = new Map<string, ParsedAccount>();
+  for (const account of accounts) {
+    const key = account.creditorName.toLowerCase();
+    if (!uniqueAccounts.has(key)) {
+      uniqueAccounts.set(key, account);
     }
   }
 
-  return inquiries;
-}
-
-function calculateIIQSummary(accounts: ParsedAccount[]): ParsedCreditData['summary'] {
-  const openAccounts = accounts.filter(a => a.accountStatus === 'open');
-  const closedAccounts = accounts.filter(a => a.accountStatus === 'closed');
+  const uniqueAccountList = Array.from(uniqueAccounts.values());
+  const openAccountsList = uniqueAccountList.filter(a => a.accountStatus === 'open');
+  const closedAccountsList = uniqueAccountList.filter(a => a.accountStatus === 'closed');
 
   let totalDebt = 0;
   let totalCreditLimit = 0;
 
-  for (const account of accounts) {
+  for (const account of uniqueAccountList) {
     if (account.balance) totalDebt += account.balance;
     if (account.creditLimit) totalCreditLimit += account.creditLimit;
   }
@@ -479,9 +1060,9 @@ function calculateIIQSummary(accounts: ParsedAccount[]): ParsedCreditData['summa
     : 0;
 
   return {
-    totalAccounts: accounts.length,
-    openAccounts: openAccounts.length,
-    closedAccounts: closedAccounts.length,
+    totalAccounts: uniqueAccountList.length,
+    openAccounts: openAccountsList.length,
+    closedAccounts: closedAccountsList.length,
     totalDebt,
     totalCreditLimit,
     utilizationPercent,
@@ -489,38 +1070,121 @@ function calculateIIQSummary(accounts: ParsedAccount[]): ParsedCreditData['summa
 }
 
 // Helper functions
-function extractFieldValue(el: cheerio.Cheerio<AnyNode>, selector: string, text: string, pattern: RegExp): string {
-  const selectorResult = el.find(selector).text().trim();
-  if (selectorResult) return selectorResult;
-  
-  const patternMatch = text.match(pattern);
-  return patternMatch ? patternMatch[1] : '';
+function parseScore(text: string): number | undefined {
+  const match = text.trim().match(/(\d{3})/);
+  if (match) {
+    const score = parseInt(match[1]);
+    if (score >= 300 && score <= 850) {
+      return score;
+    }
+  }
+  return undefined;
+}
+
+function parseNumericValue(text: string, convertToCents: boolean = false): number {
+  const cleaned = text.replace(/[$,]/g, '').trim();
+  const parsed = parseFloat(cleaned);
+  if (isNaN(parsed)) return 0;
+  // Convert to cents for monetary values to match system convention
+  return convertToCents ? Math.round(parsed * 100) : Math.round(parsed * 100) / 100;
 }
 
 function parseMoneyValue(value: string | undefined | null): number | undefined {
-  if (!value) return undefined;
-  const cleaned = value.replace(/[$,]/g, '');
+  if (!value || value === '-') return undefined;
+  const cleaned = value.replace(/[$,]/g, '').trim();
   const parsed = parseFloat(cleaned);
   if (isNaN(parsed)) return undefined;
-  return Math.round(parsed * 100); // Store as cents
+  return Math.round(parsed * 100);
 }
 
 function parseDate(dateStr: string | undefined | null): Date | undefined {
-  if (!dateStr) return undefined;
-  const date = new Date(dateStr);
+  if (!dateStr || dateStr === '-') return undefined;
+  
+  // Clean the string and extract date pattern
+  const cleaned = dateStr.replace(/\s+/g, ' ').trim();
+  
+  // Try to extract a date pattern (MM/DD/YYYY, M/D/YYYY, YYYY, etc.)
+  const dateMatch = cleaned.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+  if (dateMatch) {
+    const date = new Date(dateMatch[1]);
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Try year-only format
+  const yearMatch = cleaned.match(/^(\d{4})$/);
+  if (yearMatch) {
+    const date = new Date(`${yearMatch[1]}-01-01`);
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Fallback to direct parsing
+  const date = new Date(cleaned);
   return isNaN(date.getTime()) ? undefined : date;
 }
 
-function parseFullName(fullName: string): { firstName: string; middleName?: string; lastName: string; suffix?: string } {
-  const parts = fullName.trim().split(/\s+/);
+function cleanText(text: string): string | undefined {
+  const cleaned = text
+    .replace(/\u00A0/g, ' ')  // Replace &nbsp;
+    .replace(/\s+/g, ' ')      // Collapse whitespace
+    .replace(/\s*-\s*$/, '')   // Remove trailing dash (empty column indicator)
+    .trim();
+  return cleaned && cleaned !== '-' ? cleaned : undefined;
+}
+
+function splitMultipleAddresses(text: string): string[] {
+  // Clean the text first
+  const cleaned = text
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*-\s*$/, '')
+    .trim();
+  
+  if (!cleaned || cleaned === '-') return [];
+  
+  // Split on pattern: date followed by start of new address (street number)
+  // Pattern: MM/YYYY followed by a number (start of next address)
+  const addresses: string[] = [];
+  const splitPattern = /(\d{2}\/\d{4})\s+(\d+\s)/g;
+  
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = splitPattern.exec(cleaned)) !== null) {
+    // Include the date with the previous address
+    const address = cleaned.substring(lastIndex, match.index + match[1].length).trim();
+    if (address) addresses.push(address);
+    lastIndex = match.index + match[1].length + 1; // Start after the date and space
+  }
+  
+  // Add the remaining text as the last address
+  const remaining = cleaned.substring(lastIndex).trim();
+  if (remaining) addresses.push(remaining);
+  
+  // If no splits occurred, return the whole thing as one address
+  if (addresses.length === 0 && cleaned) {
+    addresses.push(cleaned);
+  }
+  
+  return addresses;
+}
+
+function parseFullName(fullName: string): {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  suffix?: string;
+} {
+  // Filter out empty strings and standalone dashes/placeholders
+  const parts = fullName.trim().split(/\s+/).filter(p => p && p !== '-' && p !== '—');
+  
   if (parts.length === 0) return { firstName: '', lastName: '' };
   if (parts.length === 1) return { firstName: parts[0], lastName: '' };
   if (parts.length === 2) return { firstName: parts[0], lastName: parts[1] };
-  
+
   const suffixes = ['JR', 'SR', 'II', 'III', 'IV'];
   let suffix: string | undefined;
   let lastName = parts[parts.length - 1];
-  
+
   if (suffixes.includes(lastName.toUpperCase().replace(/\./g, ''))) {
     suffix = lastName;
     lastName = parts[parts.length - 2];
@@ -531,16 +1195,42 @@ function parseFullName(fullName: string): { firstName: string; middleName?: stri
       suffix,
     };
   }
-  
+
   return {
     firstName: parts[0],
-    middleName: parts.slice(1, -1).join(' '),
+    middleName: parts.length > 2 ? parts.slice(1, -1).join(' ') : undefined,
     lastName,
   };
 }
 
-function parseAddress(addressText: string): { street: string; city: string; state: string; zipCode: string } | null {
-  // Common address pattern: Street, City, ST ZIP
+function parseAddress(addressText: string): {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+} | null {
+  // IIQ format: "Street\nCity, ST\nZip"
+  const lines = addressText.split(/\n|<br\s*\/?>/i).map(l => l.trim()).filter(Boolean);
+  
+  if (lines.length >= 2) {
+    const street = lines[0];
+    const cityStateLine = lines[1];
+    const zipLine = lines[2] || '';
+    
+    // Parse "City, ST" or "City, ST Zip"
+    const cityStateMatch = cityStateLine.match(/([^,]+),\s*([A-Z]{2})/i);
+    if (cityStateMatch) {
+      const zipMatch = zipLine.match(/(\d{5}(?:-\d{4})?)/);
+      return {
+        street,
+        city: cityStateMatch[1].trim(),
+        state: cityStateMatch[2].toUpperCase(),
+        zipCode: zipMatch ? zipMatch[1] : '',
+      };
+    }
+  }
+  
+  // Fallback: single line format "Street, City, ST ZIP"
   const match = addressText.match(/(.+?),\s*(.+?),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i);
   if (match) {
     return {
@@ -550,15 +1240,14 @@ function parseAddress(addressText: string): { street: string; city: string; stat
       zipCode: match[4],
     };
   }
+  
   return null;
 }
 
-function detectBureauFromContext($: cheerio.CheerioAPI, el: AnyNode): 'transunion' | 'experian' | 'equifax' {
-  const parentText = $(el).parents().slice(0, 3).text().toLowerCase();
-  if (parentText.includes('transunion')) return 'transunion';
-  if (parentText.includes('experian')) return 'experian';
-  if (parentText.includes('equifax')) return 'equifax';
-  return 'transunion'; // Default
+function getBureauName(columnIndex: number): 'transunion' | 'experian' | 'equifax' {
+  if (columnIndex === 1) return 'transunion';
+  if (columnIndex === 2) return 'experian';
+  return 'equifax';
 }
 
 function determineAccountStatus(text: string): string {
@@ -566,9 +1255,11 @@ function determineAccountStatus(text: string): string {
   if (lower.includes('closed')) return 'closed';
   if (lower.includes('collection')) return 'collection';
   if (lower.includes('charge') && lower.includes('off')) return 'charge_off';
+  if (lower.includes('derogatory')) return 'derogatory';
   if (lower.includes('paid')) return 'paid';
   if (lower.includes('transferred')) return 'transferred';
-  return 'open';
+  if (lower.includes('open')) return 'open';
+  return 'unknown';
 }
 
 function determinePaymentStatus(text: string): string {
@@ -579,7 +1270,7 @@ function determinePaymentStatus(text: string): string {
   if (lower.includes('90') && lower.includes('late')) return '90_days_late';
   if (lower.includes('60') && lower.includes('late')) return '60_days_late';
   if (lower.includes('30') && lower.includes('late')) return '30_days_late';
-  if (lower.includes('collection')) return 'collection';
-  if (lower.includes('charge') && lower.includes('off')) return 'charge_off';
-  return 'current';
+  if (lower.includes('collection') || lower.includes('chargeoff')) return 'collection';
+  if (lower.includes('current') || lower.includes('pays as agreed') || lower.includes('ok')) return 'current';
+  return text || 'unknown';
 }
