@@ -4,12 +4,15 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
+  // Check if this is the audit-report API route (needs to be embedded in iframe)
+  const isAuditReportRoute = request.nextUrl.pathname.includes('/audit-report');
+
   // Security Headers
   const securityHeaders = {
     // HTTPS Strict Transport Security - force HTTPS for 1 year
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-    // Prevent clickjacking
-    'X-Frame-Options': 'DENY',
+    // Prevent clickjacking - allow same-origin for audit report iframe
+    'X-Frame-Options': isAuditReportRoute ? 'SAMEORIGIN' : 'DENY',
     // Prevent MIME type sniffing
     'X-Content-Type-Options': 'nosniff',
     // XSS Protection
@@ -27,7 +30,8 @@ export function middleware(request: NextRequest) {
       "img-src 'self' data: https: blob:",
       "connect-src 'self' https://www.google-analytics.com https://plausible.io https://api.cal.com https://*.cal.com",
       "frame-src 'self' https://app.cal.com https://*.cal.com",
-      "frame-ancestors 'none'",
+      // Allow same-origin framing for audit report, deny for everything else
+      isAuditReportRoute ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
     ].join('; '),
   };
 

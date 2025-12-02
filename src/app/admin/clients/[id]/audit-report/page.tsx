@@ -13,7 +13,7 @@ export default function AuditReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
-  const [reportType, setReportType] = useState<'comprehensive' | 'simple'>('comprehensive');
+  const [reportType, setReportType] = useState<'comprehensive' | 'simple'>('simple');
 
   useEffect(() => {
     fetchClientName();

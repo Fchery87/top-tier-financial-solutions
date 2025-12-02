@@ -476,7 +476,7 @@ export default function ClientDetailPage() {
     }
   };
 
-  const handleGenerateReport = async (openInNewTab: boolean = true, reportType: 'comprehensive' | 'simple' = 'comprehensive') => {
+  const handleGenerateReport = async (openInNewTab: boolean = true, reportType: 'comprehensive' | 'simple' = 'simple') => {
     setGeneratingReport(true);
     try {
       if (openInNewTab) {

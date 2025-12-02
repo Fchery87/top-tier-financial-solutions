@@ -98,10 +98,13 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Credit Analysis Report - ${fullName}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     @page {
       size: 8.5in 11in;
-      margin: 0.75in;
+      margin: 0.5in;
     }
     
     * {
@@ -110,18 +113,37 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
       box-sizing: border-box;
     }
     
+    :root {
+      --primary: #0F172A;
+      --secondary: #C6A87C;
+      --secondary-light: #E5D5BC;
+      --text-dark: #0F131A;
+      --text-light: #64748B;
+      --bg-page: #F9F8F6;
+      --bg-card: #FFFFFF;
+      --success: #059669;
+      --warning: #D97706;
+      --danger: #DC2626;
+    }
+    
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 11pt;
       line-height: 1.6;
-      color: #1a1a2e;
-      background: #fff;
+      color: var(--text-dark);
+      background: var(--bg-page);
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    .container {
+      max-width: 8.5in;
+      margin: 0 auto;
+      background: var(--bg-card);
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
     }
     
     .page {
-      max-width: 8.5in;
-      margin: 0 auto;
-      padding: 20px 40px;
+      padding: 40px 56px;
     }
     
     .page-break {
@@ -131,16 +153,34 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
     
     /* Typography */
     h1, h2, h3, h4, h5 {
-      color: #1a365d;
+      font-family: 'Playfair Display', serif;
+      color: var(--primary);
       margin-bottom: 12px;
       font-weight: 600;
     }
     
     h1 { font-size: 2em; }
-    h2 { font-size: 1.5em; border-bottom: 2px solid #c9a227; padding-bottom: 8px; margin-top: 24px; }
-    h3 { font-size: 1.25em; color: #2d3748; }
-    h4 { font-size: 1.1em; color: #4a5568; }
-    h5 { font-size: 1em; color: #4a5568; margin-top: 16px; }
+    h2 { 
+      font-size: 1.5em; 
+      padding-bottom: 12px; 
+      margin-top: 32px;
+      margin-bottom: 24px;
+      border-bottom: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h2::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 28px;
+      background: var(--secondary);
+      border-radius: 2px;
+    }
+    h3 { font-size: 1.25em; color: var(--primary); }
+    h4 { font-size: 1.1em; color: var(--text-dark); }
+    h5 { font-size: 1em; color: var(--text-dark); margin-top: 16px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; }
     
     p {
       margin-bottom: 12px;
@@ -154,100 +194,197 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
     li {
       margin-bottom: 6px;
     }
+
+    /* Header */
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 48px 56px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(198, 168, 124, 0.15) 0%, transparent 70%);
+      transform: translate(30%, -30%);
+    }
+    .header-content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-logo svg {
+      width: 48px;
+      height: 48px;
+    }
+    .brand-text h1 {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: white;
+      margin-bottom: 0;
+    }
+    .brand-text p {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--secondary);
+      margin-top: 4px;
+      margin-bottom: 0;
+    }
+    .report-meta {
+      text-align: right;
+    }
+    .report-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(198, 168, 124, 0.3);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--secondary);
+      margin-bottom: 8px;
+    }
+    .report-date {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
     
     /* Cover Page */
     .cover-page {
       text-align: center;
-      padding-top: 120px;
+      padding: 80px 56px;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-page) 100%);
     }
     
     .logo-container {
-      margin-bottom: 40px;
+      margin-bottom: 48px;
     }
     
     .logo-svg {
       width: 80px;
       height: 80px;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
     }
     
     .company-name {
+      font-family: 'Playfair Display', serif;
       font-size: 2.5em;
       font-weight: 700;
-      color: #1a365d;
+      color: var(--primary);
       letter-spacing: -1px;
     }
     
     .company-tagline {
-      font-size: 0.9em;
+      font-size: 0.85em;
       text-transform: uppercase;
       letter-spacing: 4px;
-      color: #c9a227;
-      font-weight: 500;
+      color: var(--secondary);
+      font-weight: 600;
     }
     
     .report-title {
+      font-family: 'Playfair Display', serif;
       font-size: 1.5em;
-      color: #4a5568;
-      margin: 40px 0;
+      color: var(--text-light);
+      margin: 48px 0;
       font-weight: 400;
     }
     
     .prepared-for {
       font-style: italic;
-      color: #718096;
+      color: var(--text-light);
       margin-bottom: 8px;
     }
     
     .client-name {
-      font-size: 2em;
-      color: #1a365d;
-      font-weight: 600;
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2em;
+      color: var(--primary);
+      font-weight: 700;
     }
     
-    .report-date {
+    .report-date-cover {
       margin-top: 16px;
-      color: #718096;
+      color: var(--text-light);
+      font-size: 14px;
     }
     
     .prepared-by-section {
-      margin-top: 80px;
-      padding: 24px;
-      background: #f7fafc;
-      border-radius: 8px;
+      margin-top: 60px;
+      padding: 32px 48px;
+      background: var(--bg-page);
+      border-radius: 16px;
+      border: 1px solid #E2E8F0;
       display: inline-block;
     }
     
     .prepared-by-section p {
       text-align: center;
       margin: 4px 0;
+      font-size: 13px;
     }
     
     /* Tables */
+    .table-container {
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: white;
+      margin: 20px 0;
+    }
+    
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 16px 0;
       font-size: 10pt;
     }
     
     thead th {
-      background: #1a365d;
+      background: var(--primary);
       color: #fff;
-      padding: 12px 8px;
+      padding: 14px 16px;
       text-align: left;
       font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     
     tbody td {
-      padding: 10px 8px;
-      border-bottom: 1px solid #e2e8f0;
+      padding: 14px 16px;
+      border-bottom: 1px solid #F1F5F9;
       vertical-align: top;
     }
     
     tbody tr:nth-child(even) {
-      background: #f7fafc;
+      background: #F8FAFC;
+    }
+    
+    tbody tr:last-child td {
+      border-bottom: none;
     }
     
     .text-center {
@@ -256,39 +393,55 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
     
     /* Score Cards */
     .scores-grid {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
       margin: 24px 0;
     }
     
     .score-card {
-      flex: 1;
       text-align: center;
-      padding: 24px 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 12px;
-      color: white;
+      padding: 28px 20px;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .score-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
     }
     
     .score-bureau {
-      font-size: 0.9em;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 2px;
-      opacity: 0.9;
-      margin-bottom: 8px;
+      color: var(--text-light);
+      font-weight: 600;
+      margin-bottom: 12px;
     }
     
     .score-value {
+      font-family: 'Playfair Display', serif;
       font-size: 3em;
       font-weight: 700;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      color: var(--primary);
+      line-height: 1;
     }
     
     .score-label {
-      font-size: 0.8em;
-      opacity: 0.8;
-      margin-top: 4px;
+      font-size: 12px;
+      color: var(--secondary);
+      margin-top: 8px;
+      font-weight: 600;
     }
     
     /* Summary Table */
@@ -297,12 +450,12 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
     }
     
     .summary-table th {
-      background: #2d3748;
+      background: var(--primary);
     }
     
     .summary-table td:first-child {
       font-weight: 600;
-      color: #2d3748;
+      color: var(--primary);
     }
     
     /* Derogatory Items */
@@ -312,216 +465,305 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
     
     .issue-tag {
       display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.85em;
-      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
     
-    .issue-late { background: #fed7d7; color: #c53030; }
-    .issue-collection { background: #feebc8; color: #c05621; }
-    .issue-chargeoff { background: #e9d8fd; color: #6b46c1; }
+    .issue-late { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+    .issue-collection { background: #FFF7ED; color: #EA580C; border: 1px solid #FED7AA; }
+    .issue-chargeoff { background: #F5F3FF; color: #7C3AED; border: 1px solid #DDD6FE; }
     
     /* Utilization */
     .utilization-grid {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin: 20px 0;
     }
     
     .utilization-card {
-      flex: 1;
-      padding: 16px;
-      background: #f7fafc;
-      border-radius: 8px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
       text-align: center;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    
+    .utilization-card p {
+      margin-bottom: 8px;
     }
     
     .utilization-percent {
+      font-family: 'Playfair Display', serif;
       font-size: 2em;
       font-weight: 700;
     }
     
-    .utilization-excellent { color: #38a169; }
-    .utilization-good { color: #68d391; }
-    .utilization-fair { color: #ecc94b; }
-    .utilization-poor { color: #ed8936; }
-    .utilization-very-poor { color: #e53e3e; }
+    .utilization-excellent { color: var(--success); }
+    .utilization-good { color: #10B981; }
+    .utilization-fair { color: var(--warning); }
+    .utilization-poor { color: #EA580C; }
+    .utilization-very-poor { color: var(--danger); }
     
     .utilization-bar {
-      height: 8px;
-      background: #e2e8f0;
-      border-radius: 4px;
+      height: 6px;
+      background: #E2E8F0;
+      border-radius: 3px;
       overflow: hidden;
-      margin-top: 8px;
+      margin-top: 12px;
     }
     
     .utilization-fill {
       height: 100%;
-      border-radius: 4px;
+      border-radius: 3px;
     }
     
     /* Info Boxes */
     .info-box {
-      padding: 16px 20px;
-      margin: 16px 0;
-      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 20px 0;
+      border-radius: 12px;
       border-left: 4px solid;
     }
     
+    .info-box p {
+      margin-bottom: 0;
+    }
+    
     .info-box.tip {
-      background: #e6fffa;
-      border-color: #38b2ac;
+      background: #ECFDF5;
+      border-color: var(--success);
     }
     
     .info-box.warning {
-      background: #fffaf0;
-      border-color: #ed8936;
+      background: #FFFBEB;
+      border-color: var(--warning);
     }
     
     .info-box.important {
-      background: #fff5f5;
-      border-color: #e53e3e;
+      background: #FEF2F2;
+      border-color: var(--danger);
     }
     
     /* Car Comparison */
     .car-comparison {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 24px;
       margin: 24px 0;
       text-align: center;
     }
     
     .car-comparison .person {
-      flex: 1;
-      padding: 20px;
-      border-radius: 8px;
+      padding: 24px;
+      border-radius: 12px;
+    }
+    
+    .car-comparison .person h4 {
+      margin-bottom: 16px;
+    }
+    
+    .car-comparison .person p {
+      margin-bottom: 6px;
+      text-align: center;
     }
     
     .car-comparison .person-a {
-      background: #c6f6d5;
-      border: 2px solid #38a169;
+      background: #ECFDF5;
+      border: 2px solid var(--success);
     }
     
     .car-comparison .person-b {
-      background: #fed7d7;
-      border: 2px solid #e53e3e;
+      background: #FEF2F2;
+      border: 2px solid var(--danger);
     }
     
     .difference-highlight {
-      background: #1a365d;
+      background: var(--primary);
       color: #fff;
-      padding: 20px;
-      border-radius: 8px;
+      padding: 28px;
+      border-radius: 12px;
       text-align: center;
-      margin: 20px 0;
+      margin: 24px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .difference-highlight::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(198, 168, 124, 0.2) 0%, transparent 70%);
+      transform: translate(30%, -30%);
     }
     
     .difference-amount {
+      font-family: 'Playfair Display', serif;
       font-size: 2.5em;
       font-weight: 700;
-      color: #c9a227;
+      color: var(--secondary);
+      position: relative;
     }
     
     /* Credit Graph */
     .credit-factors {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
-      margin: 16px 0;
+      margin: 20px 0;
     }
     
     .credit-factor {
-      flex: 1;
-      min-width: 150px;
-      padding: 16px;
-      background: #f7fafc;
-      border-radius: 8px;
+      padding: 20px 12px;
+      background: white;
+      border-radius: 12px;
+      text-align: center;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    
+    .credit-factor p {
+      margin-bottom: 4px;
       text-align: center;
     }
     
     .credit-factor-percent {
+      font-family: 'Playfair Display', serif;
       font-size: 1.5em;
       font-weight: 700;
-      color: #667eea;
+      color: var(--secondary);
     }
     
     /* Footer */
     .section-footer {
       margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e2e8f0;
+      padding-top: 24px;
+      border-top: 1px solid #E2E8F0;
       text-align: center;
-      font-size: 0.9em;
-      color: #718096;
+      font-size: 0.85em;
+      color: var(--text-light);
     }
     
     /* CTA Section */
     .cta-section {
-      background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+      background: var(--primary);
       color: #fff;
-      padding: 32px;
-      border-radius: 12px;
+      padding: 40px;
+      border-radius: 16px;
       text-align: center;
       margin: 32px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(198, 168, 124, 0.15) 0%, transparent 70%);
+      transform: translate(30%, -30%);
     }
     
     .cta-section h3 {
-      color: #c9a227;
+      font-family: 'Playfair Display', serif;
+      color: var(--secondary);
       margin-bottom: 12px;
+      font-size: 1.5em;
+      position: relative;
+    }
+    
+    .cta-section p {
+      position: relative;
+      text-align: center;
     }
     
     .cta-contact {
       display: flex;
       justify-content: center;
       gap: 32px;
-      margin-top: 20px;
+      margin-top: 24px;
       flex-wrap: wrap;
+      position: relative;
     }
     
     .cta-contact a {
-      color: #c9a227;
+      color: var(--secondary);
       text-decoration: none;
+      font-weight: 500;
+    }
+    
+    /* Footer */
+    .footer {
+      background: var(--primary);
+      color: white;
+      padding: 48px 56px;
+      text-align: center;
+    }
+    .footer-content {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .footer-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: var(--secondary);
+    }
+    .footer p {
+      text-align: center;
     }
     
     /* Print Styles */
     @media print {
       body {
         font-size: 10pt;
+        background: white;
+      }
+      
+      .container {
+        box-shadow: none;
       }
       
       .page {
-        padding: 0;
+        padding: 20px 40px;
       }
       
       .page-break {
         page-break-after: always;
       }
       
-      .score-card {
+      .score-card, .header, .cta-section, .difference-highlight, thead th {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
       
-      thead th {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+      .cover-page {
+        min-height: auto;
+        padding: 60px 40px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="page">
+  <div class="container">
     <!-- COVER PAGE -->
     <div class="cover-page">
       <div class="logo-container">
         <svg class="logo-svg" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M24 4L42 14V34L24 44L6 34V14L24 4Z" fill="#e2e8f0" stroke="#c9a227" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M24 11V37M13 17L24 11L35 17M13 25L24 31L35 25" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="24" cy="11" r="2" fill="#c9a227"/>
-          <circle cx="13" cy="17" r="2" fill="#c9a227"/>
-          <circle cx="35" cy="17" r="2" fill="#c9a227"/>
+          <rect width="48" height="48" rx="8" fill="#0F172A"/>
+          <path d="M14 16H34V19H26V34H22V19H14V16Z" fill="#C6A87C"/>
+          <path d="M14 34V31H34V34H14Z" fill="#C6A87C" opacity="0.6"/>
         </svg>
         <div class="company-name">Top Tier</div>
         <div class="company-tagline">Financial Solutions</div>
@@ -531,7 +773,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
       
       <p class="prepared-for">Prepared for</p>
       <div class="client-name">${fullName}</div>
-      <p class="report-date">${reportDate}</p>
+      <p class="report-date-cover">${reportDate}</p>
       
       <div class="prepared-by-section">
         <p class="prepared-for">Prepared by</p>
@@ -897,7 +1139,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
         `).join('')}
       </tbody>
     </table>
-    ` : '<p style="color: #38a169; padding: 16px; background: #c6f6d5; border-radius: 8px;">Congratulations! No derogatory items found on your report.</p>'}
+    ` : '<p style="color: #059669; padding: 20px; background: #ECFDF5; border-radius: 12px; border: 1px solid #A7F3D0;">Congratulations! No derogatory items found on your report.</p>'}
     
     <h3>Your Public Records</h3>
     <p>You have <strong>${publicRecordsTotal}</strong> public records. Public records include court records, bankruptcy filings, tax liens, and monetary judgments. These typically remain on your credit report for 7 to 10 years.</p>
@@ -925,7 +1167,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
         `).join('')}
       </tbody>
     </table>
-    ` : '<p style="color: #38a169;">No public records found.</p>'}
+    ` : '<p style="color: #059669; padding: 16px; background: #ECFDF5; border-radius: 12px; border: 1px solid #A7F3D0;">No public records found.</p>'}
     
     <h3>Your Inquiries</h3>
     <p>You have <strong>${inquiriesTotal}</strong> inquiries on your reports. Each time you apply for credit, it can lower your score. During credit repair, we strongly recommend that you <strong>do not apply for any new credit</strong>.</p>
@@ -951,8 +1193,8 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
         `).join('')}
       </tbody>
     </table>
-    ${inquiriesTotal > 15 ? `<p style="font-size: 0.9em; color: #718096;">+ ${inquiriesTotal - 15} more inquiries</p>` : ''}
-    ` : '<p style="color: #38a169;">No recent inquiries found.</p>'}
+    ${inquiriesTotal > 15 ? `<p style="font-size: 0.85em; color: #64748B; margin-top: 12px;">+ ${inquiriesTotal - 15} more inquiries</p>` : ''}
+    ` : '<p style="color: #059669; padding: 16px; background: #ECFDF5; border-radius: 12px; border: 1px solid #A7F3D0;">No recent inquiries found.</p>'}
     
     <h3>Credit Utilization</h3>
     <p>Your credit utilization ratio is one of the most important factors in your credit score. We recommend keeping utilization below 30%, ideally under 10%.</p>

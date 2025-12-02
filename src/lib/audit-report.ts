@@ -325,437 +325,628 @@ export function generateAuditReportHTML(data: AuditReportData): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Credit Audit Report - ${data.client.name}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #0F172A; /* Deep Navy */
+      --secondary: #C6A87C; /* Gold */
+      --secondary-light: #E5D5BC;
+      --text-dark: #0F131A;
+      --text-light: #64748B;
+      --bg-page: #F9F8F6; /* Warm Alabaster */
+      --bg-card: #FFFFFF;
+      --success: #059669;
+      --warning: #D97706;
+      --danger: #DC2626;
+    }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       line-height: 1.6;
-      color: #1f2937;
-      background: #f9fafb;
+      color: var(--text-dark);
+      background: var(--bg-page);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Playfair Display', serif;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
-      background: white;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      background: var(--bg-card);
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+      min-height: 100vh;
     }
+    
+    /* Header */
     .header {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      background: var(--primary);
       color: white;
-      padding: 32px 40px;
+      padding: 48px 56px;
+      position: relative;
+      overflow: hidden;
     }
-    .header-top {
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(198, 168, 124, 0.15) 0%, transparent 70%);
+      transform: translate(30%, -30%);
+    }
+    .header-content {
+      position: relative;
+      z-index: 10;
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
+      align-items: center;
     }
-    .company-name {
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-logo svg {
+      width: 48px;
+      height: 48px;
+    }
+    .brand-text h1 {
       font-size: 24px;
       font-weight: 700;
-      letter-spacing: -0.5px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
     }
-    .report-title {
-      font-size: 14px;
+    .brand-text p {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      opacity: 0.9;
+      letter-spacing: 0.2em;
+      color: var(--secondary);
+      margin-top: 4px;
     }
-    .client-info {
-      display: flex;
-      gap: 32px;
-      font-size: 14px;
-      opacity: 0.9;
+    .report-meta {
+      text-align: right;
     }
-    .section {
-      padding: 32px 40px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .section-title {
-      font-size: 18px;
+    .report-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(198, 168, 124, 0.3);
+      border-radius: 100px;
+      font-size: 12px;
       font-weight: 600;
-      margin-bottom: 20px;
-      color: #1e293b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--secondary);
+      margin-bottom: 8px;
+    }
+    .report-date {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Client Summary Bar */
+    .client-summary {
+      background: white;
+      padding: 32px 56px;
+      border-bottom: 1px solid #F1F5F9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .client-details h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .client-contact {
+      display: flex;
+      gap: 24px;
+      font-size: 14px;
+      color: var(--text-light);
+    }
+    .client-contact span {
       display: flex;
       align-items: center;
       gap: 8px;
     }
+
+    /* Section Styles */
+    .section {
+      padding: 40px 56px;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-title::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 24px;
+      background: var(--secondary);
+      border-radius: 2px;
+    }
+
+    /* Scores Grid */
     .scores-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 24px;
+      gap: 24px;
+      margin-bottom: 32px;
     }
     .score-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
       text-align: center;
-      padding: 20px;
-      border-radius: 12px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      position: relative;
+      overflow: hidden;
     }
-    .score-bureau {
+    .score-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+    .score-label {
       font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #64748b;
-      margin-bottom: 8px;
+      letter-spacing: 0.1em;
+      color: var(--text-light);
+      font-weight: 600;
+      margin-bottom: 12px;
     }
     .score-value {
-      font-size: 36px;
+      font-size: 48px;
       font-weight: 700;
-      color: #1e293b;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: 8px;
+      font-family: 'Playfair Display', serif;
     }
-    .overall-rating {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-    }
-    .rating-label {
-      font-size: 24px;
+    .score-status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
       font-weight: 600;
     }
-    .rating-badge {
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .issues-summary {
+
+    /* Insights Grid */
+    .insights-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
+      gap: 16px;
+      margin-bottom: 32px;
     }
-    .issue-stat {
-      text-align: center;
+    .insight-card {
+      background: #F8FAFC;
+      border-radius: 12px;
       padding: 16px;
-      border-radius: 8px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
+      border: 1px solid #E2E8F0;
     }
-    .issue-stat.warning { background: #fffbeb; border-color: #fde68a; }
-    .issue-stat.info { background: #eff6ff; border-color: #bfdbfe; }
-    .issue-count {
-      font-size: 28px;
+    .insight-value {
+      font-size: 24px;
       font-weight: 700;
-      color: #dc2626;
+      color: var(--primary);
+      margin-bottom: 4px;
+      font-family: 'Playfair Display', serif;
     }
-    .issue-stat.warning .issue-count { color: #d97706; }
-    .issue-stat.info .issue-count { color: #2563eb; }
-    .issue-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #6b7280;
-      margin-top: 4px;
+    .insight-label {
+      font-size: 12px;
+      color: var(--text-light);
+      font-weight: 500;
     }
-    .items-table {
+
+    /* Tables */
+    .table-container {
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: white;
+    }
+    table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 14px;
     }
-    .items-table th {
+    th {
+      background: #F8FAFC;
+      padding: 16px 24px;
       text-align: left;
-      padding: 12px;
-      background: #f8fafc;
-      font-weight: 600;
-      color: #475569;
-      border-bottom: 2px solid #e2e8f0;
-    }
-    .items-table td {
-      padding: 12px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .severity-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-light);
+      border-bottom: 1px solid #E2E8F0;
     }
-    .action-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 500;
-      background: #dbeafe;
-      color: #1d4ed8;
+    td {
+      padding: 16px 24px;
+      font-size: 14px;
+      border-bottom: 1px solid #F1F5F9;
+      color: var(--text-dark);
     }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .creditor-name {
+      font-weight: 600;
+      color: var(--primary);
+      display: block;
+    }
+    .creditor-sub {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    /* Projection Box */
     .projection-box {
-      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, #1e293b 100%);
+      border-radius: 16px;
+      padding: 32px;
       color: white;
-      padding: 24px;
-      border-radius: 12px;
-      text-align: center;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .projection-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(198, 168, 124, 0.2) 0%, transparent 70%);
+      transform: translate(30%, -30%);
+    }
+    .projection-content {
+      position: relative;
+      z-index: 1;
     }
     .projection-title {
       font-size: 14px;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      opacity: 0.9;
-      margin-bottom: 12px;
-    }
-    .projection-scores {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      font-size: 32px;
-      font-weight: 700;
-    }
-    .projection-arrow {
-      font-size: 24px;
-    }
-    .projection-increase {
-      font-size: 14px;
-      margin-top: 8px;
-      opacity: 0.9;
-    }
-    .recommendations-list {
-      list-style: none;
-    }
-    .recommendations-list li {
-      padding: 12px 16px;
+      letter-spacing: 0.1em;
+      color: var(--secondary);
       margin-bottom: 8px;
-      background: #f0fdf4;
-      border-left: 4px solid #22c55e;
+      font-weight: 600;
+    }
+    .projection-text {
+      font-size: 24px;
+      font-family: 'Playfair Display', serif;
+      max-width: 400px;
+    }
+    .projection-score {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 16px 32px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    .proj-val {
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--secondary);
+      line-height: 1;
+      font-family: 'Playfair Display', serif;
+    }
+    .proj-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 4px;
+    }
+
+    /* Recommendations */
+    .rec-list {
+      display: grid;
+      gap: 12px;
+    }
+    .rec-item {
+      background: #F8FAFC;
+      border-left: 4px solid var(--success);
+      padding: 16px 24px;
       border-radius: 0 8px 8px 0;
       font-size: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
     }
-    .cta-section {
-      background: #1e293b;
+
+    /* Footer */
+    .footer {
+      background: var(--primary);
       color: white;
-      padding: 32px 40px;
+      padding: 48px 56px;
       text-align: center;
     }
-    .cta-title {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 8px;
+    .footer-content {
+      max-width: 600px;
+      margin: 0 auto;
     }
-    .cta-subtitle {
-      opacity: 0.8;
-      margin-bottom: 20px;
+    .footer-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: var(--secondary);
     }
-    .cta-contact {
+    .footer-contact {
       display: flex;
       justify-content: center;
-      gap: 32px;
+      gap: 24px;
+      margin-bottom: 32px;
       font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
     }
-    .cta-contact a {
-      color: #fbbf24;
+    .footer-contact a {
+      color: white;
       text-decoration: none;
+      border-bottom: 1px solid var(--secondary);
+      padding-bottom: 2px;
     }
-    .footer {
-      padding: 16px 40px;
-      text-align: center;
+    .disclaimer {
       font-size: 11px;
-      color: #9ca3af;
-      background: #f9fafb;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1.6;
     }
-    .utilization-bar {
-      height: 8px;
-      background: #e5e7eb;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-top: 8px;
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .utilization-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.3s;
-    }
+    .badge-severe { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+    .badge-high { background: #FFF7ED; color: #EA580C; border: 1px solid #FED7AA; }
+    .badge-medium { background: #FEFCE8; color: #CA8A04; border: 1px solid #FEF08A; }
+    .badge-low { background: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0; }
+
     @media print {
       body { background: white; }
-      .container { box-shadow: none; }
-      .cta-section { break-inside: avoid; }
+      .container { box-shadow: none; max-width: 100%; }
+      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .projection-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .section { break-inside: avoid; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <div class="header-top">
-        <div>
-          <div class="company-name">${companyInfo.name}</div>
-          <div class="report-title">Credit Audit Report</div>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="brand">
+          <div class="brand-logo">
+            <!-- Inline SVG Logo -->
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 4L42 14V34L24 44L6 34V14L24 4Z" style="fill: rgba(198, 168, 124, 0.1); stroke: #C6A87C;" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M24 11V37M13 17L24 11L35 17M13 25L24 31L35 25" style="stroke: #C6A87C;" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="24" cy="11" r="2" style="fill: #C6A87C;" />
+              <circle cx="13" cy="17" r="2" style="fill: #C6A87C;" />
+              <circle cx="35" cy="17" r="2" style="fill: #C6A87C;" />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>${companyInfo.name}</h1>
+            <p>Premium Credit Consulting</p>
+          </div>
         </div>
-        <div style="text-align: right; font-size: 13px;">
-          <div>Report Generated</div>
-          <div style="font-weight: 600;">${formatDate(data.generatedAt)}</div>
+        <div class="report-meta">
+          <div class="report-badge">Credit Audit Report</div>
+          <div class="report-date">Generated on ${formatDate(data.generatedAt)}</div>
         </div>
       </div>
-      <div class="client-info">
-        <div><strong>Client:</strong> ${data.client.name}</div>
-        <div><strong>Email:</strong> ${data.client.email}</div>
-        ${data.client.phone ? `<div><strong>Phone:</strong> ${data.client.phone}</div>` : ''}
+    </header>
+
+    <!-- Client Summary -->
+    <div class="client-summary">
+      <div class="client-details">
+        <h2>${data.client.name}</h2>
+        <div class="client-contact">
+          <span>📧 ${data.client.email}</span>
+          ${data.client.phone ? `<span>📱 ${data.client.phone}</span>` : ''}
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Overall Status</div>
+        <div style="font-size: 18px; font-weight: 700; color: ${overallRating.color}; font-family: 'Playfair Display', serif;">
+          ${overallRating.label} Credit
+        </div>
       </div>
     </div>
 
+    <!-- Credit Scores -->
     <div class="section">
-      <div class="section-title">Credit Score Summary</div>
+      <div class="section-header">
+        <h3 class="section-title">Credit Score Overview</h3>
+      </div>
       <div class="scores-grid">
         <div class="score-card">
-          <div class="score-bureau">TransUnion</div>
+          <div class="score-label">TransUnion</div>
           <div class="score-value">${data.scores.transunion || '---'}</div>
+          ${data.scores.transunion ? getScoreBadge(data.scores.transunion) : ''}
         </div>
         <div class="score-card">
-          <div class="score-bureau">Experian</div>
+          <div class="score-label">Experian</div>
           <div class="score-value">${data.scores.experian || '---'}</div>
+          ${data.scores.experian ? getScoreBadge(data.scores.experian) : ''}
         </div>
         <div class="score-card">
-          <div class="score-bureau">Equifax</div>
+          <div class="score-label">Equifax</div>
           <div class="score-value">${data.scores.equifax || '---'}</div>
-        </div>
-      </div>
-      <div class="overall-rating" style="background: ${overallRating.bgColor};">
-        <span class="rating-label" style="color: ${overallRating.color};">Overall Rating:</span>
-        <span class="rating-badge" style="background: ${overallRating.color}; color: white;">
-          ${overallRating.label}
-        </span>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Issues Identified</div>
-      <div class="issues-summary">
-        <div class="issue-stat">
-          <div class="issue-count">${data.negativeItems.length}</div>
-          <div class="issue-label">Total Issues</div>
-        </div>
-        <div class="issue-stat">
-          <div class="issue-count">${data.summary.collectionsCount}</div>
-          <div class="issue-label">Collections</div>
-        </div>
-        <div class="issue-stat warning">
-          <div class="issue-count">${data.summary.latePaymentCount}</div>
-          <div class="issue-label">Late Payments</div>
-        </div>
-        <div class="issue-stat info">
-          <div class="issue-count">${data.summary.derogatoryCount}</div>
-          <div class="issue-label">Derogatory</div>
+          ${data.scores.equifax ? getScoreBadge(data.scores.equifax) : ''}
         </div>
       </div>
 
-      ${data.negativeItems.length > 0 ? `
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th>Creditor</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th>Severity</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.negativeItems.slice(0, 10).map(item => {
-            const severity = getSeverityStyle(item.riskSeverity);
-            return `
-            <tr>
-              <td><strong>${item.creditorName}</strong></td>
-              <td>${formatItemType(item.itemType)}</td>
-              <td>${item.amount ? formatCurrency(item.amount) : '---'}</td>
-              <td>
-                <span class="severity-badge" style="background: ${severity.bgColor}; color: ${severity.color};">
-                  ${item.riskSeverity.toUpperCase()}
-                </span>
-              </td>
-              <td>
-                <span class="action-badge">${item.recommendedAction ? formatItemType(item.recommendedAction) : 'Review'}</span>
-              </td>
-            </tr>
-          `}).join('')}
-        </tbody>
-      </table>
-      ${data.negativeItems.length > 10 ? `<p style="margin-top: 12px; color: #6b7280; font-size: 13px;">+ ${data.negativeItems.length - 10} more items</p>` : ''}
-      ` : '<p style="color: #059669; text-align: center; padding: 20px;">No negative items found. Your credit report is clean!</p>'}
-    </div>
-
-    <div class="section">
-      <div class="section-title">Account Overview</div>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
-        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: #1e293b;">${data.summary.totalAccounts}</div>
-          <div style="font-size: 12px; color: #64748b;">Total Accounts</div>
+      <div class="insights-grid">
+        <div class="insight-card">
+          <div class="insight-value">${data.negativeItems.length}</div>
+          <div class="insight-label">Negative Items</div>
         </div>
-        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: #1e293b;">${formatCurrency(data.summary.totalDebt)}</div>
-          <div style="font-size: 12px; color: #64748b;">Total Debt</div>
+        <div class="insight-card">
+          <div class="insight-value">${data.summary.collectionsCount}</div>
+          <div class="insight-label">Collections</div>
         </div>
-        <div style="padding: 16px; background: #f8fafc; border-radius: 8px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: ${(data.summary.utilizationPercent || 0) > 30 ? '#dc2626' : '#059669'};">
-            ${data.summary.utilizationPercent || 0}%
-          </div>
-          <div style="font-size: 12px; color: #64748b;">Credit Utilization</div>
+        <div class="insight-card">
+          <div class="insight-value">${data.summary.utilizationPercent || 0}%</div>
+          <div class="insight-label">Utilization</div>
         </div>
-      </div>
-      <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
-          <span>Credit Utilization</span>
-          <span>${data.summary.utilizationPercent || 0}% of ${formatCurrency(data.summary.totalCreditLimit)}</span>
-        </div>
-        <div class="utilization-bar">
-          <div class="utilization-fill" style="width: ${Math.min(data.summary.utilizationPercent || 0, 100)}%; background: ${(data.summary.utilizationPercent || 0) > 50 ? '#dc2626' : (data.summary.utilizationPercent || 0) > 30 ? '#f59e0b' : '#22c55e'};"></div>
+        <div class="insight-card">
+          <div class="insight-value">${formatCurrency(data.summary.totalDebt)}</div>
+          <div class="insight-label">Total Debt</div>
         </div>
       </div>
     </div>
 
+    <!-- Projection -->
     ${projectedScore ? `
-    <div class="section">
-      <div class="section-title">Potential Improvement</div>
+    <div class="section" style="padding-top: 0;">
       <div class="projection-box">
-        <div class="projection-title">Estimated Score After Credit Repair</div>
-        <div class="projection-scores">
-          <span>${avgScore}</span>
-          <span class="projection-arrow">→</span>
-          <span>${projectedScore}+</span>
+        <div class="projection-content">
+          <div class="projection-title">Improvement Analysis</div>
+          <div class="projection-text">
+            Based on our audit, your potential credit score could reach new heights.
+          </div>
         </div>
-        <div class="projection-increase">Up to +${projectedIncrease} points possible</div>
+        <div class="projection-score">
+          <div class="proj-val">${projectedScore}+</div>
+          <div class="proj-label">Projected Score</div>
+        </div>
       </div>
     </div>
     ` : ''}
 
+    <!-- Negative Items -->
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Items Requiring Attention</h3>
+      </div>
+      ${data.negativeItems.length > 0 ? `
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Creditor / Type</th>
+              <th>Bureau</th>
+              <th>Amount</th>
+              <th>Severity</th>
+              <th>Recommended Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.negativeItems.map(item => {
+              const severityClass = `badge-${item.riskSeverity}`;
+              return `
+              <tr>
+                <td>
+                  <span class="creditor-name">${item.creditorName}</span>
+                  <span class="creditor-sub">${formatItemType(item.itemType)}</span>
+                </td>
+                <td>${item.bureau || 'All Bureaus'}</td>
+                <td>${item.amount ? formatCurrency(item.amount) : '---'}</td>
+                <td>
+                  <span class="badge ${severityClass}">
+                    ${item.riskSeverity}
+                  </span>
+                </td>
+                <td>${item.recommendedAction ? formatItemType(item.recommendedAction) : 'Review'}</td>
+              </tr>
+            `}).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : '<p style="text-align: center; color: var(--success);">No negative items found. Excellent work!</p>'}
+    </div>
+
+    <!-- Recommendations -->
     ${data.recommendations.length > 0 ? `
     <div class="section">
-      <div class="section-title">Recommended Action Plan</div>
-      <ul class="recommendations-list">
-        ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-      </ul>
+      <div class="section-header">
+        <h3 class="section-title">Strategic Recommendations</h3>
+      </div>
+      <div class="rec-list">
+        ${data.recommendations.map(rec => `
+          <div class="rec-item">
+            <span>•</span>
+            <span>${rec}</span>
+          </div>
+        `).join('')}
+      </div>
     </div>
     ` : ''}
 
     ${renderFcraComplianceSection(data)}
-    
     ${renderDiscrepanciesSection(data)}
-    
     ${renderRound1StrategySection(data)}
 
-    <div class="cta-section">
-      <div class="cta-title">Ready to Improve Your Credit?</div>
-      <div class="cta-subtitle">Our team is ready to help you dispute inaccuracies and repair your credit.</div>
-      <div class="cta-contact">
-        <div>📞 <a href="tel:${companyInfo.phone}">${companyInfo.phone}</a></div>
-        <div>📧 <a href="mailto:${companyInfo.email}">${companyInfo.email}</a></div>
-        ${companyInfo.website ? `<div>🌐 ${companyInfo.website}</div>` : ''}
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-title">Ready to transform your credit?</div>
+        <div class="footer-contact">
+          <a href="tel:${companyInfo.phone}">${companyInfo.phone}</a>
+          <a href="mailto:${companyInfo.email}">${companyInfo.email}</a>
+          ${companyInfo.website ? `<a href="https://${companyInfo.website}" target="_blank">${companyInfo.website}</a>` : ''}
+        </div>
+        <div class="disclaimer">
+          <p>© ${new Date().getFullYear()} ${companyInfo.name}. All rights reserved.</p>
+          <p>This document contains confidential financial information. It is intended solely for the use of the individual to whom it is addressed. This report does not constitute legal or financial advice.</p>
+        </div>
       </div>
-    </div>
-
-    <div class="footer">
-      <p>This report is for informational purposes only and does not constitute financial advice.</p>
-      <p>© ${new Date().getFullYear()} ${companyInfo.name}. All rights reserved.</p>
-    </div>
+    </footer>
   </div>
 </body>
 </html>`;
 }
+
+function getScoreBadge(score: number) {
+  let color = '#64748B';
+  let text = 'N/A';
+  let bg = '#F1F5F9';
+  
+  if (score >= 750) { color = '#059669'; text = 'Excellent'; bg = '#ECFDF5'; }
+  else if (score >= 700) { color = '#10B981'; text = 'Good'; bg = '#D1FAE5'; }
+  else if (score >= 650) { color = '#D97706'; text = 'Fair'; bg = '#FEF3C7'; }
+  else if (score >= 600) { color = '#EA580C'; text = 'Poor'; bg = '#FFEDD5'; }
+  else { color = '#DC2626'; text = 'Very Poor'; bg = '#FEE2E2'; }
+
+  return `<span class="score-status" style="background: ${bg}; color: ${color};">${text}</span>`;
+}
+
+// ... (Keep existing helper functions below: calculateProjectedScoreIncrease, renderFcraComplianceSection, etc.)
+
 
 export function calculateProjectedScoreIncrease(negativeItems: AuditReportData['negativeItems']): number {
   return calculateProjectedIncrease(negativeItems);
@@ -780,65 +971,73 @@ function renderFcraComplianceSection(data: AuditReportData): string {
   }
   
   return `
-    <div class="section" style="background: #fef2f2; border: 2px solid #fecaca;">
-      <div class="section-title" style="color: #dc2626;">
-        ⚠️ FCRA Compliance Issues Found
+    <div class="section" style="background: #FEF2F2; border-bottom: 1px solid #FECACA;">
+      <div class="section-header">
+        <h3 class="section-title" style="color: var(--danger);">
+          ⚠️ FCRA Compliance Issues
+        </h3>
       </div>
       
       ${pastLimitItems.length > 0 ? `
-      <div style="margin-bottom: 20px;">
-        <h4 style="color: #dc2626; margin-bottom: 12px;">🚨 Items Past Reporting Limit (Immediate Action Required)</h4>
-        <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
-          Under FCRA Section 605 (15 U.S.C. § 1681c), these items have exceeded the maximum reporting period and must be removed.
+      <div style="margin-bottom: 32px;">
+        <h4 style="color: var(--danger); margin-bottom: 16px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+          <span>🚨</span> Items Past Reporting Limit
+        </h4>
+        <p style="font-size: 14px; color: var(--text-light); margin-bottom: 16px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #FECACA;">
+          <strong>Legal Note:</strong> Under FCRA Section 605 (15 U.S.C. § 1681c), these items have exceeded the maximum reporting period and must be removed immediately.
         </p>
-        <table class="items-table" style="background: white;">
-          <thead>
-            <tr>
-              <th>Creditor</th>
-              <th>Type</th>
-              <th>Bureau</th>
-              <th>Limit</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${pastLimitItems.map(item => `
+        <div class="table-container">
+          <table>
+            <thead>
               <tr>
-                <td><strong>${item.creditorName}</strong></td>
-                <td>${formatItemType(item.itemType)}</td>
-                <td>${item.bureau || 'All'}</td>
-                <td>${item.reportingLimitYears} years</td>
-                <td><span style="color: #dc2626; font-weight: 600;">⛔ VIOLATION</span></td>
+                <th>Creditor</th>
+                <th>Type</th>
+                <th>Bureau</th>
+                <th>Limit</th>
+                <th>Status</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${pastLimitItems.map(item => `
+                <tr>
+                  <td><span class="creditor-name">${item.creditorName}</span></td>
+                  <td>${formatItemType(item.itemType)}</td>
+                  <td>${item.bureau || 'All'}</td>
+                  <td>${item.reportingLimitYears} years</td>
+                  <td><span class="badge badge-severe">VIOLATION</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
       ` : ''}
       
       ${nearExpiryItems.length > 0 ? `
       <div>
-        <h4 style="color: #d97706; margin-bottom: 12px;">⏰ Items Expiring Soon</h4>
-        <table class="items-table" style="background: white;">
-          <thead>
-            <tr>
-              <th>Creditor</th>
-              <th>Type</th>
-              <th>Expires In</th>
-              <th>Strategy</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${nearExpiryItems.slice(0, 5).map(item => `
+        <h4 style="color: var(--warning); margin-bottom: 16px; font-size: 16px;">⏰ Items Expiring Soon</h4>
+        <div class="table-container">
+          <table>
+            <thead>
               <tr>
-                <td><strong>${item.creditorName}</strong></td>
-                <td>${formatItemType(item.itemType)}</td>
-                <td>${item.daysUntilExpiration} days</td>
-                <td>${item.daysUntilExpiration && item.daysUntilExpiration < 180 ? 'Wait or Dispute' : 'Dispute Now'}</td>
+                <th>Creditor</th>
+                <th>Type</th>
+                <th>Expires In</th>
+                <th>Strategy</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${nearExpiryItems.slice(0, 5).map(item => `
+                <tr>
+                  <td><span class="creditor-name">${item.creditorName}</span></td>
+                  <td>${formatItemType(item.itemType)}</td>
+                  <td>${item.daysUntilExpiration} days</td>
+                  <td>${item.daysUntilExpiration && item.daysUntilExpiration < 180 ? 'Wait or Dispute' : 'Dispute Now'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
       ` : ''}
     </div>
@@ -858,49 +1057,53 @@ function renderDiscrepanciesSection(data: AuditReportData): string {
   
   return `
     <div class="section">
-      <div class="section-title">
-        🔍 Cross-Bureau Discrepancies Detected
+      <div class="section-header">
+        <h3 class="section-title">Cross-Bureau Discrepancies</h3>
       </div>
-      <p style="font-size: 13px; color: #6b7280; margin-bottom: 16px;">
-        Under FCRA Section 611 (15 U.S.C. § 1681i), bureaus must reinvestigate disputed information. Discrepancies across bureaus provide strong dispute grounds.
-      </p>
+      <div style="margin-bottom: 24px; padding: 16px; background: #F8FAFC; border-radius: 8px; border-left: 4px solid var(--secondary);">
+        <p style="font-size: 14px; color: var(--text-light);">
+          <strong>Why this matters:</strong> Under FCRA Section 611 (15 U.S.C. § 1681i), bureaus must reinvestigate disputed information. When data conflicts across bureaus, it provides strong grounds for removal.
+        </p>
+      </div>
       
       ${highSeverity.length > 0 ? `
-      <div style="margin-bottom: 20px;">
-        <h4 style="color: #dc2626; margin-bottom: 12px;">High-Priority Discrepancies (Strong Dispute Basis)</h4>
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th>Issue</th>
-              <th>Creditor</th>
-              <th>TransUnion</th>
-              <th>Experian</th>
-              <th>Equifax</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${highSeverity.slice(0, 5).map(disc => `
+      <div style="margin-bottom: 32px;">
+        <h4 style="color: var(--danger); margin-bottom: 16px; font-size: 16px;">High-Priority Discrepancies</h4>
+        <div class="table-container">
+          <table>
+            <thead>
               <tr>
-                <td><strong>${formatItemType(disc.discrepancyType)}</strong></td>
-                <td>${disc.creditorName || '---'}</td>
-                <td>${disc.valueTransunion || '---'}</td>
-                <td>${disc.valueExperian || '---'}</td>
-                <td>${disc.valueEquifax || '---'}</td>
+                <th>Issue</th>
+                <th>Creditor</th>
+                <th>TransUnion</th>
+                <th>Experian</th>
+                <th>Equifax</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${highSeverity.slice(0, 5).map(disc => `
+                <tr>
+                  <td><strong>${formatItemType(disc.discrepancyType)}</strong></td>
+                  <td>${disc.creditorName || '---'}</td>
+                  <td>${disc.valueTransunion || '---'}</td>
+                  <td>${disc.valueExperian || '---'}</td>
+                  <td>${disc.valueEquifax || '---'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
       ` : ''}
       
       ${piiDiscrepancies.length > 0 ? `
-      <div style="margin-bottom: 20px;">
-        <h4 style="color: #d97706; margin-bottom: 12px;">Personal Information Discrepancies</h4>
-        <div style="background: #fffbeb; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-          <p style="font-size: 13px; margin-bottom: 8px;">
-            <strong>Note:</strong> Different names or addresses across bureaus may indicate:
+      <div style="margin-bottom: 32px;">
+        <h4 style="color: var(--warning); margin-bottom: 16px; font-size: 16px;">Personal Information Errors</h4>
+        <div style="background: #FFF7ED; padding: 20px; border-radius: 12px; border: 1px solid #FED7AA;">
+          <p style="font-size: 14px; margin-bottom: 12px; color: #9A3412;">
+            <strong>Warning:</strong> Discrepancies in names or addresses can indicate:
           </p>
-          <ul style="font-size: 13px; margin-left: 20px; color: #6b7280;">
+          <ul style="font-size: 14px; margin-left: 24px; color: #C2410C; list-style-type: disc;">
             <li>Data entry errors by creditors</li>
             <li>Mixed files with another consumer</li>
             <li>Potential identity theft indicators</li>
@@ -911,9 +1114,9 @@ function renderDiscrepanciesSection(data: AuditReportData): string {
       
       ${mediumSeverity.length > 0 ? `
       <div>
-        <h4 style="color: #6b7280; margin-bottom: 12px;">Other Discrepancies</h4>
-        <p style="font-size: 13px; color: #6b7280;">
-          ${mediumSeverity.length} additional discrepancies found (balance differences, dates, etc.)
+        <h4 style="color: var(--text-light); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Additional Findings</h4>
+        <p style="font-size: 14px; color: var(--text-dark);">
+          ${mediumSeverity.length} additional discrepancies found (balance differences, dates, etc.) that can be used as secondary dispute points.
         </p>
       </div>
       ` : ''}
@@ -929,46 +1132,57 @@ function renderRound1StrategySection(data: AuditReportData): string {
   }
   
   return `
-    <div class="section" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6;">
-      <div class="section-title" style="color: #1d4ed8;">
-        📋 Round 1 Dispute Strategy
+    <div class="section" style="background: #F1F5F9;">
+      <div class="section-header">
+        <h3 class="section-title">
+          📋 Round 1 Dispute Strategy
+        </h3>
       </div>
-      <p style="font-size: 13px; color: #6b7280; margin-bottom: 16px;">
-        Prioritized items for your first round of disputes. Each item includes the FCRA citation for your dispute letter.
+      <p style="font-size: 14px; color: var(--text-light); margin-bottom: 24px;">
+        We have prioritized the following items for your first round of disputes based on FCRA violations and impact probability.
       </p>
       
-      <table class="items-table" style="background: white;">
-        <thead>
-          <tr>
-            <th style="width: 30px;">#</th>
-            <th>Creditor</th>
-            <th>Type</th>
-            <th>Dispute Reason</th>
-            <th>FCRA Code</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${strategy.map((item, idx) => `
+      <div class="table-container">
+        <table>
+          <thead>
             <tr>
-              <td style="text-align: center; font-weight: 700; color: ${item.priority === 1 ? '#dc2626' : item.priority === 2 ? '#ea580c' : '#3b82f6'};">
-                ${idx + 1}
-              </td>
-              <td><strong>${item.creditorName}</strong><br><span style="font-size: 11px; color: #6b7280;">${item.bureau || 'All Bureaus'}</span></td>
-              <td>${formatItemType(item.itemType)}</td>
-              <td style="font-size: 12px;">${item.reason}</td>
-              <td style="font-size: 11px; font-family: monospace;">${item.fcraCode}</td>
+              <th style="width: 50px;">#</th>
+              <th>Creditor</th>
+              <th>Type</th>
+              <th>Dispute Reason</th>
+              <th>FCRA Code</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${strategy.map((item, idx) => `
+              <tr>
+                <td style="text-align: center;">
+                  <span style="
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 24px; height: 24px; border-radius: 50%; 
+                    background: ${item.priority === 1 ? 'var(--danger)' : 'var(--primary)'}; 
+                    color: white; font-size: 12px; font-weight: 700;
+                  ">${idx + 1}</span>
+                </td>
+                <td>
+                  <span class="creditor-name">${item.creditorName}</span>
+                  <span class="creditor-sub">${item.bureau || 'All Bureaus'}</span>
+                </td>
+                <td>${formatItemType(item.itemType)}</td>
+                <td style="font-size: 13px;">${item.reason}</td>
+                <td><code style="background: #E2E8F0; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: var(--primary);">${item.fcraCode}</code></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
       
-      <div style="margin-top: 16px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #3b82f6;">
-        <p style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">💡 Dispute Strategy Tips:</p>
-        <ul style="font-size: 12px; color: #6b7280; margin-left: 16px;">
-          <li>Priority 1 items (FCRA violations) should be disputed immediately</li>
-          <li>Include FCRA citations in all dispute letters for legal weight</li>
-          <li>Send disputes via certified mail with return receipt requested</li>
-          <li>Bureaus have 30 days to investigate (45 days if you submit additional info)</li>
+      <div style="margin-top: 24px; padding: 20px; background: white; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <p style="font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--primary);">💡 Strategy Note</p>
+        <ul style="font-size: 14px; color: var(--text-light); margin-left: 20px; list-style-type: disc;">
+          <li>Priority 1 items represent clear FCRA violations and should be removed immediately upon dispute.</li>
+          <li>We cite specific FCRA codes in every letter to ensure bureaus process them as legal disputes, not generic complaints.</li>
+          <li>Bureaus have 30 days to investigate from the date they receive your letter.</li>
         </ul>
       </div>
     </div>
