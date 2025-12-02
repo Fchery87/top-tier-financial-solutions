@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { 
   Loader2, FileText, TrendingUp, Clock, CheckCircle, 
   AlertCircle, Upload, ChevronRight, Sparkles, Shield,
-  FileUp, Calendar, Target, Zap
+  FileUp, Calendar, Target, Zap, FileSignature
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay } from '@/components/ui/AnimatedBackground';
@@ -477,6 +477,12 @@ export default function PortalPage() {
                     <CardTitle className="font-serif text-xl">Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    <Button asChild variant="outline" className="w-full justify-start">
+                      <Link href="/portal/agreement">
+                        <FileSignature className="w-4 h-4 mr-2" />
+                        Service Agreement
+                      </Link>
+                    </Button>
                     {auditReport?.has_report && (
                       <Button asChild variant="outline" className="w-full justify-start">
                         <Link href="/portal/audit-report">

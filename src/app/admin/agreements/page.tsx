@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { NY_SERVICE_AGREEMENT_TEMPLATE, REQUIRED_DISCLOSURES_NY } from '@/lib/service-agreement-template';
 
 interface AgreementTemplate {
   id: string;
@@ -35,52 +36,13 @@ const DISCLOSURE_OPTIONS = [
   { value: 'no_guarantee', label: 'No Guarantee Disclosure' },
   { value: 'credit_bureau_rights', label: 'Credit Bureau Rights' },
   { value: 'written_contract', label: 'Written Contract Notice' },
-  { value: 'fee_disclosure', label: 'Fee Disclosure (No Advance Fees)' },
+  { value: 'fee_disclosure', label: 'Fee Disclosure (No Advance Fees - NY Required)' },
+  { value: 'ny_adverse_data', label: 'NY Time Limits on Adverse Data' },
+  { value: 'information_statement', label: 'NY Information Statement (GBL 458-d)' },
 ];
 
-const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <h1 style="text-align: center; color: #1a365d;">Credit Repair Services Agreement</h1>
-  <p style="text-align: center; color: #666;">Top Tier Financial Solutions</p>
-  
-  <hr style="margin: 20px 0;" />
-  
-  <p><strong>Client Name:</strong> {{client_name}}</p>
-  <p><strong>Client Email:</strong> {{client_email}}</p>
-  <p><strong>Date:</strong> {{date}}</p>
-  
-  <h2>1. Services</h2>
-  <p>{{company_name}} agrees to provide credit repair services including but not limited to:</p>
-  <ul>
-    <li>Analysis of credit reports from all three major credit bureaus</li>
-    <li>Identification of potentially inaccurate, incomplete, or unverifiable items</li>
-    <li>Preparation and submission of dispute letters to credit bureaus</li>
-    <li>Follow-up on dispute results and additional rounds as needed</li>
-  </ul>
-  
-  <h2>2. Client Responsibilities</h2>
-  <p>Client agrees to:</p>
-  <ul>
-    <li>Provide accurate and complete information</li>
-    <li>Respond promptly to requests for additional information</li>
-    <li>Review and sign all necessary documents</li>
-  </ul>
-  
-  <h2>3. Fees and Payment</h2>
-  <p>Payment for services will be collected ONLY after services have been rendered, in compliance with the Credit Repair Organizations Act (CROA).</p>
-  
-  <h2>4. Right to Cancel</h2>
-  <p style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107;">
-    <strong>IMPORTANT:</strong> You have the right to cancel this contract within 3 business days from the date you sign it. To cancel, you must notify {{company_name}} in writing.
-  </p>
-  
-  <h2>5. No Guarantees</h2>
-  <p>No credit repair organization can guarantee specific results. Results vary based on individual circumstances.</p>
-  
-  <div style="margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px;">
-    <p><strong>Client Signature:</strong> _________________________</p>
-    <p><strong>Date:</strong> _________________________</p>
-  </div>
-</div>`;
+// Use the comprehensive NY GBL Article 28-BB compliant template as default
+const DEFAULT_TEMPLATE = NY_SERVICE_AGREEMENT_TEMPLATE;
 
 export default function AgreementsPage() {
   const [templates, setTemplates] = React.useState<AgreementTemplate[]>([]);
@@ -95,7 +57,7 @@ export default function AgreementsPage() {
     name: '',
     version: '1.0',
     content: DEFAULT_TEMPLATE,
-    requiredDisclosures: ['right_to_cancel', 'no_guarantee', 'fee_disclosure'],
+    requiredDisclosures: REQUIRED_DISCLOSURES_NY,
     cancellationPeriodDays: 3,
     isActive: true,
   });
@@ -125,7 +87,7 @@ export default function AgreementsPage() {
       name: '',
       version: '1.0',
       content: DEFAULT_TEMPLATE,
-      requiredDisclosures: ['right_to_cancel', 'no_guarantee', 'fee_disclosure'],
+      requiredDisclosures: REQUIRED_DISCLOSURES_NY,
       cancellationPeriodDays: 3,
       isActive: true,
     });
@@ -140,7 +102,7 @@ export default function AgreementsPage() {
       content: template.content,
       requiredDisclosures: template.required_disclosures 
         ? JSON.parse(template.required_disclosures) 
-        : ['right_to_cancel'],
+        : REQUIRED_DISCLOSURES_NY,
       cancellationPeriodDays: template.cancellation_period_days,
       isActive: template.is_active,
     });
@@ -239,7 +201,7 @@ export default function AgreementsPage() {
       content: template.content,
       requiredDisclosures: template.required_disclosures 
         ? JSON.parse(template.required_disclosures) 
-        : ['right_to_cancel'],
+        : REQUIRED_DISCLOSURES_NY,
       cancellationPeriodDays: template.cancellation_period_days,
       isActive: true,
     });

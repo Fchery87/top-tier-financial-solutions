@@ -4,6 +4,7 @@ import { agreementTemplates, clientAgreements, disclosureAcknowledgments, client
 import { eq, desc, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { DISCLOSURE_TEXTS, REQUIRED_DISCLOSURES_NY } from '@/lib/service-agreement-template';
 
 // GET - List agreement templates or client agreements
 export async function GET(request: NextRequest) {
@@ -165,25 +166,17 @@ export async function POST(request: NextRequest) {
         expiresAt,
       });
 
-      // Create disclosure acknowledgment records
+      // Create disclosure acknowledgment records (NY GBL Article 28-BB compliant)
       const disclosures = template[0].requiredDisclosures 
         ? JSON.parse(template[0].requiredDisclosures) 
-        : ['right_to_cancel', 'no_guarantee', 'fee_disclosure'];
-
-      const disclosureTexts: Record<string, string> = {
-        right_to_cancel: 'You have the right to cancel this contract within 3 business days from the date you signed it. To cancel, you must notify us in writing.',
-        no_guarantee: 'No one can guarantee to improve your credit score. We cannot guarantee specific results.',
-        credit_bureau_rights: 'You have the right to dispute inaccurate information in your credit report directly with the credit bureaus at no charge.',
-        written_contract: 'You are entitled to a written contract specifying the services to be performed.',
-        fee_disclosure: 'You understand that fees will only be charged after services have been rendered, in compliance with the Credit Repair Organizations Act.',
-      };
+        : REQUIRED_DISCLOSURES_NY;
 
       for (const disclosureType of disclosures) {
         await db.insert(disclosureAcknowledgments).values({
           id: crypto.randomUUID(),
           agreementId,
           disclosureType,
-          disclosureText: disclosureTexts[disclosureType] || disclosureType,
+          disclosureText: DISCLOSURE_TEXTS[disclosureType as keyof typeof DISCLOSURE_TEXTS] || disclosureType,
           acknowledged: false,
         });
       }
