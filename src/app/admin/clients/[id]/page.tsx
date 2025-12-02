@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
 import { ClientTabs, type ClientTab } from '@/components/admin/ClientTabs';
+import { ProgressTab } from '@/components/admin/ProgressTab';
 
 interface ClientDetail {
   id: string;
@@ -863,6 +864,16 @@ export default function ClientDetailPage() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* Progress Tab */}
+          {activeTab === 'progress' && (
+            <ProgressTab 
+              clientId={clientId} 
+              creditReports={creditReports}
+              scoreHistory={scoreHistory}
+              disputes={disputes}
+            />
           )}
 
           {/* Reports Tab */}

@@ -19,7 +19,8 @@ import {
   Activity,
   BarChart3,
   Target,
-  Zap
+  Zap,
+  Trophy
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -526,7 +527,7 @@ export default function AdminDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
                   <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
                     <Link href="/admin/clients">
                       <Users className="w-5 h-5" />
@@ -537,6 +538,12 @@ export default function AdminDashboard() {
                     <Link href="/admin/disputes">
                       <Scale className="w-5 h-5" />
                       <span className="text-xs">Disputes</span>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
+                    <Link href="/admin/results">
+                      <Trophy className="w-5 h-5" />
+                      <span className="text-xs">Results</span>
                     </Link>
                   </Button>
                   <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>

@@ -30,7 +30,7 @@ import {
   ShieldCheck,
   FolderKanban,
   Megaphone,
-  Settings
+  Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -71,6 +71,7 @@ const navSections: NavSection[] = [
     icon: Scale,
     items: [
       { name: 'All Disputes', href: '/admin/disputes', icon: Scale },
+      { name: 'Results & Wins', href: '/admin/results', icon: Trophy },
       { name: 'Dispute Wizard', href: '/admin/disputes/wizard', icon: Wand2 },
       { name: 'Letter Templates', href: '/admin/dispute-templates', icon: Library },
       { name: 'Compliance', href: '/admin/compliance', icon: ShieldCheck },
