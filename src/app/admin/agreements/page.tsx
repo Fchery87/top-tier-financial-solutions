@@ -209,12 +209,15 @@ export default function AgreementsPage() {
   };
 
   const toggleDisclosure = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      requiredDisclosures: prev.requiredDisclosures.includes(value)
-        ? prev.requiredDisclosures.filter(d => d !== value)
-        : [...prev.requiredDisclosures, value],
-    }));
+    setFormData(prev => {
+      const current = prev.requiredDisclosures || [];
+      return {
+        ...prev,
+        requiredDisclosures: current.includes(value)
+          ? current.filter(d => d !== value)
+          : [...current, value],
+      };
+    });
   };
 
   const columns = [
@@ -447,7 +450,7 @@ export default function AgreementsPage() {
                     <label className="text-sm font-medium">Template Name *</label>
                     <input
                       type="text"
-                      value={formData.name}
+                      value={formData.name || ''}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-secondary"
                       placeholder="Standard Client Agreement"
@@ -457,7 +460,7 @@ export default function AgreementsPage() {
                     <label className="text-sm font-medium">Version</label>
                     <input
                       type="text"
-                      value={formData.version}
+                      value={formData.version || ''}
                       onChange={(e) => setFormData({ ...formData, version: e.target.value })}
                       className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-secondary"
                       placeholder="1.0"
@@ -470,7 +473,7 @@ export default function AgreementsPage() {
                   <input
                     type="number"
                     min="3"
-                    value={formData.cancellationPeriodDays}
+                    value={formData.cancellationPeriodDays ?? 3}
                     onChange={(e) => setFormData({ ...formData, cancellationPeriodDays: parseInt(e.target.value) || 3 })}
                     className="w-32 px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-secondary"
                   />
@@ -484,7 +487,7 @@ export default function AgreementsPage() {
                       <label key={option.value} className="flex items-center gap-2 p-2 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={formData.requiredDisclosures.includes(option.value)}
+                          checked={(formData.requiredDisclosures || []).includes(option.value)}
                           onChange={() => toggleDisclosure(option.value)}
                           className="w-4 h-4"
                         />
@@ -500,7 +503,7 @@ export default function AgreementsPage() {
                     Available placeholders: {`{{client_name}}, {{client_email}}, {{client_phone}}, {{date}}, {{company_name}}`}
                   </p>
                   <textarea
-                    value={formData.content}
+                    value={formData.content || ''}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-secondary min-h-[300px] font-mono text-sm"
                     placeholder="Enter HTML content..."
