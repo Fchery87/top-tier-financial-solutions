@@ -476,11 +476,12 @@ export default function ClientDetailPage() {
     }
   };
 
-  const handleGenerateReport = async (openInNewTab: boolean = true) => {
+  const handleGenerateReport = async (openInNewTab: boolean = true, reportType: 'comprehensive' | 'simple' = 'comprehensive') => {
     setGeneratingReport(true);
     try {
       if (openInNewTab) {
-        window.open(`/api/admin/clients/${clientId}/audit-report`, '_blank');
+        // Open the new audit report page for a better viewing experience
+        window.open(`/admin/clients/${clientId}/audit-report`, '_blank');
       } else {
         const response = await fetch(`/api/admin/clients/${clientId}/audit-report`, { method: 'POST' });
         if (response.ok) alert('Audit report saved successfully!');
