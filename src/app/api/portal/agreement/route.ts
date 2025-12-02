@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (!client) {
-      return NextResponse.json({ error: 'Client profile not found' }, { status: 404 });
+      return NextResponse.json({ 
+        agreement: null,
+        message: 'No client profile found. Please contact us to get started.' 
+      });
     }
 
     // Get the most recent pending or signed agreement

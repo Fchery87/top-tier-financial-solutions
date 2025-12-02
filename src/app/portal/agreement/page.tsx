@@ -357,14 +357,21 @@ export default function AgreementPage() {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-secondary" />
             </div>
-          ) : error && !agreement ? (
+          ) : !agreement ? (
             <Card className="bg-card/80 backdrop-blur-sm border-border/50 p-8 text-center">
-              <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No Agreement Found</h2>
-              <p className="text-muted-foreground mb-4">{error}</p>
-              <Button asChild>
-                <Link href="/portal">Return to Portal</Link>
-              </Button>
+              <FileSignature className="w-12 h-12 text-secondary mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">No Agreement Available</h2>
+              <p className="text-muted-foreground mb-4">
+                {error || "You don't have a pending service agreement yet. Please contact us to get started with your credit repair journey."}
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button asChild variant="outline">
+                  <Link href="/portal">Return to Portal</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/contact">Contact Us</Link>
+                </Button>
+              </div>
             </Card>
           ) : agreement?.status === 'signed' ? (
             <div className="space-y-6">
