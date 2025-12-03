@@ -67,13 +67,44 @@ interface Methodology {
   successIndicators: string[];
 }
 
-const WIZARD_STEPS = [
+// Steps for template mode (manual reason selection)
+const TEMPLATE_WIZARD_STEPS = [
   { id: 1, name: 'Client', icon: Users },
   { id: 2, name: 'Items', icon: FileText },
   { id: 3, name: 'Round', icon: Target },
-  { id: 4, name: 'Generate', icon: Sparkles },
+  { id: 4, name: 'Reasons', icon: FileText },
   { id: 5, name: 'Review', icon: CheckCircle },
 ];
+
+// Steps for AI mode (no manual reason selection - AI analyzes items)
+const AI_WIZARD_STEPS = [
+  { id: 1, name: 'Client', icon: Users },
+  { id: 2, name: 'Items', icon: FileText },
+  { id: 3, name: 'Configure', icon: Target },
+  { id: 4, name: 'Review', icon: CheckCircle },
+];
+
+interface AIAnalysisResult {
+  itemId: string;
+  creditorName: string;
+  itemType: string;
+  suggestedMethodology: string;
+  autoReasonCodes: string[];
+  metro2Violations: string[];
+  fcraIssues: string[];
+  confidence: number;
+  analysisNotes: string;
+}
+
+interface AIAnalysisSummary {
+  itemCount: number;
+  recommendedMethodology: string;
+  allReasonCodes: string[];
+  allMetro2Violations: string[];
+  allFcraIssues: string[];
+  averageConfidence: number;
+  analysisNotes: string;
+}
 
 const BUREAUS = [
   { code: 'transunion', label: 'TransUnion' },
@@ -110,7 +141,17 @@ export default function DisputeWizardPage() {
   const [recommendedMethodology, setRecommendedMethodology] = React.useState<string | null>(null);
   const [loadingMethodologies, setLoadingMethodologies] = React.useState(false);
 
-  // Step 4 - Reason Codes
+  // AI Analysis Results (used when generationMethod === 'ai')
+  const [aiAnalysisResults, setAiAnalysisResults] = React.useState<AIAnalysisResult[]>([]);
+  const [aiAnalysisSummary, setAiAnalysisSummary] = React.useState<AIAnalysisSummary | null>(null);
+  const [analyzingItems, setAnalyzingItems] = React.useState(false);
+
+  // Get active wizard steps based on generation method
+  const WIZARD_STEPS = generationMethod === 'ai' ? AI_WIZARD_STEPS : TEMPLATE_WIZARD_STEPS;
+  const maxSteps = WIZARD_STEPS.length;
+  const reviewStepId = generationMethod === 'ai' ? 4 : 5;
+
+  // Step 4 - Reason Codes (only used in template mode)
   const [reasonCodes, setReasonCodes] = React.useState<ReasonCode[]>([]);
   const [disputeTypes, setDisputeTypes] = React.useState<DisputeType[]>([]);
   const [selectedReasonCodes, setSelectedReasonCodes] = React.useState<string[]>([]);
@@ -206,6 +247,38 @@ export default function DisputeWizardPage() {
     }
   };
 
+  // Analyze items with AI (auto-determine dispute strategy)
+  const analyzeItemsWithAI = async () => {
+    if (selectedItems.length === 0) return;
+    
+    setAnalyzingItems(true);
+    try {
+      const response = await fetch('/api/admin/disputes/analyze-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemIds: selectedItems,
+          round: disputeRound,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiAnalysisResults(data.analyses || []);
+        setAiAnalysisSummary(data.summary || null);
+        
+        // Auto-select the recommended methodology
+        if (data.summary?.recommendedMethodology) {
+          setSelectedMethodology(data.summary.recommendedMethodology);
+        }
+      }
+    } catch (error) {
+      console.error('Error analyzing items:', error);
+    } finally {
+      setAnalyzingItems(false);
+    }
+  };
+
   // Get recommended methodology based on selected items
   const getRecommendedMethodologyForItems = React.useCallback(() => {
     if (selectedItems.length === 0) return null;
@@ -254,13 +327,28 @@ export default function DisputeWizardPage() {
 
   // Generate letters
   const generateLetters = async () => {
-    if (!selectedClient || selectedItems.length === 0 || selectedReasonCodes.length === 0) {
+    // For AI mode, we use AI analysis; for template mode, we need manual reason codes
+    const reasonCodesToUse = generationMethod === 'ai' 
+      ? (aiAnalysisSummary?.allReasonCodes || ['not_mine', 'wrong_status'])
+      : selectedReasonCodes;
+
+    if (!selectedClient || selectedItems.length === 0) {
+      return;
+    }
+    
+    // For template mode, require reason codes
+    if (generationMethod === 'template' && reasonCodesToUse.length === 0) {
       return;
     }
 
     setGenerating(true);
     setGenerationProgress(0);
     const letters: typeof generatedLetters = [];
+    
+    // Use AI-determined methodology or user-selected
+    const methodologyToUse = generationMethod === 'ai' 
+      ? (aiAnalysisSummary?.recommendedMethodology || selectedMethodology)
+      : selectedMethodology;
 
     const bureausToUse = targetRecipient === 'bureau' ? selectedBureaus : ['direct'];
 
@@ -281,10 +369,12 @@ export default function DisputeWizardPage() {
               disputeType: selectedDisputeType,
               round: disputeRound,
               targetRecipient: targetRecipient,
-              reasonCodes: selectedReasonCodes,
+              reasonCodes: reasonCodesToUse,
               customReason: customReason || undefined,
               combineItems: true,
-              methodology: selectedMethodology, // NEW: Include methodology
+              methodology: methodologyToUse,
+              // Include AI analysis data for enhanced letters
+              metro2Violations: generationMethod === 'ai' ? aiAnalysisSummary?.allMetro2Violations : undefined
             }),
           });
 
@@ -326,12 +416,16 @@ export default function DisputeWizardPage() {
                 disputeType: selectedDisputeType,
                 round: disputeRound,
                 targetRecipient: targetRecipient,
-                reasonCodes: selectedReasonCodes,
+                reasonCodes: reasonCodesToUse,
                 customReason: customReason || undefined,
                 creditorName: item.creditor_name,
                 itemType: item.item_type,
                 amount: item.amount,
-                methodology: selectedMethodology, // NEW: Include methodology
+                methodology: methodologyToUse,
+                // Include AI analysis data for this specific item
+                metro2Violations: generationMethod === 'ai' 
+                  ? aiAnalysisResults.find(a => a.itemId === itemId)?.metro2Violations 
+                  : undefined
               }),
             });
 
@@ -356,7 +450,7 @@ export default function DisputeWizardPage() {
 
     setGeneratedLetters(letters);
     setGenerating(false);
-    setCurrentStep(5);
+    setCurrentStep(reviewStepId); // Go to review step (4 for AI mode, 5 for template mode)
   };
 
   const handleSelectClient = (client: Client) => {
@@ -458,10 +552,17 @@ export default function DisputeWizardPage() {
       case 2:
         return selectedItems.length > 0;
       case 3:
+        // Step 3 is always the last config step before generation
         return targetRecipient === 'bureau' ? selectedBureaus.length > 0 : true;
       case 4:
+        // In AI mode, step 4 is Review (generated letters)
+        // In template mode, step 4 is Reason Codes selection
+        if (generationMethod === 'ai') {
+          return generatedLetters.length > 0;
+        }
         return selectedReasonCodes.length > 0;
       case 5:
+        // Only exists in template mode - this is the Review step
         return generatedLetters.length > 0;
       default:
         return false;
@@ -895,6 +996,26 @@ export default function DisputeWizardPage() {
                     Template-Based
                   </Button>
                 </div>
+                {/* AI Mode Info */}
+                {generationMethod === 'ai' && (
+                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm">
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-green-600 dark:text-green-400">AI Analysis Mode</p>
+                        <p className="text-muted-foreground mt-1">
+                          The AI will automatically analyze your selected items using Metro 2 compliance knowledge to:
+                        </p>
+                        <ul className="text-muted-foreground mt-1 space-y-0.5 text-xs list-disc list-inside">
+                          <li>Identify the best dispute methodology</li>
+                          <li>Detect Metro 2 field violations</li>
+                          <li>Select appropriate reason codes</li>
+                          <li>Generate unique, FCRA-compliant letters</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Combined Letters Option */}
@@ -953,8 +1074,8 @@ export default function DisputeWizardPage() {
           </Card>
         )}
 
-        {/* Step 4: Reason Codes */}
-        {currentStep === 4 && (
+        {/* Step 4: Reason Codes (Template Mode Only) OR Review (AI Mode) */}
+        {currentStep === 4 && generationMethod === 'template' && (
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader>
               <CardTitle>Select Dispute Reasons</CardTitle>
@@ -1028,9 +1149,57 @@ export default function DisputeWizardPage() {
           </Card>
         )}
 
-        {/* Step 5: Review */}
-        {currentStep === 5 && (
+        {/* Review Step: Step 4 for AI mode, Step 5 for template mode */}
+        {((currentStep === 4 && generationMethod === 'ai') || (currentStep === 5 && generationMethod === 'template')) && (
           <div className="space-y-4">
+            {/* AI Analysis Summary (AI mode only) */}
+            {generationMethod === 'ai' && aiAnalysisSummary && (
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 border-l-4 border-l-green-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-green-500" />
+                    AI Analysis Summary
+                  </CardTitle>
+                  <CardDescription>
+                    Metro 2 compliance analysis complete - {Math.round(aiAnalysisSummary.averageConfidence * 100)}% confidence
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div className="p-2 rounded bg-muted/50">
+                      <p className="text-muted-foreground">Items Analyzed</p>
+                      <p className="font-semibold">{aiAnalysisSummary.itemCount}</p>
+                    </div>
+                    <div className="p-2 rounded bg-muted/50">
+                      <p className="text-muted-foreground">Methodology</p>
+                      <p className="font-semibold capitalize">{aiAnalysisSummary.recommendedMethodology.replace(/_/g, ' ')}</p>
+                    </div>
+                    <div className="p-2 rounded bg-muted/50">
+                      <p className="text-muted-foreground">Reason Codes</p>
+                      <p className="font-semibold">{aiAnalysisSummary.allReasonCodes.length}</p>
+                    </div>
+                    <div className="p-2 rounded bg-muted/50">
+                      <p className="text-muted-foreground">Violations Found</p>
+                      <p className="font-semibold">{aiAnalysisSummary.allMetro2Violations.length}</p>
+                    </div>
+                  </div>
+                  {aiAnalysisSummary.allMetro2Violations.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      <p className="font-medium mb-1">Metro 2 Violations Identified:</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {aiAnalysisSummary.allMetro2Violations.slice(0, 3).map((v, i) => (
+                          <li key={i}>{v}</li>
+                        ))}
+                        {aiAnalysisSummary.allMetro2Violations.length > 3 && (
+                          <li>+{aiAnalysisSummary.allMetro2Violations.length - 3} more violations</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Bulk Actions Card */}
             <Card className="bg-card/80 backdrop-blur-sm border-border/50 border-l-4 border-l-secondary">
               <CardHeader className="pb-3">
@@ -1179,36 +1348,83 @@ export default function DisputeWizardPage() {
           Back
         </Button>
 
-        {currentStep === 4 ? (
-          <Button
-            onClick={generateLetters}
-            disabled={!canProceed() || generating}
-          >
-            {generating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating ({generationProgress}%)
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Letters
-              </>
-            )}
-          </Button>
-        ) : currentStep === 5 ? (
-          <Button onClick={() => router.push('/admin/clients')}>
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Done
-          </Button>
+        {/* AI Mode: Step 3 triggers analysis + generation, Step 4 is Review */}
+        {/* Template Mode: Step 4 triggers generation, Step 5 is Review */}
+        {generationMethod === 'ai' ? (
+          // AI MODE NAVIGATION
+          currentStep === 3 ? (
+            <Button
+              onClick={async () => {
+                // First analyze items with AI, then generate letters
+                await analyzeItemsWithAI();
+                await generateLetters();
+              }}
+              disabled={!canProceed() || generating || analyzingItems}
+            >
+              {analyzingItems ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Analyzing Items...
+                </>
+              ) : generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating ({generationProgress}%)
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Analyze & Generate
+                </>
+              )}
+            </Button>
+          ) : currentStep === 4 ? (
+            <Button onClick={() => router.push('/admin/clients')}>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Done
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setCurrentStep(prev => Math.min(maxSteps, prev + 1))}
+              disabled={!canProceed()}
+            >
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )
         ) : (
-          <Button
-            onClick={() => setCurrentStep(prev => Math.min(5, prev + 1))}
-            disabled={!canProceed()}
-          >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          // TEMPLATE MODE NAVIGATION
+          currentStep === 4 ? (
+            <Button
+              onClick={generateLetters}
+              disabled={!canProceed() || generating}
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating ({generationProgress}%)
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Letters
+                </>
+              )}
+            </Button>
+          ) : currentStep === 5 ? (
+            <Button onClick={() => router.push('/admin/clients')}>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Done
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setCurrentStep(prev => Math.min(maxSteps, prev + 1))}
+              disabled={!canProceed()}
+            >
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )
         )}
       </motion.div>
     </div>

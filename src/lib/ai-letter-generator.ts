@@ -659,4 +659,258 @@ Enclosures:
 - Proof of address`;
 }
 
+// ============================================
+// AI ITEM ANALYSIS - Auto-determine dispute strategy
+// ============================================
+
+export interface ItemAnalysisResult {
+  itemId: string;
+  creditorName: string;
+  itemType: string;
+  suggestedMethodology: string;
+  autoReasonCodes: string[];
+  metro2Violations: string[];
+  fcraIssues: string[];
+  confidence: number;
+  analysisNotes: string;
+}
+
+interface AnalyzeItemParams {
+  id: string;
+  creditorName: string;
+  originalCreditor?: string | null;
+  itemType: string;
+  amount?: number | null;
+  dateReported?: string | null;
+  dateOfLastActivity?: string | null;
+  bureau?: string | null;
+  riskSeverity?: string | null;
+  accountStatus?: string | null;
+  paymentStatus?: string | null;
+}
+
+/**
+ * Analyze a negative item and auto-determine the best dispute strategy
+ * Uses Metro 2 compliance knowledge to identify violations and recommend approach
+ */
+export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1): ItemAnalysisResult {
+  const reasonCodes: string[] = [];
+  const metro2Violations: string[] = [];
+  const fcraIssues: string[] = [];
+  let methodology = 'factual';
+  let confidence = 0.7; // Base confidence
+  const notes: string[] = [];
+
+  const itemType = item.itemType?.toLowerCase() || '';
+  const now = new Date();
+
+  // ---- FCRA 7-Year Check ----
+  if (item.dateReported || item.dateOfLastActivity) {
+    const reportDate = new Date(item.dateReported || item.dateOfLastActivity || '');
+    const yearsSinceReport = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    
+    if (yearsSinceReport >= 7) {
+      reasonCodes.push('obsolete');
+      fcraIssues.push('FCRA § 605(a): Item exceeds 7-year reporting limit');
+      notes.push('Item is past FCRA reporting limit - strong deletion candidate');
+      confidence = 0.95;
+    } else if (yearsSinceReport >= 6) {
+      notes.push('Item approaching 7-year limit - may fall off soon');
+      fcraIssues.push('Item nearing FCRA expiration');
+    }
+  }
+
+  // ---- Item Type Specific Analysis ----
+  switch (itemType) {
+    case 'collection':
+      // Collections require debt validation
+      if (round === 1) {
+        methodology = 'debt_validation';
+        reasonCodes.push('not_mine');
+        metro2Violations.push('Metro 2 Field 17A: Account status must be verified');
+        metro2Violations.push('Metro 2 Field 24: Original creditor information required');
+        notes.push('Collection accounts require debt validation under FDCPA');
+        
+        if (!item.originalCreditor) {
+          metro2Violations.push('Missing original creditor - Metro 2 compliance violation');
+          reasonCodes.push('wrong_status');
+          confidence += 0.1;
+        }
+      } else {
+        methodology = 'method_of_verification';
+        notes.push('Round 2+: Demanding method of verification');
+      }
+      break;
+
+    case 'charge_off':
+      methodology = 'metro2_compliance';
+      reasonCodes.push('wrong_status', 'wrong_balance');
+      metro2Violations.push('Metro 2 Field 17A: Charge-off status code verification required');
+      metro2Violations.push('Metro 2 Field 10: Balance reporting must reflect charge-off amount');
+      notes.push('Charge-offs often have Metro 2 reporting errors');
+      break;
+
+    case 'late_payment':
+      methodology = 'factual';
+      reasonCodes.push('never_late', 'wrong_dates');
+      metro2Violations.push('Metro 2 Field 25-36: Payment history pattern verification');
+      metro2Violations.push('Metro 2 Field 8: Date of first delinquency accuracy');
+      notes.push('Payment history disputes focus on date and status accuracy');
+      break;
+
+    case 'repossession':
+      methodology = 'metro2_compliance';
+      reasonCodes.push('wrong_status', 'wrong_balance');
+      metro2Violations.push('Metro 2 Field 17A: Repossession status code');
+      metro2Violations.push('Metro 2 Field 10: Deficiency balance accuracy');
+      notes.push('Repossession records must show accurate deficiency balances');
+      break;
+
+    case 'foreclosure':
+      methodology = 'metro2_compliance';
+      reasonCodes.push('wrong_status', 'wrong_dates');
+      metro2Violations.push('Metro 2 Field 17A: Foreclosure status verification');
+      metro2Violations.push('Metro 2 Field 9: Date closed accuracy');
+      fcraIssues.push('FCRA § 605(a)(4): Foreclosure 7-year limit from completion date');
+      notes.push('Foreclosure dates are frequently misreported');
+      break;
+
+    case 'bankruptcy':
+      // Bankruptcy has 10-year limit
+      if (item.dateReported) {
+        const reportDate = new Date(item.dateReported);
+        const yearsSince = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        if (yearsSince >= 10) {
+          reasonCodes.push('obsolete');
+          fcraIssues.push('FCRA § 605(a)(1): Bankruptcy exceeds 10-year limit');
+          confidence = 0.95;
+        }
+      }
+      reasonCodes.push('wrong_status');
+      metro2Violations.push('Metro 2 Field 38: Bankruptcy disposition code');
+      notes.push('Bankruptcy public record - verify discharge status');
+      break;
+
+    case 'judgment':
+    case 'tax_lien':
+      methodology = 'consumer_law';
+      reasonCodes.push('wrong_status', 'wrong_dates');
+      fcraIssues.push('Public record accuracy requirements under FCRA § 605(a)');
+      notes.push('Public records require strict verification procedures');
+      break;
+
+    case 'inquiry':
+      methodology = 'factual';
+      reasonCodes.push('unauthorized_inquiry');
+      fcraIssues.push('FCRA § 604: Permissible purpose required for inquiries');
+      notes.push('Hard inquiries require permissible purpose');
+      
+      // Check if inquiry is older than 2 years
+      if (item.dateReported) {
+        const inquiryDate = new Date(item.dateReported);
+        const yearsSince = (now.getTime() - inquiryDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        if (yearsSince >= 2) {
+          reasonCodes.push('obsolete');
+          fcraIssues.push('Inquiry exceeds 2-year reporting limit');
+          confidence = 0.9;
+        }
+      }
+      break;
+
+    default:
+      // Generic analysis for unknown types
+      reasonCodes.push('not_mine', 'wrong_status');
+      metro2Violations.push('Metro 2 Field 17A: Account status verification required');
+      notes.push('Generic dispute - verify account ownership and status');
+  }
+
+  // ---- Round-Based Methodology Adjustment ----
+  if (round >= 2 && methodology !== 'debt_validation') {
+    methodology = 'method_of_verification';
+    notes.push(`Round ${round}: Escalating to method of verification demand`);
+    fcraIssues.push('Prior dispute verified without documentation - demanding verification method');
+  }
+
+  if (round >= 3) {
+    methodology = 'consumer_law';
+    notes.push('Round 3+: Citing potential willful non-compliance');
+    fcraIssues.push('15 U.S.C. § 1681n: Willful non-compliance - statutory damages');
+  }
+
+  // ---- Balance/Amount Analysis ----
+  if (item.amount && item.amount > 0) {
+    if (!reasonCodes.includes('wrong_balance')) {
+      // Check for suspiciously round numbers (often estimated, not actual)
+      if (item.amount % 100 === 0 && item.amount > 500) {
+        metro2Violations.push('Metro 2 Field 10: Balance appears estimated, not actual');
+        notes.push('Round dollar amount suggests estimated balance');
+      }
+    }
+  }
+
+  // ---- Ensure minimum reason codes ----
+  if (reasonCodes.length === 0) {
+    reasonCodes.push('not_mine', 'wrong_status');
+  }
+
+  // Deduplicate
+  const uniqueReasonCodes = [...new Set(reasonCodes)];
+  const uniqueMetro2 = [...new Set(metro2Violations)];
+  const uniqueFcra = [...new Set(fcraIssues)];
+
+  return {
+    itemId: item.id,
+    creditorName: item.creditorName,
+    itemType: item.itemType,
+    suggestedMethodology: methodology,
+    autoReasonCodes: uniqueReasonCodes,
+    metro2Violations: uniqueMetro2,
+    fcraIssues: uniqueFcra,
+    confidence: Math.min(confidence, 1),
+    analysisNotes: notes.join('. '),
+  };
+}
+
+/**
+ * Analyze multiple negative items and return consolidated analysis
+ */
+export function analyzeNegativeItems(items: AnalyzeItemParams[], round: number = 1): ItemAnalysisResult[] {
+  return items.map(item => analyzeNegativeItem(item, round));
+}
+
+/**
+ * Get the best overall methodology for a batch of items
+ */
+export function getBestMethodologyForBatch(analyses: ItemAnalysisResult[]): string {
+  // Priority order for methodologies
+  const methodologyPriority: Record<string, number> = {
+    'consumer_law': 5,
+    'method_of_verification': 4,
+    'debt_validation': 3,
+    'metro2_compliance': 2,
+    'factual': 1,
+  };
+
+  let bestMethodology = 'factual';
+  let highestPriority = 0;
+
+  for (const analysis of analyses) {
+    const priority = methodologyPriority[analysis.suggestedMethodology] || 0;
+    if (priority > highestPriority) {
+      highestPriority = priority;
+      bestMethodology = analysis.suggestedMethodology;
+    }
+  }
+
+  return bestMethodology;
+}
+
+/**
+ * Consolidate all reason codes from multiple item analyses
+ */
+export function consolidateReasonCodes(analyses: ItemAnalysisResult[]): string[] {
+  const allCodes = analyses.flatMap(a => a.autoReasonCodes);
+  return [...new Set(allCodes)];
+}
+
 export type { ClientInfo, NegativeItemInfo, GenerateLetterParams, GenerateMultiItemLetterParams };
