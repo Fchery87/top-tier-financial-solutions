@@ -364,6 +364,16 @@ export const emailCampaigns = pgTable('email_campaigns', {
 // CREDIT ANALYSIS SYSTEM TABLES
 // ============================================
 
+// Client stage enum for pipeline tracking
+export const clientStageEnum = pgEnum('client_stage', [
+  'lead',
+  'consultation', 
+  'agreement',
+  'onboarding',
+  'active',
+  'completed'
+]);
+
 // Clients table (central client management - converted from leads)
 export const clients = pgTable('clients', {
   id: text('id').primaryKey(),
@@ -374,6 +384,8 @@ export const clients = pgTable('clients', {
   email: text('email').notNull(),
   phone: text('phone'),
   status: text('status').default('active'), // 'pending' | 'active' | 'paused' | 'completed' | 'cancelled'
+  stage: clientStageEnum('stage').default('lead'), // Pipeline stage for CRM tracking
+  assignedTo: text('assigned_to').references(() => user.id, { onDelete: 'set null' }), // Staff assignment
   notes: text('notes'),
   convertedAt: timestamp('converted_at').defaultNow(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -381,6 +393,8 @@ export const clients = pgTable('clients', {
 }, (table) => [
   index("clients_userId_idx").on(table.userId),
   index("clients_email_idx").on(table.email),
+  index("clients_stage_idx").on(table.stage),
+  index("clients_assignedTo_idx").on(table.assignedTo),
 ]);
 
 // Credit reports (uploaded files)
@@ -1306,6 +1320,41 @@ export const clientNotificationPreferences = pgTable('client_notification_prefer
 }, (table) => [
   index("client_notification_preferences_clientId_idx").on(table.clientId),
 ]);
+
+// ============================================
+// CRM GOALS & TRACKING
+// ============================================
+
+// Goal type enum
+export const goalTypeEnum = pgEnum('goal_type', [
+  'deletions',
+  'new_clients',
+  'disputes_sent',
+  'revenue'
+]);
+
+// Goals table for tracking monthly targets
+export const goals = pgTable('goals', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+  month: text('month').notNull(), // Format: '2024-12'
+  goalType: goalTypeEnum('goal_type').notNull(),
+  target: integer('target').notNull(),
+  current: integer('current').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("goals_userId_idx").on(table.userId),
+  index("goals_month_idx").on(table.month),
+]);
+
+// Goals relations
+export const goalsRelations = relations(goals, ({ one }) => ({
+  user: one(user, {
+    fields: [goals.userId],
+    references: [user.id],
+  }),
+}));
 
 // Email automation relations
 export const emailTemplatesRelations = relations(emailTemplates, ({ many }) => ({

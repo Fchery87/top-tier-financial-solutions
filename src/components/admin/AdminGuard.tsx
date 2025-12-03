@@ -7,6 +7,9 @@ import { ShieldX, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { AdminProvider } from '@/contexts/AdminContext';
+
+type AdminRole = 'super_admin' | 'admin' | 'staff' | null;
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -15,6 +18,7 @@ interface AdminGuardProps {
 export function AdminGuard({ children }: AdminGuardProps) {
   const { user, isLoading: authLoading } = useAuth();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [userRole, setUserRole] = useState<AdminRole>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -33,7 +37,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
       }
 
       try {
-        // Check if user has super_admin role
+        // Check if user has admin/super_admin role
         const response = await fetch('/api/admin/check-access', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -43,12 +47,15 @@ export function AdminGuard({ children }: AdminGuardProps) {
         if (response.ok) {
           const data = await response.json();
           setIsAuthorized(data.authorized);
+          setUserRole(data.role || (data.authorized ? 'super_admin' : null));
         } else {
           setIsAuthorized(false);
+          setUserRole(null);
         }
       } catch (error) {
         console.error('Error checking admin access:', error);
         setIsAuthorized(false);
+        setUserRole(null);
       } finally {
         setIsLoading(false);
       }
@@ -126,6 +133,14 @@ export function AdminGuard({ children }: AdminGuardProps) {
     );
   }
 
-  // Authorized - render children
-  return <>{children}</>;
+  // Authorized - render children with admin context
+  return (
+    <AdminProvider 
+      role={userRole} 
+      userId={user?.id || null}
+      userEmail={user?.email || null}
+    >
+      {children}
+    </AdminProvider>
+  );
 }

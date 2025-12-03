@@ -24,6 +24,13 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ClientPipeline } from '@/components/admin/ClientPipeline';
+import { ScoreTrendChart } from '@/components/admin/ScoreTrendChart';
+import { OnboardingProgress } from '@/components/admin/OnboardingProgress';
+import { CalendarWidget } from '@/components/admin/CalendarWidget';
+import { TeamActivity } from '@/components/admin/TeamActivity';
+import { GoalTracker } from '@/components/admin/GoalTracker';
+import { AutomationStatus } from '@/components/admin/AutomationStatus';
 
 interface DashboardStats {
   activeClients: number;
@@ -255,6 +262,15 @@ export default function AdminDashboard() {
             )}
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* Client Pipeline - Kanban Board */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+      >
+        <ClientPipeline />
       </motion.div>
 
       {/* Main Content Grid */}
@@ -570,60 +586,115 @@ export default function AdminDashboard() {
           </motion.div>
         </div>
 
-        {/* Right Column - Activity Timeline */}
+        {/* Right Column - CRM Widgets */}
+        <div className="space-y-6">
+          {/* Calendar Widget */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <CalendarWidget />
+          </motion.div>
+
+          {/* Score Trend Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <ScoreTrendChart />
+          </motion.div>
+
+          {/* Onboarding Progress */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55 }}
+          >
+            <OnboardingProgress />
+          </motion.div>
+
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-secondary" />
+                  Recent Activity
+                </CardTitle>
+                <CardDescription>Latest updates across all clients</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : !stats?.recentActivity || stats.recentActivity.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No recent activity</p>
+                    <p className="text-xs mt-1">Upload a credit report to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {stats.recentActivity.map((item, index) => (
+                      <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className={`mt-0.5 p-1.5 rounded-full ${
+                          item.type === 'dispute' ? 'bg-purple-500/10' : 'bg-blue-500/10'
+                        }`}>
+                          {item.type === 'dispute' ? (
+                            <Scale className="w-3 h-3 text-purple-500" />
+                          ) : (
+                            <FileText className="w-3 h-3 text-blue-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.clientName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.action}
+                            {item.detail && <span className="ml-1 text-secondary">{item.detail}</span>}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {item.timestamp ? formatTimeAgo(item.timestamp) : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Bottom Row - Goals, Team & Automation */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
+          transition={{ delay: 0.65 }}
         >
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 h-full">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-serif flex items-center gap-2">
-                <Activity className="w-5 h-5 text-secondary" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>Latest updates across all clients</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : !stats?.recentActivity || stats.recentActivity.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No recent activity</p>
-                  <p className="text-xs mt-1">Upload a credit report to get started</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {stats.recentActivity.map((item, index) => (
-                    <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className={`mt-0.5 p-1.5 rounded-full ${
-                        item.type === 'dispute' ? 'bg-purple-500/10' : 'bg-blue-500/10'
-                      }`}>
-                        {item.type === 'dispute' ? (
-                          <Scale className="w-3 h-3 text-purple-500" />
-                        ) : (
-                          <FileText className="w-3 h-3 text-blue-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.clientName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.action}
-                          {item.detail && <span className="ml-1 text-secondary">{item.detail}</span>}
-                        </p>
-                      </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {item.timestamp ? formatTimeAgo(item.timestamp) : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <GoalTracker />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <TeamActivity />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+        >
+          <AutomationStatus />
         </motion.div>
       </div>
 
