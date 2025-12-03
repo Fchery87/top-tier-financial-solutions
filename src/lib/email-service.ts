@@ -94,8 +94,8 @@ export function renderTemplate(template: string, variables: EmailVariables): str
   // Handle conditional blocks {{#if variable}}...{{/if}}
   rendered = rendered.replace(
     /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_, varName, content) => {
-      const value = allVariables[varName];
+    (_match: string, varName: string, content: string) => {
+      const value = (allVariables as Record<string, string | number | undefined>)[varName];
       return value ? content : '';
     }
   );

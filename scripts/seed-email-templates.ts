@@ -8,6 +8,7 @@ import 'dotenv/config';
 import { db } from '../db/client';
 import { emailTemplates, emailAutomationRules } from '../db/schema';
 import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 import { DEFAULT_EMAIL_TEMPLATES } from '../src/lib/email-service';
 
 async function seedEmailTemplates() {
@@ -20,7 +21,7 @@ async function seedEmailTemplates() {
     const existing = await db
       .select()
       .from(emailTemplates)
-      .where((t) => t.triggerType === template.triggerType)
+      .where(eq(emailTemplates.triggerType, template.triggerType))
       .limit(1);
 
     if (existing.length > 0) {
