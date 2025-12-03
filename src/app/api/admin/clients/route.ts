@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { desc, asc, count, eq, or, ilike, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { triggerAutomation } from '@/lib/email-service';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -158,6 +159,18 @@ export async function POST(request: NextRequest) {
         .update(consultationRequests)
         .set({ status: 'archived', updatedAt: now }) // Mark as archived when converted to client
         .where(eq(consultationRequests.id, lead_id));
+    }
+
+    // Send welcome email to new client
+    try {
+      await triggerAutomation('welcome', id, {
+        client_name: `${first_name} ${last_name}`,
+        client_first_name: first_name,
+        client_email: email,
+      });
+    } catch (emailError) {
+      // Log but don't fail the request
+      console.error('Error sending welcome email:', emailError);
     }
 
     return NextResponse.json({

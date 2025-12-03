@@ -1187,3 +1187,117 @@ export const messageAttachmentsRelations = relations(messageAttachments, ({ one 
     references: [messages.id],
   }),
 }));
+
+// ============================================
+// EMAIL AUTOMATION TABLES
+// ============================================
+
+// Email trigger types enum
+export const emailTriggerTypeEnum = pgEnum('email_trigger_type', [
+  'welcome',
+  'dispute_created',
+  'dispute_sent',
+  'response_received',
+  'item_deleted',
+  'progress_report',
+  'agreement_sent',
+  'agreement_signed',
+  'payment_received',
+  'custom'
+]);
+
+// Email templates for automated communications
+export const emailTemplates = pgTable('email_templates', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  triggerType: emailTriggerTypeEnum('trigger_type').notNull(),
+  subject: text('subject').notNull(),
+  htmlContent: text('html_content').notNull(),
+  textContent: text('text_content'), // Plain text fallback
+  variables: text('variables'), // JSON array of available variables
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Email automation rules (when to send)
+export const emailAutomationRules = pgTable('email_automation_rules', {
+  id: text('id').primaryKey(),
+  templateId: text('template_id').notNull().references(() => emailTemplates.id, { onDelete: 'cascade' }),
+  triggerType: emailTriggerTypeEnum('trigger_type').notNull(),
+  delayMinutes: integer('delay_minutes').default(0), // Delay before sending (0 = immediate)
+  conditions: text('conditions'), // JSON object with trigger conditions
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("email_automation_rules_templateId_idx").on(table.templateId),
+  index("email_automation_rules_triggerType_idx").on(table.triggerType),
+]);
+
+// Email send log (audit trail)
+export const emailSendLog = pgTable('email_send_log', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').references(() => clients.id, { onDelete: 'set null' }),
+  templateId: text('template_id').references(() => emailTemplates.id, { onDelete: 'set null' }),
+  toEmail: text('to_email').notNull(),
+  subject: text('subject').notNull(),
+  triggerType: emailTriggerTypeEnum('trigger_type'),
+  status: text('status').default('pending'), // 'pending' | 'sent' | 'failed' | 'bounced'
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at'),
+  openedAt: timestamp('opened_at'),
+  clickedAt: timestamp('clicked_at'),
+  metadata: text('metadata'), // JSON with additional context (dispute_id, etc.)
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("email_send_log_clientId_idx").on(table.clientId),
+  index("email_send_log_status_idx").on(table.status),
+  index("email_send_log_triggerType_idx").on(table.triggerType),
+]);
+
+// Client notification preferences
+export const clientNotificationPreferences = pgTable('client_notification_preferences', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  emailEnabled: boolean('email_enabled').default(true),
+  disputeUpdates: boolean('dispute_updates').default(true),
+  progressReports: boolean('progress_reports').default(true),
+  marketingEmails: boolean('marketing_emails').default(false),
+  preferredFrequency: text('preferred_frequency').default('immediate'), // 'immediate' | 'daily' | 'weekly'
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("client_notification_preferences_clientId_idx").on(table.clientId),
+]);
+
+// Email automation relations
+export const emailTemplatesRelations = relations(emailTemplates, ({ many }) => ({
+  automationRules: many(emailAutomationRules),
+  sendLogs: many(emailSendLog),
+}));
+
+export const emailAutomationRulesRelations = relations(emailAutomationRules, ({ one }) => ({
+  template: one(emailTemplates, {
+    fields: [emailAutomationRules.templateId],
+    references: [emailTemplates.id],
+  }),
+}));
+
+export const emailSendLogRelations = relations(emailSendLog, ({ one }) => ({
+  client: one(clients, {
+    fields: [emailSendLog.clientId],
+    references: [clients.id],
+  }),
+  template: one(emailTemplates, {
+    fields: [emailSendLog.templateId],
+    references: [emailTemplates.id],
+  }),
+}));
+
+export const clientNotificationPreferencesRelations = relations(clientNotificationPreferences, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientNotificationPreferences.clientId],
+    references: [clients.id],
+  }),
+}));

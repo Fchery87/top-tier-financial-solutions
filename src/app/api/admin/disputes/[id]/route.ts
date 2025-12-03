@@ -7,6 +7,7 @@ import { disputes, negativeItems, clients } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
+import { triggerAutomation } from '@/lib/email-service';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -278,6 +279,44 @@ export async function PUT(
       .from(disputes)
       .where(eq(disputes.id, id))
       .limit(1);
+
+    // Trigger email automations based on status/outcome changes
+    try {
+      // Dispute marked as sent
+      if (sentAt && currentDispute.sentAt === null) {
+        const responseDeadlineDate = updatedDispute.responseDeadline 
+          ? new Date(updatedDispute.responseDeadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+          : 'within 30 days';
+        
+        await triggerAutomation('dispute_sent', currentDispute.clientId, {
+          dispute_count: 1,
+          bureau_name: currentDispute.bureau.charAt(0).toUpperCase() + currentDispute.bureau.slice(1),
+          creditor_name: updatedDispute.creditorName || 'the disputed item',
+          dispute_round: updatedDispute.round || 1,
+          response_deadline: responseDeadlineDate,
+        }, { dispute_id: id });
+      }
+
+      // Response received
+      if (responseReceivedAt && currentDispute.responseReceivedAt === null) {
+        await triggerAutomation('response_received', currentDispute.clientId, {
+          bureau_name: currentDispute.bureau.charAt(0).toUpperCase() + currentDispute.bureau.slice(1),
+          creditor_name: updatedDispute.creditorName || 'the disputed item',
+          dispute_round: updatedDispute.round || 1,
+        }, { dispute_id: id, outcome });
+      }
+
+      // Item deleted - celebration email
+      if (outcome === 'deleted' && currentDispute.outcome !== 'deleted') {
+        await triggerAutomation('item_deleted', currentDispute.clientId, {
+          creditor_name: updatedDispute.creditorName || 'Negative Item',
+          bureau_name: currentDispute.bureau.charAt(0).toUpperCase() + currentDispute.bureau.slice(1),
+        }, { dispute_id: id });
+      }
+    } catch (emailError) {
+      // Log but don't fail the request if email fails
+      console.error('Error sending automated email:', emailError);
+    }
 
     return NextResponse.json({
       dispute: {

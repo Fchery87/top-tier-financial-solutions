@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { 
   Loader2, FileText, TrendingUp, Clock, CheckCircle, 
   AlertCircle, Upload, ChevronRight, Sparkles, Shield,
-  FileUp, Calendar, Target, Zap, FileSignature
+  FileUp, Calendar, Target, Zap, FileSignature, Scale,
+  Trophy, TrendingDown, BarChart3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay } from '@/components/ui/AnimatedBackground';
@@ -57,6 +58,48 @@ interface Document {
   created_at: string;
 }
 
+interface PortalDispute {
+  id: string;
+  bureau: string;
+  status: string;
+  round: number;
+  creditor_name: string;
+  item_type: string | null;
+  sent_at: string | null;
+  response_deadline: string | null;
+  outcome: string | null;
+  outcome_date: string | null;
+  created_at: string | null;
+}
+
+interface DisputeStats {
+  total: number;
+  in_progress: number;
+  deleted: number;
+  awaiting: number;
+}
+
+interface ScoreHistoryEntry {
+  id: string;
+  score_transunion: number | null;
+  score_experian: number | null;
+  score_equifax: number | null;
+  average_score: number | null;
+  recorded_at: string;
+}
+
+interface ScoreSummary {
+  current_average: number | null;
+  starting_average: number | null;
+  total_change: number;
+  current_scores: {
+    transunion: number | null;
+    experian: number | null;
+    equifax: number | null;
+  };
+  records_count: number;
+}
+
 const phaseLabels: Record<string, string> = {
   initial_review: 'Initial Review',
   dispute_preparation: 'Dispute Preparation',
@@ -79,7 +122,19 @@ export default function PortalPage() {
   const [cases, setCases] = React.useState<ClientCase[]>([]);
   const [documents, setDocuments] = React.useState<Document[]>([]);
   const [auditReport, setAuditReport] = React.useState<AuditReportStatus | null>(null);
+  const [disputes, setDisputes] = React.useState<PortalDispute[]>([]);
+  const [disputeStats, setDisputeStats] = React.useState<DisputeStats | null>(null);
+  const [scoreHistory, setScoreHistory] = React.useState<ScoreHistoryEntry[]>([]);
+  const [scoreSummary, setScoreSummary] = React.useState<ScoreSummary | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  // Document upload state
+  const [showUploadModal, setShowUploadModal] = React.useState(false);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [uploadFileType, setUploadFileType] = React.useState('credit_report');
+  const [uploadNotes, setUploadNotes] = React.useState('');
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (user) {
@@ -90,10 +145,12 @@ export default function PortalPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [casesRes, docsRes, auditRes] = await Promise.all([
+      const [casesRes, docsRes, auditRes, disputesRes, scoreRes] = await Promise.all([
         fetch('/api/portal/cases'),
         fetch('/api/portal/documents'),
         fetch('/api/portal/audit-report'),
+        fetch('/api/portal/disputes'),
+        fetch('/api/portal/score-history'),
       ]);
 
       if (casesRes.ok) {
@@ -110,10 +167,79 @@ export default function PortalPage() {
         const auditData = await auditRes.json();
         setAuditReport(auditData);
       }
+
+      if (disputesRes.ok) {
+        const disputesData = await disputesRes.json();
+        setDisputes(disputesData.disputes || []);
+        setDisputeStats(disputesData.stats || null);
+      }
+
+      if (scoreRes.ok) {
+        const scoreData = await scoreRes.json();
+        setScoreHistory(scoreData.history || []);
+        setScoreSummary(scoreData.summary || null);
+      }
     } catch (error) {
       console.error('Error fetching portal data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = [
+        'application/pdf',
+        'text/html',
+        'text/plain',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please upload a PDF, HTML, TXT, image, or Word document.');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File too large. Maximum size is 10MB.');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('file_type', uploadFileType);
+      formData.append('notes', uploadNotes);
+
+      const response = await fetch('/api/portal/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        setShowUploadModal(false);
+        setSelectedFile(null);
+        setUploadFileType('credit_report');
+        setUploadNotes('');
+        fetchData(); // Refresh documents list
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading:', error);
+      alert('Upload failed');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -392,19 +518,202 @@ export default function PortalPage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Disputes Progress */}
+                <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                  <CardHeader>
+                    <CardTitle className="font-serif text-xl flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-secondary" />
+                      Dispute Progress
+                    </CardTitle>
+                    <CardDescription>
+                      Track the status of your credit disputes
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {disputeStats && disputeStats.total > 0 ? (
+                      <div className="space-y-4">
+                        {/* Dispute Stats */}
+                        <div className="grid grid-cols-4 gap-3">
+                          <div className="p-3 rounded-lg bg-muted/30 text-center">
+                            <p className="text-2xl font-bold text-foreground">{disputeStats.total}</p>
+                            <p className="text-xs text-muted-foreground">Total</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-blue-500/10 text-center">
+                            <p className="text-2xl font-bold text-blue-500">{disputeStats.in_progress}</p>
+                            <p className="text-xs text-muted-foreground">In Progress</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-yellow-500/10 text-center">
+                            <p className="text-2xl font-bold text-yellow-500">{disputeStats.awaiting}</p>
+                            <p className="text-xs text-muted-foreground">Awaiting</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-green-500/10 text-center">
+                            <p className="text-2xl font-bold text-green-500">{disputeStats.deleted}</p>
+                            <p className="text-xs text-muted-foreground">Deleted</p>
+                          </div>
+                        </div>
+
+                        {/* Dispute List */}
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                          {disputes.map((dispute) => (
+                            <div 
+                              key={dispute.id} 
+                              className={`p-3 rounded-lg border transition-colors ${
+                                dispute.outcome === 'deleted' 
+                                  ? 'bg-green-500/10 border-green-500/30' 
+                                  : dispute.status === 'sent' 
+                                    ? 'bg-blue-500/10 border-blue-500/30'
+                                    : 'bg-muted/30 border-border/50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {dispute.outcome === 'deleted' ? (
+                                      <Trophy className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                    ) : dispute.status === 'sent' ? (
+                                      <Clock className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                    ) : (
+                                      <Scale className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                    )}
+                                    <p className="text-sm font-medium truncate">{dispute.creditor_name}</p>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {dispute.bureau.toUpperCase()} • Round {dispute.round}
+                                    {dispute.item_type && ` • ${dispute.item_type.replace(/_/g, ' ')}`}
+                                  </p>
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  {dispute.outcome === 'deleted' ? (
+                                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-500/20 text-green-500">
+                                      Removed
+                                    </span>
+                                  ) : dispute.outcome === 'verified' ? (
+                                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-500">
+                                      Escalating
+                                    </span>
+                                  ) : dispute.status === 'sent' ? (
+                                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-500">
+                                      In Review
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground capitalize">
+                                      {dispute.status}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {dispute.sent_at && !dispute.outcome && dispute.response_deadline && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Response expected by {new Date(dispute.response_deadline).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Scale className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No disputes in progress yet.</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          We'll start disputing negative items once your credit report is analyzed.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Score History Chart */}
+                {scoreHistory.length > 1 && (
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                    <CardHeader>
+                      <CardTitle className="font-serif text-xl flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-secondary" />
+                        Score Progress
+                      </CardTitle>
+                      <CardDescription>
+                        Your credit score journey over time
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {scoreSummary && (
+                        <div className="mb-6 p-4 rounded-lg bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Total Change</p>
+                              <div className="flex items-center gap-2">
+                                {scoreSummary.total_change >= 0 ? (
+                                  <TrendingUp className="w-5 h-5 text-green-500" />
+                                ) : (
+                                  <TrendingDown className="w-5 h-5 text-red-500" />
+                                )}
+                                <p className={`text-2xl font-bold ${
+                                  scoreSummary.total_change >= 0 ? 'text-green-500' : 'text-red-500'
+                                }`}>
+                                  {scoreSummary.total_change >= 0 ? '+' : ''}{scoreSummary.total_change} pts
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Current Average</p>
+                              <p className="text-2xl font-bold text-foreground">
+                                {scoreSummary.current_average || '---'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Simple Bar Chart */}
+                      <div className="h-32 flex items-end gap-1">
+                        {scoreHistory.slice(0, 12).reverse().map((entry, index) => {
+                          const score = entry.average_score || 0;
+                          const maxScore = 850;
+                          const heightPercent = (score / maxScore) * 100;
+                          
+                          return (
+                            <div key={entry.id} className="flex-1 flex flex-col items-center gap-1">
+                              <div 
+                                className="w-full bg-secondary rounded-t transition-all hover:bg-secondary/80"
+                                style={{ height: `${Math.max(heightPercent, 5)}%`, minHeight: '4px' }}
+                                title={`${score} - ${new Date(entry.recorded_at).toLocaleDateString()}`}
+                              />
+                              {index % 3 === 0 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(entry.recorded_at).toLocaleDateString('en-US', { month: 'short' })}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               {/* Documents Sidebar */}
               <div className="space-y-6">
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-                  <CardHeader>
-                    <CardTitle className="font-serif text-xl flex items-center gap-2">
-                      <FileUp className="w-5 h-5 text-secondary" />
-                      Documents
-                    </CardTitle>
-                    <CardDescription>
-                      Your uploaded documents and correspondence
-                    </CardDescription>
+                  <CardHeader className="flex flex-row items-start justify-between gap-2">
+                    <div>
+                      <CardTitle className="font-serif text-xl flex items-center gap-2">
+                        <FileUp className="w-5 h-5 text-secondary" />
+                        Documents
+                      </CardTitle>
+                      <CardDescription>
+                        Your uploaded documents and correspondence
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowUploadModal(true)}
+                    >
+                      <Upload className="w-4 h-4 mr-1" />
+                      Upload
+                    </Button>
                   </CardHeader>
                   <CardContent>
                     {documents.length > 0 ? (
@@ -422,7 +731,19 @@ export default function PortalPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-muted-foreground text-center py-6">No documents yet.</p>
+                      <div className="text-center py-6">
+                        <FileUp className="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No documents yet.</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-3"
+                          onClick={() => setShowUploadModal(true)}
+                        >
+                          <Upload className="w-4 h-4 mr-1" />
+                          Upload Your First Document
+                        </Button>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -510,6 +831,119 @@ export default function PortalPage() {
           )}
         </div>
       </section>
+
+      {/* Upload Document Modal */}
+      {showUploadModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowUploadModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md"
+          >
+            <Card className="bg-card border-border shadow-2xl">
+              <CardHeader>
+                <CardTitle className="font-serif">Upload Document</CardTitle>
+                <CardDescription>
+                  Upload credit reports, ID documents, or correspondence for your case.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Document Type</label>
+                  <select
+                    value={uploadFileType}
+                    onChange={(e) => setUploadFileType(e.target.value)}
+                    className="w-full h-10 px-3 mt-1 rounded-md border border-input bg-background text-sm"
+                  >
+                    <option value="credit_report">Credit Report</option>
+                    <option value="id_document">ID Document</option>
+                    <option value="dispute_letter">Dispute Letter</option>
+                    <option value="correspondence">Bureau Correspondence</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">File</label>
+                  <div
+                    className="mt-1 border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-secondary/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {selectedFile ? (
+                      <div>
+                        <FileText className="w-8 h-8 mx-auto mb-2 text-secondary" />
+                        <p className="text-sm font-medium">{selectedFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Click to select a file</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          PDF, HTML, TXT, images, or Word docs (max 10MB)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.html,.htm,.txt,.jpg,.jpeg,.png,.gif,.doc,.docx"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Notes (Optional)</label>
+                  <textarea
+                    value={uploadNotes}
+                    onChange={(e) => setUploadNotes(e.target.value)}
+                    placeholder="Add any notes about this document..."
+                    className="w-full min-h-[60px] mt-1 px-3 py-2 text-sm rounded-md border border-input bg-background"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setSelectedFile(null);
+                      setUploadNotes('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                    onClick={handleUpload}
+                    disabled={!selectedFile || uploading}
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Upload className="w-4 h-4 mr-2" />
+                    )}
+                    Upload
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }
