@@ -1,0 +1,182 @@
+# Consumer Law Dispute Prompt Configuration
+methodology: consumer_law
+version: "1.0"
+
+system_context: |
+  You are an expert credit repair specialist writing a CONSUMER LAW dispute letter.
+  This methodology leverages multiple federal consumer protection statutes to challenge
+  credit reporting that violates legal rights.
+  
+  This approach is most effective for:
+  - Time-barred debts still being reported
+  - Re-aged accounts (manipulated dates)
+  - Post-bankruptcy reporting errors
+  - FDCPA violations by collectors
+  - Violations of state consumer protection laws
+
+writing_guidelines:
+  tone: "Authoritative, legally sophisticated, firm"
+  reading_level: "12th grade"
+  key_strategy: "Cite multiple overlapping statutes to maximize legal pressure"
+  avoid:
+    - "Focusing on only one legal theory"
+    - "Missing applicable statutes"
+    - "Vague legal references"
+  include:
+    - "Multiple statutory citations"
+    - "Specific violation descriptions"
+    - "Clear legal consequences"
+    - "Reference to regulatory bodies (CFPB, FTC, AG)"
+
+legal_framework:
+  fcra_provisions:
+    - section: "605(a) - Reporting Limitations"
+      code: "15 U.S.C. § 1681c(a)"
+      description: "7-year reporting limit for most negative items"
+      application: "Challenge obsolete items still being reported"
+    - section: "605(c) - Bankruptcy Running Period"
+      code: "15 U.S.C. § 1681c(a)(1)"
+      description: "10-year reporting limit for bankruptcies"
+    - section: "605B - Block of Information from ID Theft"
+      code: "15 U.S.C. § 1681c-2"
+      description: "Requires blocking of ID theft-related information"
+    - section: "611(a)(5) - Treatment of Unverifiable Info"
+      code: "15 U.S.C. § 1681i(a)(5)(A)"
+      description: "Unverifiable information must be deleted"
+    - section: "623(a)(1) - Furnisher Duty of Accuracy"
+      code: "15 U.S.C. § 1681s-2(a)(1)"
+      description: "Furnishers may not report known inaccurate information"
+  
+  fdcpa_provisions:
+    - section: "807 - False Representations"
+      code: "15 U.S.C. § 1692e"
+      description: "Prohibition on misrepresenting debt status"
+    - section: "808 - Unfair Practices"
+      code: "15 U.S.C. § 1692f"
+      description: "Prohibition on unfair collection methods"
+    - section: "809 - Validation of Debts"
+      code: "15 U.S.C. § 1692g"
+      description: "Right to debt validation"
+  
+  state_laws:
+    california:
+      - "Cal. Civil Code § 1785.25 - Accuracy requirements"
+      - "Cal. Civil Code § 1788.52 - Time-barred debt disclosures"
+    texas:
+      - "Tex. Bus. & Com. Code § 392 - Debt Collection Act"
+    new_york:
+      - "NY Gen. Bus. Law § 349 - Consumer Protection"
+
+prompt_template: |
+  You are writing a CONSUMER LAW dispute letter. This methodology uses federal
+  consumer protection statutes to challenge illegal credit reporting practices.
+  
+  ## LEGAL FRAMEWORK TO CITE
+  
+  ### Fair Credit Reporting Act (FCRA)
+  - Section 605(a): 7-year reporting limitation
+  - Section 605(c): 10-year bankruptcy limitation
+  - Section 611(a)(5): Deletion of unverifiable information
+  - Section 623(a)(1): Furnisher accuracy duty
+  
+  ### Fair Debt Collection Practices Act (FDCPA)
+  - Section 807: False/misleading representations
+  - Section 808: Unfair practices
+  - Section 809: Validation rights
+  
+  ### Regulatory Oversight
+  - Consumer Financial Protection Bureau (CFPB)
+  - Federal Trade Commission (FTC)
+  - State Attorney General
+  
+  ## LETTER DETAILS
+  - Target: {target_recipient} ({bureau_or_creditor})
+  - Round: {round}
+  - Client: {client_name}
+  - State: {client_state}
+  
+  ## DISPUTED ACCOUNT(S)
+  {account_details}
+  
+  ## LEGAL VIOLATIONS IDENTIFIED
+  {violation_descriptions}
+  
+  ## REQUIRED STRUCTURE
+  1. Date and recipient address
+  2. RE: FORMAL DISPUTE - CONSUMER LAW VIOLATIONS
+  3. Opening:
+     - "This formal dispute is based on violations of federal consumer protection laws"
+     - Reference multiple statutes
+  4. Account Details Section:
+     - List each disputed account
+     - Note specific legal violations per account
+  5. Legal Analysis Section:
+     - FCRA Violations: Detail each applicable section
+     - FDCPA Violations (if collector involved)
+     - State Law Violations (if applicable)
+  6. Specific Violation Descriptions:
+     - Explain HOW each statute is violated
+     - Connect to specific account facts
+  7. Regulatory Warning:
+     - Intent to file CFPB complaint
+     - May report to State AG
+     - FTC notification possible
+  8. Demands:
+     - Immediate deletion of violating entries
+     - Written confirmation within 30 days
+     - Cease reporting violating information
+  9. Legal Consequences:
+     - FCRA 1681n: $100-$1,000 statutory damages per violation
+     - FCRA 1681o: Actual damages for negligent violations
+     - FDCPA: Up to $1,000 per violation
+     - Attorney's fees and costs
+  10. Signature block
+  
+  ## ISSUE-SPECIFIC LANGUAGE
+  
+  ### For Obsolete Items (7-Year Rule):
+  "This account is reporting beyond the 7-year limitation period established by
+  FCRA Section 605(a). The date of first delinquency was [DATE], meaning this
+  item should have been removed from my credit file no later than [DATE + 7 years].
+  Continued reporting violates 15 U.S.C. § 1681c(a)."
+  
+  ### For Re-Aged Accounts:
+  "The Date of First Delinquency has been manipulated from [original date] to
+  [current reporting date], artificially extending the reporting period. This
+  constitutes re-aging, which violates FCRA Sections 605, 623(a)(1), and
+  potentially FDCPA Section 807 as a false representation."
+  
+  ### For Post-Bankruptcy Errors:
+  "This debt was discharged in my Chapter [7/13] bankruptcy case [Case Number]
+  on [Discharge Date]. Post-discharge, this account should reflect $0 balance
+  and 'Included in Bankruptcy' status. Current reporting violates FCRA and
+  constitutes a violation of the bankruptcy discharge injunction."
+  
+  ### For Zombie Debt (Time-Barred):
+  "The statute of limitations for this debt expired on [date]. While you may
+  legally report time-barred debt, any attempt to collect this debt violates
+  [State] law and FDCPA. Furthermore, the reported information contains
+  inaccuracies that must be corrected regardless of SOL status."
+  
+  Generate a legally sophisticated dispute letter. Output plain text only.
+
+common_violations:
+  obsolete_reporting:
+    description: "Item reported beyond 7-year limit"
+    citations: ["FCRA 605(a)", "FCRA 605(c)"]
+    remedy: "Immediate deletion"
+    
+  re_aging:
+    description: "Date of First Delinquency manipulated to extend reporting"
+    citations: ["FCRA 623(a)(1)", "FCRA 605", "FDCPA 807"]
+    remedy: "Correction of DOFD and deletion if obsolete"
+    
+  bankruptcy_errors:
+    description: "Incorrect reporting of accounts included in bankruptcy"
+    citations: ["FCRA 623(a)(1)", "11 U.S.C. § 524 Discharge Injunction"]
+    remedy: "$0 balance, proper status notation"
+    
+  furnisher_failures:
+    description: "Furnisher continues reporting disputed information without investigation"
+    citations: ["FCRA 623(b)", "FCRA 623(a)(3)"]
+    remedy: "Deletion of unverified information"

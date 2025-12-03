@@ -5,7 +5,7 @@ import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
 import { clients, negativeItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { generateUniqueDisputeLetter, DISPUTE_REASON_CODES } from '@/lib/ai-letter-generator';
+import { generateUniqueDisputeLetter, generateMultiItemDisputeLetter, DISPUTE_REASON_CODES } from '@/lib/ai-letter-generator';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -35,12 +35,18 @@ export async function POST(request: NextRequest) {
     const {
       clientId,
       negativeItemId,
+      negativeItemIds, // Support for multiple items
       bureau,
       disputeType,
       round,
       targetRecipient,
       reasonCodes,
       customReason,
+      combineItems, // Flag to indicate combined letter mode
+      methodology, // NEW: Dispute methodology (factual, metro2_compliance, etc.)
+      metro2Violations, // NEW: Specific Metro 2 field violations
+      priorDisputeDate, // NEW: For method of verification letters
+      priorDisputeResult, // NEW: Result of prior dispute
     } = body;
 
     if (!clientId || !bureau) {
@@ -68,7 +74,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Get negative item info if provided
+    // Handle multi-item combined letter
+    if (combineItems && negativeItemIds && negativeItemIds.length > 0) {
+      // Fetch all negative items
+      const items = await Promise.all(
+        negativeItemIds.map(async (itemId: string) => {
+          const [item] = await db
+            .select()
+            .from(negativeItems)
+            .where(eq(negativeItems.id, itemId))
+            .limit(1);
+          return item;
+        })
+      );
+
+      const validItems = items.filter(Boolean);
+
+      if (validItems.length === 0) {
+        return NextResponse.json({ error: 'No valid items found' }, { status: 400 });
+      }
+
+      // Generate combined letter
+      const letterContent = await generateMultiItemDisputeLetter({
+        disputeType: disputeType || 'standard',
+        round: round || 1,
+        targetRecipient: targetRecipient || 'bureau',
+        clientData: {
+          name: `${client.firstName} ${client.lastName}`,
+          address: undefined,
+          city: undefined,
+          state: undefined,
+          zip: undefined,
+        },
+        items: validItems.map(item => ({
+          creditorName: item.creditorName,
+          originalCreditor: item.originalCreditor || undefined,
+          accountNumber: item.id.slice(-8),
+          itemType: item.itemType,
+          amount: item.amount || undefined,
+          dateReported: item.dateReported?.toISOString(),
+          bureau: bureau,
+        })),
+        bureau: bureau,
+        reasonCodes: reasonCodes,
+        customReason: customReason,
+        methodology: methodology, // NEW: Pass methodology
+      });
+
+      return NextResponse.json({
+        letter_content: letterContent,
+        client_name: `${client.firstName} ${client.lastName}`,
+        bureau: bureau,
+        round: round || 1,
+        dispute_type: disputeType || 'standard',
+        reason_codes: reasonCodes,
+        item_count: validItems.length,
+        item_ids: negativeItemIds,
+        combined: true,
+      });
+    }
+
+    // Single item letter (original behavior)
     let negativeItem = null;
     if (negativeItemId) {
       const [item] = await db
@@ -84,6 +150,10 @@ export async function POST(request: NextRequest) {
       disputeType: disputeType || 'standard',
       round: round || 1,
       targetRecipient: targetRecipient || 'bureau',
+      methodology: methodology, // NEW: Pass methodology
+      metro2Violations: metro2Violations, // NEW: Pass Metro 2 violations
+      priorDisputeDate: priorDisputeDate, // NEW: For method of verification
+      priorDisputeResult: priorDisputeResult, // NEW: Prior result
       clientData: {
         name: `${client.firstName} ${client.lastName}`,
         address: undefined,
@@ -111,6 +181,7 @@ export async function POST(request: NextRequest) {
       round: round || 1,
       dispute_type: disputeType || 'standard',
       reason_codes: reasonCodes,
+      combined: false,
     });
   } catch (error) {
     console.error('Error generating dispute letter:', error);

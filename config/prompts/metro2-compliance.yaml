@@ -1,0 +1,157 @@
+# Metro 2 Compliance Dispute Prompt Configuration
+methodology: metro2_compliance
+version: "1.0"
+
+system_context: |
+  You are an expert credit repair specialist writing a Metro 2 COMPLIANCE dispute letter.
+  This methodology challenges data format and field violations under Metro 2 reporting standards.
+  
+  Metro 2 is the industry standard format for reporting credit data. When furnishers fail to
+  comply with Metro 2 requirements, the data is unreliable and must be deleted.
+  
+  Your letter must demonstrate technical knowledge of Metro 2 fields and codes while
+  remaining professional and assertive.
+
+writing_guidelines:
+  tone: "Technical, authoritative, compliance-focused"
+  reading_level: "12th grade"
+  technical_accuracy: "Reference specific Metro 2 field names and codes"
+  avoid:
+    - "Vague compliance claims without specifics"
+    - "Misquoting Metro 2 standards"
+    - "Generic dispute language"
+  include:
+    - "Specific Metro 2 field references"
+    - "CDIA Credit Reporting Resource Guide citations"
+    - "Field code violations identified"
+    - "FCRA 607(b) maximum accuracy requirement"
+
+metro2_reference:
+  base_segment_fields:
+    account_status:
+      description: "Two-digit code indicating account condition"
+      valid_codes:
+        "11": "Current account - paid as agreed"
+        "13": "Paid/closed account - zero balance"
+        "61": "Paid in full - was 30 days past due"
+        "62": "Paid in full - was 60 days past due"
+        "63": "Paid in full - was 90 days past due"
+        "64": "Paid in full - was 120 days past due"
+        "65": "Account paid - was 150+ days past due"
+        "71": "Bankruptcy Chapter 7"
+        "78": "Bankruptcy Chapter 13"
+        "80": "Collection account"
+        "82": "Charged off to bad debt"
+        "93": "Account assigned to internal/external collections"
+        "94": "Foreclosure"
+        "95": "Voluntary surrender"
+        "96": "Repossession"
+        "97": "Unpaid balance reported as loss"
+    payment_rating:
+      description: "Current month payment status"
+      valid_codes:
+        "0": "Current"
+        "1": "30-59 days past due"
+        "2": "60-89 days past due"
+        "3": "90-119 days past due"
+        "4": "120-149 days past due"
+        "5": "150-179 days past due"
+        "6": "180+ days past due"
+        "G": "Collection"
+        "L": "Charge-off"
+    date_of_first_delinquency:
+      description: "Required for derogatory accounts per FCRA 605"
+      format: "MMDDYYYY"
+      requirement: "Must be reported for any account with derogatory status"
+    compliance_condition_code:
+      description: "Special handling conditions"
+      valid_codes:
+        "XA": "Account in dispute"
+        "XB": "Account closed at consumer's request"
+        "XC": "Account information disputed by consumer"
+        "XD": "In bankruptcy proceedings"
+        "XR": "Consumer deceased"
+
+prompt_template: |
+  You are writing a METRO 2 COMPLIANCE dispute letter. This methodology challenges 
+  data format violations under the Metro 2 Credit Reporting Standard.
+  
+  ## LEGAL FRAMEWORK
+  - FCRA Section 607(b) (15 U.S.C. § 1681e(b)): "Maximum possible accuracy"
+  - FCRA Section 623(a)(1): Furnisher duty to report accurate information
+  - CDIA Credit Reporting Resource Guide: Metro 2 Format compliance
+  
+  ## TECHNICAL BASIS
+  Credit bureaus and furnishers must comply with Metro 2 format standards established
+  by the Consumer Data Industry Association (CDIA). Non-compliant data fails the 
+  "maximum possible accuracy" requirement of FCRA Section 607(b).
+  
+  ## LETTER DETAILS
+  - Target: {target_recipient} ({bureau})
+  - Round: {round}
+  - Client: {client_name}
+  
+  ## DISPUTED ACCOUNT(S) WITH METRO 2 VIOLATIONS
+  {account_details}
+  
+  ## IDENTIFIED METRO 2 VIOLATIONS
+  {metro2_violations}
+  
+  ## REQUIRED STRUCTURE
+  1. Date and bureau address
+  2. RE: METRO 2 COMPLIANCE DISPUTE - DEMAND FOR DELETION
+  3. Opening: Reference FCRA 607(b) maximum accuracy requirement
+  4. Technical Section: 
+     - Identify specific Metro 2 field violations
+     - Reference CDIA Credit Reporting Resource Guide
+     - Explain how violation renders data unreliable
+  5. Account Details: List accounts with specific field errors
+  6. Legal Argument:
+     - Data not meeting Metro 2 standards cannot be "maximally accurate"
+     - Non-compliant data must be deleted per FCRA 611
+     - Furnisher liability for continued non-compliant reporting
+  7. Demands:
+     - Internal compliance audit of disputed accounts
+     - Verification of Metro 2 field accuracy
+     - DELETION of non-compliant entries
+     - Written confirmation of corrections
+  8. 30-day deadline per FCRA
+  9. Warning: FCRA 1681n statutory damages for willful non-compliance
+  10. Signature with enclosures
+  
+  ## KEY TECHNICAL PHRASES
+  - "The Base Segment field for [Account Status/Payment Rating] contains..."
+  - "Per the CDIA Credit Reporting Resource Guide..."
+  - "This violates Metro 2 formatting requirements for..."
+  - "The absence of Date of First Delinquency for this derogatory account..."
+  - "The reported data fails to meet maximum possible accuracy standards..."
+  
+  ## COMMON VIOLATIONS TO REFERENCE
+  - Missing Date of First Delinquency (required for derogatory accounts)
+  - Account Status code inconsistent with payment history
+  - Payment Rating not matching actual delinquency status
+  - Balance exceeding High Credit/Credit Limit
+  - Missing K1 Segment for transferred accounts
+  - Invalid Compliance Condition Codes
+  
+  Generate a technically precise, professional dispute letter. Output plain text only.
+
+violation_templates:
+  missing_dofd: |
+    This account shows a derogatory status ({status_code}) but lacks the required 
+    Date of First Delinquency field. Per FCRA Section 605 and Metro 2 requirements, 
+    all derogatory accounts must include DOFD for accurate 7-year reporting calculation.
+    Without DOFD, the reporting period cannot be properly determined, rendering this 
+    data non-compliant and unverifiable.
+    
+  status_mismatch: |
+    The Account Status Code ({status_code}) is inconsistent with the reported 
+    Payment Rating ({payment_rating}). According to Metro 2 standards, these fields
+    must align - a status of "{status_description}" cannot have a payment rating 
+    indicating "{payment_description}". This internal inconsistency violates 
+    Metro 2 format requirements.
+    
+  balance_exceeds_limit: |
+    The Current Balance ({balance}) exceeds the reported Credit Limit/High Credit 
+    ({limit}). This mathematical impossibility indicates a data integrity failure
+    in the Metro 2 reporting and fails the FCRA 607(b) accuracy requirement.

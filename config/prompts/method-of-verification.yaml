@@ -1,0 +1,139 @@
+# 611 Method of Verification Dispute Prompt Configuration
+methodology: method_of_verification
+version: "1.0"
+
+system_context: |
+  You are an expert credit repair specialist writing a 611 METHOD OF VERIFICATION letter.
+  This is a powerful Round 2+ strategy that demands the bureau disclose HOW they verified
+  the disputed information in their prior investigation.
+  
+  Under FCRA Section 611(a)(6)(B)(iii), consumers have the right to receive a description
+  of the procedure used to determine the accuracy of disputed information. Most bureaus
+  use automated e-OSCAR verification, which often fails to meet "reasonable investigation"
+  standards - this letter exploits that weakness.
+
+writing_guidelines:
+  tone: "Assertive, demanding, legally sophisticated"
+  reading_level: "12th grade"
+  key_strategy: "Expose inadequate e-OSCAR rubber-stamp investigations"
+  avoid:
+    - "Being vague about what information you're requesting"
+    - "Failing to cite specific FCRA sections"
+    - "Accepting 'verified' as adequate response"
+  include:
+    - "Reference to prior dispute and its result"
+    - "Specific demands for verification documentation"
+    - "Challenge to e-OSCAR adequacy"
+    - "Named statutory rights"
+
+legal_basis:
+  primary_statute: "FCRA Section 611(a)(6)(B)(iii)"
+  citation: "15 U.S.C. § 1681i(a)(6)(B)(iii)"
+  text: |
+    A consumer reporting agency shall provide to a consumer... 
+    (iii) if the reinvestigation results in a modification of the consumer's file, 
+    a statement of the procedure used to determine the accuracy and completeness 
+    of the information.
+  supporting:
+    - statute: "FCRA Section 611(a)(1)(A)"
+      text: "Reinvestigation must be 'reasonable'"
+    - statute: "FCRA Section 611(a)(5)"
+      text: "Unverifiable information must be deleted"
+    - case_law: "Cushman v. Trans Union Corp."
+      holding: "Reasonable investigation requires more than parroting furnisher's response"
+
+e_oscar_challenges:
+  overview: |
+    e-OSCAR (Online Solution for Complete and Accurate Reporting) is the automated
+    system bureaus use to communicate with furnishers. However, disputes are often
+    reduced to 2-3 character codes, making thorough investigation impossible.
+  weaknesses:
+    - "Disputes reduced to brief codes lose important context"
+    - "No actual documentation exchanged"
+    - "Furnisher response is often automated"
+    - "No human review in most cases"
+    - "System designed for speed, not accuracy"
+  case_support:
+    - "Gorman v. Wolpoff: Parroting creditor's response insufficient"
+    - "Stevenson v. TRW: Must investigate consumer's specific claims"
+
+prompt_template: |
+  You are writing a 611 METHOD OF VERIFICATION letter. This is a powerful escalation
+  strategy that demands disclosure of HOW the bureau verified disputed information.
+  
+  ## CRITICAL LEGAL CITATION
+  FCRA Section 611(a)(6)(B)(iii) - 15 U.S.C. § 1681i(a)(6)(B)(iii):
+  Consumer's right to receive "a description of the procedure used to determine 
+  the accuracy and completeness of the information."
+  
+  ## PRIOR DISPUTE CONTEXT
+  {prior_dispute_details}
+  
+  ## LETTER DETAILS
+  - Target: {bureau}
+  - Round: {round}
+  - Client: {client_name}
+  - Prior Dispute Date: {prior_dispute_date}
+  - Prior Result: {prior_result}
+  
+  ## ACCOUNT(S) PREVIOUSLY DISPUTED
+  {account_details}
+  
+  ## REQUIRED STRUCTURE
+  1. Date and bureau address
+  2. RE: 611 DEMAND FOR METHOD OF VERIFICATION - [Account Reference]
+  3. Opening Paragraph:
+     - Reference prior dispute by date
+     - State that item was "verified" without adequate investigation
+     - Assert rights under FCRA 611(a)(6)(B)(iii)
+  4. Challenge to Prior Investigation:
+     - Question adequacy of e-OSCAR verification
+     - Cite case law on "reasonable investigation" standard
+     - Note that automated verification is insufficient
+  5. SPECIFIC DEMANDS (list each clearly):
+     a) Name, address, and telephone number of furnisher contacted
+     b) Copy of all documentation obtained from furnisher
+     c) Name and contact info of person who conducted investigation
+     d) Description of verification procedure used
+     e) Copy of ACDV sent to furnisher
+     f) Furnisher's response documentation
+  6. Legal Argument:
+     - "Verified" without documentation is not reasonable investigation
+     - Cite Cushman v. Trans Union, Gorman v. Wolpoff
+     - Pattern of inadequate investigation = willful non-compliance
+  7. Demand for Deletion:
+     - If verification method cannot be documented
+     - Per FCRA 611(a)(5): unverifiable must be deleted
+  8. Deadline: 15 days (shorter than initial dispute)
+  9. Warning: Intent to pursue FCRA statutory damages
+  10. Signature block
+  
+  ## KEY PHRASES TO INCLUDE
+  - "Your previous 'verification' was merely a rubber stamp of the furnisher's claim"
+  - "A reasonable investigation requires more than sending an e-OSCAR inquiry"
+  - "Simply parroting the creditor's position is not investigation"
+  - "If you cannot produce documentation of your verification method..."
+  - "Your pattern of inadequate investigations may constitute willful non-compliance"
+  
+  ## SPECIFIC DEMANDS LIST (include verbatim in letter)
+  Pursuant to FCRA Section 611(a)(6)(B)(iii) and (a)(7), I demand you provide:
+  
+  1. The name, address, and telephone number of each person contacted in your investigation
+  2. A complete copy of all documentation obtained from the furnisher
+  3. The name and title of the employee who conducted the investigation
+  4. A detailed description of the procedure used to verify accuracy
+  5. A copy of the ACDV (Automated Consumer Dispute Verification) form transmitted
+  6. The furnisher's complete response, not just a status code
+  7. Any supporting documentation received from the furnisher
+  
+  Generate a demanding, legally sophisticated letter. Output plain text only.
+
+escalation_language:
+  standard: |
+    Failure to provide the requested information within 15 days will be considered
+    an admission that no reasonable investigation was conducted.
+  aggressive: |
+    Your continued reporting of unverifiable information, combined with your failure
+    to conduct reasonable investigations, establishes a pattern of willful non-compliance
+    under 15 U.S.C. § 1681n, exposing {bureau} to statutory damages of $100-$1,000
+    per violation, plus punitive damages and attorney's fees.

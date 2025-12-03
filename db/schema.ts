@@ -626,6 +626,12 @@ export const disputes = pgTable('disputes', {
   escalationReason: text('escalation_reason'), // Reason for escalation to next round
   creditorName: text('creditor_name'), // Denormalized for quick access
   accountNumber: text('account_number'), // Masked account number
+  // NEW: Methodology tracking for enhanced dispute strategies
+  methodology: text('methodology'), // 'factual' | 'metro2_compliance' | 'consumer_law' | 'method_of_verification' | 'debt_validation' | 'goodwill'
+  disputedFields: text('disputed_fields'), // JSON array of specific Metro 2 fields disputed
+  fcraSections: text('fcra_sections'), // JSON array of FCRA sections cited in letter
+  escalationHistory: text('escalation_history'), // JSON array of round progression history
+  priorDisputeId: text('prior_dispute_id'), // Reference to previous dispute in escalation chain
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
@@ -634,6 +640,7 @@ export const disputes = pgTable('disputes', {
   index("disputes_negativeItemId_idx").on(table.negativeItemId),
   index("disputes_status_idx").on(table.status),
   index("disputes_responseDeadline_idx").on(table.responseDeadline),
+  index("disputes_methodology_idx").on(table.methodology),
 ]);
 
 // Dispute letter templates
@@ -649,6 +656,35 @@ export const disputeLetterTemplates = pgTable('dispute_letter_templates', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// Dispute letter library (methodology-specific templates with effectiveness tracking)
+export const disputeLetterLibrary = pgTable('dispute_letter_library', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  methodology: text('methodology').notNull(), // 'factual' | 'metro2_compliance' | 'consumer_law' | 'method_of_verification' | 'debt_validation' | 'goodwill'
+  targetRecipient: text('target_recipient').notNull(), // 'bureau' | 'creditor' | 'collector' | 'furnisher'
+  round: integer('round').default(1), // Which round this template is best for
+  itemTypes: text('item_types'), // JSON array of item types this template fits (e.g., ['collection', 'charge_off'])
+  bureau: text('bureau'), // NULL for universal, or specific bureau name
+  reasonCodes: text('reason_codes'), // JSON array of reason codes this template addresses
+  content: text('content').notNull(), // Full letter template with placeholders
+  promptContext: text('prompt_context'), // Additional context to add to AI prompt when using this template
+  variables: text('variables'), // JSON array of required variables
+  legalCitations: text('legal_citations'), // JSON array of FCRA/FDCPA sections cited
+  // Effectiveness tracking
+  timesUsed: integer('times_used').default(0),
+  successCount: integer('success_count').default(0), // Times resulted in deletion
+  effectivenessRating: integer('effectiveness_rating'), // Calculated success percentage (0-100)
+  lastUsedAt: timestamp('last_used_at'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("dispute_letter_library_methodology_idx").on(table.methodology),
+  index("dispute_letter_library_targetRecipient_idx").on(table.targetRecipient),
+  index("dispute_letter_library_round_idx").on(table.round),
+]);
 
 // ============================================
 // CRM SYSTEM TABLES - Tasks & Notes

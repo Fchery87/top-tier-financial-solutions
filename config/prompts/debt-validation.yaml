@@ -1,0 +1,149 @@
+# Debt Validation (FDCPA) Prompt Configuration
+methodology: debt_validation
+version: "1.0"
+
+system_context: |
+  You are an expert credit repair specialist writing a DEBT VALIDATION letter under
+  the Fair Debt Collection Practices Act (FDCPA) Section 809.
+  
+  This letter is sent to COLLECTORS (not bureaus) and demands they validate the
+  debt with documentation before continuing collection activities. If sent within
+  30 days of their initial contact, they MUST stop all collection until validated.
+  
+  Key: This challenges the collector's ability to prove they own the debt and that
+  the amount is accurate - many purchased debts lack proper documentation.
+
+writing_guidelines:
+  tone: "Firm, legally precise, demanding"
+  reading_level: "12th grade"
+  key_strategy: "Force collector to prove chain of ownership and accurate balance"
+  timing: "Most effective within 30 days of first collection notice"
+  avoid:
+    - "Acknowledging the debt is valid"
+    - "Making payment promises"
+    - "Providing unnecessary personal information"
+  include:
+    - "Clear FDCPA 809 citation"
+    - "Specific documentation demands"
+    - "Cease collection demand until validation"
+    - "Credit reporting restrictions"
+
+legal_basis:
+  primary_statute: "FDCPA Section 809"
+  citations:
+    - section: "809(a)"
+      code: "15 U.S.C. § 1692g(a)"
+      description: "Within 5 days of initial contact, collector must send validation notice"
+    - section: "809(b)"
+      code: "15 U.S.C. § 1692g(b)"
+      description: "If disputed in writing within 30 days, collector must cease collection until validation"
+  related:
+    - statute: "FDCPA Section 807"
+      code: "15 U.S.C. § 1692e"
+      description: "False or misleading representations"
+    - statute: "FDCPA Section 808"
+      code: "15 U.S.C. § 1692f"
+      description: "Unfair practices"
+
+validation_requirements:
+  minimum_required:
+    - "Amount of debt and how it was calculated"
+    - "Name of original creditor"
+    - "Proof collector is licensed in consumer's state"
+  enhanced_requests:
+    - "Original signed contract or agreement"
+    - "Complete payment history from original creditor"
+    - "Chain of assignment/ownership documentation"
+    - "Final account statement from original creditor"
+    - "Date of last payment"
+    - "Date account was charged off"
+    - "Collector's state license number"
+
+prompt_template: |
+  You are writing a DEBT VALIDATION letter under FDCPA Section 809. This letter
+  demands a debt collector prove the validity of the debt they're trying to collect.
+  
+  ## LEGAL FRAMEWORK
+  - FDCPA Section 809(b) (15 U.S.C. § 1692g(b)): Upon written dispute within 30 days,
+    collector must CEASE all collection activity until debt is validated
+  - FDCPA Section 807: Prohibition on false/misleading representations
+  - FDCPA Section 808: Prohibition on unfair practices
+  
+  ## LETTER DETAILS
+  - Collector Name: {collector_name}
+  - Collector Address: {collector_address}
+  - Reference/Account Number: {reference_number}
+  - Alleged Original Creditor: {original_creditor}
+  - Alleged Amount: {alleged_amount}
+  - Client Name: {client_name}
+  
+  ## DISPUTE REASON
+  {reason_description}
+  
+  ## REQUIRED STRUCTURE
+  1. Date and collector's address
+  2. RE: DEBT VALIDATION DEMAND - FDCPA 809(b)
+       Account/Reference #: {reference_number}
+  3. Opening:
+     - "This letter is in response to your [contact/notice] dated [date]"
+     - "I am exercising my rights under FDCPA Section 809(b)"
+     - "I dispute this alleged debt in its entirety"
+  4. CEASE COLLECTION DEMAND:
+     - "You must immediately cease all collection activity"
+     - "This includes calls, letters, and credit reporting"
+     - "Until proper validation is provided per FDCPA 809(b)"
+  5. VALIDATION DEMANDS (numbered list):
+     a) Proof you are licensed to collect in [State]
+     b) Name, address, and phone of original creditor
+     c) Original signed contract or credit application bearing my signature
+     d) Complete payment history from account opening
+     e) Final account statement from original creditor
+     f) Complete chain of assignment showing how you obtained this debt
+     g) Itemized accounting showing how the amount was calculated
+     h) Date of last payment
+     i) Date account was charged off
+     j) Statute of limitations expiration date in my state
+  6. CREDIT REPORTING NOTICE:
+     - "Do not furnish information to any credit bureau while disputed"
+     - "Reporting unvalidated debt violates FCRA and FDCPA"
+  7. FDCPA VIOLATION WARNING:
+     - Continued collection without validation = FDCPA violation
+     - Statutory damages: up to $1,000 per violation
+     - Actual damages and attorney's fees
+  8. No Payment Promise Disclaimer:
+     - "This is not an acknowledgment of debt"
+     - "I am requesting validation as permitted by law"
+  9. Signature (no SSN or unnecessary info)
+  
+  ## KEY PHRASES
+  - "Pursuant to 15 U.S.C. § 1692g(b), you must cease all collection activity..."
+  - "I dispute this alleged debt and demand validation..."
+  - "Failure to validate this debt requires deletion from all credit reports..."
+  - "Collection or credit reporting of unvalidated debt constitutes..."
+  - "This is not an acknowledgment that this debt is valid..."
+  
+  ## DO NOT INCLUDE
+  - Full Social Security Number
+  - Bank account information
+  - Any statement acknowledging the debt
+  - Payment offers or promises
+  
+  ## OPTIONAL ADDITIONS IF APPLICABLE
+  - State-specific debt collection licensing requirements
+  - Statute of limitations expiration notice
+  - Prior validation request ignored
+  
+  Generate a firm, legally precise debt validation letter. Output plain text only.
+
+timing_notes:
+  within_30_days: |
+    When sent within 30 days of collector's first contact, this triggers FDCPA 809(b)
+    protections - collector MUST stop all collection until validated.
+  after_30_days: |
+    After 30 days, validation request is still effective but collector not required
+    to stop collection. However, reporting unvalidated debt may violate FCRA.
+
+follow_up_actions:
+  if_validated: "Review documentation, then file factual dispute if errors found"
+  if_not_validated_30_days: "Send follow-up demanding deletion from credit reports"
+  if_collection_continues: "Document FDCPA violation, consider attorney consultation"

@@ -1,0 +1,500 @@
+# Dispute Strategies Configuration
+# This file configures the AI letter generation system with methodology-specific prompts,
+# reason codes, and escalation paths for credit repair disputes.
+
+version: "1.0"
+
+# ============================================
+# DISPUTE METHODOLOGIES
+# ============================================
+methodologies:
+  factual:
+    name: "Factual Dispute"
+    description: "Challenges the accuracy of reported information based on documented facts"
+    round_range: [1, 2, 3]
+    target_recipients: ["bureau", "creditor", "furnisher"]
+    best_for:
+      - "Incorrect account details"
+      - "Wrong payment history"
+      - "Inaccurate balances"
+      - "Accounts not belonging to consumer"
+    legal_citations:
+      primary:
+        - section: "FCRA Section 611"
+          code: "15 U.S.C. § 1681i"
+          description: "Procedure in case of disputed accuracy"
+        - section: "FCRA Section 623"
+          code: "15 U.S.C. § 1681s-2"
+          description: "Responsibilities of furnishers of information"
+      secondary:
+        - section: "FCRA Section 609"
+          code: "15 U.S.C. § 1681g"
+          description: "Disclosures to consumers"
+    escalation_triggers:
+      verified: "method_of_verification"
+      updated: "re_dispute"
+      no_response: "cfpb_complaint"
+      deleted: null
+    success_indicators:
+      - "Account deleted from credit report"
+      - "Information corrected to accurate status"
+      - "Duplicate entry removed"
+
+  metro2_compliance:
+    name: "Metro 2 Compliance"
+    description: "Challenges reporting format violations under Metro 2 standards"
+    round_range: [1, 2]
+    target_recipients: ["bureau"]
+    best_for:
+      - "Invalid status codes"
+      - "Missing required fields"
+      - "Incorrect date formats"
+      - "Balance/limit inconsistencies"
+    legal_citations:
+      primary:
+        - section: "FCRA Section 607"
+          code: "15 U.S.C. § 1681e"
+          description: "Compliance procedures - maximum possible accuracy"
+        - section: "FCRA Section 623(a)(1)"
+          code: "15 U.S.C. § 1681s-2(a)(1)"
+          description: "Duty to provide accurate information"
+      secondary:
+        - section: "CDIA Metro 2 Format"
+          code: "Industry Standard"
+          description: "Credit Reporting Resource Guide compliance"
+    metro2_fields:
+      base_segment:
+        - field: "Account Status"
+          codes: ["11", "13", "61", "62", "63", "64", "65", "71", "78", "80", "82", "83", "84", "93", "94", "95", "96", "97"]
+          description: "Current status of the account"
+        - field: "Payment Rating"
+          codes: ["0", "1", "2", "3", "4", "5", "6", "G", "L"]
+          description: "Payment pattern for current month"
+        - field: "Compliance Condition Code"
+          codes: ["XA", "XB", "XC", "XD", "XE", "XF", "XG", "XH", "XJ", "XR"]
+          description: "Special compliance conditions"
+        - field: "Date of First Delinquency"
+          format: "MMDDYYYY"
+          description: "Required for derogatory accounts"
+      k_segment:
+        - field: "K1 - Original Creditor Name"
+          description: "Name of original creditor for collections"
+        - field: "K2 - Creditor Classification"
+          codes: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"]
+          description: "Type of creditor"
+        - field: "K4 - Specialized Payment Indicator"
+          codes: ["01", "02", "03"]
+          description: "Special payment arrangements"
+    escalation_triggers:
+      verified: "direct_creditor"
+      no_response: "fcra_violation_notice"
+      deleted: null
+
+  consumer_law:
+    name: "Consumer Law Dispute"
+    description: "Leverages federal consumer protection laws to challenge reporting"
+    round_range: [2, 3]
+    target_recipients: ["bureau", "creditor", "collector", "furnisher"]
+    best_for:
+      - "Time-barred debts still reporting"
+      - "Re-aged accounts"
+      - "Post-bankruptcy reporting errors"
+      - "FDCPA violations by collectors"
+    legal_citations:
+      primary:
+        - section: "FCRA Section 605"
+          code: "15 U.S.C. § 1681c"
+          description: "Requirements relating to information in consumer reports (7-year rule)"
+        - section: "FDCPA Section 809"
+          code: "15 U.S.C. § 1692g"
+          description: "Validation of debts"
+        - section: "FCRA Section 611(a)(5)"
+          code: "15 U.S.C. § 1681i(a)(5)"
+          description: "Treatment of inaccurate or unverifiable information"
+      secondary:
+        - section: "FCBA"
+          code: "15 U.S.C. § 1666"
+          description: "Fair Credit Billing Act - billing error resolution"
+    escalation_triggers:
+      verified: "intent_to_sue_notice"
+      no_response: "cfpb_complaint"
+      deleted: null
+
+  method_of_verification:
+    name: "611 Method of Verification"
+    description: "Demands disclosure of how disputed information was verified"
+    round_range: [2, 3]
+    target_recipients: ["bureau"]
+    best_for:
+      - "Items verified without documentation"
+      - "E-OSCAR rubber stamp responses"
+      - "Follow-up to prior verified disputes"
+    legal_citations:
+      primary:
+        - section: "FCRA Section 611(a)(6)(B)(iii)"
+          code: "15 U.S.C. § 1681i(a)(6)(B)(iii)"
+          description: "Consumer's right to description of reinvestigation procedure"
+        - section: "FCRA Section 611(a)(7)"
+          code: "15 U.S.C. § 1681i(a)(7)"
+          description: "Description of procedure used to determine accuracy"
+    required_demands:
+      - "Name, address, and telephone number of furnisher"
+      - "Method used to verify information"
+      - "Documentation obtained during investigation"
+      - "Name of employee who conducted investigation"
+    escalation_triggers:
+      no_documentation: "fcra_violation_notice"
+      verified: "direct_creditor"
+      deleted: null
+
+  debt_validation:
+    name: "Debt Validation (FDCPA)"
+    description: "Requests validation of debt from collectors under FDCPA"
+    round_range: [1]
+    target_recipients: ["collector"]
+    best_for:
+      - "Collection accounts"
+      - "Purchased debt"
+      - "Unknown creditor accounts"
+    legal_citations:
+      primary:
+        - section: "FDCPA Section 809(b)"
+          code: "15 U.S.C. § 1692g(b)"
+          description: "Validation of debts - cease collection until validated"
+        - section: "FDCPA Section 809(a)"
+          code: "15 U.S.C. § 1692g(a)"
+          description: "Notice of debt - required disclosures"
+    required_documentation:
+      - "Complete payment history"
+      - "Original signed contract/agreement"
+      - "Chain of assignment/ownership"
+      - "Calculation of amount owed"
+      - "Proof they are licensed to collect in consumer's state"
+    escalation_triggers:
+      no_validation: "cease_reporting_demand"
+      validated: "factual_dispute"
+      deleted: null
+
+  goodwill:
+    name: "Goodwill Request"
+    description: "Appeals to creditor's discretion for removal of accurate negative items"
+    round_range: [1]
+    target_recipients: ["creditor"]
+    best_for:
+      - "Single late payment on otherwise perfect history"
+      - "Paid collections"
+      - "Hardship circumstances"
+      - "Long-term customer relationships"
+    approach: "non_adversarial"
+    key_elements:
+      - "Acknowledge the debt/late payment"
+      - "Explain circumstances"
+      - "Highlight positive payment history"
+      - "Request goodwill adjustment"
+    escalation_triggers:
+      denied: "factual_dispute"
+      approved: null
+
+# ============================================
+# CREDIT BUREAUS
+# ============================================
+bureaus:
+  transunion:
+    name: "TransUnion"
+    address: |
+      TransUnion Consumer Solutions
+      P.O. Box 2000
+      Chester, PA 19016-2000
+    phone: "1-800-916-8800"
+    online_dispute: "https://www.transunion.com/credit-disputes/dispute-your-credit"
+    fax: "1-610-546-4771"
+    specific_requirements:
+      - "Include full SSN for faster processing"
+      - "Reference TransUnion file number if available"
+    response_timeframe_days: 30
+    investigation_methods:
+      - "e-OSCAR automated verification"
+      - "Manual review for complex disputes"
+
+  experian:
+    name: "Experian"
+    address: |
+      Experian
+      P.O. Box 4500
+      Allen, TX 75013
+    phone: "1-888-397-3742"
+    online_dispute: "https://www.experian.com/disputes/main.html"
+    fax: "1-972-390-3837"
+    specific_requirements:
+      - "Requires 2 forms of ID for identity verification"
+      - "Certified mail recommended for documentation trail"
+    response_timeframe_days: 30
+    investigation_methods:
+      - "e-OSCAR automated verification"
+      - "ACDV form transmission to furnishers"
+
+  equifax:
+    name: "Equifax"
+    address: |
+      Equifax Information Services LLC
+      P.O. Box 740256
+      Atlanta, GA 30374-0256
+    phone: "1-866-349-5191"
+    online_dispute: "https://www.equifax.com/personal/credit-report-services/credit-dispute/"
+    fax: "1-888-826-0549"
+    specific_requirements:
+      - "Include Equifax file number for faster processing"
+      - "Accepts disputes via secure online portal"
+    response_timeframe_days: 30
+    investigation_methods:
+      - "e-OSCAR automated verification"
+      - "Direct furnisher contact"
+
+# ============================================
+# REASON CODES (Organized by Category)
+# ============================================
+reason_codes:
+  accuracy:
+    - code: "not_mine"
+      label: "Not My Account"
+      description: "This account does not belong to me. I have never opened, authorized, or used this account."
+      methodology_fit: ["factual", "consumer_law"]
+      fcra_section: "611(a)"
+      dispute_strength: "strong"
+      
+    - code: "never_late"
+      label: "Never Late"
+      description: "The reported late payment history is inaccurate. I have always made payments on time."
+      methodology_fit: ["factual"]
+      fcra_section: "623(a)(1)"
+      dispute_strength: "medium"
+      
+    - code: "wrong_balance"
+      label: "Incorrect Balance"
+      description: "The reported balance and/or payment amounts are incorrect."
+      methodology_fit: ["factual", "metro2_compliance"]
+      fcra_section: "623(a)(1)"
+      dispute_strength: "medium"
+      
+    - code: "wrong_dates"
+      label: "Incorrect Dates"
+      description: "The dates associated with this account are being reported incorrectly."
+      methodology_fit: ["factual", "metro2_compliance"]
+      fcra_section: "623(a)(1)"
+      dispute_strength: "medium"
+      
+    - code: "wrong_status"
+      label: "Incorrect Account Status"
+      description: "The account status being reported is inaccurate."
+      methodology_fit: ["factual", "metro2_compliance"]
+      fcra_section: "623(a)(1)"
+      dispute_strength: "medium"
+
+  ownership:
+    - code: "identity_theft"
+      label: "Identity Theft"
+      description: "This account was opened fraudulently as a result of identity theft."
+      methodology_fit: ["factual", "consumer_law"]
+      fcra_section: "605B"
+      dispute_strength: "strong"
+      requires_documentation: ["FTC Identity Theft Report", "Police Report"]
+      
+    - code: "mixed_file"
+      label: "Mixed Credit File"
+      description: "This account belongs to another consumer and has been incorrectly placed on my file."
+      methodology_fit: ["factual", "consumer_law"]
+      fcra_section: "607(b)"
+      dispute_strength: "strong"
+
+  compliance:
+    - code: "obsolete"
+      label: "Obsolete Information"
+      description: "This information is obsolete and has exceeded the 7-year reporting period."
+      methodology_fit: ["consumer_law"]
+      fcra_section: "605(a)"
+      dispute_strength: "strong"
+      
+    - code: "duplicate"
+      label: "Duplicate Entry"
+      description: "This account appears multiple times on my credit report."
+      methodology_fit: ["factual", "metro2_compliance"]
+      fcra_section: "607(b)"
+      dispute_strength: "strong"
+      
+    - code: "closed_by_consumer"
+      label: "Closed by Consumer"
+      description: "This account was closed at my request but is reported incorrectly."
+      methodology_fit: ["factual"]
+      fcra_section: "623(a)(2)"
+      dispute_strength: "medium"
+
+  collections:
+    - code: "paid_collection"
+      label: "Paid Collection"
+      description: "This collection has been paid in full but is still being reported as unpaid."
+      methodology_fit: ["factual"]
+      fcra_section: "623(a)(1)"
+      dispute_strength: "medium"
+      
+    - code: "settled_not_updated"
+      label: "Settled - Not Updated"
+      description: "This account was settled but the status has not been updated."
+      methodology_fit: ["factual"]
+      fcra_section: "623(a)(2)"
+      dispute_strength: "medium"
+      
+    - code: "no_validation"
+      label: "Unvalidated Debt"
+      description: "Collector failed to validate debt within 30 days as required by FDCPA."
+      methodology_fit: ["debt_validation", "consumer_law"]
+      fcra_section: "FDCPA 809"
+      dispute_strength: "strong"
+
+  metro2_violations:
+    - code: "missing_dofd"
+      label: "Missing Date of First Delinquency"
+      description: "Required DOFD field is missing or invalid for derogatory account."
+      methodology_fit: ["metro2_compliance"]
+      metro2_field: "Date of First Delinquency"
+      dispute_strength: "strong"
+      
+    - code: "invalid_status_code"
+      label: "Invalid Account Status Code"
+      description: "Account status code does not match account condition."
+      methodology_fit: ["metro2_compliance"]
+      metro2_field: "Account Status"
+      dispute_strength: "medium"
+      
+    - code: "payment_rating_mismatch"
+      label: "Payment Rating Mismatch"
+      description: "Payment rating does not match actual payment history."
+      methodology_fit: ["metro2_compliance"]
+      metro2_field: "Payment Rating"
+      dispute_strength: "medium"
+      
+    - code: "balance_exceeds_limit"
+      label: "Balance Exceeds Credit Limit"
+      description: "Reported balance exceeds reported credit limit, indicating data error."
+      methodology_fit: ["metro2_compliance"]
+      metro2_field: "Current Balance / Credit Limit"
+      dispute_strength: "medium"
+
+  inquiries:
+    - code: "unauthorized_inquiry"
+      label: "Unauthorized Inquiry"
+      description: "This inquiry was made without my authorization or permissible purpose."
+      methodology_fit: ["factual", "consumer_law"]
+      fcra_section: "604"
+      dispute_strength: "medium"
+
+# ============================================
+# ESCALATION PATHS
+# ============================================
+escalation_paths:
+  standard_progression:
+    round_1:
+      target: "bureau"
+      methodology: "factual"
+      if_verified: "round_2"
+      if_deleted: "complete"
+      if_no_response: "cfpb_complaint"
+    round_2:
+      target: "bureau"
+      methodology: "method_of_verification"
+      if_verified: "round_3"
+      if_deleted: "complete"
+      if_no_documentation: "fcra_violation_notice"
+    round_3:
+      target: "creditor"
+      methodology: "direct_creditor"
+      if_verified: "legal_consultation"
+      if_deleted: "complete"
+
+  aggressive_progression:
+    round_1:
+      target: "bureau"
+      methodology: "metro2_compliance"
+      parallel_action: "debt_validation_to_collector"
+    round_2:
+      target: ["bureau", "creditor"]
+      methodology: ["method_of_verification", "consumer_law"]
+    round_3:
+      target: "cfpb"
+      methodology: "regulatory_complaint"
+
+# ============================================
+# RESPONSE OUTCOME TYPES
+# ============================================
+outcomes:
+  - code: "deleted"
+    label: "Item Deleted"
+    description: "Negative item successfully removed from credit report"
+    next_action: null
+    is_success: true
+    
+  - code: "verified"
+    label: "Verified as Accurate"
+    description: "Bureau claims item was verified with furnisher"
+    next_action: "escalate"
+    is_success: false
+    
+  - code: "updated"
+    label: "Information Updated"
+    description: "Some information was corrected but item remains"
+    next_action: "review_changes"
+    is_success: "partial"
+    
+  - code: "no_response"
+    label: "No Response (30 Days)"
+    description: "Bureau failed to respond within FCRA timeframe"
+    next_action: "demand_deletion"
+    is_success: false
+    fcra_violation: true
+    
+  - code: "frivolous"
+    label: "Marked Frivolous"
+    description: "Bureau refused to investigate claiming dispute is frivolous"
+    next_action: "resubmit_with_documentation"
+    is_success: false
+
+# ============================================
+# ITEM TYPE CONFIGURATIONS
+# ============================================
+item_types:
+  collection:
+    recommended_methodologies: ["debt_validation", "factual", "metro2_compliance"]
+    common_issues:
+      - "Missing original creditor info"
+      - "Re-aged account"
+      - "Inaccurate balance"
+    required_metro2_fields:
+      - "K1 Segment (Original Creditor)"
+      - "Date of First Delinquency"
+      
+  charge_off:
+    recommended_methodologies: ["factual", "metro2_compliance"]
+    common_issues:
+      - "Wrong date of charge-off"
+      - "Incorrect balance"
+      - "Still showing open"
+      
+  late_payment:
+    recommended_methodologies: ["factual", "goodwill"]
+    common_issues:
+      - "Incorrect late date"
+      - "Wrong number of days late"
+      
+  bankruptcy:
+    recommended_methodologies: ["consumer_law", "factual"]
+    common_issues:
+      - "Accounts included should show $0 balance"
+      - "Wrong discharge date"
+      - "Reporting beyond 10-year limit"
+    reporting_limit_years: 10
+    
+  inquiry:
+    recommended_methodologies: ["factual"]
+    common_issues:
+      - "No permissible purpose"
+      - "Duplicate inquiry"
+    reporting_limit_years: 2

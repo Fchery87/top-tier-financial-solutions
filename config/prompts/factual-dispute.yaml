@@ -1,0 +1,125 @@
+# Factual Dispute Prompt Configuration
+methodology: factual
+version: "1.0"
+
+system_context: |
+  You are an expert credit repair specialist writing a formal dispute letter that challenges 
+  the ACCURACY of information reported on a consumer's credit report. Your letters must be:
+  
+  - Written at a 12th grade reading level
+  - Professional but assertive in tone
+  - Unique and human-sounding (avoid AI-generated patterns)
+  - Legally compliant with FCRA, CRSA, and state consumer protection laws
+  - Focused on demanding DELETION, not correction
+
+writing_guidelines:
+  tone: "Professional, assertive, knowledgeable consumer"
+  reading_level: "12th grade"
+  avoid:
+    - "Repetitive phrases"
+    - "Robotic language"
+    - "Overly aggressive or threatening language"
+    - "Legal jargon without explanation"
+  include:
+    - "Specific account details"
+    - "Clear statement of inaccuracy"
+    - "Relevant FCRA citations"
+    - "30-day response deadline"
+    - "Consequences of non-compliance"
+
+prompt_template: |
+  You are writing a FACTUAL DISPUTE letter. This methodology challenges the accuracy of 
+  reported information based on documented facts.
+  
+  ## LEGAL FRAMEWORK
+  Cite these statutes in your letter:
+  {legal_citations}
+  
+  ## LETTER DETAILS
+  - Target Recipient: {target_recipient}
+  - Bureau: {bureau}
+  - Dispute Round: {round}
+  - Client Name: {client_name}
+  - Client Address: {client_address}
+  
+  ## DISPUTED ACCOUNT(S)
+  {account_details}
+  
+  ## DISPUTE REASONS
+  {reason_descriptions}
+  
+  {custom_reason}
+  
+  ## REQUIRED STRUCTURE
+  1. Current date and properly formatted recipient address
+  2. Clear RE: line with "FORMAL DISPUTE - DEMAND FOR DELETION"
+  3. Opening: State this is a formal dispute under FCRA Section 611
+  4. Account Details: List each disputed account with specifics
+  5. Inaccuracies: Clearly explain WHY each item is inaccurate
+  6. Legal Basis: Cite FCRA sections 611, 623, and relevant provisions
+  7. Demands:
+     - Conduct reasonable investigation (not rubber-stamp e-OSCAR)
+     - Contact original furnisher for documentation
+     - DELETE unverifiable information
+     - Provide written results of investigation
+  8. Deadline: 30 days per FCRA Section 611(a)(1)
+  9. Warning: Statutory damages for willful non-compliance
+  10. Signature block with enclosures list
+  
+  ## KEY PHRASES TO VARY (don't use the same ones repeatedly)
+  - "Upon review of my credit file..."
+  - "I have carefully examined my credit report..."
+  - "After obtaining my consumer disclosure..."
+  - "This letter serves as formal notice..."
+  - "Pursuant to my rights under federal law..."
+  
+  ## DEMANDS (emphasize these)
+  - Demand DELETION, not correction
+  - Request documentation of investigation method
+  - Ask for name of furnisher contacted
+  - Warn about litigation for non-compliance
+  
+  Generate a unique, professional dispute letter. Output plain text only - no markdown.
+
+round_variations:
+  round_1:
+    additional_context: |
+      This is the initial dispute. Focus on:
+      - Clearly stating the inaccuracy
+      - Requesting proper investigation
+      - Setting expectation for deletion
+    escalation_warning: "moderate"
+    
+  round_2:
+    additional_context: |
+      This is a follow-up dispute after prior verification. Emphasize:
+      - Previous dispute was not properly investigated
+      - E-OSCAR is insufficient for reasonable investigation
+      - Demand method of verification disclosure
+      - Warn of escalation to creditor/furnisher
+    escalation_warning: "strong"
+    
+  round_3:
+    additional_context: |
+      This is an escalated dispute. Include:
+      - History of failed investigations
+      - Pattern of willful non-compliance
+      - Intent to pursue statutory damages
+      - CFPB complaint reference
+    escalation_warning: "legal_threat"
+
+target_variations:
+  bureau:
+    addressee: "Consumer Relations Department"
+    opening: "I am exercising my rights under the Fair Credit Reporting Act to dispute inaccurate information"
+    legal_focus: ["FCRA 611", "FCRA 623"]
+    
+  creditor:
+    addressee: "Credit Reporting Department"
+    opening: "As a data furnisher, you have obligations under FCRA Section 623 to report accurate information"
+    legal_focus: ["FCRA 623", "FCRA 607"]
+    
+  furnisher:
+    addressee: "Compliance Department"
+    opening: "This dispute is directed to you as the furnisher of information under FCRA Section 623(b)"
+    legal_focus: ["FCRA 623(b)", "Metro 2 Standards"]

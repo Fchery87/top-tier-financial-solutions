@@ -48,11 +48,23 @@ interface ReasonCode {
   code: string;
   label: string;
   description: string;
+  methodologyFit?: string[];
+  strength?: string;
 }
 
 interface DisputeType {
   code: string;
   label: string;
+}
+
+interface Methodology {
+  code: string;
+  name: string;
+  description: string;
+  roundRange: number[];
+  targetRecipients: string[];
+  bestFor: string[];
+  successIndicators: string[];
 }
 
 const WIZARD_STEPS = [
@@ -90,6 +102,13 @@ export default function DisputeWizardPage() {
   const [targetRecipient, setTargetRecipient] = React.useState<'bureau' | 'creditor' | 'collector'>('bureau');
   const [selectedBureaus, setSelectedBureaus] = React.useState<string[]>(['transunion', 'experian', 'equifax']);
   const [generationMethod, setGenerationMethod] = React.useState<'ai' | 'template'>('ai');
+  const [combineItemsPerBureau, setCombineItemsPerBureau] = React.useState(true);
+  
+  // NEW: Methodology Selection
+  const [methodologies, setMethodologies] = React.useState<Methodology[]>([]);
+  const [selectedMethodology, setSelectedMethodology] = React.useState<string>('factual');
+  const [recommendedMethodology, setRecommendedMethodology] = React.useState<string | null>(null);
+  const [loadingMethodologies, setLoadingMethodologies] = React.useState(false);
 
   // Step 4 - Reason Codes
   const [reasonCodes, setReasonCodes] = React.useState<ReasonCode[]>([]);
@@ -102,7 +121,9 @@ export default function DisputeWizardPage() {
   const [generatedLetters, setGeneratedLetters] = React.useState<Array<{
     bureau: string;
     itemId: string;
+    itemIds?: string[]; // For combined letters
     content: string;
+    combined: boolean;
   }>>([]);
   const [generating, setGenerating] = React.useState(false);
   const [generationProgress, setGenerationProgress] = React.useState(0);
@@ -147,23 +168,83 @@ export default function DisputeWizardPage() {
   };
 
   // Fetch reason codes and dispute types
-  const fetchReasonCodes = async () => {
+  const fetchReasonCodes = async (methodology?: string) => {
     try {
-      const response = await fetch('/api/admin/disputes/generate-letter');
+      const url = methodology 
+        ? `/api/admin/disputes/methodologies?methodology=${methodology}`
+        : '/api/admin/disputes/generate-letter';
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setReasonCodes(data.reason_codes || []);
-        setDisputeTypes(data.dispute_types || []);
+        if (data.dispute_types) {
+          setDisputeTypes(data.dispute_types || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching reason codes:', error);
     }
   };
 
+  // Fetch methodologies
+  const fetchMethodologies = async () => {
+    setLoadingMethodologies(true);
+    try {
+      const response = await fetch('/api/admin/disputes/methodologies');
+      if (response.ok) {
+        const data = await response.json();
+        setMethodologies(data.methodologies || []);
+        // Also set reason codes from methodologies API
+        if (data.reason_codes && data.reason_codes.length > 0) {
+          setReasonCodes(data.reason_codes);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching methodologies:', error);
+    } finally {
+      setLoadingMethodologies(false);
+    }
+  };
+
+  // Get recommended methodology based on selected items
+  const getRecommendedMethodologyForItems = React.useCallback(() => {
+    if (selectedItems.length === 0) return null;
+    
+    // Check if any item is a collection - recommend debt_validation
+    const hasCollection = negativeItems
+      .filter(i => selectedItems.includes(i.id))
+      .some(i => i.item_type === 'collection');
+    
+    if (hasCollection && disputeRound === 1) {
+      return 'debt_validation';
+    }
+    
+    // For round 2+, recommend method_of_verification
+    if (disputeRound >= 2) {
+      return 'method_of_verification';
+    }
+    
+    return 'factual';
+  }, [selectedItems, negativeItems, disputeRound]);
+
   React.useEffect(() => {
     fetchClients();
     fetchReasonCodes();
+    fetchMethodologies();
   }, [fetchClients]);
+
+  // Update recommended methodology when items or round changes
+  React.useEffect(() => {
+    const recommended = getRecommendedMethodologyForItems();
+    setRecommendedMethodology(recommended);
+  }, [getRecommendedMethodologyForItems]);
+
+  // Refetch reason codes when methodology changes
+  React.useEffect(() => {
+    if (selectedMethodology) {
+      fetchReasonCodes(selectedMethodology);
+    }
+  }, [selectedMethodology]);
 
   React.useEffect(() => {
     if (selectedClient) {
@@ -182,12 +263,11 @@ export default function DisputeWizardPage() {
     const letters: typeof generatedLetters = [];
 
     const bureausToUse = targetRecipient === 'bureau' ? selectedBureaus : ['direct'];
-    const totalLetters = selectedItems.length * bureausToUse.length;
-    let completed = 0;
 
-    for (const itemId of selectedItems) {
-      const item = negativeItems.find(i => i.id === itemId);
-      if (!item) continue;
+    // Combined letter mode: one letter per bureau with all selected items
+    if (combineItemsPerBureau && targetRecipient === 'bureau') {
+      const totalLetters = bureausToUse.length;
+      let completed = 0;
 
       for (const bureau of bureausToUse) {
         try {
@@ -196,16 +276,15 @@ export default function DisputeWizardPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               clientId: selectedClient.id,
-              negativeItemId: itemId,
-              bureau: targetRecipient === 'bureau' ? bureau : item.bureau || 'transunion',
+              negativeItemIds: selectedItems,
+              bureau: bureau,
               disputeType: selectedDisputeType,
               round: disputeRound,
               targetRecipient: targetRecipient,
               reasonCodes: selectedReasonCodes,
               customReason: customReason || undefined,
-              creditorName: item.creditor_name,
-              itemType: item.item_type,
-              amount: item.amount,
+              combineItems: true,
+              methodology: selectedMethodology, // NEW: Include methodology
             }),
           });
 
@@ -213,16 +292,65 @@ export default function DisputeWizardPage() {
             const data = await response.json();
             letters.push({
               bureau: bureau,
-              itemId: itemId,
+              itemId: selectedItems[0], // Primary item for reference
+              itemIds: selectedItems,
               content: data.letter_content,
+              combined: true,
             });
           }
         } catch (error) {
-          console.error('Error generating letter:', error);
+          console.error('Error generating combined letter:', error);
         }
 
         completed++;
         setGenerationProgress(Math.round((completed / totalLetters) * 100));
+      }
+    } else {
+      // Individual letter mode: one letter per item per bureau (original behavior)
+      const totalLetters = selectedItems.length * bureausToUse.length;
+      let completed = 0;
+
+      for (const itemId of selectedItems) {
+        const item = negativeItems.find(i => i.id === itemId);
+        if (!item) continue;
+
+        for (const bureau of bureausToUse) {
+          try {
+            const response = await fetch('/api/admin/disputes/generate-letter', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clientId: selectedClient.id,
+                negativeItemId: itemId,
+                bureau: targetRecipient === 'bureau' ? bureau : item.bureau || 'transunion',
+                disputeType: selectedDisputeType,
+                round: disputeRound,
+                targetRecipient: targetRecipient,
+                reasonCodes: selectedReasonCodes,
+                customReason: customReason || undefined,
+                creditorName: item.creditor_name,
+                itemType: item.item_type,
+                amount: item.amount,
+                methodology: selectedMethodology, // NEW: Include methodology
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              letters.push({
+                bureau: bureau,
+                itemId: itemId,
+                content: data.letter_content,
+                combined: false,
+              });
+            }
+          } catch (error) {
+            console.error('Error generating letter:', error);
+          }
+
+          completed++;
+          setGenerationProgress(Math.round((completed / totalLetters) * 100));
+        }
       }
     }
 
@@ -656,6 +784,77 @@ export default function DisputeWizardPage() {
                 </div>
               </div>
 
+              {/* Methodology Selection */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Dispute Strategy</label>
+                  {recommendedMethodology && recommendedMethodology !== selectedMethodology && (
+                    <button
+                      onClick={() => setSelectedMethodology(recommendedMethodology)}
+                      className="text-xs text-secondary hover:underline"
+                    >
+                      Use recommended: {methodologies.find(m => m.code === recommendedMethodology)?.name}
+                    </button>
+                  )}
+                </div>
+                {loadingMethodologies ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-secondary" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {methodologies
+                      .filter(m => m.roundRange.includes(disputeRound))
+                      .map((methodology) => (
+                        <div
+                          key={methodology.code}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                            selectedMethodology === methodology.code
+                              ? 'border-secondary bg-secondary/10'
+                              : 'border-border hover:border-secondary/50'
+                          }`}
+                          onClick={() => setSelectedMethodology(methodology.code)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`w-4 h-4 mt-0.5 rounded-full border-2 flex-shrink-0 ${
+                              selectedMethodology === methodology.code
+                                ? 'border-secondary bg-secondary'
+                                : 'border-muted-foreground/30'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{methodology.name}</p>
+                                {recommendedMethodology === methodology.code && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                                    Recommended
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {methodology.description}
+                              </p>
+                              {methodology.bestFor.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {methodology.bestFor.slice(0, 2).map((use, i) => (
+                                    <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                      {use}
+                                    </span>
+                                  ))}
+                                  {methodology.bestFor.length > 2 && (
+                                    <span className="text-xs text-muted-foreground">
+                                      +{methodology.bestFor.length - 2} more
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+
               {/* Bureau Selection (for Round 1) */}
               {targetRecipient === 'bureau' && (
                 <div className="space-y-3">
@@ -697,6 +896,59 @@ export default function DisputeWizardPage() {
                   </Button>
                 </div>
               </div>
+
+              {/* Combined Letters Option */}
+              {targetRecipient === 'bureau' && selectedItems.length > 1 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Letter Format</label>
+                  <div className="space-y-2">
+                    <div
+                      className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                        combineItemsPerBureau
+                          ? 'border-secondary bg-secondary/10'
+                          : 'border-border hover:border-secondary/50'
+                      }`}
+                      onClick={() => setCombineItemsPerBureau(true)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 ${
+                          combineItemsPerBureau
+                            ? 'border-secondary bg-secondary'
+                            : 'border-muted-foreground/30'
+                        }`} />
+                        <div>
+                          <p className="font-medium">Combined Letter per Bureau (Recommended)</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedItems.length} items combined into {selectedBureaus.length} letter(s) - one per bureau
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                        !combineItemsPerBureau
+                          ? 'border-secondary bg-secondary/10'
+                          : 'border-border hover:border-secondary/50'
+                      }`}
+                      onClick={() => setCombineItemsPerBureau(false)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 ${
+                          !combineItemsPerBureau
+                            ? 'border-secondary bg-secondary'
+                            : 'border-muted-foreground/30'
+                        }`} />
+                        <div>
+                          <p className="font-medium">Individual Letter per Item</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedItems.length * selectedBureaus.length} separate letters - one per item per bureau
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -844,16 +1096,36 @@ export default function DisputeWizardPage() {
               <CardContent className="space-y-4">
                 {generatedLetters.map((letter, index) => {
                   const item = negativeItems.find(i => i.id === letter.itemId);
+                  const allItems = letter.combined && letter.itemIds
+                    ? letter.itemIds.map(id => negativeItems.find(i => i.id === id)).filter(Boolean)
+                    : [item].filter(Boolean);
+                  
                   return (
                     <div key={index} className="border border-border rounded-lg overflow-hidden">
                       <div className="bg-muted/50 px-4 py-3 flex items-center justify-between">
                         <div>
-                          <p className="font-medium">
-                            {item?.creditor_name || 'Unknown'} - {letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatItemType(item?.item_type || '')}
-                          </p>
+                          {letter.combined ? (
+                            <>
+                              <p className="font-medium flex items-center gap-2">
+                                <span className="px-2 py-0.5 text-xs bg-secondary/20 text-secondary rounded">
+                                  Combined
+                                </span>
+                                {letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)} - {allItems.length} Account(s)
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {allItems.map((i: typeof item) => i?.creditor_name).join(', ')}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-medium">
+                                {item?.creditor_name || 'Unknown'} - {letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatItemType(item?.item_type || '')}
+                              </p>
+                            </>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -869,7 +1141,9 @@ export default function DisputeWizardPage() {
                             size="sm"
                             onClick={() => downloadLetter(
                               letter.content,
-                              `dispute-${letter.bureau}-${item?.creditor_name?.replace(/\s+/g, '-')}.txt`
+                              letter.combined
+                                ? `dispute-${letter.bureau}-combined-${allItems.length}-accounts.txt`
+                                : `dispute-${letter.bureau}-${item?.creditor_name?.replace(/\s+/g, '-')}.txt`
                             )}
                           >
                             <Download className="w-4 h-4 mr-1" />
