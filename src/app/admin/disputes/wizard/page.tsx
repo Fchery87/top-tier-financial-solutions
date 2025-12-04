@@ -44,6 +44,14 @@ interface NegativeItem {
   recommended_action: string | null;
 }
 
+// Per-item dispute instruction (set during item selection)
+interface ItemDisputeInstruction {
+  itemId: string;
+  instructionType: 'preset' | 'custom';
+  presetCode?: string;
+  customText?: string;
+}
+
 interface ReasonCode {
   code: string;
   label: string;
@@ -67,17 +75,25 @@ interface Methodology {
   successIndicators: string[];
 }
 
-// Steps for template mode (manual reason selection)
-const TEMPLATE_WIZARD_STEPS = [
-  { id: 1, name: 'Client', icon: Users },
-  { id: 2, name: 'Items', icon: FileText },
-  { id: 3, name: 'Round', icon: Target },
-  { id: 4, name: 'Reasons', icon: FileText },
-  { id: 5, name: 'Review', icon: CheckCircle },
+// Pre-built dispute instructions (like Credit Repair Cloud)
+const PRESET_DISPUTE_INSTRUCTIONS = [
+  { code: 'not_mine', label: 'Not My Account', description: 'This account does not belong to me. I have never opened or authorized this account.' },
+  { code: 'never_late', label: 'Never Late', description: 'I have never been late on this account. The payment history is inaccurate.' },
+  { code: 'wrong_balance', label: 'Incorrect Balance', description: 'The balance reported is incorrect and does not reflect the actual amount.' },
+  { code: 'paid_in_full', label: 'Paid in Full', description: 'This account has been paid in full but is still showing a balance or negative status.' },
+  { code: 'wrong_status', label: 'Wrong Account Status', description: 'The account status being reported is inaccurate.' },
+  { code: 'wrong_dates', label: 'Incorrect Dates', description: 'The dates associated with this account are being reported incorrectly.' },
+  { code: 'duplicate', label: 'Duplicate Account', description: 'This account appears multiple times on my credit report.' },
+  { code: 'obsolete', label: 'Obsolete Information', description: 'This information is obsolete and has exceeded the legal reporting period.' },
+  { code: 'identity_theft', label: 'Identity Theft', description: 'This account was opened fraudulently as a result of identity theft.' },
+  { code: 'settled', label: 'Account Settled', description: 'This account was settled but is not being reported correctly.' },
+  { code: 'included_bankruptcy', label: 'Included in Bankruptcy', description: 'This account was included in bankruptcy and should reflect discharged status.' },
+  { code: 'unauthorized_inquiry', label: 'Unauthorized Inquiry', description: 'This inquiry was made without my authorization or permissible purpose.' },
+  { code: 'custom', label: 'Custom Instruction', description: 'Enter your own dispute instruction' },
 ];
 
-// Steps for AI mode (no manual reason selection - AI analyzes items)
-const AI_WIZARD_STEPS = [
+// Both modes now use 4 steps (Template mode no longer has separate Reason Codes step)
+const WIZARD_STEPS = [
   { id: 1, name: 'Client', icon: Users },
   { id: 2, name: 'Items', icon: FileText },
   { id: 3, name: 'Configure', icon: Target },
@@ -127,6 +143,9 @@ export default function DisputeWizardPage() {
   const [negativeItems, setNegativeItems] = React.useState<NegativeItem[]>([]);
   const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
   const [loadingItems, setLoadingItems] = React.useState(false);
+  
+  // Per-item dispute instructions (for template mode)
+  const [itemDisputeInstructions, setItemDisputeInstructions] = React.useState<Map<string, ItemDisputeInstruction>>(new Map());
 
   // Step 3 - Round & Target
   const [disputeRound, setDisputeRound] = React.useState(1);
@@ -146,12 +165,11 @@ export default function DisputeWizardPage() {
   const [aiAnalysisSummary, setAiAnalysisSummary] = React.useState<AIAnalysisSummary | null>(null);
   const [analyzingItems, setAnalyzingItems] = React.useState(false);
 
-  // Get active wizard steps based on generation method
-  const WIZARD_STEPS = generationMethod === 'ai' ? AI_WIZARD_STEPS : TEMPLATE_WIZARD_STEPS;
+  // Both modes use 4 steps now
   const maxSteps = WIZARD_STEPS.length;
-  const reviewStepId = generationMethod === 'ai' ? 4 : 5;
+  const reviewStepId = 4;
 
-  // Step 4 - Reason Codes (only used in template mode)
+  // Legacy reason codes state (kept for backward compatibility, but not used in new flow)
   const [reasonCodes, setReasonCodes] = React.useState<ReasonCode[]>([]);
   const [disputeTypes, setDisputeTypes] = React.useState<DisputeType[]>([]);
   const [selectedReasonCodes, setSelectedReasonCodes] = React.useState<string[]>([]);
@@ -327,19 +345,14 @@ export default function DisputeWizardPage() {
 
   // Generate letters
   const generateLetters = async () => {
-    // For AI mode, we use AI analysis; for template mode, we need manual reason codes
-    const reasonCodesToUse = generationMethod === 'ai' 
-      ? (aiAnalysisSummary?.allReasonCodes || ['not_mine', 'wrong_status'])
-      : selectedReasonCodes;
-
     if (!selectedClient || selectedItems.length === 0) {
       return;
     }
-    
-    // For template mode, require reason codes
-    if (generationMethod === 'template' && reasonCodesToUse.length === 0) {
-      return;
-    }
+
+    // For AI mode, we use AI analysis; for template mode, we use per-item instructions
+    const reasonCodesToUse = generationMethod === 'ai' 
+      ? (aiAnalysisSummary?.allReasonCodes || ['not_mine', 'wrong_status'])
+      : []; // Template mode now uses per-item instructions
 
     setGenerating(true);
     setGenerationProgress(0);
@@ -351,6 +364,17 @@ export default function DisputeWizardPage() {
       : selectedMethodology;
 
     const bureausToUse = targetRecipient === 'bureau' ? selectedBureaus : ['direct'];
+
+    // Build per-item instructions map for template mode
+    const perItemInstructions: Record<string, string> = {};
+    if (generationMethod === 'template') {
+      selectedItems.forEach(itemId => {
+        const instruction = itemDisputeInstructions.get(itemId);
+        if (instruction) {
+          perItemInstructions[itemId] = getInstructionText(itemId);
+        }
+      });
+    }
 
     // Combined letter mode: one letter per bureau with all selected items
     if (combineItemsPerBureau && targetRecipient === 'bureau') {
@@ -373,6 +397,8 @@ export default function DisputeWizardPage() {
               customReason: customReason || undefined,
               combineItems: true,
               methodology: methodologyToUse,
+              // Include per-item instructions for template mode
+              perItemInstructions: generationMethod === 'template' ? perItemInstructions : undefined,
               // Include AI analysis data for enhanced letters
               metro2Violations: generationMethod === 'ai' ? aiAnalysisSummary?.allMetro2Violations : undefined
             }),
@@ -404,6 +430,11 @@ export default function DisputeWizardPage() {
         const item = negativeItems.find(i => i.id === itemId);
         if (!item) continue;
 
+        // Get per-item instruction for template mode
+        const itemInstruction = generationMethod === 'template' 
+          ? getInstructionText(itemId)
+          : undefined;
+
         for (const bureau of bureausToUse) {
           try {
             const response = await fetch('/api/admin/disputes/generate-letter', {
@@ -417,11 +448,13 @@ export default function DisputeWizardPage() {
                 round: disputeRound,
                 targetRecipient: targetRecipient,
                 reasonCodes: reasonCodesToUse,
-                customReason: customReason || undefined,
+                customReason: itemInstruction || customReason || undefined,
                 creditorName: item.creditor_name,
                 itemType: item.item_type,
                 amount: item.amount,
                 methodology: methodologyToUse,
+                // Include per-item instruction for template mode
+                disputeInstruction: itemInstruction,
                 // Include AI analysis data for this specific item
                 metro2Violations: generationMethod === 'ai' 
                   ? aiAnalysisResults.find(a => a.itemId === itemId)?.metro2Violations 
@@ -450,7 +483,7 @@ export default function DisputeWizardPage() {
 
     setGeneratedLetters(letters);
     setGenerating(false);
-    setCurrentStep(reviewStepId); // Go to review step (4 for AI mode, 5 for template mode)
+    setCurrentStep(reviewStepId); // Go to review step (4 for both modes now)
   };
 
   const handleSelectClient = (client: Client) => {
@@ -460,11 +493,7 @@ export default function DisputeWizardPage() {
   };
 
   const handleToggleItem = (itemId: string) => {
-    setSelectedItems(prev =>
-      prev.includes(itemId)
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
+    toggleItemSelection(itemId);
   };
 
   const handleToggleBureau = (bureau: string) => {
@@ -550,19 +579,24 @@ export default function DisputeWizardPage() {
       case 1:
         return selectedClient !== null;
       case 2:
+        // For template mode, all selected items must have dispute instructions
+        if (generationMethod === 'template') {
+          const allItemsHaveInstructions = selectedItems.every(itemId => {
+            const instruction = itemDisputeInstructions.get(itemId);
+            if (!instruction) return false;
+            if (instruction.instructionType === 'preset' && instruction.presetCode && instruction.presetCode !== 'custom') return true;
+            if (instruction.instructionType === 'custom' && instruction.customText && instruction.customText.trim().length > 0) return true;
+            return false;
+          });
+          return selectedItems.length > 0 && allItemsHaveInstructions;
+        }
+        // AI mode just needs selected items
         return selectedItems.length > 0;
       case 3:
-        // Step 3 is always the last config step before generation
+        // Step 3 is the config step before generation
         return targetRecipient === 'bureau' ? selectedBureaus.length > 0 : true;
       case 4:
-        // In AI mode, step 4 is Review (generated letters)
-        // In template mode, step 4 is Reason Codes selection
-        if (generationMethod === 'ai') {
-          return generatedLetters.length > 0;
-        }
-        return selectedReasonCodes.length > 0;
-      case 5:
-        // Only exists in template mode - this is the Review step
+        // Step 4 is Review for both modes
         return generatedLetters.length > 0;
       default:
         return false;
@@ -579,6 +613,63 @@ export default function DisputeWizardPage() {
       style: 'currency',
       currency: 'USD',
     }).format(cents / 100);
+  };
+
+  // Helper: Update dispute instruction for an item
+  const updateItemInstruction = (itemId: string, instructionType: 'preset' | 'custom', value: string) => {
+    setItemDisputeInstructions(prev => {
+      const newMap = new Map(prev);
+      if (instructionType === 'preset') {
+        newMap.set(itemId, {
+          itemId,
+          instructionType: value === 'custom' ? 'custom' : 'preset',
+          presetCode: value,
+          customText: value === 'custom' ? (prev.get(itemId)?.customText || '') : undefined,
+        });
+      } else {
+        newMap.set(itemId, {
+          itemId,
+          instructionType: 'custom',
+          presetCode: 'custom',
+          customText: value,
+        });
+      }
+      return newMap;
+    });
+  };
+
+  // Helper: Get the dispute instruction text for an item
+  const getInstructionText = (itemId: string): string => {
+    const instruction = itemDisputeInstructions.get(itemId);
+    if (!instruction) return '';
+    if (instruction.instructionType === 'custom') return instruction.customText || '';
+    const preset = PRESET_DISPUTE_INSTRUCTIONS.find(p => p.code === instruction.presetCode);
+    return preset?.description || '';
+  };
+
+  // Helper: Toggle item selection
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev => {
+      if (prev.includes(itemId)) {
+        // Removing item - also remove its instruction
+        setItemDisputeInstructions(prevInstructions => {
+          const newMap = new Map(prevInstructions);
+          newMap.delete(itemId);
+          return newMap;
+        });
+        return prev.filter(id => id !== itemId);
+      } else {
+        // Adding item - initialize with empty preset
+        if (generationMethod === 'template') {
+          setItemDisputeInstructions(prevInstructions => {
+            const newMap = new Map(prevInstructions);
+            newMap.set(itemId, { itemId, instructionType: 'preset', presetCode: '' });
+            return newMap;
+          });
+        }
+        return [...prev, itemId];
+      }
+    });
   };
 
   return (
@@ -736,6 +827,26 @@ export default function DisputeWizardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Info box for template mode */}
+              {generationMethod === 'template' && (
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <p className="text-sm text-blue-400">
+                    <strong>Template Mode:</strong> Select items below and set a dispute instruction for each one. 
+                    You can choose from pre-built reasons or enter a custom instruction.
+                  </p>
+                </div>
+              )}
+              
+              {/* Info box for AI mode */}
+              {generationMethod === 'ai' && (
+                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <p className="text-sm text-green-400">
+                    <strong>AI Mode:</strong> Simply select items to dispute. The AI will automatically analyze 
+                    each item for Metro 2 compliance violations and FCRA issues.
+                  </p>
+                </div>
+              )}
+              
               {loadingItems ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-secondary" />
@@ -765,9 +876,31 @@ export default function DisputeWizardPage() {
                             size="sm"
                             onClick={() => {
                               if (allSelected) {
-                                setSelectedItems(prev => prev.filter(id => !bureauItems.map(i => i.id).includes(id)));
+                                // Deselect: remove items and their instructions
+                                const idsToRemove = bureauItems.map(i => i.id);
+                                setSelectedItems(prev => prev.filter(id => !idsToRemove.includes(id)));
+                                if (generationMethod === 'template') {
+                                  setItemDisputeInstructions(prev => {
+                                    const newMap = new Map(prev);
+                                    idsToRemove.forEach(id => newMap.delete(id));
+                                    return newMap;
+                                  });
+                                }
                               } else {
-                                setSelectedItems(prev => [...new Set([...prev, ...bureauItems.map(i => i.id)])]);
+                                // Select: add items and initialize their instructions
+                                const newIds = bureauItems.map(i => i.id);
+                                setSelectedItems(prev => [...new Set([...prev, ...newIds])]);
+                                if (generationMethod === 'template') {
+                                  setItemDisputeInstructions(prev => {
+                                    const newMap = new Map(prev);
+                                    newIds.forEach(id => {
+                                      if (!newMap.has(id)) {
+                                        newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
+                                      }
+                                    });
+                                    return newMap;
+                                  });
+                                }
                               }
                             }}
                           >
@@ -781,9 +914,24 @@ export default function DisputeWizardPage() {
                         size="sm"
                         onClick={() => {
                           if (selectedItems.length === negativeItems.length) {
+                            // Deselect all
                             setSelectedItems([]);
+                            setItemDisputeInstructions(new Map());
                           } else {
-                            setSelectedItems(negativeItems.map(i => i.id));
+                            // Select all
+                            const allIds = negativeItems.map(i => i.id);
+                            setSelectedItems(allIds);
+                            if (generationMethod === 'template') {
+                              setItemDisputeInstructions(prev => {
+                                const newMap = new Map(prev);
+                                allIds.forEach(id => {
+                                  if (!newMap.has(id)) {
+                                    newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
+                                  }
+                                });
+                                return newMap;
+                              });
+                            }
                           }
                         }}
                       >
@@ -792,46 +940,96 @@ export default function DisputeWizardPage() {
                     </div>
                   </div>
 
-                  {negativeItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                        selectedItems.includes(item.id)
-                          ? 'border-secondary bg-secondary/10'
-                          : 'border-border hover:border-secondary/50'
-                      }`}
-                      onClick={() => handleToggleItem(item.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{item.creditor_name}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              item.risk_severity === 'severe' ? 'bg-red-500/20 text-red-400' :
-                              item.risk_severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                              item.risk_severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                              'bg-green-500/20 text-green-400'
+                  {negativeItems.map((item) => {
+                    const isSelected = selectedItems.includes(item.id);
+                    const instruction = itemDisputeInstructions.get(item.id);
+                    const showInstructionUI = isSelected && generationMethod === 'template';
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-lg border transition-all ${
+                          isSelected
+                            ? 'border-secondary bg-secondary/10'
+                            : 'border-border hover:border-secondary/50'
+                        }`}
+                      >
+                        {/* Item Header - Clickable to select/deselect */}
+                        <div
+                          className="p-4 cursor-pointer"
+                          onClick={() => handleToggleItem(item.id)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{item.creditor_name}</p>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  item.risk_severity === 'severe' ? 'bg-red-500/20 text-red-400' :
+                                  item.risk_severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                                  item.risk_severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-green-500/20 text-green-400'
+                                }`}>
+                                  {item.risk_severity}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {formatItemType(item.item_type)} • {formatCurrency(item.amount)}
+                                {item.bureau && ` • ${item.bureau.charAt(0).toUpperCase() + item.bureau.slice(1)}`}
+                              </p>
+                            </div>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              isSelected
+                                ? 'border-secondary bg-secondary'
+                                : 'border-muted-foreground/30'
                             }`}>
-                              {item.risk_severity}
-                            </span>
+                              {isSelected && (
+                                <Check className="w-3 h-3 text-primary" />
+                              )}
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {formatItemType(item.item_type)} • {formatCurrency(item.amount)}
-                            {item.bureau && ` • ${item.bureau.charAt(0).toUpperCase() + item.bureau.slice(1)}`}
-                          </p>
                         </div>
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                          selectedItems.includes(item.id)
-                            ? 'border-secondary bg-secondary'
-                            : 'border-muted-foreground/30'
-                        }`}>
-                          {selectedItems.includes(item.id) && (
-                            <Check className="w-3 h-3 text-primary" />
-                          )}
-                        </div>
+                        
+                        {/* Per-Item Dispute Instruction (Template Mode Only) */}
+                        {showInstructionUI && (
+                          <div 
+                            className="px-4 pb-4 pt-2 border-t border-border/50 space-y-3"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <label className="text-xs font-medium text-muted-foreground">Dispute Instruction</label>
+                            <select
+                              className="w-full p-2 rounded-md border border-border bg-background text-sm"
+                              value={instruction?.presetCode || ''}
+                              onChange={(e) => updateItemInstruction(item.id, 'preset', e.target.value)}
+                            >
+                              <option value="">Select dispute reason...</option>
+                              {PRESET_DISPUTE_INSTRUCTIONS.map((preset) => (
+                                <option key={preset.code} value={preset.code}>
+                                  {preset.label}
+                                </option>
+                              ))}
+                            </select>
+                            
+                            {/* Custom text field when "Custom Instruction" is selected */}
+                            {instruction?.presetCode === 'custom' && (
+                              <textarea
+                                className="w-full p-2 rounded-md border border-border bg-background text-sm min-h-[80px]"
+                                placeholder="Enter your custom dispute instruction for this account..."
+                                value={instruction?.customText || ''}
+                                onChange={(e) => updateItemInstruction(item.id, 'custom', e.target.value)}
+                              />
+                            )}
+                            
+                            {/* Show selected instruction preview */}
+                            {instruction?.presetCode && instruction.presetCode !== 'custom' && (
+                              <p className="text-xs text-muted-foreground italic">
+                                {PRESET_DISPUTE_INSTRUCTIONS.find(p => p.code === instruction.presetCode)?.description}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -1074,83 +1272,8 @@ export default function DisputeWizardPage() {
           </Card>
         )}
 
-        {/* Step 4: Reason Codes (Template Mode Only) OR Review (AI Mode) */}
-        {currentStep === 4 && generationMethod === 'template' && (
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-            <CardHeader>
-              <CardTitle>Select Dispute Reasons</CardTitle>
-              <CardDescription>Choose reason codes and dispute type</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Dispute Type */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Dispute Type</label>
-                <div className="flex flex-wrap gap-2">
-                  {disputeTypes.map((type) => (
-                    <Button
-                      key={type.code}
-                      variant={selectedDisputeType === type.code ? 'secondary' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedDisputeType(type.code)}
-                    >
-                      {type.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Reason Codes */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium">
-                  Reason Codes ({selectedReasonCodes.length} selected)
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
-                  {reasonCodes.map((reason) => (
-                    <div
-                      key={reason.code}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                        selectedReasonCodes.includes(reason.code)
-                          ? 'border-secondary bg-secondary/10'
-                          : 'border-border hover:border-secondary/50'
-                      }`}
-                      onClick={() => handleToggleReasonCode(reason.code)}
-                    >
-                      <div className="flex items-start gap-2">
-                        <div className={`w-4 h-4 mt-0.5 rounded border-2 flex-shrink-0 ${
-                          selectedReasonCodes.includes(reason.code)
-                            ? 'border-secondary bg-secondary'
-                            : 'border-muted-foreground/30'
-                        }`}>
-                          {selectedReasonCodes.includes(reason.code) && (
-                            <Check className="w-3 h-3 text-primary" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{reason.label}</p>
-                          <p className="text-xs text-muted-foreground">{reason.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Reason */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Additional Context (Optional)</label>
-                <textarea
-                  value={customReason}
-                  onChange={(e) => setCustomReason(e.target.value)}
-                  placeholder="Add any additional details or context for the dispute..."
-                  className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Review Step: Step 4 for AI mode, Step 5 for template mode */}
-        {((currentStep === 4 && generationMethod === 'ai') || (currentStep === 5 && generationMethod === 'template')) && (
+        {/* Step 4: Review (Both AI and Template Mode) */}
+        {currentStep === 4 && (
           <div className="space-y-4">
             {/* AI Analysis Summary (AI mode only) */}
             {generationMethod === 'ai' && aiAnalysisSummary && (
@@ -1348,83 +1471,48 @@ export default function DisputeWizardPage() {
           Back
         </Button>
 
-        {/* AI Mode: Step 3 triggers analysis + generation, Step 4 is Review */}
-        {/* Template Mode: Step 4 triggers generation, Step 5 is Review */}
-        {generationMethod === 'ai' ? (
-          // AI MODE NAVIGATION
-          currentStep === 3 ? (
-            <Button
-              onClick={async () => {
-                // First analyze items with AI, then generate letters
+        {/* Both modes: Step 3 triggers generation, Step 4 is Review */}
+        {currentStep === 3 ? (
+          <Button
+            onClick={async () => {
+              if (generationMethod === 'ai') {
+                // AI mode: First analyze items with AI, then generate letters
                 await analyzeItemsWithAI();
-                await generateLetters();
-              }}
-              disabled={!canProceed() || generating || analyzingItems}
-            >
-              {analyzingItems ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing Items...
-                </>
-              ) : generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating ({generationProgress}%)
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Analyze & Generate
-                </>
-              )}
-            </Button>
-          ) : currentStep === 4 ? (
-            <Button onClick={() => router.push('/admin/clients')}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Done
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setCurrentStep(prev => Math.min(maxSteps, prev + 1))}
-              disabled={!canProceed()}
-            >
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          )
+              }
+              await generateLetters();
+            }}
+            disabled={!canProceed() || generating || analyzingItems}
+          >
+            {analyzingItems ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyzing Items...
+              </>
+            ) : generating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating ({generationProgress}%)
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                {generationMethod === 'ai' ? 'Analyze & Generate' : 'Generate Letters'}
+              </>
+            )}
+          </Button>
+        ) : currentStep === 4 ? (
+          <Button onClick={() => router.push('/admin/clients')}>
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Done
+          </Button>
         ) : (
-          // TEMPLATE MODE NAVIGATION
-          currentStep === 4 ? (
-            <Button
-              onClick={generateLetters}
-              disabled={!canProceed() || generating}
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating ({generationProgress}%)
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Letters
-                </>
-              )}
-            </Button>
-          ) : currentStep === 5 ? (
-            <Button onClick={() => router.push('/admin/clients')}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Done
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setCurrentStep(prev => Math.min(maxSteps, prev + 1))}
-              disabled={!canProceed()}
-            >
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          )
+          <Button
+            onClick={() => setCurrentStep(prev => Math.min(maxSteps, prev + 1))}
+            disabled={!canProceed()}
+          >
+            Next
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
         )}
       </motion.div>
     </div>
