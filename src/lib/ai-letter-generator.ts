@@ -781,162 +781,238 @@ interface AnalyzeItemParams {
   dateOfLastActivity?: string | null;
   bureau?: string | null;
   riskSeverity?: string | null;
-  accountStatus?: string | null;
-  paymentStatus?: string | null;
+  // Metro 2 relevant fields from credit account
+  accountStatus?: string | null; // 'open' | 'closed' | 'collection' | 'charge_off' | 'paid'
+  accountType?: string | null; // 'credit_card' | 'auto_loan' | 'mortgage' | 'collection' | etc.
+  currentBalance?: number | null;
+  creditLimit?: number | null;
+  highCredit?: number | null;
+  pastDueAmount?: number | null;
+  paymentStatus?: string | null; // 'current' | '30_days_late' | '60_days_late' | etc.
+  dateOpened?: string | null;
+  remarks?: string | null;
 }
 
 /**
- * Analyze a negative item and auto-determine the best dispute strategy
+ * Analyze a negative item using Metro 2 compliance checklist
  * 
- * IMPORTANT: This function only cites violations/issues that can be PROVEN from the data.
- * It does NOT assume or fabricate violations based on item type.
+ * This function performs FACTUAL analysis based on the Metro 2 data categories:
+ * 1. Balance and amount checks - balance vs status consistency
+ * 2. Status and payment history consistency - status code vs payment pattern
+ * 3. Delinquency timing and obsolescence - DOFD accuracy, 7-year limits
+ * 4. Third-party collector issues - missing original creditor for debt buyers
+ * 5. Data completeness - required fields that are missing
  * 
- * The analysis focuses on:
- * 1. FCRA reporting limits (7-year, 10-year) - can be calculated from dates
- * 2. Actual missing data fields (if we can see the field is empty)
- * 3. Verification requests (always valid under FCRA 611)
- * 
- * It does NOT fabricate:
- * - "Missing original creditor" unless we know it's a third-party collector
- * - Specific Metro 2 field violations unless we have evidence
- * - Data inconsistencies unless we can actually see conflicting data
+ * IMPORTANT: Only flags issues that can be PROVEN from the actual data provided.
+ * Does NOT fabricate or assume violations.
  */
 export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1): ItemAnalysisResult {
   const reasonCodes: string[] = [];
   const metro2Violations: string[] = [];
   const fcraIssues: string[] = [];
   let methodology = 'factual';
-  let confidence = 0.5; // Start with baseline confidence - only increase with provable issues
+  let confidence = 0.5; // Baseline - increases with each provable issue found
   const notes: string[] = [];
 
   const itemType = item.itemType?.toLowerCase() || '';
+  const accountStatus = item.accountStatus?.toLowerCase() || '';
+  const paymentStatus = item.paymentStatus?.toLowerCase() || '';
   const now = new Date();
 
   // ============================================
-  // FACTUAL CHECKS - Only cite what we can PROVE
+  // METRO 2 ANALYSIS CHECKLIST - Evidence-Based
   // ============================================
 
-  // ---- FCRA 7-Year / 10-Year Limit Check (FACTUAL) ----
-  // This is a factual check we can calculate from dates
-  if (item.dateReported || item.dateOfLastActivity) {
-    const reportDate = new Date(item.dateReported || item.dateOfLastActivity || '');
-    const yearsSinceReport = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+  // ---- CHECK 1: Balance and Amount Consistency ----
+  // Look for: balance > 0 on paid/closed account, balance inconsistent with status
+  
+  const hasBalance = item.currentBalance !== null && item.currentBalance !== undefined && item.currentBalance > 0;
+  const amount = item.amount || item.currentBalance || 0;
+  
+  // Balance > $0 on account marked as paid or closed
+  if (hasBalance && (accountStatus === 'paid' || accountStatus === 'closed')) {
+    const balanceAmount = item.currentBalance! / 100; // Convert cents to dollars
+    metro2Violations.push(`Balance of $${balanceAmount.toFixed(2)} reported on account with status "${accountStatus}" - balance should be $0`);
+    reasonCodes.push('balance_discrepancy');
+    notes.push(`Account shows ${accountStatus} status but reports non-zero balance`);
+    confidence += 0.2;
+  }
+
+  // Past due amount on current account
+  if (item.pastDueAmount && item.pastDueAmount > 0 && paymentStatus === 'current') {
+    const pastDue = item.pastDueAmount / 100;
+    metro2Violations.push(`Past due amount of $${pastDue.toFixed(2)} reported while payment status shows "current"`);
+    reasonCodes.push('status_inconsistency');
+    notes.push('Past due amount conflicts with current payment status');
+    confidence += 0.15;
+  }
+
+  // ---- CHECK 2: Status and Payment History Consistency ----
+  // Look for: status code doesn't match payment pattern
+
+  // Charge-off status but payment status shows current
+  if ((itemType === 'charge_off' || accountStatus === 'charge_off') && paymentStatus === 'current') {
+    metro2Violations.push('Account status shows "charge-off" but payment status indicates "current" - these statuses are inconsistent');
+    reasonCodes.push('status_inconsistency');
+    notes.push('Charge-off status conflicts with current payment status');
+    confidence += 0.2;
+  }
+
+  // Collection status but account shows as open/current
+  if (itemType === 'collection' && accountStatus === 'open' && paymentStatus === 'current') {
+    metro2Violations.push('Item type is "collection" but account shows as open with current payment status - status codes are inconsistent');
+    reasonCodes.push('status_inconsistency');
+    notes.push('Collection item type conflicts with open/current account status');
+    confidence += 0.15;
+  }
+
+  // Late payment item type but payment status shows current (and no delinquency info)
+  if (itemType === 'late_payment' && paymentStatus === 'current' && !item.pastDueAmount) {
+    metro2Violations.push('Item flagged as "late payment" but payment status shows "current" with no past due amount');
+    reasonCodes.push('status_inconsistency');
+    notes.push('Late payment designation conflicts with current payment status');
+    confidence += 0.15;
+  }
+
+  // ---- CHECK 3: Delinquency Timing and Obsolescence ----
+  // Look for: FCRA time limits exceeded, potential re-aging
+  
+  const reportDate = item.dateReported ? new Date(item.dateReported) : null;
+  const lastActivityDate = item.dateOfLastActivity ? new Date(item.dateOfLastActivity) : null;
+  const openedDate = item.dateOpened ? new Date(item.dateOpened) : null;
+  const effectiveDate = lastActivityDate || reportDate;
+
+  if (effectiveDate) {
+    const yearsSinceActivity = (now.getTime() - effectiveDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
     
-    // Different limits for different item types
-    const isChapter7Bankruptcy = itemType === 'bankruptcy';
-    const reportingLimit = isChapter7Bankruptcy ? 10 : 7;
+    // FCRA 7-year limit for most negative items
+    const isBankruptcy = itemType === 'bankruptcy';
+    const reportingLimit = isBankruptcy ? 10 : 7;
     
-    if (yearsSinceReport >= reportingLimit) {
+    if (yearsSinceActivity >= reportingLimit) {
+      metro2Violations.push(`This ${itemType} has been reporting for ${Math.floor(yearsSinceActivity)} years - exceeds FCRA ${reportingLimit}-year limit (last activity: ${effectiveDate.toLocaleDateString()})`);
+      fcraIssues.push(`FCRA § 605(a): Negative information exceeds ${reportingLimit}-year reporting limit`);
       reasonCodes.push('obsolete');
-      fcraIssues.push(`FCRA § 605(a): This item has exceeded the ${reportingLimit}-year reporting limit and should be removed`);
-      notes.push(`Item is ${Math.floor(yearsSinceReport)} years old - past FCRA reporting limit`);
-      metro2Violations.push(`Item exceeds FCRA ${reportingLimit}-year reporting limit (reported ${reportDate.toLocaleDateString()})`);
-      confidence = 0.95; // High confidence - this is provable
-    } else if (yearsSinceReport >= (reportingLimit - 1)) {
-      notes.push(`Item is ${Math.floor(yearsSinceReport)} years old - approaching ${reportingLimit}-year limit`);
-      fcraIssues.push(`Item nearing FCRA expiration (${Math.ceil(reportingLimit - yearsSinceReport)} months remaining)`);
+      notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - past FCRA reporting limit`);
+      confidence = 0.95; // Very high confidence - this is a clear FCRA violation
+    } else if (yearsSinceActivity >= (reportingLimit - 1)) {
+      notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - approaching ${reportingLimit}-year limit`);
     }
-    
-    // For inquiries - 2 year limit
-    if (itemType === 'inquiry' && yearsSinceReport >= 2) {
+
+    // Inquiry 2-year limit
+    if (itemType === 'inquiry' && yearsSinceActivity >= 2) {
+      metro2Violations.push(`Hard inquiry from ${effectiveDate.toLocaleDateString()} exceeds 2-year reporting limit`);
+      fcraIssues.push('FCRA § 605(a)(3): Hard inquiries must be removed after 2 years');
       reasonCodes.push('obsolete');
-      fcraIssues.push('FCRA § 605(a)(3): Hard inquiry exceeds 2-year reporting limit');
-      metro2Violations.push(`Hard inquiry exceeds 2-year limit (reported ${reportDate.toLocaleDateString()})`);
       confidence = 0.9;
     }
   }
 
-  // ---- Third-Party Collection Agency Check (FACTUAL) ----
-  // Only flag "missing original creditor" for ACTUAL third-party collectors
-  // NOT for original creditors reporting their own accounts
+  // Potential re-aging check: if reported date is much newer than date opened for a derogatory account
+  if (openedDate && reportDate && (itemType === 'collection' || itemType === 'charge_off')) {
+    const yearsBetween = (reportDate.getTime() - openedDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    if (yearsBetween > 2) {
+      // Account reported much later than opened - could indicate re-aging or sold debt
+      notes.push(`Account opened ${openedDate.toLocaleDateString()} but reported ${reportDate.toLocaleDateString()} - ${Math.floor(yearsBetween)} year gap may require DOFD verification`);
+    }
+  }
+
+  // ---- CHECK 4: Third-Party Collection Agency ----
+  // Only flag missing original creditor for ACTUAL third-party collectors
+  
   const isThirdPartyCollector = itemType === 'collection' && isLikelyCollectionAgency(item.creditorName);
   
   if (isThirdPartyCollector && !item.originalCreditor) {
-    // This is a third-party collector without original creditor info - this IS a valid issue
-    metro2Violations.push('Third-party collection account is missing Original Creditor Name (Metro 2 Field 24)');
+    metro2Violations.push(`Third-party collection agency "${item.creditorName}" is not reporting Original Creditor Name (Metro 2 Field 24) - required for debt validation`);
+    fcraIssues.push('FCRA § 623(a)(2): Debt collectors must identify the original creditor upon request');
     reasonCodes.push('incomplete_data');
-    fcraIssues.push('FCRA § 623(a)(2): Debt collectors must identify the original creditor');
-    notes.push('Collection agency account missing original creditor information');
-    confidence += 0.15;
+    notes.push('Collection agency account missing required original creditor information');
+    confidence += 0.2;
   }
 
-  // ---- Methodology Selection Based on Item Type ----
-  // This is about strategy, not claiming violations
+  // ---- CHECK 5: Data Completeness ----
+  // Check for missing critical fields based on item type
+  
+  // Collection/charge-off without a balance amount
+  if ((itemType === 'collection' || itemType === 'charge_off') && !amount) {
+    notes.push('No balance amount reported for derogatory account - request verification of amount owed');
+  }
+
+  // ---- METHODOLOGY SELECTION ----
+  // Based on item type and round number
+  
   switch (itemType) {
     case 'collection':
       methodology = round === 1 ? 'debt_validation' : 'method_of_verification';
-      reasonCodes.push('verification_required');
-      notes.push('Collection account - verification of debt ownership and accuracy required');
+      if (!reasonCodes.includes('verification_required')) {
+        reasonCodes.push('verification_required');
+      }
+      if (notes.length === 0) {
+        notes.push('Collection account - requesting debt validation and verification of reporting accuracy');
+      }
       break;
 
     case 'charge_off':
       methodology = 'factual';
-      reasonCodes.push('verification_required');
-      notes.push('Charge-off account - verification of balance and status accuracy required');
+      if (!reasonCodes.includes('verification_required')) {
+        reasonCodes.push('verification_required');
+      }
+      if (notes.length === 0) {
+        notes.push('Charge-off account - requesting verification of balance, status, and DOFD accuracy');
+      }
       break;
 
     case 'late_payment':
       methodology = 'factual';
-      reasonCodes.push('verification_required');
-      notes.push('Late payment record - verification of payment history accuracy required');
-      break;
-
-    case 'repossession':
-      methodology = 'factual';
-      reasonCodes.push('verification_required');
-      notes.push('Repossession record - verification of dates and deficiency balance required');
-      break;
-
-    case 'foreclosure':
-      methodology = 'factual';
-      reasonCodes.push('verification_required');
-      notes.push('Foreclosure record - verification of dates and completion status required');
-      break;
-
-    case 'bankruptcy':
-      methodology = 'factual';
-      reasonCodes.push('verification_required');
-      notes.push('Bankruptcy record - verification of discharge status required');
-      break;
-
-    case 'judgment':
-    case 'tax_lien':
-      methodology = 'consumer_law';
-      reasonCodes.push('verification_required');
-      fcraIssues.push('FCRA § 611: Public records require verification procedures');
-      notes.push('Public record - strict verification procedures required');
+      if (!reasonCodes.includes('verification_required')) {
+        reasonCodes.push('verification_required');
+      }
+      if (notes.length === 0) {
+        notes.push('Late payment record - requesting verification of payment history accuracy');
+      }
       break;
 
     case 'inquiry':
       methodology = 'factual';
-      reasonCodes.push('verification_required');
       fcraIssues.push('FCRA § 604: Permissible purpose must be documented');
-      notes.push('Inquiry - permissible purpose documentation required');
+      reasonCodes.push('verification_required');
+      if (notes.length === 0) {
+        notes.push('Inquiry - requesting documentation of permissible purpose');
+      }
       break;
 
     default:
       methodology = 'factual';
-      reasonCodes.push('verification_required');
-      notes.push('Verification of account data accuracy required');
+      if (!reasonCodes.includes('verification_required')) {
+        reasonCodes.push('verification_required');
+      }
+      if (notes.length === 0) {
+        notes.push('Requesting verification of account data accuracy and completeness');
+      }
   }
 
-  // ---- Round-Based Escalation ----
+  // ---- ROUND-BASED ESCALATION ----
   if (round >= 2) {
     methodology = 'method_of_verification';
+    fcraIssues.push('FCRA § 611(a)(6)(B)(iii): Consumer entitled to description of method of verification');
     notes.push(`Round ${round}: Requesting method of verification from prior investigation`);
-    fcraIssues.push('FCRA § 611(a)(6)(B)(iii): Consumer entitled to method of verification');
   }
 
   if (round >= 3) {
     methodology = 'consumer_law';
-    notes.push('Round 3+: Prior investigations may constitute inadequate reinvestigation');
-    fcraIssues.push('Potential willful non-compliance under 15 U.S.C. § 1681n');
+    fcraIssues.push('15 U.S.C. § 1681n: Potential willful non-compliance if adequate investigation not conducted');
+    notes.push('Round 3+: Prior investigations may have been inadequate');
     confidence += 0.1;
   }
 
-  // ---- Ensure verification request is always included ----
-  if (!reasonCodes.includes('verification_required')) {
-    reasonCodes.push('verification_required');
+  // ---- SUMMARY ----
+  // If we found specific issues, confidence should be higher
+  // If only generic verification request, confidence is lower
+  
+  const hasSpecificIssues = metro2Violations.length > 0;
+  if (!hasSpecificIssues && confidence < 0.6) {
+    // No specific issues found - this is just a verification request
+    notes.unshift('No specific data inconsistencies identified - requesting general verification');
   }
 
   // Deduplicate
