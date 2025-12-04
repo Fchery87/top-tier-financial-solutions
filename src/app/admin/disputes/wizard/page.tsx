@@ -75,21 +75,35 @@ interface Methodology {
   successIndicators: string[];
 }
 
-// Pre-built dispute instructions (like Credit Repair Cloud)
+// Pre-built dispute instructions - PRIORITIZE METRO 2 COMPLIANCE-BASED FACTUAL DISPUTES
+// IMPORTANT: Do NOT default to ownership denial claims (not_mine, identity_theft) 
+// unless client specifically confirms those facts
 const PRESET_DISPUTE_INSTRUCTIONS = [
-  { code: 'not_mine', label: 'Not My Account', description: 'This account does not belong to me. I have never opened or authorized this account.' },
-  { code: 'never_late', label: 'Never Late', description: 'I have never been late on this account. The payment history is inaccurate.' },
-  { code: 'wrong_balance', label: 'Incorrect Balance', description: 'The balance reported is incorrect and does not reflect the actual amount.' },
-  { code: 'paid_in_full', label: 'Paid in Full', description: 'This account has been paid in full but is still showing a balance or negative status.' },
-  { code: 'wrong_status', label: 'Wrong Account Status', description: 'The account status being reported is inaccurate.' },
-  { code: 'wrong_dates', label: 'Incorrect Dates', description: 'The dates associated with this account are being reported incorrectly.' },
-  { code: 'duplicate', label: 'Duplicate Account', description: 'This account appears multiple times on my credit report.' },
-  { code: 'obsolete', label: 'Obsolete Information', description: 'This information is obsolete and has exceeded the legal reporting period.' },
-  { code: 'identity_theft', label: 'Identity Theft', description: 'This account was opened fraudulently as a result of identity theft.' },
-  { code: 'settled', label: 'Account Settled', description: 'This account was settled but is not being reported correctly.' },
-  { code: 'included_bankruptcy', label: 'Included in Bankruptcy', description: 'This account was included in bankruptcy and should reflect discharged status.' },
-  { code: 'unauthorized_inquiry', label: 'Unauthorized Inquiry', description: 'This inquiry was made without my authorization or permissible purpose.' },
-  { code: 'custom', label: 'Custom Instruction', description: 'Enter your own dispute instruction' },
+  // === RECOMMENDED: METRO 2 COMPLIANCE-BASED FACTUAL DISPUTES ===
+  { code: 'verification_required', label: '✓ Request Verification (Recommended)', description: 'I am requesting documented verification of this account data under FCRA Section 611. The furnisher must provide proof that this information is complete and accurate per Metro 2 standards.', category: 'factual' },
+  { code: 'metro2_violation', label: '✓ Metro 2 Compliance Violation', description: 'This account contains Metro 2 format compliance violations and does not meet the maximum possible accuracy standard required under FCRA Section 607(b).', category: 'factual' },
+  { code: 'inaccurate_reporting', label: '✓ Inaccurate Information', description: 'The information being reported contains inaccuracies. I am disputing the accuracy of this data under FCRA Section 623 and demanding a reasonable investigation.', category: 'factual' },
+  { code: 'incomplete_data', label: '✓ Incomplete Data Fields', description: 'This account is being reported with incomplete information, missing required Metro 2 data fields necessary for accurate credit reporting.', category: 'factual' },
+  { code: 'missing_dofd', label: '✓ Missing Date of First Delinquency', description: 'This derogatory account lacks the required Date of First Delinquency (DOFD) field, which is mandatory under FCRA Section 605 for calculating the 7-year reporting period.', category: 'factual' },
+  { code: 'status_inconsistency', label: '✓ Status Code Inconsistency', description: 'The Account Status Code is inconsistent with the Payment Rating and payment history pattern. This internal data inconsistency violates Metro 2 format requirements.', category: 'factual' },
+  
+  // === SITUATIONAL: Use when specific conditions apply ===
+  { code: 'wrong_balance', label: 'Incorrect Balance', description: 'The balance reported is incorrect and does not reflect the actual amount owed.', category: 'situational' },
+  { code: 'paid_in_full', label: 'Paid in Full', description: 'This account has been paid in full but is still showing a balance or negative status.', category: 'situational' },
+  { code: 'wrong_status', label: 'Wrong Account Status', description: 'The account status being reported is inaccurate and requires verification.', category: 'situational' },
+  { code: 'wrong_dates', label: 'Incorrect Dates', description: 'The dates associated with this account are being reported incorrectly.', category: 'situational' },
+  { code: 'duplicate', label: 'Duplicate Account', description: 'This account appears multiple times on my credit report.', category: 'situational' },
+  { code: 'obsolete', label: 'Obsolete Information (7+ Years)', description: 'This information is obsolete and has exceeded the FCRA 7-year reporting period.', category: 'situational' },
+  { code: 'settled', label: 'Account Settled', description: 'This account was settled but is not being reported correctly.', category: 'situational' },
+  { code: 'included_bankruptcy', label: 'Included in Bankruptcy', description: 'This account was included in bankruptcy and should reflect discharged status.', category: 'situational' },
+  { code: 'unauthorized_inquiry', label: 'Unauthorized Inquiry', description: 'This inquiry lacks documented permissible purpose under FCRA Section 604.', category: 'situational' },
+  
+  // === CAUTION: Only use when client specifically confirms these facts ===
+  { code: 'not_mine', label: '⚠️ Not My Account (CLIENT MUST CONFIRM)', description: 'This account does not belong to me. I have never opened or authorized this account. WARNING: Only use if client confirms this is true.', category: 'ownership_claim' },
+  { code: 'never_late', label: '⚠️ Never Late (CLIENT MUST CONFIRM)', description: 'I have never been late on this account. WARNING: Only use if client confirms all payments were on time.', category: 'ownership_claim' },
+  { code: 'identity_theft', label: '⚠️ Identity Theft (REQUIRES DOCUMENTATION)', description: 'This account was opened fraudulently as a result of identity theft. WARNING: Should have police report or FTC Identity Theft Report.', category: 'ownership_claim' },
+  
+  { code: 'custom', label: 'Custom Instruction', description: 'Enter your own dispute instruction', category: 'custom' },
 ];
 
 // Both modes now use 4 steps (Template mode no longer has separate Reason Codes step)
