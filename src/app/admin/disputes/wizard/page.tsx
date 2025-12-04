@@ -280,8 +280,9 @@ export default function DisputeWizardPage() {
   };
 
   // Analyze items with AI (auto-determine dispute strategy)
-  const analyzeItemsWithAI = async () => {
-    if (selectedItems.length === 0) return;
+  // Returns the analysis data directly to avoid React state timing issues
+  const analyzeItemsWithAI = async (): Promise<{ analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null> => {
+    if (selectedItems.length === 0) return null;
     
     setAnalyzingItems(true);
     try {
@@ -296,16 +297,25 @@ export default function DisputeWizardPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setAiAnalysisResults(data.analyses || []);
-        setAiAnalysisSummary(data.summary || null);
+        const analyses = data.analyses || [];
+        const summary = data.summary || null;
+        
+        // Update state for UI display
+        setAiAnalysisResults(analyses);
+        setAiAnalysisSummary(summary);
         
         // Auto-select the recommended methodology
-        if (data.summary?.recommendedMethodology) {
-          setSelectedMethodology(data.summary.recommendedMethodology);
+        if (summary?.recommendedMethodology) {
+          setSelectedMethodology(summary.recommendedMethodology);
         }
+        
+        // Return the data directly to avoid state timing issues
+        return { analyses, summary };
       }
+      return null;
     } catch (error) {
       console.error('Error analyzing items:', error);
+      return null;
     } finally {
       setAnalyzingItems(false);
     }
@@ -358,14 +368,19 @@ export default function DisputeWizardPage() {
   }, [selectedClient]);
 
   // Generate letters
-  const generateLetters = async () => {
+  // Accepts optional analysis data to avoid React state timing issues
+  const generateLetters = async (analysisData?: { analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null) => {
     if (!selectedClient || selectedItems.length === 0) {
       return;
     }
 
+    // Use passed analysis data or fall back to state (for non-AI mode or re-generation)
+    const effectiveAnalyses = analysisData?.analyses || aiAnalysisResults;
+    const effectiveSummary = analysisData?.summary || aiAnalysisSummary;
+
     // For AI mode, we use AI analysis; for template mode, we use per-item instructions
     const reasonCodesToUse = generationMethod === 'ai' 
-      ? (aiAnalysisSummary?.allReasonCodes || ['not_mine', 'wrong_status'])
+      ? (effectiveSummary?.allReasonCodes || ['verification_required', 'inaccurate_reporting'])
       : []; // Template mode now uses per-item instructions
 
     setGenerating(true);
@@ -374,7 +389,7 @@ export default function DisputeWizardPage() {
     
     // Use AI-determined methodology or user-selected
     const methodologyToUse = generationMethod === 'ai' 
-      ? (aiAnalysisSummary?.recommendedMethodology || selectedMethodology)
+      ? (effectiveSummary?.recommendedMethodology || selectedMethodology)
       : selectedMethodology;
 
     const bureausToUse = targetRecipient === 'bureau' ? selectedBureaus : ['direct'];
@@ -413,8 +428,8 @@ export default function DisputeWizardPage() {
               methodology: methodologyToUse,
               // Include per-item instructions for template mode
               perItemInstructions: generationMethod === 'template' ? perItemInstructions : undefined,
-              // Include AI analysis data for enhanced letters
-              metro2Violations: generationMethod === 'ai' ? aiAnalysisSummary?.allMetro2Violations : undefined
+              // Include AI analysis data for enhanced letters - use effectiveSummary to avoid state timing issues
+              metro2Violations: generationMethod === 'ai' ? effectiveSummary?.allMetro2Violations : undefined
             }),
           });
 
@@ -469,9 +484,9 @@ export default function DisputeWizardPage() {
                 methodology: methodologyToUse,
                 // Include per-item instruction for template mode
                 disputeInstruction: itemInstruction,
-                // Include AI analysis data for this specific item
+                // Include AI analysis data for this specific item - use effectiveAnalyses to avoid state timing issues
                 metro2Violations: generationMethod === 'ai' 
-                  ? aiAnalysisResults.find(a => a.itemId === itemId)?.metro2Violations 
+                  ? effectiveAnalyses.find(a => a.itemId === itemId)?.metro2Violations 
                   : undefined
               }),
             });
@@ -1489,11 +1504,13 @@ export default function DisputeWizardPage() {
         {currentStep === 3 ? (
           <Button
             onClick={async () => {
+              let analysisData = null;
               if (generationMethod === 'ai') {
-                // AI mode: First analyze items with AI, then generate letters
-                await analyzeItemsWithAI();
+                // AI mode: First analyze items with AI, then pass the data directly to generateLetters
+                // This avoids React state timing issues where state updates haven't applied yet
+                analysisData = await analyzeItemsWithAI();
               }
-              await generateLetters();
+              await generateLetters(analysisData);
             }}
             disabled={!canProceed() || generating || analyzingItems}
           >

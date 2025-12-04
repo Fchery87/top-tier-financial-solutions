@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
         reasonCodes: reasonCodes,
         customReason: customReason,
         methodology: methodology, // NEW: Pass methodology
+        metro2Violations: metro2Violations, // Pass Metro 2 violations to combined letters
       });
 
       return NextResponse.json({

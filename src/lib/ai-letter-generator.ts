@@ -99,6 +99,16 @@ function formatItemType(type: string): string {
   return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+function buildMetro2ViolationsSection(violations?: string[]): string {
+  if (!violations || violations.length === 0) return '';
+  const uniqueViolations = [...new Set(violations.filter(Boolean))];
+  if (uniqueViolations.length === 0) return '';
+  return [
+    'Metro 2 violations identified:',
+    ...uniqueViolations.map(v => `- ${v}`),
+  ].join('\n');
+}
+
 function getReasonDescriptions(reasonCodes: string[]): string {
   return reasonCodes
     .map(code => REASON_CODE_DESCRIPTIONS[code] || code)
@@ -189,6 +199,8 @@ WHAT THIS LETTER MUST DO:
 - Bureau: {bureau}
 - Dispute Basis: {reason_description}
 {custom_reason}
+- Metro 2 Findings:
+{metro2_violations}
 
 5. REQUIRED STRUCTURE:
 - Current date and recipient address
@@ -225,6 +237,7 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
 
     const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
     const reasonDescription = getReasonDescriptions(params.reasonCodes);
+    const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
     
     const prompt = AI_PROMPT_TEMPLATE
       .replace('{compliance_context}', complianceContext)
@@ -237,7 +250,8 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
       .replace('{amount}', params.itemData.amount ? formatCurrency(params.itemData.amount) : 'Not Specified')
       .replace('{bureau}', params.itemData.bureau.toUpperCase())
       .replace('{reason_description}', reasonDescription)
-      .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '');
+      .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
+      .replace('{metro2_violations}', metro2Section || 'No specific Metro 2 violations provided; verify all Metro 2 fields for accuracy.');
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -298,6 +312,7 @@ function buildMethodologyPrompt(
 ): string {
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const legalCitations = buildLegalCitationsString(params.methodology || 'factual');
+  const metro2ViolationsSection = buildMetro2ViolationsSection(params.metro2Violations);
   
   // Get round-specific variation if available
   let roundContext = '';
@@ -320,18 +335,9 @@ ${params.itemData.originalCreditor ? `Original Creditor: ${params.itemData.origi
 ${params.itemData.accountNumber ? `Account Number: ****${params.itemData.accountNumber.slice(-4)}` : ''}
 Item Type: ${formatItemType(params.itemData.itemType)}
 ${params.itemData.amount ? `Amount: ${formatCurrency(params.itemData.amount)}` : ''}
-${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
+  ${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
 Bureau: ${params.itemData.bureau.toUpperCase()}
 `.trim();
-
-  // Build Metro 2 violations section if applicable
-  let metro2ViolationsSection = '';
-  if (params.metro2Violations && params.metro2Violations.length > 0) {
-    metro2ViolationsSection = `
-## METRO 2 VIOLATIONS IDENTIFIED
-${params.metro2Violations.join('\n')}
-`;
-  }
 
   // Build prior dispute section for method of verification
   let priorDisputeSection = '';
@@ -348,6 +354,33 @@ ${params.metro2Violations.join('\n')}
     ? `${params.clientData.address}\n${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}`
     : 'Address on file';
 
+  const templateIncludesViolationSlot = promptConfig.prompt_template.includes('{metro2_violations}') 
+    || promptConfig.prompt_template.includes('{violation_descriptions}');
+
+  let promptTemplate = promptConfig.prompt_template
+    .replace('{legal_citations}', legalCitations)
+    .replace('{target_recipient}', params.targetRecipient.toUpperCase())
+    .replace('{bureau}', params.itemData.bureau.toUpperCase())
+    .replace('{bureau_or_creditor}', params.targetRecipient === 'bureau' ? params.itemData.bureau : params.itemData.creditorName)
+    .replace('{round}', params.round.toString())
+    .replace('{client_name}', params.clientData.name)
+    .replace('{client_address}', clientAddress)
+    .replace('{client_state}', params.clientData.state || 'State')
+    .replace('{account_details}', accountDetails)
+    .replace('{reason_descriptions}', reasonDescription)
+    .replace('{reason_description}', reasonDescription)
+    .replace('{violation_descriptions}', metro2ViolationsSection || 'See reason codes above')
+    .replace('{metro2_violations}', metro2ViolationsSection || 'See reason codes above')
+    .replace('{custom_reason}', params.customReason ? `Additional Context: ${params.customReason}` : '')
+    .replace('{prior_dispute_details}', priorDisputeSection)
+    .replace('{prior_dispute_date}', params.priorDisputeDate || 'Previous dispute')
+    .replace('{prior_result}', params.priorDisputeResult || 'Verified');
+
+  // If the template doesn't surface Metro 2 violations, append them so they appear in the final letter
+  if (metro2ViolationsSection && !templateIncludesViolationSlot) {
+    promptTemplate += `\n\n${metro2ViolationsSection}`;
+  }
+
   // Combine system context with prompt template
   const fullPrompt = `
 ${promptConfig.system_context}
@@ -361,25 +394,7 @@ Include: ${promptConfig.writing_guidelines.include.join(', ')}
 ${roundContext ? `## ROUND-SPECIFIC INSTRUCTIONS\n${roundContext}\n` : ''}
 ${targetContext ? `## TARGET-SPECIFIC APPROACH\n${targetContext}\n` : ''}
 
-${promptConfig.prompt_template
-  .replace('{legal_citations}', legalCitations)
-  .replace('{target_recipient}', params.targetRecipient.toUpperCase())
-  .replace('{bureau}', params.itemData.bureau.toUpperCase())
-  .replace('{bureau_or_creditor}', params.targetRecipient === 'bureau' ? params.itemData.bureau : params.itemData.creditorName)
-  .replace('{round}', params.round.toString())
-  .replace('{client_name}', params.clientData.name)
-  .replace('{client_address}', clientAddress)
-  .replace('{client_state}', params.clientData.state || 'State')
-  .replace('{account_details}', accountDetails)
-  .replace('{reason_descriptions}', reasonDescription)
-  .replace('{reason_description}', reasonDescription)
-  .replace('{violation_descriptions}', metro2ViolationsSection || 'See reason codes above')
-  .replace('{metro2_violations}', metro2ViolationsSection)
-  .replace('{custom_reason}', params.customReason ? `Additional Context: ${params.customReason}` : '')
-  .replace('{prior_dispute_details}', priorDisputeSection)
-  .replace('{prior_dispute_date}', params.priorDisputeDate || 'Previous dispute')
-  .replace('{prior_result}', params.priorDisputeResult || 'Verified')
-}
+${promptTemplate}
 
 ${bureauConfig ? `
 ## BUREAU-SPECIFIC REQUIREMENTS FOR ${bureauConfig.name.toUpperCase()}
@@ -418,6 +433,7 @@ function generateFallbackLetter(params: GenerateLetterParams): string {
   const currentDate = formatDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
+  const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
   
   let recipientAddress = '';
   if (params.targetRecipient === 'bureau') {
@@ -451,6 +467,8 @@ REASON FOR DISPUTE:
 ${reasonDescription}
 
 ${params.customReason ? `Additional Information: ${params.customReason}` : ''}
+
+${metro2Section ? `${metro2Section}\n` : ''}
 
 LEGAL BASIS FOR DELETION:
 ${complianceContext}
@@ -519,7 +537,8 @@ interface GenerateMultiItemLetterParams {
   bureau: string;
   reasonCodes: string[];
   customReason?: string;
-  methodology?: string; // NEW: Methodology selection
+  methodology?: string; // Methodology selection
+  metro2Violations?: string[]; // Specific Metro 2 field violations to cite in letter
 }
 
 const MULTI_ITEM_AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter for MULTIPLE accounts based on METRO 2 COMPLIANCE and FCRA VERIFICATION requirements.
@@ -569,6 +588,9 @@ WHAT THIS LETTER MUST DO:
 5. ACCOUNTS REQUIRING VERIFICATION:
 {items_list}
 
+Metro 2 violations from analysis (cite these explicitly in the letter):
+{metro2_violations}
+
 For EACH account listed above, the dispute basis is:
 - Requesting documented verification that data is accurate and complete
 - Challenging Metro 2 format compliance for this tradeline
@@ -604,6 +626,7 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
 
     const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
     const reasonDescription = getReasonDescriptions(params.reasonCodes);
+    const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
     
     // Build items list for the prompt
     const itemsList = params.items.map((item, index) => `
@@ -623,6 +646,7 @@ ${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDa
       .replace('{bureau}', params.bureau.toUpperCase())
       .replace('{item_count}', params.items.length.toString())
       .replace('{reason_description}', reasonDescription)
+      .replace('{metro2_violations}', metro2Section || 'No specific Metro 2 violations provided; verify all Metro 2 fields for each item.')
       .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
       .replace('{items_list}', itemsList);
 
@@ -660,6 +684,7 @@ function generateMultiItemFallbackLetter(params: GenerateMultiItemLetterParams):
   const currentDate = formatDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
+  const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
   
   let recipientAddress = '';
   if (params.targetRecipient === 'bureau') {
@@ -699,6 +724,8 @@ REASON FOR DISPUTE (APPLIES TO ALL ACCOUNTS):
 ${reasonDescription}
 
 ${params.customReason ? `Additional Information: ${params.customReason}` : ''}
+
+${metro2Section ? `${metro2Section}\n` : ''}
 
 LEGAL BASIS FOR DELETION:
 ${complianceContext}
