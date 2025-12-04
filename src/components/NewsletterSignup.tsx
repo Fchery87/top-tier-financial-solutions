@@ -71,7 +71,7 @@ export function NewsletterSignup({
             <span className="text-sm">Thank you for subscribing!</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-3" suppressHydrationWarning>
             <Input
               type="email"
               placeholder="Enter your email"
@@ -114,7 +114,7 @@ export function NewsletterSignup({
             <span>Thank you for subscribing!</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex gap-2">
+          <form onSubmit={handleSubmit} className="flex gap-2" suppressHydrationWarning>
             <Input
               type="email"
               placeholder="Enter your email"
@@ -160,7 +160,7 @@ export function NewsletterSignup({
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     type="text"
