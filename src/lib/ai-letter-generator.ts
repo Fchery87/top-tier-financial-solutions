@@ -144,24 +144,39 @@ statutory damages of $100-$1,000 per violation, plus punitive damages under 15 U
   return context;
 }
 
-const AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter. Your task is to generate a unique, professional dispute letter that:
+const AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter based on METRO 2 COMPLIANCE and FCRA VERIFICATION requirements.
+
+CRITICAL COMPLIANCE RULES - YOU MUST FOLLOW THESE:
+===============================================
+1. NEVER claim "this account does not belong to me" or "I never opened this account" - this is FRAUDULENT if untrue
+2. NEVER claim the consumer "never authorized" or "never used" the account unless explicitly stated in the reason
+3. NEVER claim identity theft or fraud unless the reason explicitly mentions identity theft
+4. Focus ONLY on: verification requirements, data accuracy, Metro 2 compliance violations
+5. The dispute is about DATA ACCURACY and VERIFICATION, not account ownership
+
+WHAT THIS LETTER MUST DO:
+========================
+- Request VERIFICATION of the account data under FCRA Section 611
+- Challenge the ACCURACY and COMPLETENESS of reported information
+- Cite Metro 2 format compliance requirements
+- Demand documented proof that information meets "maximum possible accuracy" standard
+- Request deletion of UNVERIFIED information (not "fraudulent" information)
 
 1. WRITING STYLE:
 - Write at a 12th grade reading level
-- Use natural, human language that doesn't appear AI-generated
-- Vary sentence structure and vocabulary
-- Sound professional but assertive, like a knowledgeable consumer
-- Avoid repetitive phrases or robotic language
+- Professional and assertive, like a knowledgeable consumer exercising legal rights
+- Avoid AI-generated patterns and repetitive phrases
+- Sound like a consumer demanding their legal rights to accurate credit reporting
 
-2. LEGAL FRAMEWORK - Include these compliance standards:
+2. LEGAL FRAMEWORK:
 {compliance_context}
 
-3. KEY REQUIREMENTS:
-- DEMAND FULL DELETION of the disputed account(s), NOT just correction
-- Assert consumer rights under FCRA, CRSA, and Metro 2 standards
-- Highlight specific violations of reporting standards
-- Be firm but professional in tone
-- Include specific account details provided
+3. KEY DISPUTE APPROACH (Metro 2 Compliance Based):
+- The consumer is DISPUTING THE ACCURACY of the reported information
+- The consumer is REQUESTING VERIFICATION with documented proof
+- The consumer is challenging whether data meets FCRA Section 607(b) "maximum possible accuracy"
+- The consumer demands deletion if information CANNOT BE VERIFIED with documentation
+- DO NOT claim the accounts are fraudulent or don't belong to the consumer
 
 4. LETTER DETAILS:
 - Target Recipient: {target_recipient}
@@ -172,19 +187,24 @@ const AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal 
 - Item Type: {item_type}
 - Amount: {amount}
 - Bureau: {bureau}
-- Reason for Dispute: {reason_description}
+- Dispute Basis: {reason_description}
 {custom_reason}
 
-5. STRUCTURE:
+5. REQUIRED STRUCTURE:
 - Current date and recipient address
-- Clear subject line with account reference
-- Opening paragraph stating the dispute
-- Middle paragraphs with specific violations and legal citations
-- Demand for deletion (not correction)
-- Deadline for response (30 days per FCRA)
-- Closing with signature block
+- Subject: "FCRA Section 611 Dispute - Request for Verification and Deletion"
+- Opening: State this is a formal dispute requesting verification under FCRA
+- Account Details: List the account(s) being disputed
+- Dispute Basis: Explain you are challenging accuracy/completeness, requesting verification
+- Metro 2 Requirements: Reference that furnishers must report in Metro 2 format with complete data
+- Legal Demands: Request verification, documentation of investigation method, deletion if unverified
+- 30-day deadline per FCRA Section 611(a)(1)
+- Warning about statutory damages for willful non-compliance
+- Signature block
 
-Generate a unique dispute letter now. Do not include any markdown formatting or code blocks - output only the plain text letter.`;
+REMEMBER: This is a VERIFICATION dispute, NOT a fraud/identity theft dispute. The consumer is exercising their FCRA right to demand proof that reported information is accurate and complete.
+
+Generate the dispute letter now. Output plain text only - no markdown.`;
 
 export async function generateUniqueDisputeLetter(params: GenerateLetterParams): Promise<string> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -502,25 +522,40 @@ interface GenerateMultiItemLetterParams {
   methodology?: string; // NEW: Methodology selection
 }
 
-const MULTI_ITEM_AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter. Your task is to generate a unique, professional dispute letter that disputes MULTIPLE accounts in a single letter to one bureau.
+const MULTI_ITEM_AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter for MULTIPLE accounts based on METRO 2 COMPLIANCE and FCRA VERIFICATION requirements.
+
+CRITICAL COMPLIANCE RULES - YOU MUST FOLLOW THESE:
+===============================================
+1. NEVER claim "this account does not belong to me" or "I never opened this account" - this is FRAUDULENT if untrue
+2. NEVER claim the consumer "never authorized" or "never used" any account unless explicitly stated in the reason
+3. NEVER claim identity theft or fraud unless the reason explicitly mentions identity theft
+4. Focus ONLY on: verification requirements, data accuracy, Metro 2 compliance violations
+5. The dispute is about DATA ACCURACY and VERIFICATION, not account ownership
+6. Each account's dispute reason should focus on VERIFICATION, not ownership denial
+
+WHAT THIS LETTER MUST DO:
+========================
+- Request VERIFICATION of ALL account data under FCRA Section 611
+- Challenge the ACCURACY and COMPLETENESS of reported information for each account
+- Cite Metro 2 format compliance requirements
+- Demand documented proof that ALL information meets "maximum possible accuracy" standard
+- Request deletion of ANY information that CANNOT BE VERIFIED with documentation
 
 1. WRITING STYLE:
 - Write at a 12th grade reading level
-- Use natural, human language that doesn't appear AI-generated
-- Vary sentence structure and vocabulary
-- Sound professional but assertive, like a knowledgeable consumer
-- Avoid repetitive phrases or robotic language
+- Professional and assertive, like a knowledgeable consumer exercising legal rights
+- Avoid AI-generated patterns and repetitive phrases
+- Sound like a consumer demanding their legal rights to accurate credit reporting
 
-2. LEGAL FRAMEWORK - Include these compliance standards:
+2. LEGAL FRAMEWORK:
 {compliance_context}
 
-3. KEY REQUIREMENTS:
-- DISPUTE ALL LISTED ACCOUNTS IN ONE LETTER
-- DEMAND FULL DELETION of ALL disputed accounts, NOT just correction
-- Assert consumer rights under FCRA, CRSA, and Metro 2 standards
-- Highlight specific violations of reporting standards for each account
-- Be firm but professional in tone
-- List each account with specific details in a clear format
+3. KEY DISPUTE APPROACH (Metro 2 Compliance Based):
+- The consumer is DISPUTING THE ACCURACY of the reported information
+- The consumer is REQUESTING VERIFICATION with documented proof for ALL accounts
+- The consumer is challenging whether data meets FCRA Section 607(b) "maximum possible accuracy"
+- The consumer demands deletion of ANY account that CANNOT BE VERIFIED with documentation
+- DO NOT claim any accounts are fraudulent or don't belong to the consumer
 
 4. LETTER DETAILS:
 - Target Recipient: {target_recipient}
@@ -528,23 +563,32 @@ const MULTI_ITEM_AI_PROMPT_TEMPLATE = `You are a credit repair specialist writin
 - Client Name: {client_name}
 - Bureau: {bureau}
 - Number of Accounts to Dispute: {item_count}
-- Reason for Dispute: {reason_description}
+- Dispute Basis: {reason_description}
 {custom_reason}
 
-5. ACCOUNTS TO DISPUTE:
+5. ACCOUNTS REQUIRING VERIFICATION:
 {items_list}
 
-6. STRUCTURE:
-- Current date and recipient address
-- Clear subject line mentioning "Multiple Accounts Dispute"
-- Opening paragraph stating the dispute covers multiple accounts
-- Section listing ALL disputed accounts with their details
-- Middle paragraphs with specific violations and legal citations applicable to all accounts
-- Demand for deletion of ALL listed accounts (not correction)
-- Deadline for response (30 days per FCRA)
-- Closing with signature block
+For EACH account listed above, the dispute basis is:
+- Requesting documented verification that data is accurate and complete
+- Challenging Metro 2 format compliance for this tradeline
+- Demanding proof that information meets FCRA "maximum possible accuracy" standard
 
-Generate a unique dispute letter now. Do not include any markdown formatting or code blocks - output only the plain text letter.`;
+6. REQUIRED STRUCTURE:
+- Current date and recipient address
+- Subject: "FCRA Section 611 Dispute - Request for Verification of Multiple Accounts"
+- Opening: State this is a formal dispute requesting verification of {item_count} accounts under FCRA
+- Account List: List ALL accounts being disputed with their details
+- Dispute Basis: For EACH account, state you are challenging accuracy/completeness and requesting verification
+- Metro 2 Requirements: Reference that furnishers must report in Metro 2 format with complete, verified data
+- Legal Demands: Request verification, documentation of investigation method, deletion of ANY unverified accounts
+- 30-day deadline per FCRA Section 611(a)(1)
+- Warning about statutory damages for willful non-compliance
+- Signature block
+
+CRITICAL REMINDER: This is a VERIFICATION dispute, NOT a fraud/identity theft dispute. For EACH account, the consumer is demanding proof that the reported information is accurate and verifiable. DO NOT claim any account "does not belong" to the consumer.
+
+Generate the dispute letter now. Output plain text only - no markdown.`;
 
 export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLetterParams): Promise<string> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -952,3 +996,397 @@ export function consolidateReasonCodes(analyses: ItemAnalysisResult[]): string[]
 }
 
 export type { ClientInfo, NegativeItemInfo, GenerateLetterParams, GenerateMultiItemLetterParams };
+
+// ============================================
+// METRO 2 STRUCTURED ANALYSIS SYSTEM
+// Factual, evidence-based dispute generation
+// ============================================
+
+/**
+ * Structured negative item data for Metro 2 analysis
+ */
+export interface Metro2NegativeItem {
+  itemId: string;
+  bureauName: string;
+  furnisherName: string;
+  accountNumberMasked: string;
+  accountType: string; // revolving, installment, mortgage, collection
+  ownershipType?: string; // individual, joint, authorized_user
+  openDate?: string;
+  closeDate?: string;
+  originalAmount?: number;
+  creditLimit?: number;
+  currentBalance?: number;
+  monthlyPayment?: number;
+  accountStatusCode: string; // current, 30, 60, 90, charge_off, collection
+  pastDueAmount?: number;
+  chargeOffAmount?: number;
+  dateOfFirstDelinquency?: string;
+  paymentHistory?: Record<string, string>; // { "2024-01": "OK", "2024-02": "30" }
+  specialComments?: string[];
+  consumerInformationIndicator?: string;
+  complianceConditionCode?: string;
+}
+
+/**
+ * Issue found during Metro 2 analysis
+ */
+export interface Metro2Issue {
+  issueType: string;
+  description: string;
+  affectedFields: string[];
+  severity: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Result of analyzing a single item
+ */
+export interface Metro2AnalysisResult {
+  itemId: string;
+  issueFound: boolean;
+  issueTypes: string[];
+  issues: Metro2Issue[];
+  explanation: string;
+}
+
+/**
+ * Full analysis output with letter
+ */
+export interface Metro2DisputeOutput {
+  analysisSummary: Metro2AnalysisResult[];
+  disputeLetter: string | null;
+  itemsWithIssues: number;
+  totalItems: number;
+}
+
+// Metro 2 Structured Analysis System Prompt
+const METRO2_ANALYSIS_SYSTEM_PROMPT = `You are an AI assistant that helps consumers dispute specific, factual
+inaccuracies in their personal credit reports. Your job is to:
+(1) analyze each negative item for accuracy and Metro 2®-style reporting issues,
+and (2) draft clear, professional dispute letters that point out only
+well-supported errors or inconsistencies.
+
+IMPORTANT LEGAL & ETHICAL RULES
+--------------------------------
+- You are NOT a lawyer. Do NOT give legal advice, do NOT tell the consumer
+  what legal actions to take, and do NOT guarantee any outcome.
+- Do NOT fabricate, exaggerate, or assume violations. Only state issues you
+  can derive directly from:
+    • the structured credit report data provided
+    • any supporting facts explicitly given by the user.
+- If the data does not clearly support a specific inaccuracy or violation,
+  you must:
+    • either state that no clear inaccuracy can be identified, OR
+    • frame the issue as a request for verification rather than an accusation.
+- NEVER claim an account "does not belong to me" or "I never opened this account"
+  unless the consumer has explicitly confirmed this with documentation.
+- Never instruct the furnisher or bureau to take actions beyond what the law
+  generally allows (no threats, no demands for compensation).
+
+CRITICAL COMPLIANCE RULES
+--------------------------
+1. NEVER fabricate ownership denial claims ("not my account", "never authorized")
+2. NEVER claim identity theft unless explicitly documented by consumer
+3. NEVER assume violations - only cite what you can SEE in the data
+4. ALWAYS frame disputes around DATA ACCURACY and VERIFICATION
+5. If no clear issue exists, state that and do NOT generate dispute language for that item
+
+ANALYSIS CHECKLIST
+-------------------
+For EACH negative item, check:
+
+1) Balance and amount checks:
+   - Does current_balance make sense with reported status?
+   - Is balance > 0 on a paid or closed account?
+   - Does past_due_amount conflict with status or history?
+
+2) Status and payment history consistency:
+   - Does account_status_code align with payment_history grid?
+   - Is account marked late/charge-off while history shows OK?
+   - Are there conflicting statuses?
+
+3) Delinquency timing and obsolescence:
+   - Is DOFD consistent with first delinquency in payment history?
+   - Has DOFD been moved forward (re-aging)?
+   - Is negative info past 7-year window from DOFD?
+
+4) Metro 2-style coding / special indicators:
+   - Is account missing dispute indicator when previously disputed?
+   - Are special conditions (bankruptcy, settlement) accurate?
+
+5) Duplicate or inconsistent tradelines:
+   - Is same debt reported multiple times?
+   - Are original creditor AND collector both showing active balances?
+
+Only mark an item as having an issue if you can point to:
+- specific fields in the data (dates, balances, statuses), AND
+- a clear, logical inconsistency, inaccuracy, or missing information.
+
+OUTPUT FORMAT
+--------------
+Return a JSON object with this exact structure:
+{
+  "analysis_summary": [
+    {
+      "item_id": "string",
+      "issue_found": true/false,
+      "issue_types": ["wrong_balance", "status_mismatch"],
+      "explanation": "Brief explanation citing specific fields"
+    }
+  ],
+  "dispute_letter": "Full letter text if any issues found, or null if no issues"
+}
+
+For the dispute_letter (if issues found):
+- Write in consumer's voice ("I am writing to dispute...")
+- Include consumer identifying info (name, address, SSN last 4, DOB)
+- Clearly identify each account with issues
+- For EACH issue, cite specific data points (dates, balances, statuses)
+- Request investigation and correction/removal if unverifiable
+- Be factual, respectful, and specific - no threats or legal advice
+- Request a response within 30 days under FCRA
+
+STYLE REQUIREMENTS
+-------------------
+- Use plain, professional English
+- No legal jargon beyond neutral references
+- No promises, threats, or guarantees
+- Be factual and specific:
+    WRONG: "This is illegal and must be deleted immediately."
+    RIGHT: "Based on the data provided, the reported balance of $X appears
+            inconsistent with the account status showing paid/closed.
+            I am requesting investigation and correction or removal if unverifiable."`;
+
+/**
+ * Generate a factual Metro 2 dispute letter using structured analysis
+ * Only generates letters for items where issues can be PROVEN from the data
+ */
+export async function generateFactualMetro2DisputeLetter(params: {
+  consumerName: string;
+  consumerAddress?: string;
+  consumerDob?: string;
+  consumerSsnLast4?: string;
+  recipientType: 'bureau' | 'furnisher';
+  recipientName: string;
+  bureau: string;
+  round: number;
+  negativeItems: Metro2NegativeItem[];
+  userExplanations?: string;
+}): Promise<Metro2DisputeOutput> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  
+  if (!apiKey) {
+    console.warn('GOOGLE_AI_API_KEY not set');
+    return {
+      analysisSummary: params.negativeItems.map(item => ({
+        itemId: item.itemId,
+        issueFound: false,
+        issueTypes: [],
+        issues: [],
+        explanation: 'AI analysis unavailable - API key not configured',
+      })),
+      disputeLetter: null,
+      itemsWithIssues: 0,
+      totalItems: params.negativeItems.length,
+    };
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        temperature: 0.1, // Low temperature for consistent, factual output
+      },
+    });
+
+    // Build structured data for the AI
+    const negativeItemsJson = JSON.stringify(params.negativeItems, null, 2);
+    
+    const bureauAddress = BUREAU_ADDRESSES[params.bureau.toLowerCase()] || '';
+    
+    const userPrompt = `Analyze the following credit report data and generate a dispute letter ONLY for
+items where you can identify specific, factual issues based on the data provided.
+
+DISPUTE CONTEXT
+----------------
+Recipient Type: ${params.recipientType}
+Recipient Name: ${params.recipientName}
+Recipient Address: ${bureauAddress}
+Bureau: ${params.bureau.toUpperCase()}
+Dispute Round: ${params.round}
+
+CONSUMER PROFILE
+-----------------
+Full Name: ${params.consumerName}
+Address: ${params.consumerAddress || 'On file'}
+Date of Birth: ${params.consumerDob || 'On file'}
+SSN Last 4: ${params.consumerSsnLast4 || 'On file'}
+
+NEGATIVE ITEMS DATA (STRUCTURED)
+---------------------------------
+${negativeItemsJson}
+
+USER-PROVIDED CONTEXT
+----------------------
+${params.userExplanations || 'No additional context provided'}
+
+INSTRUCTIONS
+-------------
+1. Review ALL negative items using the analysis checklist in the system prompt
+2. For each item, determine if there is a clearly supported inaccuracy from the DATA
+3. Produce JSON output with:
+   (a) analysis_summary - describing issues per item
+   (b) dispute_letter - ONE well-structured letter covering all items with CONFIRMED issues
+
+CRITICAL REMINDERS:
+- ONLY rely on data provided - do NOT fabricate issues
+- If you cannot confirm a specific inaccuracy from the data, mark issue_found=false
+- Do NOT generate dispute text for items without confirmed, data-supported issues
+- Do NOT claim accounts don't belong to consumer unless explicitly documented
+- Focus on DATA ACCURACY and VERIFICATION, not ownership denial
+- Each issue must cite specific data fields that show the inconsistency
+
+Return ONLY the JSON object, no markdown formatting.`;
+
+    // Combine system prompt with user prompt
+    const fullPrompt = METRO2_ANALYSIS_SYSTEM_PROMPT + '\n\n---\n\n' + userPrompt;
+    
+    const result = await model.generateContent(fullPrompt);
+
+    const response = await result.response;
+    let responseText = response.text();
+    
+    // Clean up response - remove markdown code blocks if present
+    responseText = responseText
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+
+    // Parse the JSON response
+    let parsedResponse: {
+      analysis_summary: Array<{
+        item_id: string;
+        issue_found: boolean;
+        issue_types: string[];
+        explanation: string;
+      }>;
+      dispute_letter: string | null;
+    };
+
+    try {
+      parsedResponse = JSON.parse(responseText);
+    } catch {
+      console.error('Failed to parse AI response as JSON:', responseText);
+      // Return fallback
+      return {
+        analysisSummary: params.negativeItems.map(item => ({
+          itemId: item.itemId,
+          issueFound: false,
+          issueTypes: [],
+          issues: [],
+          explanation: 'Analysis failed - could not parse AI response',
+        })),
+        disputeLetter: null,
+        itemsWithIssues: 0,
+        totalItems: params.negativeItems.length,
+      };
+    }
+
+    // Transform to our output format
+    const analysisSummary: Metro2AnalysisResult[] = parsedResponse.analysis_summary.map(item => ({
+      itemId: item.item_id,
+      issueFound: item.issue_found,
+      issueTypes: item.issue_types || [],
+      issues: (item.issue_types || []).map(type => ({
+        issueType: type,
+        description: item.explanation,
+        affectedFields: [],
+        severity: 'medium' as const,
+      })),
+      explanation: item.explanation,
+    }));
+
+    const itemsWithIssues = analysisSummary.filter(a => a.issueFound).length;
+
+    // Post-process the letter if it exists
+    let disputeLetter = parsedResponse.dispute_letter;
+    if (disputeLetter && itemsWithIssues > 0) {
+      // Add date if missing
+      const currentDate = formatDate();
+      if (!disputeLetter.includes(currentDate) && !disputeLetter.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b/)) {
+        disputeLetter = currentDate + '\n\n' + disputeLetter;
+      }
+      // Add bureau address if missing
+      if (bureauAddress && !disputeLetter.includes(bureauAddress.split('\n')[0])) {
+        const lines = disputeLetter.split('\n');
+        lines.splice(1, 0, '', bureauAddress);
+        disputeLetter = lines.join('\n');
+      }
+    }
+
+    return {
+      analysisSummary,
+      disputeLetter: itemsWithIssues > 0 ? disputeLetter : null,
+      itemsWithIssues,
+      totalItems: params.negativeItems.length,
+    };
+
+  } catch (error) {
+    console.error('Metro 2 analysis failed:', error);
+    return {
+      analysisSummary: params.negativeItems.map(item => ({
+        itemId: item.itemId,
+        issueFound: false,
+        issueTypes: [],
+        issues: [],
+        explanation: `Analysis error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      })),
+      disputeLetter: null,
+      itemsWithIssues: 0,
+      totalItems: params.negativeItems.length,
+    };
+  }
+}
+
+/**
+ * Convert legacy NegativeItem format to Metro2NegativeItem format
+ */
+export function convertToMetro2Format(item: {
+  id: string;
+  creditorName: string;
+  originalCreditor?: string | null;
+  itemType: string;
+  amount?: number | null;
+  dateReported?: string | null;
+  dateOfLastActivity?: string | null;
+  bureau?: string | null;
+  accountStatus?: string | null;
+  paymentStatus?: string | null;
+}, bureau: string): Metro2NegativeItem {
+  return {
+    itemId: item.id,
+    bureauName: bureau,
+    furnisherName: item.creditorName,
+    accountNumberMasked: `****${item.id.slice(-4)}`,
+    accountType: mapItemTypeToAccountType(item.itemType),
+    accountStatusCode: item.accountStatus || item.paymentStatus || 'unknown',
+    currentBalance: item.amount || undefined,
+    dateOfFirstDelinquency: item.dateReported || item.dateOfLastActivity || undefined,
+  };
+}
+
+function mapItemTypeToAccountType(itemType: string): string {
+  const mapping: Record<string, string> = {
+    collection: 'collection',
+    charge_off: 'charge_off',
+    late_payment: 'revolving',
+    repossession: 'installment',
+    foreclosure: 'mortgage',
+    bankruptcy: 'bankruptcy',
+    judgment: 'public_record',
+    tax_lien: 'public_record',
+    inquiry: 'inquiry',
+  };
+  return mapping[itemType.toLowerCase()] || 'unknown';
+}
