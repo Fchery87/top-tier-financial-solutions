@@ -787,179 +787,156 @@ interface AnalyzeItemParams {
 
 /**
  * Analyze a negative item and auto-determine the best dispute strategy
- * Uses Metro 2 compliance knowledge to identify violations and recommend approach
+ * 
+ * IMPORTANT: This function only cites violations/issues that can be PROVEN from the data.
+ * It does NOT assume or fabricate violations based on item type.
+ * 
+ * The analysis focuses on:
+ * 1. FCRA reporting limits (7-year, 10-year) - can be calculated from dates
+ * 2. Actual missing data fields (if we can see the field is empty)
+ * 3. Verification requests (always valid under FCRA 611)
+ * 
+ * It does NOT fabricate:
+ * - "Missing original creditor" unless we know it's a third-party collector
+ * - Specific Metro 2 field violations unless we have evidence
+ * - Data inconsistencies unless we can actually see conflicting data
  */
 export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1): ItemAnalysisResult {
   const reasonCodes: string[] = [];
   const metro2Violations: string[] = [];
   const fcraIssues: string[] = [];
   let methodology = 'factual';
-  let confidence = 0.7; // Base confidence
+  let confidence = 0.5; // Start with baseline confidence - only increase with provable issues
   const notes: string[] = [];
 
   const itemType = item.itemType?.toLowerCase() || '';
   const now = new Date();
 
-  // ---- FCRA 7-Year Check ----
+  // ============================================
+  // FACTUAL CHECKS - Only cite what we can PROVE
+  // ============================================
+
+  // ---- FCRA 7-Year / 10-Year Limit Check (FACTUAL) ----
+  // This is a factual check we can calculate from dates
   if (item.dateReported || item.dateOfLastActivity) {
     const reportDate = new Date(item.dateReported || item.dateOfLastActivity || '');
     const yearsSinceReport = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
     
-    if (yearsSinceReport >= 7) {
+    // Different limits for different item types
+    const isChapter7Bankruptcy = itemType === 'bankruptcy';
+    const reportingLimit = isChapter7Bankruptcy ? 10 : 7;
+    
+    if (yearsSinceReport >= reportingLimit) {
       reasonCodes.push('obsolete');
-      fcraIssues.push('FCRA § 605(a): Item exceeds 7-year reporting limit');
-      notes.push('Item is past FCRA reporting limit - strong deletion candidate');
-      confidence = 0.95;
-    } else if (yearsSinceReport >= 6) {
-      notes.push('Item approaching 7-year limit - may fall off soon');
-      fcraIssues.push('Item nearing FCRA expiration');
+      fcraIssues.push(`FCRA § 605(a): This item has exceeded the ${reportingLimit}-year reporting limit and should be removed`);
+      notes.push(`Item is ${Math.floor(yearsSinceReport)} years old - past FCRA reporting limit`);
+      metro2Violations.push(`Item exceeds FCRA ${reportingLimit}-year reporting limit (reported ${reportDate.toLocaleDateString()})`);
+      confidence = 0.95; // High confidence - this is provable
+    } else if (yearsSinceReport >= (reportingLimit - 1)) {
+      notes.push(`Item is ${Math.floor(yearsSinceReport)} years old - approaching ${reportingLimit}-year limit`);
+      fcraIssues.push(`Item nearing FCRA expiration (${Math.ceil(reportingLimit - yearsSinceReport)} months remaining)`);
+    }
+    
+    // For inquiries - 2 year limit
+    if (itemType === 'inquiry' && yearsSinceReport >= 2) {
+      reasonCodes.push('obsolete');
+      fcraIssues.push('FCRA § 605(a)(3): Hard inquiry exceeds 2-year reporting limit');
+      metro2Violations.push(`Hard inquiry exceeds 2-year limit (reported ${reportDate.toLocaleDateString()})`);
+      confidence = 0.9;
     }
   }
 
-  // ---- Item Type Specific Analysis ----
-  // IMPORTANT: Use factual Metro 2 compliance-based reason codes, NOT ownership denial
-  // Only use 'not_mine' or 'identity_theft' when client explicitly confirms fraud/mixed file
+  // ---- Third-Party Collection Agency Check (FACTUAL) ----
+  // Only flag "missing original creditor" for ACTUAL third-party collectors
+  // NOT for original creditors reporting their own accounts
+  const isThirdPartyCollector = itemType === 'collection' && isLikelyCollectionAgency(item.creditorName);
+  
+  if (isThirdPartyCollector && !item.originalCreditor) {
+    // This is a third-party collector without original creditor info - this IS a valid issue
+    metro2Violations.push('Third-party collection account is missing Original Creditor Name (Metro 2 Field 24)');
+    reasonCodes.push('incomplete_data');
+    fcraIssues.push('FCRA § 623(a)(2): Debt collectors must identify the original creditor');
+    notes.push('Collection agency account missing original creditor information');
+    confidence += 0.15;
+  }
+
+  // ---- Methodology Selection Based on Item Type ----
+  // This is about strategy, not claiming violations
   switch (itemType) {
     case 'collection':
-      // Collections: Challenge verification and Metro 2 compliance
-      if (round === 1) {
-        methodology = 'debt_validation';
-        reasonCodes.push('verification_required', 'incomplete_data');
-        metro2Violations.push('Metro 2 Field 17A: Account status code must be verified with documentation');
-        metro2Violations.push('Metro 2 Field 24: Original creditor information required for proper verification');
-        metro2Violations.push('Metro 2 Field 8: Date of First Delinquency (DOFD) must be accurately reported');
-        notes.push('Collection accounts require full debt validation and Metro 2 compliance verification under FDCPA');
-        
-        if (!item.originalCreditor) {
-          metro2Violations.push('Missing original creditor name - Metro 2 compliance violation (Field 24)');
-          reasonCodes.push('missing_dofd');
-          confidence += 0.1;
-        }
-      } else {
-        methodology = 'method_of_verification';
-        reasonCodes.push('verification_required', 'metro2_violation');
-        notes.push('Round 2+: Demanding method of verification and documented proof');
-      }
+      methodology = round === 1 ? 'debt_validation' : 'method_of_verification';
+      reasonCodes.push('verification_required');
+      notes.push('Collection account - verification of debt ownership and accuracy required');
       break;
 
     case 'charge_off':
-      methodology = 'metro2_compliance';
-      reasonCodes.push('metro2_violation', 'balance_discrepancy', 'status_inconsistency');
-      metro2Violations.push('Metro 2 Field 17A: Charge-off status code (82) verification required');
-      metro2Violations.push('Metro 2 Field 10: Balance must accurately reflect charge-off amount');
-      metro2Violations.push('Metro 2 Field 8: Date of First Delinquency required for charge-offs');
-      notes.push('Charge-offs require verification of Metro 2 status codes and balance accuracy');
+      methodology = 'factual';
+      reasonCodes.push('verification_required');
+      notes.push('Charge-off account - verification of balance and status accuracy required');
       break;
 
     case 'late_payment':
       methodology = 'factual';
-      reasonCodes.push('inaccurate_reporting', 'status_inconsistency');
-      metro2Violations.push('Metro 2 Fields 25-36: Payment history pattern requires verification');
-      metro2Violations.push('Metro 2 Field 8: Date of first delinquency must be accurate');
-      metro2Violations.push('Metro 2 Payment Rating: Must accurately reflect account status');
-      notes.push('Payment history disputes focus on Metro 2 data accuracy and verification');
+      reasonCodes.push('verification_required');
+      notes.push('Late payment record - verification of payment history accuracy required');
       break;
 
     case 'repossession':
-      methodology = 'metro2_compliance';
-      reasonCodes.push('metro2_violation', 'balance_discrepancy', 'verification_required');
-      metro2Violations.push('Metro 2 Field 17A: Repossession status code (96) verification');
-      metro2Violations.push('Metro 2 Field 10: Deficiency balance must be accurately calculated');
-      metro2Violations.push('Metro 2 Field 9: Date of repossession accuracy required');
-      notes.push('Repossession records require accurate deficiency balance and status verification');
+      methodology = 'factual';
+      reasonCodes.push('verification_required');
+      notes.push('Repossession record - verification of dates and deficiency balance required');
       break;
 
     case 'foreclosure':
-      methodology = 'metro2_compliance';
-      reasonCodes.push('metro2_violation', 'verification_required', 'status_inconsistency');
-      metro2Violations.push('Metro 2 Field 17A: Foreclosure status code (94) verification');
-      metro2Violations.push('Metro 2 Field 9: Foreclosure completion date accuracy');
-      metro2Violations.push('Metro 2 Field 8: DOFD required for 7-year calculation');
-      fcraIssues.push('FCRA § 605(a)(4): Foreclosure 7-year limit from completion date');
-      notes.push('Foreclosure records require verification of dates and Metro 2 compliance');
+      methodology = 'factual';
+      reasonCodes.push('verification_required');
+      notes.push('Foreclosure record - verification of dates and completion status required');
       break;
 
     case 'bankruptcy':
-      // Bankruptcy has 10-year limit
-      if (item.dateReported) {
-        const reportDate = new Date(item.dateReported);
-        const yearsSince = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
-        if (yearsSince >= 10) {
-          reasonCodes.push('obsolete');
-          fcraIssues.push('FCRA § 605(a)(1): Bankruptcy exceeds 10-year limit');
-          confidence = 0.95;
-        }
-      }
-      reasonCodes.push('verification_required', 'status_inconsistency');
-      metro2Violations.push('Metro 2 Field 38: Bankruptcy disposition code must be verified');
-      metro2Violations.push('Metro 2 Field 17A: Account status must reflect bankruptcy discharge');
-      notes.push('Bankruptcy record requires verification of disposition and discharge status');
+      methodology = 'factual';
+      reasonCodes.push('verification_required');
+      notes.push('Bankruptcy record - verification of discharge status required');
       break;
 
     case 'judgment':
     case 'tax_lien':
       methodology = 'consumer_law';
-      reasonCodes.push('verification_required', 'inaccurate_reporting');
-      fcraIssues.push('Public record accuracy requirements under FCRA § 605(a)');
-      fcraIssues.push('FCRA § 611: Reasonable investigation required for public records');
-      notes.push('Public records require strict verification and accuracy procedures');
+      reasonCodes.push('verification_required');
+      fcraIssues.push('FCRA § 611: Public records require verification procedures');
+      notes.push('Public record - strict verification procedures required');
       break;
 
     case 'inquiry':
       methodology = 'factual';
       reasonCodes.push('verification_required');
       fcraIssues.push('FCRA § 604: Permissible purpose must be documented');
-      notes.push('Hard inquiries require documented permissible purpose verification');
-      
-      // Check if inquiry is older than 2 years
-      if (item.dateReported) {
-        const inquiryDate = new Date(item.dateReported);
-        const yearsSince = (now.getTime() - inquiryDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
-        if (yearsSince >= 2) {
-          reasonCodes.push('obsolete');
-          fcraIssues.push('Inquiry exceeds 2-year reporting limit');
-          confidence = 0.9;
-        }
-      }
+      notes.push('Inquiry - permissible purpose documentation required');
       break;
 
     default:
-      // Default: Use factual Metro 2 compliance-based disputes
-      // NEVER default to 'not_mine' - that's a specific claim requiring client confirmation
-      reasonCodes.push('verification_required', 'inaccurate_reporting');
-      metro2Violations.push('Metro 2 Field 17A: Account status code verification required');
-      metro2Violations.push('Metro 2 compliance: All data fields require documented verification');
-      notes.push('Requesting verification of account data and Metro 2 compliance');
+      methodology = 'factual';
+      reasonCodes.push('verification_required');
+      notes.push('Verification of account data accuracy required');
   }
 
-  // ---- Round-Based Methodology Adjustment ----
-  if (round >= 2 && methodology !== 'debt_validation') {
+  // ---- Round-Based Escalation ----
+  if (round >= 2) {
     methodology = 'method_of_verification';
-    notes.push(`Round ${round}: Escalating to method of verification demand`);
-    fcraIssues.push('Prior dispute verified without documentation - demanding verification method');
+    notes.push(`Round ${round}: Requesting method of verification from prior investigation`);
+    fcraIssues.push('FCRA § 611(a)(6)(B)(iii): Consumer entitled to method of verification');
   }
 
   if (round >= 3) {
     methodology = 'consumer_law';
-    notes.push('Round 3+: Citing potential willful non-compliance');
-    fcraIssues.push('15 U.S.C. § 1681n: Willful non-compliance - statutory damages');
+    notes.push('Round 3+: Prior investigations may constitute inadequate reinvestigation');
+    fcraIssues.push('Potential willful non-compliance under 15 U.S.C. § 1681n');
+    confidence += 0.1;
   }
 
-  // ---- Balance/Amount Analysis ----
-  if (item.amount && item.amount > 0) {
-    if (!reasonCodes.includes('wrong_balance')) {
-      // Check for suspiciously round numbers (often estimated, not actual)
-      if (item.amount % 100 === 0 && item.amount > 500) {
-        metro2Violations.push('Metro 2 Field 10: Balance appears estimated, not actual');
-        notes.push('Round dollar amount suggests estimated balance');
-      }
-    }
-  }
-
-  // ---- Ensure minimum reason codes ----
-  // Use factual Metro 2 compliance codes, NEVER default to ownership denial
-  if (reasonCodes.length === 0) {
-    reasonCodes.push('verification_required', 'inaccurate_reporting');
+  // ---- Ensure verification request is always included ----
+  if (!reasonCodes.includes('verification_required')) {
+    reasonCodes.push('verification_required');
   }
 
   // Deduplicate
@@ -978,6 +955,111 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     confidence: Math.min(confidence, 1),
     analysisNotes: notes.join('. '),
   };
+}
+
+/**
+ * Determines if a creditor name is likely a third-party collection agency
+ * vs an original creditor reporting their own account.
+ * 
+ * Original creditors (NOT collection agencies):
+ * - Banks: Chase, Capital One, Discover, Citi, etc.
+ * - Telecoms: Verizon, AT&T, T-Mobile, etc.
+ * - Utilities: Power companies, gas companies
+ * - Retailers: Macy's, Amazon, Target, etc.
+ * - Credit card issuers
+ * 
+ * Collection agencies (third-party):
+ * - Companies with "collection" in name
+ * - Companies with "recovery" in name
+ * - Known collection agencies (Midland, Portfolio, etc.)
+ */
+function isLikelyCollectionAgency(creditorName: string): boolean {
+  if (!creditorName) return false;
+  
+  const name = creditorName.toUpperCase();
+  
+  // Known collection agency indicators
+  const collectionIndicators = [
+    'COLLECTION',
+    'COLLECTIONS',
+    'RECOVERY',
+    'RECOVERIES',
+    'DEBT',
+    'RECEIVABLES',
+    'ASSET ACCEPTANCE',
+    'MIDLAND',
+    'PORTFOLIO',
+    'CONVERGENT',
+    'IC SYSTEM',
+    'NCO FINANCIAL',
+    'TRANSWORLD',
+    'ALLIED INTERSTATE',
+    'AFNI',
+    'AMSHER',
+    'CREDIT MANAGEMENT',
+    'CREDIT BUREAU',
+    'CBCS',
+    'ERC',
+    'ENHANCED RECOVERY',
+    'FMS',
+    'GC SERVICES',
+    'GLOBAL CREDIT',
+    'HALSTED FINANCIAL',
+    'HRS ACCOUNT',
+    'JEFFERSON CAPITAL',
+    'LVNV',
+    'MEDICREDIT',
+    'NATIONAL CREDIT',
+    'NATIONAL ENTERPRISE',
+    'NORTHLAND',
+    'PENDRICK',
+    'PHOENIX FINANCIAL',
+    'RADIUS GLOBAL',
+    'RESURGENT',
+    'SECOND ROUND',
+    'SUNRISE CREDIT',
+    'WAKEFIELD',
+  ];
+  
+  for (const indicator of collectionIndicators) {
+    if (name.includes(indicator)) {
+      return true;
+    }
+  }
+  
+  // Known original creditors (NOT collection agencies)
+  const originalCreditorPatterns = [
+    // Banks
+    'CHASE', 'CAPITAL ONE', 'CITI', 'DISCOVER', 'WELLS FARGO', 'BANK OF AMERICA',
+    'SYNCHRONY', 'BARCLAYS', 'AMERICAN EXPRESS', 'AMEX', 'US BANK',
+    // Credit cards
+    'CREDITONE', 'CREDIT ONE', 'CREDITONEBNK',
+    // Telecoms
+    'VERIZON', 'AT&T', 'T-MOBILE', 'SPRINT', 'COMCAST', 'XFINITY',
+    // Retailers
+    'MACY', 'MACYS', 'TARGET', 'WALMART', 'AMAZON', 'KOHLS', 'JC PENNEY',
+    'BEST BUY', 'HOME DEPOT', 'LOWES',
+    // Auto
+    'TOYOTA', 'HONDA', 'FORD', 'GM FINANCIAL', 'ALLY', 'SANTANDER',
+    // Fintech/Online lenders
+    'KIKOFF', 'SELF LENDER', 'CHIME', 'SOFI', 'UPSTART', 'AVANT', 'LENDING CLUB',
+    // Utilities
+    'ELECTRIC', 'GAS', 'WATER', 'POWER', 'ENERGY', 'UTILITY',
+    // Student loans
+    'NAVIENT', 'NELNET', 'SALLIE MAE', 'GREAT LAKES', 'MOHELA',
+    // Medical (original providers, not collectors)
+    'HOSPITAL', 'MEDICAL CENTER', 'CLINIC', 'HEALTH SYSTEM',
+  ];
+  
+  for (const pattern of originalCreditorPatterns) {
+    if (name.includes(pattern)) {
+      return false; // This is an original creditor, not a collection agency
+    }
+  }
+  
+  // Default: if we can't determine, assume it might be original creditor
+  // to avoid false claims about missing original creditor info
+  return false;
 }
 
 /**
