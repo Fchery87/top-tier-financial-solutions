@@ -1386,3 +1386,35 @@ export const clientNotificationPreferencesRelations = relations(clientNotificati
     references: [clients.id],
   }),
 }));
+
+// ============================================
+// SYSTEM SETTINGS (Super Admin Only)
+// ============================================
+
+// LLM provider enum
+export const llmProviderEnum = pgEnum('llm_provider', ['google', 'openai', 'anthropic', 'custom']);
+
+// System settings for application-wide configuration
+export const systemSettings = pgTable('system_settings', {
+  id: text('id').primaryKey(),
+  settingKey: text('setting_key').notNull().unique(),
+  settingValue: text('setting_value'),
+  settingType: text('setting_type').notNull(), // 'string' | 'number' | 'boolean' | 'json'
+  category: text('category').default('general'), // 'general' | 'llm' | 'email' | 'billing' | 'compliance'
+  description: text('description'),
+  isSecret: boolean('is_secret').default(false), // Whether value should be hidden in UI
+  lastModifiedBy: text('last_modified_by').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index("system_settings_key_idx").on(table.settingKey),
+  index("system_settings_category_idx").on(table.category),
+]);
+
+// System settings relations
+export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
+  lastModifiedBy: one(user, {
+    fields: [systemSettings.lastModifiedBy],
+    references: [user.id],
+  }),
+}));

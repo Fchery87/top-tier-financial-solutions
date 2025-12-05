@@ -30,7 +30,8 @@ import {
   ShieldCheck,
   FolderKanban,
   Megaphone,
-  Trophy
+  Trophy,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -306,14 +307,41 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-white/10">
+      <div className="p-3 border-t border-white/10 space-y-1">
+        <Link
+          href="/admin/settings"
+          className={cn(
+            "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
+            pathname === '/admin/settings'
+              ? "bg-secondary text-primary" 
+              : "text-white/70 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <Settings className={cn(
+            "w-5 h-5 flex-shrink-0",
+            pathname === '/admin/settings' ? "text-primary" : "text-current"
+          )} />
+          {!collapsed && (
+            <span className="text-sm font-medium">Settings</span>
+          )}
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+              Settings
+            </div>
+          )}
+        </Link>
         <Link
           href="/"
-          className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200"
+          className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group relative"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!collapsed && (
             <span className="text-sm font-medium">Back to Site</span>
+          )}
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+              Back to Site
+            </div>
           )}
         </Link>
       </div>

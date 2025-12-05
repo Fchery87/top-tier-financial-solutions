@@ -7,6 +7,7 @@ import {
   getAllReasonCodesFlat,
   type PromptConfig,
 } from './dispute-config-loader';
+import { getLLMConfig } from './settings-service';
 
 interface ClientInfo {
   name: string;
@@ -232,21 +233,34 @@ REMEMBER: This is a VERIFICATION dispute, NOT a fraud/identity theft dispute. Th
 Generate the dispute letter now. Output plain text only - no markdown.`;
 
 export async function generateUniqueDisputeLetter(params: GenerateLetterParams): Promise<string> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  // Get LLM configuration from database (with fallback to env vars)
+  const llmConfig = await getLLMConfig();
   
   // If methodology is specified, use the new YAML-based system
   if (params.methodology) {
     return generateMethodologyBasedLetter(params);
   }
   
-  if (!apiKey) {
-    console.warn('GOOGLE_AI_API_KEY not set, falling back to template-based letter');
+  if (!llmConfig.apiKey) {
+    console.warn('No LLM API key configured, falling back to template-based letter');
     return generateFallbackLetter(params);
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    // Use configured provider and model
+    if (llmConfig.provider !== 'google') {
+      console.warn(`Provider "${llmConfig.provider}" not yet supported, falling back to template`);
+      return generateFallbackLetter(params);
+    }
+
+    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: llmConfig.model,
+      generationConfig: {
+        temperature: llmConfig.temperature || 0.1,
+        maxOutputTokens: llmConfig.maxTokens || 4096,
+      },
+    });
 
     const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
     const reasonDescription = getReasonDescriptions(params.reasonCodes);
@@ -280,7 +294,7 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
 
 // NEW: Generate letter using YAML-based methodology configuration
 async function generateMethodologyBasedLetter(params: GenerateLetterParams): Promise<string> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const llmConfig = await getLLMConfig();
   const methodology = params.methodology || 'factual';
   
   // Load methodology-specific prompt config
@@ -288,8 +302,8 @@ async function generateMethodologyBasedLetter(params: GenerateLetterParams): Pro
   const methodologyConfig = getMethodology(methodology);
   const bureauConfig = getBureauConfig(params.itemData.bureau);
   
-  if (!apiKey) {
-    console.warn('GOOGLE_AI_API_KEY not set, falling back to template-based letter');
+  if (!llmConfig.apiKey) {
+    console.warn('No LLM API key configured, falling back to template-based letter');
     return generateFallbackLetter(params);
   }
   
@@ -299,8 +313,19 @@ async function generateMethodologyBasedLetter(params: GenerateLetterParams): Pro
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    if (llmConfig.provider !== 'google') {
+      console.warn(`Provider "${llmConfig.provider}" not yet supported, falling back to template`);
+      return generateFallbackLetter(params);
+    }
+
+    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: llmConfig.model,
+      generationConfig: {
+        temperature: llmConfig.temperature || 0.1,
+        maxOutputTokens: llmConfig.maxTokens || 4096,
+      },
+    });
 
     // Build the prompt using YAML configuration
     const prompt = buildMethodologyPrompt(params, promptConfig, methodologyConfig, bureauConfig);
@@ -643,16 +668,27 @@ CRITICAL REMINDER: This is a VERIFICATION dispute, NOT a fraud/identity theft di
 Generate the dispute letter now. Output plain text only - no markdown.`;
 
 export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLetterParams): Promise<string> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const llmConfig = await getLLMConfig();
   
-  if (!apiKey) {
-    console.warn('GOOGLE_AI_API_KEY not set, falling back to template-based letter');
+  if (!llmConfig.apiKey) {
+    console.warn('No LLM API key configured, falling back to template-based letter');
     return generateMultiItemFallbackLetter(params);
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    if (llmConfig.provider !== 'google') {
+      console.warn(`Provider "${llmConfig.provider}" not yet supported, falling back to template`);
+      return generateMultiItemFallbackLetter(params);
+    }
+
+    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: llmConfig.model,
+      generationConfig: {
+        temperature: llmConfig.temperature || 0.1,
+        maxOutputTokens: llmConfig.maxTokens || 4096,
+      },
+    });
 
     const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
     const reasonDescription = getReasonDescriptions(params.reasonCodes);
@@ -1395,10 +1431,10 @@ export async function generateFactualMetro2DisputeLetter(params: {
   negativeItems: Metro2NegativeItem[];
   userExplanations?: string;
 }): Promise<Metro2DisputeOutput> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const llmConfig = await getLLMConfig();
   
-  if (!apiKey) {
-    console.warn('GOOGLE_AI_API_KEY not set');
+  if (!llmConfig.apiKey) {
+    console.warn('No LLM API key configured');
     return {
       analysisSummary: params.negativeItems.map(item => ({
         itemId: item.itemId,
@@ -1414,11 +1450,28 @@ export async function generateFactualMetro2DisputeLetter(params: {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
+    if (llmConfig.provider !== 'google') {
+      console.warn(`Provider "${llmConfig.provider}" not yet supported for Metro2 analysis`);
+      return {
+        analysisSummary: params.negativeItems.map(item => ({
+          itemId: item.itemId,
+          issueFound: false,
+          issueTypes: [],
+          issues: [],
+          explanation: 'AI analysis unavailable - provider not supported',
+        })),
+        disputeLetter: null,
+        itemsWithIssues: 0,
+        totalItems: params.negativeItems.length,
+      };
+    }
+
+    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
+      model: llmConfig.model,
       generationConfig: {
-        temperature: 0.1, // Low temperature for consistent, factual output
+        temperature: llmConfig.temperature || 0.1,
+        maxOutputTokens: llmConfig.maxTokens || 4096,
       },
     });
 
