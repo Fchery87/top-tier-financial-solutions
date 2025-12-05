@@ -87,8 +87,10 @@ export interface ParsedNegativeItem {
   itemType: string;
   creditorName: string;
   originalCreditor?: string;
+  accountNumber?: string; // For linking to credit accounts
   amount?: number;
   dateReported?: Date;
+  dateOfLastActivity?: Date; // For DOFD/obsolescence analysis
   bureau?: string;
   riskSeverity: string;
 }

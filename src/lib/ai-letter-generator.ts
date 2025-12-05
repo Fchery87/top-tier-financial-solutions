@@ -104,8 +104,13 @@ function buildMetro2ViolationsSection(violations?: string[]): string {
   const uniqueViolations = [...new Set(violations.filter(Boolean))];
   if (uniqueViolations.length === 0) return '';
   return [
-    'Metro 2 violations identified:',
-    ...uniqueViolations.map(v => `- ${v}`),
+    '=== METRO 2 COMPLIANCE VIOLATIONS (MUST CITE THESE IN LETTER BODY) ===',
+    'The AI analysis identified the following specific Metro 2 violations.',
+    'You MUST integrate these into your dispute explanation section.',
+    '',
+    ...uniqueViolations.map((v, i) => `${i + 1}. ${v}`),
+    '',
+    '=== END OF VIOLATIONS - CITE ALL OF THESE IN YOUR LETTER ===',
   ].join('\n');
 }
 
@@ -171,6 +176,14 @@ WHAT THIS LETTER MUST DO:
 - Cite Metro 2 format compliance requirements
 - Demand documented proof that information meets "maximum possible accuracy" standard
 - Request deletion of UNVERIFIED information (not "fraudulent" information)
+
+CRITICAL: CITE METRO 2 VIOLATIONS IN THE LETTER BODY
+=====================================================
+You MUST explicitly reference each Metro 2 violation provided below in the letter.
+DO NOT just list them - INTEGRATE them into your dispute explanation.
+For each violation, explain HOW it demonstrates inaccuracy or non-compliance.
+Example: "The account reports a balance of $XXX while showing a status of 'paid' - this data
+inconsistency violates Metro 2 reporting standards for Field 17 (Account Status) and Field 8 (Balance)."
 
 1. WRITING STYLE:
 - Write at a 12th grade reading level
@@ -251,7 +264,7 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
       .replace('{bureau}', params.itemData.bureau.toUpperCase())
       .replace('{reason_description}', reasonDescription)
       .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
-      .replace('{metro2_violations}', metro2Section || 'No specific Metro 2 violations provided; verify all Metro 2 fields for accuracy.');
+      .replace('{metro2_violations}', metro2Section || 'IMPORTANT: No specific Metro 2 violations were provided by the AI analysis.\nRequest general verification of all Metro 2 data fields for accuracy and completeness.\nFocus on requesting documented proof of accuracy under FCRA Section 611.');
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -377,8 +390,9 @@ Bureau: ${params.itemData.bureau.toUpperCase()}
     .replace('{prior_result}', params.priorDisputeResult || 'Verified');
 
   // If the template doesn't surface Metro 2 violations, append them so they appear in the final letter
+  // Add them prominently to ensure the AI cites them
   if (metro2ViolationsSection && !templateIncludesViolationSlot) {
-    promptTemplate += `\n\n${metro2ViolationsSection}`;
+    promptTemplate += `\n\n!!! CRITICAL - CITE THESE VIOLATIONS IN YOUR LETTER !!!\n${metro2ViolationsSection}`;
   }
 
   // Combine system context with prompt template
@@ -433,13 +447,21 @@ function generateFallbackLetter(params: GenerateLetterParams): string {
   const currentDate = formatDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
-  const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
+  const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
+    ? params.metro2Violations.filter(Boolean) 
+    : [];
   
   let recipientAddress = '';
   if (params.targetRecipient === 'bureau') {
     recipientAddress = BUREAU_ADDRESSES[params.itemData.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion;
   } else {
     recipientAddress = `${params.itemData.creditorName}\nCredit Dispute Department`;
+  }
+
+  // Build Metro 2 violations section for fallback letter (simpler format)
+  let metro2ViolationsText = '';
+  if (metro2ViolationsRaw.length > 0) {
+    metro2ViolationsText = `\nSPECIFIC METRO 2 COMPLIANCE VIOLATIONS IDENTIFIED:\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}\n\nThese violations demonstrate that the reported information does not meet the "maximum possible accuracy" standard required under FCRA Section 607(b) and Metro 2 format requirements.`;
   }
 
   return `${currentDate}
@@ -467,8 +489,7 @@ REASON FOR DISPUTE:
 ${reasonDescription}
 
 ${params.customReason ? `Additional Information: ${params.customReason}` : ''}
-
-${metro2Section ? `${metro2Section}\n` : ''}
+${metro2ViolationsText}
 
 LEGAL BASIS FOR DELETION:
 ${complianceContext}
@@ -560,6 +581,15 @@ WHAT THIS LETTER MUST DO:
 - Demand documented proof that ALL information meets "maximum possible accuracy" standard
 - Request deletion of ANY information that CANNOT BE VERIFIED with documentation
 
+CRITICAL: CITE METRO 2 VIOLATIONS IN THE LETTER BODY
+=====================================================
+You MUST explicitly reference each Metro 2 violation provided below in the letter.
+DO NOT just list them in a separate section - INTEGRATE them into your dispute explanation.
+For EACH account, if specific violations are identified, explain HOW those violations demonstrate
+inaccuracy or non-compliance with Metro 2 reporting standards.
+Example: "Account #1 (XYZ Bank) reports a balance of $XXX while showing a 'closed' status, which
+violates Metro 2 Field 8 (Balance) reporting requirements - closed accounts must show $0 balance."
+
 1. WRITING STYLE:
 - Write at a 12th grade reading level
 - Professional and assertive, like a knowledgeable consumer exercising legal rights
@@ -646,7 +676,7 @@ ${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDa
       .replace('{bureau}', params.bureau.toUpperCase())
       .replace('{item_count}', params.items.length.toString())
       .replace('{reason_description}', reasonDescription)
-      .replace('{metro2_violations}', metro2Section || 'No specific Metro 2 violations provided; verify all Metro 2 fields for each item.')
+      .replace('{metro2_violations}', metro2Section || 'IMPORTANT: No specific Metro 2 violations were provided by the AI analysis.\nFor each account, request general verification of all Metro 2 data fields for accuracy and completeness.\nFocus on requesting documented proof of accuracy under FCRA Section 611 for ALL disputed accounts.')
       .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
       .replace('{items_list}', itemsList);
 
@@ -684,7 +714,9 @@ function generateMultiItemFallbackLetter(params: GenerateMultiItemLetterParams):
   const currentDate = formatDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
-  const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
+  const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
+    ? params.metro2Violations.filter(Boolean) 
+    : [];
   
   let recipientAddress = '';
   if (params.targetRecipient === 'bureau') {
@@ -703,6 +735,12 @@ ${item.amount ? `Reported Amount: ${formatCurrency(item.amount)}` : ''}
 ${item.dateReported ? `Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`).join('\n');
 
   const creditorList = params.items.map(item => item.creditorName).join(', ');
+
+  // Build Metro 2 violations section for fallback letter
+  let metro2ViolationsText = '';
+  if (metro2ViolationsRaw.length > 0) {
+    metro2ViolationsText = `\nSPECIFIC METRO 2 COMPLIANCE VIOLATIONS IDENTIFIED:\nThe following Metro 2 format violations apply to one or more of the disputed accounts:\n\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}\n\nThese violations demonstrate that the reported information does not meet the "maximum possible accuracy" standard required under FCRA Section 607(b) and Metro 2 format requirements.`;
+  }
 
   return `${currentDate}
 
@@ -724,8 +762,7 @@ REASON FOR DISPUTE (APPLIES TO ALL ACCOUNTS):
 ${reasonDescription}
 
 ${params.customReason ? `Additional Information: ${params.customReason}` : ''}
-
-${metro2Section ? `${metro2Section}\n` : ''}
+${metro2ViolationsText}
 
 LEGAL BASIS FOR DELETION:
 ${complianceContext}

@@ -71,9 +71,15 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
 
     // Store parsed accounts with completeness scoring
     const storedAccountIds: string[] = [];
+    const accountIdMap = new Map<string, string>(); // Map creditor+account# to accountId
+    
     for (const account of parsedData.accounts) {
       const accountId = randomUUID();
       storedAccountIds.push(accountId);
+      
+      // Create lookup key for linking negative items later
+      const lookupKey = `${account.creditorName}|${account.accountNumber || ''}`.toLowerCase();
+      accountIdMap.set(lookupKey, accountId);
       
       // Calculate completeness score
       const { score: completenessScore, missingFields } = calculateCompletenessScore({
@@ -128,18 +134,42 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     }
 
     // Store negative items and calculate FCRA compliance
+    // CRITICAL FIX: Link negative items to their corresponding credit accounts
     for (const item of parsedData.negativeItems) {
       const negativeItemId = randomUUID();
+      
+      // Try to find matching credit account by creditor name
+      // Some negative items (like collections) might not have exact account number matches
+      let matchedAccountId: string | null = null;
+      
+      // First try exact match with account number if available
+      if (item.accountNumber) {
+        const lookupKey = `${item.creditorName}|${item.accountNumber}`.toLowerCase();
+        matchedAccountId = accountIdMap.get(lookupKey) || null;
+      }
+      
+      // If no match and no account number, try fuzzy match by creditor name only
+      if (!matchedAccountId) {
+        const creditorLower = item.creditorName.toLowerCase();
+        for (const [key, accountId] of accountIdMap.entries()) {
+          if (key.startsWith(creditorLower + '|')) {
+            matchedAccountId = accountId;
+            break;
+          }
+        }
+      }
       
       await db.insert(negativeItems).values({
         id: negativeItemId,
         creditReportId: reportId,
         clientId: report.clientId,
+        creditAccountId: matchedAccountId, // CRITICAL: Link to credit account for Metro 2 data
         itemType: item.itemType,
         creditorName: item.creditorName,
         originalCreditor: item.originalCreditor,
         amount: item.amount,
         dateReported: item.dateReported,
+        dateOfLastActivity: item.dateOfLastActivity, // Add this field for DOFD analysis
         bureau: report.bureau,
         riskSeverity: item.riskSeverity,
         recommendedAction: getRecommendedAction(item),
