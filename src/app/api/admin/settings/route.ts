@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
@@ -8,12 +9,14 @@ import { randomUUID } from 'crypto';
 
 // Check if user is super admin
 async function checkSuperAdmin() {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
   if (!session?.user) {
     return { authorized: false, error: 'Unauthorized' };
   }
 
-  if (session.user.role !== 'super_admin') {
+  if ((session.user as any).role !== 'super_admin') {
     return { authorized: false, error: 'Super admin access required' };
   }
 
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
       } else {
         switch (setting.settingType) {
           case 'number':
-            parsedValue = parseInt(setting.settingValue || '0', 10);
+            parsedValue = parseFloat(setting.settingValue || '0');
             break;
           case 'boolean':
             parsedValue = setting.settingValue === 'true';

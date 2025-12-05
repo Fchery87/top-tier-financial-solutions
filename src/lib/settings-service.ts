@@ -41,7 +41,7 @@ export async function getSetting(key: string): Promise<any> {
   // Parse value based on type
   switch (settingData.settingType) {
     case 'number':
-      parsedValue = parseInt(settingData.settingValue || '0', 10);
+      parsedValue = parseFloat(settingData.settingValue || '0');
       break;
     case 'boolean':
       parsedValue = settingData.settingValue === 'true';
@@ -174,7 +174,7 @@ export async function getSettingsByCategory(category: string): Promise<any[]> {
     let parsedValue: any;
     switch (setting.settingType) {
       case 'number':
-        parsedValue = parseInt(setting.settingValue || '0', 10);
+        parsedValue = parseFloat(setting.settingValue || '0');
         break;
       case 'boolean':
         parsedValue = setting.settingValue === 'true';
