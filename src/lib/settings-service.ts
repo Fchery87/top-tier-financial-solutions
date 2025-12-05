@@ -5,7 +5,7 @@
  * Provides a caching layer for frequently accessed settings like LLM configuration.
  */
 
-import { db } from '@/db';
+import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 

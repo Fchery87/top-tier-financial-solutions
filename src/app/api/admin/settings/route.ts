@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
-import { db } from '@/db';
+import { auth } from '@/lib/auth';
+import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getSetting, setSetting, getSettingsByCategory, updateLLMConfig, getLLMConfig, clearSettingsCache } from '@/lib/settings-service';
