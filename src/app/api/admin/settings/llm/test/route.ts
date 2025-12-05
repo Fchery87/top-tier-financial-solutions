@@ -99,6 +99,28 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      case 'zhipu': {
+        const OpenAI = (await import('openai')).default;
+        const client = new OpenAI({ 
+          apiKey: config.apiKey,
+          baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+        });
+        const response = await client.chat.completions.create({
+          model: config.model || 'glm-4-flash',
+          messages: [{ role: 'user', content: testPrompt }],
+          max_tokens: 50,
+        });
+        const text = response.choices[0]?.message?.content || '';
+        
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Connection successful',
+          provider: 'Zhipu AI (GLM)',
+          model: config.model,
+          response: text.substring(0, 100),
+        });
+      }
+
       default:
         return NextResponse.json({ 
           success: false, 

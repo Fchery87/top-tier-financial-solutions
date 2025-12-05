@@ -50,6 +50,21 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
       return textBlock?.type === 'text' ? textBlock.text : '';
     }
     
+    case 'zhipu': {
+      // Zhipu AI (Z.ai / GLM) - OpenAI-compatible API
+      const openai = new OpenAI({ 
+        apiKey: config.apiKey,
+        baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+      });
+      const response = await openai.chat.completions.create({
+        model: config.model || 'glm-4-flash',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: config.temperature || 0.1,
+        max_tokens: config.maxTokens || 4096,
+      });
+      return response.choices[0]?.message?.content || '';
+    }
+    
     default:
       throw new Error(`Unsupported LLM provider: ${config.provider}`);
   }

@@ -202,7 +202,7 @@ export async function getSettingsByCategory(category: string): Promise<any[]> {
 // ============================================
 
 export interface LLMConfig {
-  provider: 'google' | 'openai' | 'anthropic' | 'custom';
+  provider: 'google' | 'openai' | 'anthropic' | 'zhipu' | 'custom';
   model: string;
   apiKey?: string; // From env or database
   apiEndpoint?: string; // For custom providers
@@ -237,6 +237,9 @@ export async function getLLMConfig(): Promise<LLMConfig> {
         break;
       case 'anthropic':
         apiKey = process.env.ANTHROPIC_API_KEY;
+        break;
+      case 'zhipu':
+        apiKey = process.env.ZHIPU_API_KEY;
         break;
       default:
         apiKey = undefined;
