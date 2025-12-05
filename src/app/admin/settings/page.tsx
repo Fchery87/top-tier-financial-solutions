@@ -361,8 +361,8 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="google">Google Gemini</option>
-                <option value="openai">OpenAI (Coming Soon)</option>
-                <option value="anthropic">Anthropic Claude (Coming Soon)</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic Claude</option>
                 <option value="custom">Custom Provider</option>
               </select>
               <p className="text-xs text-muted-foreground mt-1">
@@ -395,21 +395,59 @@ export default function SettingsPage() {
                     <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
                   </optgroup>
                 </select>
+              ) : getCurrentValue('provider') === 'openai' ? (
+                <select
+                  value={getCurrentValue('model')}
+                  onChange={(e) => handleConfigChange('model', e.target.value)}
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <optgroup label="GPT-4o (Latest)">
+                    <option value="gpt-4o">GPT-4o (Recommended)</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap)</option>
+                  </optgroup>
+                  <optgroup label="GPT-4 Turbo">
+                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    <option value="gpt-4-turbo-preview">GPT-4 Turbo Preview</option>
+                  </optgroup>
+                  <optgroup label="GPT-4">
+                    <option value="gpt-4">GPT-4 (Most Capable)</option>
+                    <option value="gpt-4-32k">GPT-4 32K Context</option>
+                  </optgroup>
+                  <optgroup label="GPT-3.5">
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Budget)</option>
+                  </optgroup>
+                </select>
+              ) : getCurrentValue('provider') === 'anthropic' ? (
+                <select
+                  value={getCurrentValue('model')}
+                  onChange={(e) => handleConfigChange('model', e.target.value)}
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <optgroup label="Claude 3.5 (Latest)">
+                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Recommended)</option>
+                    <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast)</option>
+                  </optgroup>
+                  <optgroup label="Claude 3 (Stable)">
+                    <option value="claude-3-opus-20240229">Claude 3 Opus (Most Capable)</option>
+                    <option value="claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)</option>
+                    <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fast)</option>
+                  </optgroup>
+                </select>
               ) : (
                 <Input
                   type="text"
                   value={getCurrentValue('model')}
                   onChange={(e) => handleConfigChange('model', e.target.value)}
-                  placeholder={
-                    getCurrentValue('provider') === 'openai' ? 'gpt-4o' :
-                    getCurrentValue('provider') === 'anthropic' ? 'claude-3-opus-20240229' :
-                    'model-name'
-                  }
+                  placeholder="model-name"
                 />
               )}
               <p className="text-xs text-muted-foreground mt-1">
                 {getCurrentValue('provider') === 'google' 
-                  ? 'Select a Gemini model. Flash models are faster, Pro models are more capable.'
+                  ? 'Flash models are faster, Pro models are more capable.'
+                  : getCurrentValue('provider') === 'openai'
+                  ? 'GPT-4o recommended for best quality/speed balance. Mini for budget.'
+                  : getCurrentValue('provider') === 'anthropic'
+                  ? 'Claude 3.5 Sonnet recommended for dispute letters. Excellent at formal writing.'
                   : 'Enter the model identifier for your provider'
                 }
               </p>

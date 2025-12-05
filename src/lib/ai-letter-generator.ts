@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import {
   loadPromptConfig,
   getMethodology,
@@ -7,7 +9,51 @@ import {
   getAllReasonCodesFlat,
   type PromptConfig,
 } from './dispute-config-loader';
-import { getLLMConfig } from './settings-service';
+import { getLLMConfig, type LLMConfig } from './settings-service';
+
+// Multi-provider LLM generation helper
+async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
+  switch (config.provider) {
+    case 'google': {
+      const genAI = new GoogleGenerativeAI(config.apiKey!);
+      const model = genAI.getGenerativeModel({ 
+        model: config.model,
+        generationConfig: {
+          temperature: config.temperature || 0.1,
+          maxOutputTokens: config.maxTokens || 4096,
+        },
+      });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
+    }
+    
+    case 'openai': {
+      const openai = new OpenAI({ apiKey: config.apiKey });
+      const response = await openai.chat.completions.create({
+        model: config.model || 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: config.temperature || 0.1,
+        max_tokens: config.maxTokens || 4096,
+      });
+      return response.choices[0]?.message?.content || '';
+    }
+    
+    case 'anthropic': {
+      const anthropic = new Anthropic({ apiKey: config.apiKey });
+      const response = await anthropic.messages.create({
+        model: config.model || 'claude-3-5-sonnet-20241022',
+        max_tokens: config.maxTokens || 4096,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const textBlock = response.content.find(block => block.type === 'text');
+      return textBlock?.type === 'text' ? textBlock.text : '';
+    }
+    
+    default:
+      throw new Error(`Unsupported LLM provider: ${config.provider}`);
+  }
+}
 
 interface ClientInfo {
   name: string;
@@ -247,21 +293,6 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
   }
 
   try {
-    // Use configured provider and model
-    if (llmConfig.provider !== 'google') {
-      console.warn(`Provider "${llmConfig.provider}" not yet supported, falling back to template`);
-      return generateFallbackLetter(params);
-    }
-
-    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: llmConfig.model,
-      generationConfig: {
-        temperature: llmConfig.temperature || 0.1,
-        maxOutputTokens: llmConfig.maxTokens || 4096,
-      },
-    });
-
     const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
     const reasonDescription = getReasonDescriptions(params.reasonCodes);
     const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
@@ -280,9 +311,8 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
       .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
       .replace('{metro2_violations}', metro2Section || 'IMPORTANT: No specific Metro 2 violations were provided by the AI analysis.\nRequest general verification of all Metro 2 data fields for accuracy and completeness.\nFocus on requesting documented proof of accuracy under FCRA Section 611.');
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const letterText = response.text();
+    // Use multi-provider helper
+    const letterText = await generateWithLLM(prompt, llmConfig);
 
     // Post-process to ensure proper formatting
     return postProcessLetter(letterText, params);
@@ -313,26 +343,11 @@ async function generateMethodologyBasedLetter(params: GenerateLetterParams): Pro
   }
 
   try {
-    if (llmConfig.provider !== 'google') {
-      console.warn(`Provider "${llmConfig.provider}" not yet supported, falling back to template`);
-      return generateFallbackLetter(params);
-    }
-
-    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: llmConfig.model,
-      generationConfig: {
-        temperature: llmConfig.temperature || 0.1,
-        maxOutputTokens: llmConfig.maxTokens || 4096,
-      },
-    });
-
     // Build the prompt using YAML configuration
     const prompt = buildMethodologyPrompt(params, promptConfig, methodologyConfig, bureauConfig);
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const letterText = response.text();
+    // Use multi-provider helper
+    const letterText = await generateWithLLM(prompt, llmConfig);
 
     return postProcessLetter(letterText, params);
   } catch (error) {
@@ -676,20 +691,6 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
   }
 
   try {
-    if (llmConfig.provider !== 'google') {
-      console.warn(`Provider "${llmConfig.provider}" not yet supported, falling back to template`);
-      return generateMultiItemFallbackLetter(params);
-    }
-
-    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: llmConfig.model,
-      generationConfig: {
-        temperature: llmConfig.temperature || 0.1,
-        maxOutputTokens: llmConfig.maxTokens || 4096,
-      },
-    });
-
     const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
     const reasonDescription = getReasonDescriptions(params.reasonCodes);
     const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
@@ -716,9 +717,8 @@ ${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDa
       .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
       .replace('{items_list}', itemsList);
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const letterText = response.text();
+    // Use multi-provider helper
+    const letterText = await generateWithLLM(prompt, llmConfig);
 
     return postProcessMultiItemLetter(letterText, params);
   } catch (error) {

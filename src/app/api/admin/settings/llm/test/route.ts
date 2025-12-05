@@ -39,41 +39,70 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    const testPrompt = 'Say "test successful" in exactly those two words.';
+
     // Test based on provider
     switch (config.provider) {
       case 'google': {
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(config.apiKey);
         const model = genAI.getGenerativeModel({ model: config.model });
-        const result = await model.generateContent('Say "test successful" if you receive this message.');
+        const result = await model.generateContent(testPrompt);
         const response = await result.response;
         const text = response.text();
         
         return NextResponse.json({ 
           success: true, 
           message: 'Connection successful',
+          provider: 'Google Gemini',
+          model: config.model,
           response: text.substring(0, 100),
         });
       }
 
       case 'openai': {
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI({ apiKey: config.apiKey });
+        const response = await openai.chat.completions.create({
+          model: config.model || 'gpt-4o',
+          messages: [{ role: 'user', content: testPrompt }],
+          max_tokens: 50,
+        });
+        const text = response.choices[0]?.message?.content || '';
+        
         return NextResponse.json({ 
-          success: false, 
-          message: 'OpenAI provider testing not yet implemented' 
+          success: true, 
+          message: 'Connection successful',
+          provider: 'OpenAI',
+          model: config.model,
+          response: text.substring(0, 100),
         });
       }
 
       case 'anthropic': {
+        const Anthropic = (await import('@anthropic-ai/sdk')).default;
+        const anthropic = new Anthropic({ apiKey: config.apiKey });
+        const response = await anthropic.messages.create({
+          model: config.model || 'claude-3-5-sonnet-20241022',
+          max_tokens: 50,
+          messages: [{ role: 'user', content: testPrompt }],
+        });
+        const textBlock = response.content.find(block => block.type === 'text');
+        const text = textBlock?.type === 'text' ? textBlock.text : '';
+        
         return NextResponse.json({ 
-          success: false, 
-          message: 'Anthropic provider testing not yet implemented' 
+          success: true, 
+          message: 'Connection successful',
+          provider: 'Anthropic Claude',
+          model: config.model,
+          response: text.substring(0, 100),
         });
       }
 
       default:
         return NextResponse.json({ 
           success: false, 
-          message: 'Unknown provider' 
+          message: `Unknown provider: ${config.provider}` 
         }, { status: 400 });
     }
   } catch (error: any) {
