@@ -54,7 +54,7 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
       // Zhipu AI (Z.ai / GLM) - OpenAI-compatible API
       const openai = new OpenAI({ 
         apiKey: config.apiKey,
-        baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+        baseURL: config.apiEndpoint || 'https://api.z.ai/api/paas/v4',
       });
       const response = await openai.chat.completions.create({
         model: config.model || 'glm-4-flash',

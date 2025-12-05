@@ -435,25 +435,33 @@ export default function SettingsPage() {
                   </optgroup>
                 </select>
               ) : getCurrentValue('provider') === 'zhipu' ? (
-                <select
-                  value={getCurrentValue('model')}
-                  onChange={(e) => handleConfigChange('model', e.target.value)}
-                  className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <optgroup label="GLM-4 (Latest)">
-                    <option value="glm-4-plus">GLM-4 Plus (Most Capable)</option>
-                    <option value="glm-4-0520">GLM-4 0520</option>
-                    <option value="glm-4">GLM-4 (Recommended)</option>
-                    <option value="glm-4-air">GLM-4 Air (Fast)</option>
-                    <option value="glm-4-airx">GLM-4 AirX (Faster)</option>
-                    <option value="glm-4-long">GLM-4 Long (1M Context)</option>
-                    <option value="glm-4-flash">GLM-4 Flash (Fastest)</option>
-                  </optgroup>
-                  <optgroup label="GLM-4V (Vision)">
-                    <option value="glm-4v-plus">GLM-4V Plus (Vision)</option>
-                    <option value="glm-4v">GLM-4V (Vision)</option>
-                  </optgroup>
-                </select>
+                <div className="space-y-2">
+                  <select
+                    value={getCurrentValue('model')}
+                    onChange={(e) => handleConfigChange('model', e.target.value)}
+                    className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <optgroup label="GLM-4 (Standard Zhipu)">
+                      <option value="glm-4-plus">GLM-4 Plus (Most Capable)</option>
+                      <option value="glm-4-0520">GLM-4 0520</option>
+                      <option value="glm-4">GLM-4 (Recommended)</option>
+                      <option value="glm-4-air">GLM-4 Air (Fast)</option>
+                      <option value="glm-4-airx">GLM-4 AirX (Faster)</option>
+                      <option value="glm-4-long">GLM-4 Long (1M Context)</option>
+                      <option value="glm-4-flash">GLM-4 Flash (Fastest)</option>
+                    </optgroup>
+                    <optgroup label="Z.ai Models (Recommended)">
+                      <option value="glm-4.6">GLM-4.6 (Recommended for Z.ai)</option>
+                    </optgroup>
+                  </select>
+                  {getCurrentValue('model') === 'custom' && (
+                    <Input
+                      type="text"
+                      placeholder="Enter exact model name from Z.ai"
+                      onChange={(e) => handleConfigChange('model', e.target.value)}
+                    />
+                  )}
+                </div>
               ) : (
                 <Input
                   type="text"
@@ -475,6 +483,30 @@ export default function SettingsPage() {
                 }
               </p>
             </div>
+
+            {/* API Endpoint (for Zhipu/Custom) */}
+            {(getCurrentValue('provider') === 'zhipu' || getCurrentValue('provider') === 'custom') && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  API Endpoint URL
+                </label>
+                <Input
+                  type="text"
+                  value={getCurrentValue('apiEndpoint') || ''}
+                  onChange={(e) => handleConfigChange('apiEndpoint', e.target.value)}
+                  placeholder={getCurrentValue('provider') === 'zhipu' 
+                    ? 'https://api.z.ai/api/paas/v4' 
+                    : 'https://api.example.com/v1'
+                  }
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {getCurrentValue('provider') === 'zhipu'
+                    ? 'For Z.ai use: https://api.z.ai/api/paas/v4'
+                    : 'The base URL for the API (OpenAI-compatible format)'
+                  }
+                </p>
+              </div>
+            )}
 
             {/* API Key */}
             <div>
