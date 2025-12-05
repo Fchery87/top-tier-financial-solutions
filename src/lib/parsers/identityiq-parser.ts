@@ -644,11 +644,20 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
         derogatoryAccounts.push(derogatoryAccount);
       }
 
+      // Extract clean creditor name and original creditor before creating accounts
+      const { creditorName: cleanCreditorName, originalCreditor } = extractOriginalCreditor(creditorName);
+
       // Create parsed accounts for each bureau that has data
       for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
         const data = accountData[bureau];
         if (Object.keys(data).length > 0) {
-          const account = createParsedAccount(creditorName, data, bureau);
+          const account = createParsedAccount(cleanCreditorName, data, bureau);
+          // Store original creditor in remarks for now (could be added to ParsedAccount interface)
+          if (originalCreditor && account.remarks) {
+            account.remarks += ` | Original Creditor: ${originalCreditor}`;
+          } else if (originalCreditor) {
+            account.remarks = `Original Creditor: ${originalCreditor}`;
+          }
           accounts.push(account);
         }
       }
@@ -944,6 +953,42 @@ function extractInquiriesFromTable(
   });
 }
 
+/**
+ * Extract original creditor from creditor name strings like:
+ * "ERC  (Original Creditor: 11 SPRINT)" → { creditor: "ERC", original: "SPRINT" }
+ * "LVNV FUNDING (Original Creditor: 12 CREDIT ONE BANK N A)" → { creditor: "LVNV FUNDING", original: "CREDIT ONE BANK N A" }
+ */
+function extractOriginalCreditor(creditorName: string): { 
+  creditorName: string; 
+  originalCreditor: string | undefined 
+} {
+  if (!creditorName) {
+    return { creditorName: '', originalCreditor: undefined };
+  }
+
+  // Pattern: "CREDITOR (Original Creditor: ORIGINAL)"
+  const pattern = /^(.+?)\s*\(Original Creditor:\s*(.+?)\)\s*$/i;
+  const match = creditorName.match(pattern);
+
+  if (match) {
+    const actualCreditor = match[1].trim();
+    let originalCreditor = match[2].trim();
+
+    // Remove leading numbers (e.g., "11 SPRINT" → "SPRINT", "12 CREDIT ONE" → "CREDIT ONE")
+    originalCreditor = originalCreditor.replace(/^\d+\s+/, '');
+
+    return {
+      creditorName: actualCreditor,
+      originalCreditor: originalCreditor || undefined,
+    };
+  }
+
+  return {
+    creditorName,
+    originalCreditor: undefined,
+  };
+}
+
 function buildNegativeItems(
   derogatoryAccounts: DerogatoryAccount[],
   accounts: ParsedAccount[]
@@ -965,9 +1010,13 @@ function buildNegativeItems(
         itemType = 'late_payment';
       }
 
+      // Extract original creditor from creditor name if present
+      const { creditorName, originalCreditor } = extractOriginalCreditor(derog.creditorName);
+
       negativeItems.push({
         itemType,
-        creditorName: derog.creditorName,
+        creditorName,
+        originalCreditor,
         riskSeverity: itemType === 'collection' ? 'high' : 'medium',
       });
     }
@@ -983,9 +1032,13 @@ function buildNegativeItems(
       else if (account.accountStatus === 'charge_off') itemType = 'charge_off';
       else if (account.paymentStatus?.includes('late')) itemType = 'late_payment';
 
+      // Extract original creditor from creditor name if present
+      const { creditorName, originalCreditor } = extractOriginalCreditor(account.creditorName);
+
       negativeItems.push({
         itemType,
-        creditorName: account.creditorName,
+        creditorName,
+        originalCreditor,
         amount: account.balance,
         bureau: account.bureau,
         riskSeverity: account.riskLevel || 'medium',
