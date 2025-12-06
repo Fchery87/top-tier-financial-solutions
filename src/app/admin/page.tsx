@@ -74,6 +74,7 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const [stats, setStats] = React.useState<DashboardStats | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [density, setDensity] = React.useState<'comfortable' | 'compact'>('comfortable');
 
   React.useEffect(() => {
     async function fetchStats() {
@@ -112,8 +113,13 @@ export default function AdminDashboard() {
     (stats.attentionNeeded?.responseDueSoon ?? 0) +
     (stats.attentionNeeded?.overdueResponses ?? 0) : 0;
 
+  const verticalSpacing = density === 'compact' ? 'space-y-4' : 'space-y-6';
+  const metricCardPadding = density === 'compact' ? 'p-3' : 'p-4';
+  const metricGridGap = density === 'compact' ? 'gap-3' : 'gap-4';
+  const isCompact = density === 'compact';
+
   return (
-    <div className="space-y-6">
+    <div className={verticalSpacing}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -130,21 +136,52 @@ export default function AdminDashboard() {
             transition={{ delay: 0.1 }}
             className="text-muted-foreground mt-1"
           >
-            Monitor cases, track disputes, and manage your credit repair workflow.
+            Monitor cases, track disputes, and manage your credit repair workflow in one command center.
           </motion.p>
         </div>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-3"
         >
-          <Button asChild>
-            <Link href="/admin/clients">
-              <Users className="w-4 h-4 mr-2" />
-              View Clients
-            </Link>
-          </Button>
+          <div className="hidden md:flex items-center gap-1 rounded-full bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">
+            <span className="px-2">Density</span>
+            <button
+              type="button"
+              onClick={() => setDensity('comfortable')}
+              className={
+                `px-2 py-0.5 rounded-full transition-colors ` +
+                (isCompact ? 'text-muted-foreground' : 'bg-background text-foreground shadow-sm')
+              }
+            >
+              Comfort
+            </button>
+            <button
+              type="button"
+              onClick={() => setDensity('compact')}
+              className={
+                `px-2 py-0.5 rounded-full transition-colors ` +
+                (isCompact ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground')
+              }
+            >
+              Compact
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild>
+              <Link href="/admin/disputes/wizard">
+                <Zap className="w-4 h-4 mr-2" />
+                New Dispute
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/admin/clients">
+                <Users className="w-4 h-4 mr-2" />
+                View Clients
+              </Link>
+            </Button>
+          </div>
         </motion.div>
       </div>
 
@@ -153,115 +190,119 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
+        className="space-y-4"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Users className="w-4 h-4 text-blue-500" />
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${metricGridGap}`}>
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+            <CardContent className={metricCardPadding}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Users className="w-4 h-4 text-blue-500" />
+                </div>
               </div>
-            </div>
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-foreground">{stats?.activeClients ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Active Cases</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-foreground">{stats?.activeClients ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Active Clients</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-lg bg-orange-500/10">
-                <FileWarning className="w-4 h-4 text-orange-500" />
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+            <CardContent className={metricCardPadding}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <Scale className="w-4 h-4 text-purple-500" />
+                </div>
               </div>
-            </div>
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-foreground">{stats?.pendingReports ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Pending Reports</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-foreground">{stats?.disputesPending ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Open Disputes</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <Scale className="w-4 h-4 text-purple-500" />
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+            <CardContent className={metricCardPadding}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-orange-500/10">
+                  <FileWarning className="w-4 h-4 text-orange-500" />
+                </div>
               </div>
-            </div>
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-foreground">{stats?.disputesPending ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Active Disputes</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-foreground">{stats?.totalNegativeItems ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Negative Tradelines</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-lg bg-cyan-500/10">
-                <BarChart3 className="w-4 h-4 text-cyan-500" />
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+            <CardContent className={metricCardPadding}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-emerald-500/10">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                </div>
               </div>
-            </div>
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-foreground">{stats?.avgCreditScore || '—'}</p>
-                <p className="text-xs text-muted-foreground">Avg Credit Score</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Items Removed (30d)</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <Target className="w-4 h-4 text-green-500" />
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 ${metricGridGap}`}>
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+            <CardContent className={metricCardPadding}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-cyan-500/10">
+                  <BarChart3 className="w-4 h-4 text-cyan-500" />
+                </div>
               </div>
-            </div>
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-foreground">{stats?.successRate ?? 0}%</p>
-                <p className="text-xs text-muted-foreground">Success Rate</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-foreground">{stats?.avgCreditScore || '—'}</p>
+                  <p className="text-xs text-muted-foreground">Average Credit Score</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
+            <CardContent className={metricCardPadding}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <Target className="w-4 h-4 text-green-500" />
+                </div>
               </div>
-            </div>
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Removed This Month</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-foreground">{stats?.successRate ?? 0}%</p>
+                  <p className="text-xs text-muted-foreground">Dispute Success Rate</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </motion.div>
 
       {/* Client Pipeline - Kanban Board */}
@@ -408,7 +449,7 @@ export default function AdminDashboard() {
             </Card>
           </motion.div>
 
-          {/* Needs Attention */}
+          {/* Today's Work / Needs Attention */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -418,7 +459,7 @@ export default function AdminDashboard() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-serif flex items-center gap-2">
                   <AlertCircle className={`w-5 h-5 ${totalAttention > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
-                  Needs Attention
+                  Today&apos;s Work
                   {totalAttention > 0 && (
                     <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-orange-500/10 text-orange-500">
                       {totalAttention}

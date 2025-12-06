@@ -571,7 +571,7 @@ export default function DisputeWizardPage() {
           raw: item,
           payload: {
             id: item.id,
-            kind: 'tradeline',
+            kind: 'tradeline' as DisputeItemKind,
             bureau: item.bureau,
             creditorName: item.creditor_name,
             originalCreditor: item.original_creditor,
@@ -586,7 +586,7 @@ export default function DisputeWizardPage() {
           raw: item,
           payload: {
             id: item.id,
-            kind: 'personal',
+            kind: 'personal' as DisputeItemKind,
             bureau: item.bureau,
             itemType: `personal_info_${item.type}`,
             value: item.value,
@@ -597,7 +597,7 @@ export default function DisputeWizardPage() {
           raw: item,
           payload: {
             id: item.id,
-            kind: 'inquiry',
+            kind: 'inquiry' as DisputeItemKind,
             bureau: item.bureau,
             creditorName: item.creditor_name,
             itemType: 'inquiry',
