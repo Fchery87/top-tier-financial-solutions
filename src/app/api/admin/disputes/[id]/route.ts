@@ -172,11 +172,21 @@ export async function PUT(
 
     if (sentAt !== undefined) {
       updateData.sentAt = sentAt ? new Date(sentAt) : null;
-      // Set response deadline to 30 days after sent date (FCRA requirement)
+      // Set response deadline and escalationReadyAt when marked as sent
       if (sentAt) {
-        const deadline = new Date(sentAt);
+        const sendDate = new Date(sentAt);
+        // Response deadline: 30 days for bureaus (FCRA requirement)
+        const deadline = new Date(sendDate);
         deadline.setDate(deadline.getDate() + 30);
         updateData.responseDeadline = deadline;
+        
+        // Escalation ready: 35 days for bureaus, 45 days for creditors/collectors
+        // This accounts for 30-day investigation + 5-day mailing buffer
+        const escalationDays = currentDispute.escalationPath === 'creditor' || 
+                               currentDispute.escalationPath === 'collector' ? 45 : 35;
+        const escalationDate = new Date(sendDate);
+        escalationDate.setDate(escalationDate.getDate() + escalationDays);
+        updateData.escalationReadyAt = escalationDate;
       }
     }
 
@@ -188,11 +198,30 @@ export async function PUT(
       updateData.escalationReason = escalationReason;
     }
 
+    // Add admin audit entry to escalation history
+    const existingHistory = currentDispute.escalationHistory 
+      ? JSON.parse(currentDispute.escalationHistory) 
+      : [];
+    existingHistory.push({
+      action: status !== undefined ? `status_changed_to_${status}` : 'updated',
+      timestamp: new Date().toISOString(),
+      adminId: adminUser.id,
+      adminEmail: adminUser.email,
+      changes: {
+        ...(status !== undefined && { status }),
+        ...(outcome !== undefined && { outcome }),
+        ...(sentAt !== undefined && { sentAt }),
+      },
+    });
+    updateData.escalationHistory = JSON.stringify(existingHistory);
+    
     // Update dispute
     await db
       .update(disputes)
       .set(updateData)
       .where(eq(disputes.id, id));
+    
+    console.log(`[AUDIT] Dispute ${id} updated by admin ${adminUser.email}`);
 
     // Auto-escalation: Create Round 2 dispute if item was verified
     let nextRoundDispute = null;

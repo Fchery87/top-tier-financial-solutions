@@ -17,6 +17,9 @@ import {
   Copy,
   Download,
   AlertCircle,
+  Zap,
+  Paperclip,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -73,6 +76,24 @@ interface ReasonCode {
 interface DisputeType {
   code: string;
   label: string;
+}
+
+interface TriageQuickAction {
+  id: string;
+  label: string;
+  description: string;
+  itemIds: string[];
+  count: number;
+  bureau?: string;
+  itemType?: string;
+}
+
+interface EvidenceDocument {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_url: string;
+  created_at: string;
 }
 
 interface Methodology {
@@ -224,6 +245,16 @@ export default function DisputeWizardPage() {
   const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
   const [loadingDiscrepancies, setLoadingDiscrepancies] = React.useState(false);
 
+  // Triage quick actions
+  const [triageQuickActions, setTriageQuickActions] = React.useState<TriageQuickAction[]>([]);
+  const [loadingTriage, setLoadingTriage] = React.useState(false);
+
+  // Evidence documents
+  const [evidenceDocuments, setEvidenceDocuments] = React.useState<EvidenceDocument[]>([]);
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = React.useState<string[]>([]);
+  const [loadingEvidence, setLoadingEvidence] = React.useState(false);
+  const [evidenceOverrideConfirmed, setEvidenceOverrideConfirmed] = React.useState(false);
+
   // Both modes use 4 steps now
   const maxSteps = WIZARD_STEPS.length;
   const reviewStepId = 4;
@@ -304,6 +335,42 @@ export default function DisputeWizardPage() {
       setDiscrepancySummary(null);
     } finally {
       setLoadingDiscrepancies(false);
+    }
+  };
+
+  // Fetch triage quick actions for the client
+  const fetchTriage = async (clientId: string) => {
+    setLoadingTriage(true);
+    try {
+      const response = await fetch('/api/admin/disputes/triage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, round: disputeRound }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTriageQuickActions(data.quickActions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching triage:', error);
+    } finally {
+      setLoadingTriage(false);
+    }
+  };
+
+  // Fetch evidence documents for the client
+  const fetchEvidence = async (clientId: string) => {
+    setLoadingEvidence(true);
+    try {
+      const response = await fetch(`/api/admin/disputes/evidence?clientId=${clientId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEvidenceDocuments(data.documents || []);
+      }
+    } catch (error) {
+      console.error('Error fetching evidence:', error);
+    } finally {
+      setLoadingEvidence(false);
     }
   };
 
@@ -432,7 +499,10 @@ export default function DisputeWizardPage() {
     if (selectedClient) {
       fetchNegativeItems(selectedClient.id);
       fetchDiscrepancies(selectedClient.id);
+      fetchTriage(selectedClient.id);
+      fetchEvidence(selectedClient.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient]);
 
   // Generate letters
@@ -502,7 +572,7 @@ export default function DisputeWizardPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               clientId: selectedClient.id,
-              negativeItemIds: itemsForThisBureau, // Only items for this bureau
+              negativeItemIds: itemsForThisBureau,
               bureau: bureau,
               disputeType: selectedDisputeType,
               round: disputeRound,
@@ -511,10 +581,9 @@ export default function DisputeWizardPage() {
               customReason: customReason || undefined,
               combineItems: true,
               methodology: methodologyToUse,
-              // Include per-item instructions for template mode
               perItemInstructions: generationMethod === 'template' ? perItemInstructions : undefined,
-              // Include AI analysis data for enhanced letters - use effectiveSummary to avoid state timing issues
-              metro2Violations: generationMethod === 'ai' ? effectiveSummary?.allMetro2Violations : undefined
+              metro2Violations: generationMethod === 'ai' ? effectiveSummary?.allMetro2Violations : undefined,
+              evidenceDocumentIds: selectedEvidenceIds.length > 0 ? selectedEvidenceIds : undefined,
             }),
           });
 
@@ -585,12 +654,11 @@ export default function DisputeWizardPage() {
                 itemType: item.item_type,
                 amount: item.amount,
                 methodology: methodologyToUse,
-                // Include per-item instruction for template mode
                 disputeInstruction: itemInstruction,
-                // Include AI analysis data for this specific item - use effectiveAnalyses to avoid state timing issues
                 metro2Violations: generationMethod === 'ai' 
                   ? effectiveAnalyses.find(a => a.itemId === itemId)?.metro2Violations 
-                  : undefined
+                  : undefined,
+                evidenceDocumentIds: selectedEvidenceIds.length > 0 ? selectedEvidenceIds : undefined,
               }),
             });
 
@@ -976,6 +1044,46 @@ export default function DisputeWizardPage() {
                   <p className="text-sm text-green-400">
                     <strong>AI Mode:</strong> Simply select items to dispute. The AI will automatically analyze 
                     each item for Metro 2 compliance violations and FCRA issues.
+                  </p>
+                </div>
+              )}
+              
+              {/* Triage Quick Actions */}
+              {triageQuickActions.length > 0 && (
+                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm font-medium text-purple-400">Quick Actions</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {triageQuickActions.map((action) => (
+                      <Button
+                        key={action.id}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs border-purple-500/30 hover:bg-purple-500/10"
+                        onClick={() => {
+                          setSelectedItems(prev => [...new Set([...prev, ...action.itemIds])]);
+                          if (generationMethod === 'template') {
+                            setItemDisputeInstructions(prev => {
+                              const newMap = new Map(prev);
+                              action.itemIds.forEach(id => {
+                                if (!newMap.has(id)) {
+                                  newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
+                                }
+                              });
+                              return newMap;
+                            });
+                          }
+                        }}
+                      >
+                        <Check className="w-3 h-3 mr-1" />
+                        {action.label} ({action.count})
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Click to quickly select items by category
                   </p>
                 </div>
               )}
@@ -1448,6 +1556,97 @@ export default function DisputeWizardPage() {
                   </div>
                 </div>
               )}
+
+              {/* Evidence Picker */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Paperclip className="w-4 h-4" />
+                    Evidence Attachments (Enclosures)
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedEvidenceIds.length} selected
+                  </span>
+                </div>
+                
+                {loadingEvidence ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-secondary" />
+                  </div>
+                ) : evidenceDocuments.length === 0 ? (
+                  <div className="p-3 rounded-lg bg-muted/50 text-center text-sm text-muted-foreground">
+                    <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No documents uploaded for this client.</p>
+                    <p className="text-xs mt-1">Standard enclosures (ID, proof of address) will be included automatically.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {evidenceDocuments.map((doc) => {
+                      const isSelected = selectedEvidenceIds.includes(doc.id);
+                      return (
+                        <div
+                          key={doc.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-secondary bg-secondary/10'
+                              : 'border-border hover:border-secondary/50'
+                          }`}
+                          onClick={() => {
+                            setSelectedEvidenceIds(prev =>
+                              isSelected
+                                ? prev.filter(id => id !== doc.id)
+                                : [...prev, doc.id]
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                              isSelected
+                                ? 'border-secondary bg-secondary'
+                                : 'border-muted-foreground/30'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 text-primary" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                              <p className="text-xs text-muted-foreground">{doc.file_type}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {/* High-risk evidence warning */}
+                {selectedReasonCodes.some(c => ['identity_theft', 'not_mine', 'never_late', 'mixed_file'].includes(c)) && 
+                 selectedEvidenceIds.length === 0 && (
+                  <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">
+                          Evidence Required for High-Risk Claims
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          The selected reason codes require supporting documentation. Please attach evidence or confirm override.
+                        </p>
+                        <label className="flex items-center gap-2 mt-2">
+                          <input
+                            type="checkbox"
+                            checked={evidenceOverrideConfirmed}
+                            onChange={(e) => setEvidenceOverrideConfirmed(e.target.checked)}
+                            className="rounded border-yellow-500"
+                          />
+                          <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                            I confirm client has provided verbal verification of these claims
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}

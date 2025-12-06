@@ -33,7 +33,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { clientId, negativeItemId, bureau, disputeReason, disputeType } = body;
+    const { 
+      clientId, 
+      negativeItemId, 
+      bureau, 
+      disputeReason, 
+      disputeType,
+      methodology,
+      evidenceDocumentIds,
+      fcraSections,
+      disputedFields,
+    } = body;
 
     if (!clientId || !bureau || !disputeReason) {
       return NextResponse.json(
@@ -87,9 +97,17 @@ export async function POST(request: NextRequest) {
       customReason: disputeReason,
     });
 
-    // Create dispute record
+    // Create dispute record with admin audit trail
     const id = randomUUID();
     const now = new Date();
+    
+    // Build escalation history with admin info for audit trail
+    const initialHistory = JSON.stringify([{
+      action: 'created',
+      timestamp: now.toISOString(),
+      adminId: adminUser.id,
+      adminEmail: adminUser.email,
+    }]);
 
     await db.insert(disputes).values({
       id,
@@ -101,9 +119,16 @@ export async function POST(request: NextRequest) {
       status: 'draft',
       round: 1,
       letterContent,
+      methodology: methodology || null,
+      fcraSections: fcraSections ? JSON.stringify(fcraSections) : null,
+      disputedFields: disputedFields ? JSON.stringify(disputedFields) : null,
+      evidenceDocumentIds: evidenceDocumentIds ? JSON.stringify(evidenceDocumentIds) : null,
+      escalationHistory: initialHistory,
       createdAt: now,
       updatedAt: now,
     });
+    
+    console.log(`[AUDIT] Dispute ${id} created by admin ${adminUser.email} for client ${clientId}`);
 
     // Fetch the created dispute
     const [createdDispute] = await db

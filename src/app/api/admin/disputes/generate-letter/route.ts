@@ -3,9 +3,10 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
-import { clients, negativeItems } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { clients, negativeItems, clientDocuments } from '@/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 import { generateUniqueDisputeLetter, generateMultiItemDisputeLetter, DISPUTE_REASON_CODES } from '@/lib/ai-letter-generator';
+import { DOCUMENT_TYPE_LABELS } from '@/lib/dispute-evidence';
 
 const HIGH_RISK_CODES = new Set([
   'identity_theft',
@@ -92,6 +93,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
+    // Fetch evidence documents if provided to build enclosures list
+    let enclosures: { documentType: string; documentName: string }[] = [];
+    if (evidenceDocumentIds && evidenceDocumentIds.length > 0) {
+      const evidenceDocs = await db
+        .select()
+        .from(clientDocuments)
+        .where(inArray(clientDocuments.id, evidenceDocumentIds));
+      
+      enclosures = evidenceDocs.map(doc => ({
+        documentType: doc.fileType || 'other',
+        documentName: DOCUMENT_TYPE_LABELS[doc.fileType as keyof typeof DOCUMENT_TYPE_LABELS] || doc.fileName,
+      }));
+    }
+
     // Handle multi-item combined letter
     if (combineItems && negativeItemIds && negativeItemIds.length > 0) {
       // Fetch all negative items
@@ -136,8 +151,9 @@ export async function POST(request: NextRequest) {
         bureau: bureau,
         reasonCodes: reasonCodes,
         customReason: customReason,
-        methodology: methodology, // NEW: Pass methodology
-        metro2Violations: metro2Violations, // Pass Metro 2 violations to combined letters
+        methodology: methodology,
+        metro2Violations: metro2Violations,
+        enclosures: enclosures,
       });
 
       return NextResponse.json({
@@ -169,10 +185,11 @@ export async function POST(request: NextRequest) {
       disputeType: disputeType || 'standard',
       round: round || 1,
       targetRecipient: targetRecipient || 'bureau',
-      methodology: methodology, // NEW: Pass methodology
-      metro2Violations: metro2Violations, // NEW: Pass Metro 2 violations
-      priorDisputeDate: priorDisputeDate, // NEW: For method of verification
-      priorDisputeResult: priorDisputeResult, // NEW: Prior result
+      methodology: methodology,
+      metro2Violations: metro2Violations,
+      priorDisputeDate: priorDisputeDate,
+      priorDisputeResult: priorDisputeResult,
+      enclosures: enclosures,
       clientData: {
         name: `${client.firstName} ${client.lastName}`,
         address: undefined,

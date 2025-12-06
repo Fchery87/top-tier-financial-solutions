@@ -89,6 +89,11 @@ interface NegativeItemInfo {
   bureau: string;
 }
 
+interface EvidenceEnclosure {
+  documentType: string;
+  documentName: string;
+}
+
 interface GenerateLetterParams {
   disputeType: string;
   round: number;
@@ -97,10 +102,11 @@ interface GenerateLetterParams {
   itemData: NegativeItemInfo;
   reasonCodes: string[];
   customReason?: string;
-  methodology?: string; // NEW: Methodology selection
-  metro2Violations?: string[]; // NEW: Specific Metro 2 field violations
-  priorDisputeDate?: string; // NEW: For method of verification letters
-  priorDisputeResult?: string; // NEW: Result of prior dispute
+  methodology?: string;
+  metro2Violations?: string[];
+  priorDisputeDate?: string;
+  priorDisputeResult?: string;
+  enclosures?: EvidenceEnclosure[];
 }
 
 const BUREAU_ADDRESSES: Record<string, string> = {
@@ -158,6 +164,24 @@ function formatCurrency(cents: number): string {
 
 function formatItemType(type: string): string {
   return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function buildEnclosuresSection(enclosures?: EvidenceEnclosure[]): string {
+  if (!enclosures || enclosures.length === 0) {
+    return `Enclosures:
+- Copy of government-issued identification
+- Proof of current address`;
+  }
+  
+  const enclosureLines = enclosures.map(e => `- ${e.documentName || e.documentType}`);
+  // Always include ID and proof of address as standard enclosures
+  const hasId = enclosures.some(e => e.documentType === 'id_document');
+  const hasProof = enclosures.some(e => e.documentType === 'proof_of_address');
+  
+  if (!hasId) enclosureLines.unshift('- Copy of government-issued identification');
+  if (!hasProof) enclosureLines.splice(hasId ? 1 : 2, 0, '- Proof of current address');
+  
+  return `Enclosures:\n${enclosureLines.join('\n')}`;
 }
 
 function buildMetro2ViolationsSection(violations?: string[]): string {
@@ -568,9 +592,7 @@ ${params.clientData.name}
 ${params.clientData.address ? params.clientData.address : ''}
 ${params.clientData.city && params.clientData.state && params.clientData.zip ? `${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}` : ''}
 
-Enclosures:
-- Copy of identification
-- Proof of address`;
+${buildEnclosuresSection(params.enclosures)}`;
 }
 
 export const DISPUTE_REASON_CODES = [
@@ -612,8 +634,9 @@ interface GenerateMultiItemLetterParams {
   bureau: string;
   reasonCodes: string[];
   customReason?: string;
-  methodology?: string; // Methodology selection
-  metro2Violations?: string[]; // Specific Metro 2 field violations to cite in letter
+  methodology?: string;
+  metro2Violations?: string[];
+  enclosures?: EvidenceEnclosure[];
 }
 
 const MULTI_ITEM_AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter for MULTIPLE accounts based on METRO 2 COMPLIANCE and FCRA VERIFICATION requirements.
@@ -837,9 +860,7 @@ ${params.clientData.name}
 ${params.clientData.address ? params.clientData.address : ''}
 ${params.clientData.city && params.clientData.state && params.clientData.zip ? `${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}` : ''}
 
-Enclosures:
-- Copy of identification
-- Proof of address`;
+${buildEnclosuresSection(params.enclosures)}`;
 }
 
 // ============================================
