@@ -18,6 +18,9 @@ import type {
   ExtendedParsedCreditData,
   PersonalInfoPerBureau,
   BureauPersonalInfo,
+  PaymentHistorySummary,
+  PersonalInfoDisputeType,
+  PersonalInfoDisputeItem,
 } from './pdf-parser';
 import {
   StandardizedAccount,
@@ -57,6 +60,10 @@ const IIQ_SELECTORS = {
   // Content wrappers
   contentWrapper: '.rpt_content_wrapper',
   fullReportHeader: '.rpt_fullReport_header',
+  
+  // Two-year payment history
+  paymentHistoryTable: 'table.rpt_content_table.addr_hsrty',
+  paymentHistoryHeader: 'div.hstry-header.hstry-header-2yr',
 };
 
 // Derogatory detection patterns (from PHP)
@@ -79,6 +86,119 @@ const BUREAU_COLUMNS = {
   equifax: 3,
 };
 
+// Payment history CSS class patterns
+const PAYMENT_HISTORY_CLASSES = {
+  late30: 'hstry-30',
+  late60: 'hstry-60',
+  late90: 'hstry-90',
+  late120: 'hstry-120',
+  late150: 'hstry-150',
+  late180: 'hstry-180',
+  chargeOff: 'hstry-other',
+  collection: 'hstry-co',
+  ok: 'hstry-ok',
+};
+
+function createEmptyPaymentHistory(): PaymentHistorySummary {
+  return {
+    lateCount30: 0,
+    lateCount60: 0,
+    lateCount90: 0,
+    lateCount120: 0,
+    lateCount150: 0,
+    lateCount180: 0,
+    chargeOffCount: 0,
+    collectionCount: 0,
+    maxLateDays: 0,
+  };
+}
+
+function computeMaxLateDays(history: PaymentHistorySummary): number {
+  if (history.lateCount180 > 0 || history.chargeOffCount > 0 || history.collectionCount > 0) return 180;
+  if (history.lateCount150 > 0) return 150;
+  if (history.lateCount120 > 0) return 120;
+  if (history.lateCount90 > 0) return 90;
+  if (history.lateCount60 > 0) return 60;
+  if (history.lateCount30 > 0) return 30;
+  return 0;
+}
+
+function extractPaymentHistory(
+  $: cheerio.CheerioAPI,
+  $accountTable: cheerio.Cheerio<AnyNode>
+): Record<'transunion' | 'experian' | 'equifax', PaymentHistorySummary> {
+  const history: Record<'transunion' | 'experian' | 'equifax', PaymentHistorySummary> = {
+    transunion: createEmptyPaymentHistory(),
+    experian: createEmptyPaymentHistory(),
+    equifax: createEmptyPaymentHistory(),
+  };
+
+  // Find payment history table within or after the account table
+  // The structure varies: sometimes nested, sometimes sibling
+  let $historyTable = $accountTable.find(IIQ_SELECTORS.paymentHistoryTable).first();
+  
+  if ($historyTable.length === 0) {
+    // Try finding as a sibling after the account table
+    $historyTable = $accountTable.nextAll(IIQ_SELECTORS.paymentHistoryTable).first();
+  }
+  
+  if ($historyTable.length === 0) {
+    return history;
+  }
+
+  // Parse payment history rows
+  // Row structure: 
+  //   Row 0: Month labels (headers)
+  //   Row 1: TransUnion payment codes
+  //   Row 2: Experian payment codes  
+  //   Row 3: Equifax payment codes
+  $historyTable.find('tr').each((rowIdx, row) => {
+    // Skip header row (months)
+    if (rowIdx === 0) return;
+    
+    // Map row index to bureau (rows 1-3 map to bureaus)
+    let bureau: 'transunion' | 'experian' | 'equifax';
+    if (rowIdx === 1) bureau = 'transunion';
+    else if (rowIdx === 2) bureau = 'experian';
+    else if (rowIdx === 3) bureau = 'equifax';
+    else return;
+
+    $(row).find('td.info').each((_, cell) => {
+      const $cell = $(cell);
+      const classes = $cell.attr('class') || '';
+      
+      // Check for each late status class
+      if (classes.includes(PAYMENT_HISTORY_CLASSES.late30)) {
+        history[bureau].lateCount30++;
+      }
+      if (classes.includes(PAYMENT_HISTORY_CLASSES.late60)) {
+        history[bureau].lateCount60++;
+      }
+      if (classes.includes(PAYMENT_HISTORY_CLASSES.late90)) {
+        history[bureau].lateCount90++;
+      }
+      if (classes.includes(PAYMENT_HISTORY_CLASSES.late120)) {
+        history[bureau].lateCount120++;
+      }
+      if (classes.includes(PAYMENT_HISTORY_CLASSES.late150)) {
+        history[bureau].lateCount150++;
+      }
+      if (classes.includes(PAYMENT_HISTORY_CLASSES.late180)) {
+        history[bureau].lateCount180++;
+      }
+      // hstry-other typically indicates chargeoff/collection
+      if (classes.includes(PAYMENT_HISTORY_CLASSES.chargeOff)) {
+        history[bureau].chargeOffCount++;
+      }
+    });
+    
+    // Compute max late days for this bureau
+    history[bureau].maxLateDays = computeMaxLateDays(history[bureau]);
+  });
+
+  return history;
+}
+
 export function parseIdentityIQReport(html: string): ExtendedParsedCreditData {
   const $ = cheerio.load(html);
   const text = $.text();
@@ -93,6 +213,7 @@ export function parseIdentityIQReport(html: string): ExtendedParsedCreditData {
   const publicRecords = extractPublicRecords($);
   const inquiries = extractIIQInquiries($);
   const negativeItems = buildNegativeItems(derogatoryAccounts, accounts);
+  const personalInfoDisputes = buildPersonalInfoDisputes(bureauPersonalInfo);
   const summary = calculateIIQSummary(accounts, bureauSummary);
 
   return {
@@ -108,6 +229,7 @@ export function parseIdentityIQReport(html: string): ExtendedParsedCreditData {
     creditUtilization,
     derogatoryAccounts,
     publicRecords,
+    personalInfoDisputes,
   } as ExtendedParsedCreditData;
 }
 
@@ -615,8 +737,11 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
         });
       });
 
-      // Check if this is a derogatory account
-      const isDerogatoryAccount = checkIfDerogatory(accountData);
+      // Extract two-year payment history for this account
+      const paymentHistory = extractPaymentHistory($, $accountTable);
+
+      // Check if this is a derogatory account (now includes payment history)
+      const isDerogatoryAccount = checkIfDerogatory(accountData, paymentHistory);
       
       if (isDerogatoryAccount) {
         const derogatoryAccount: DerogatoryAccount = {
@@ -626,16 +751,19 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
             accountStatus: accountData.transunion.accountStatus,
             accountDate: accountData.transunion.dateOpened,
             paymentStatus: accountData.transunion.paymentStatus,
+            paymentHistory: paymentHistory.transunion,
           },
           experian: {
             accountStatus: accountData.experian.accountStatus,
             accountDate: accountData.experian.dateOpened,
             paymentStatus: accountData.experian.paymentStatus,
+            paymentHistory: paymentHistory.experian,
           },
           equifax: {
             accountStatus: accountData.equifax.accountStatus,
             accountDate: accountData.equifax.dateOpened,
             paymentStatus: accountData.equifax.paymentStatus,
+            paymentHistory: paymentHistory.equifax,
           },
         };
         derogatoryAccounts.push(derogatoryAccount);
@@ -664,17 +792,26 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
   return { accounts, derogatoryAccounts };
 }
 
-function checkIfDerogatory(accountData: Record<string, Record<string, string>>): boolean {
-  for (const bureau of ['transunion', 'experian', 'equifax']) {
+function checkIfDerogatory(
+  accountData: Record<string, Record<string, string>>,
+  paymentHistory?: Record<'transunion' | 'experian' | 'equifax', PaymentHistorySummary>
+): boolean {
+  for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
     const data = accountData[bureau];
     const status = (data.accountStatus || '').toLowerCase();
     const paymentStatus = (data.paymentStatus || '').toLowerCase();
+    const maxLate = paymentHistory?.[bureau]?.maxLateDays ?? 0;
     
+    // Check account status
     if (status === 'derogatory') return true;
     
+    // Check payment status patterns
     for (const pattern of DEROGATORY_PATTERNS) {
       if (paymentStatus.includes(pattern)) return true;
     }
+    
+    // Check two-year payment history for lates
+    if (maxLate >= 30) return true;
   }
   return false;
 }
@@ -1012,66 +1149,132 @@ function buildNegativeItems(
   accounts: ParsedAccount[]
 ): ParsedNegativeItem[] {
   const negativeItems: ParsedNegativeItem[] = [];
-  const addedCreditors = new Set<string>();
+  // Improved deduplication: use creditor + bureau + status instead of just creditor name
+  const addedKeys = new Set<string>();
 
   // Add from derogatory accounts
   for (const derog of derogatoryAccounts) {
-    if (!addedCreditors.has(derog.creditorName.toLowerCase())) {
-      addedCreditors.add(derog.creditorName.toLowerCase());
+    // Process each bureau separately to avoid collapsing multiple bad accounts
+    for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
+      const bureauData = derog[bureau];
+      if (!bureauData.accountStatus && !bureauData.paymentStatus) continue;
       
-      let itemType = 'derogatory';
       const status = derog.uniqueStatus.toLowerCase();
+      const paymentHistory = bureauData.paymentHistory;
+      const maxLate = paymentHistory?.maxLateDays ?? 0;
       
-      if (status.includes('collection') || status.includes('chargeoff')) {
+      // Determine item type with priority: collection > charge_off > late_payment > derogatory
+      let itemType = 'derogatory';
+      
+      if (status.includes('collection')) {
         itemType = 'collection';
-      } else if (status.includes('late')) {
-        itemType = 'late_payment';
+      } else if (status.includes('chargeoff') || status.includes('charge off')) {
+        itemType = 'charge_off';
+      } else if (status.includes('late') || maxLate >= 30) {
+        itemType = 'late_payment'; // "Delinquent" bucket
       }
 
-      // Extract original creditor from creditor name if present
+      // Create unique key using creditor + bureau + itemType
       const { creditorName, originalCreditor } = extractOriginalCreditor(derog.creditorName);
+      const dedupKey = `${creditorName.toLowerCase()}|${bureau}|${itemType}`;
+      
+      if (addedKeys.has(dedupKey)) continue;
+      addedKeys.add(dedupKey);
+
+      // Calculate risk severity based on late history
+      let riskSeverity: string;
+      if (itemType === 'collection' || itemType === 'charge_off' || maxLate >= 90) {
+        riskSeverity = 'high';
+      } else if (maxLate >= 60) {
+        riskSeverity = 'medium';
+      } else {
+        riskSeverity = 'medium';
+      }
 
       negativeItems.push({
         itemType,
         creditorName,
         originalCreditor,
-        riskSeverity: itemType === 'collection' ? 'high' : 'medium',
+        bureau,
+        riskSeverity,
       });
     }
   }
 
-  // Add additional negative items from accounts
+  // Add additional negative items from accounts (with improved deduplication)
   for (const account of accounts) {
-    if (account.isNegative && !addedCreditors.has(account.creditorName.toLowerCase())) {
-      addedCreditors.add(account.creditorName.toLowerCase());
-      
-      let itemType = 'derogatory';
-      const normalizedStatus = (account.accountStatus || '').toLowerCase();
-      const normalizedPayment = (account.paymentStatus || '').toLowerCase();
-
-      if (normalizedStatus === 'collection' || normalizedPayment.includes('collection')) {
-        itemType = 'collection';
-      } else if (normalizedStatus === 'charge_off' || normalizedPayment.includes('charge')) {
-        itemType = 'charge_off';
-      } else if (normalizedPayment.includes('late')) {
-        itemType = 'late_payment';
-      }
-
-      // Extract original creditor from creditor name if present
-      const { creditorName, originalCreditor } = extractOriginalCreditor(account.creditorName);
-
-      negativeItems.push({
-        itemType,
-        creditorName,
-        originalCreditor,
-        amount: account.balance,
-        bureau: account.bureau,
-        riskSeverity: account.riskLevel || 'medium',
-      });
+    if (!account.isNegative) continue;
+    
+    const normalizedStatus = (account.accountStatus || '').toLowerCase();
+    const normalizedPayment = (account.paymentStatus || '').toLowerCase();
+    
+    // Determine item type
+    let itemType = 'derogatory';
+    
+    if (normalizedStatus === 'collection' || normalizedPayment.includes('collection')) {
+      itemType = 'collection';
+    } else if (normalizedStatus === 'charge_off' || normalizedPayment.includes('charge')) {
+      itemType = 'charge_off';
+    } else if (normalizedPayment.includes('late')) {
+      itemType = 'late_payment';
     }
+
+    // Create unique key using creditor + bureau + account number (if available)
+    const { creditorName, originalCreditor } = extractOriginalCreditor(account.creditorName);
+    const dedupKey = `${creditorName.toLowerCase()}|${account.bureau || ''}|${account.accountNumber || itemType}`;
+    
+    if (addedKeys.has(dedupKey)) continue;
+    addedKeys.add(dedupKey);
+
+    negativeItems.push({
+      itemType,
+      creditorName,
+      originalCreditor,
+      accountNumber: account.accountNumber,
+      amount: account.balance,
+      bureau: account.bureau,
+      riskSeverity: account.riskLevel || 'medium',
+    });
   }
 
   return negativeItems;
+}
+
+function buildPersonalInfoDisputes(
+  personalInfo: BureauPersonalInfo
+): PersonalInfoDisputeItem[] {
+  const items: PersonalInfoDisputeItem[] = [];
+
+  const add = (
+    bureau: 'transunion' | 'experian' | 'equifax',
+    type: PersonalInfoDisputeType,
+    value?: string
+  ) => {
+    const v = value?.trim();
+    if (!v || v === '-' || v === '') return;
+    items.push({ type, bureau, value: v });
+  };
+
+  const addMany = (
+    bureau: 'transunion' | 'experian' | 'equifax',
+    type: PersonalInfoDisputeType,
+    values?: string[]
+  ) => {
+    (values || []).forEach(v => add(bureau, type, v));
+  };
+
+  for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
+    const info = personalInfo[bureau];
+    add(bureau, 'name', info.name);
+    add(bureau, 'date_of_birth', info.dateOfBirth);
+    add(bureau, 'current_address', info.currentAddress);
+    addMany(bureau, 'also_known_as', info.alsoKnownAs);
+    addMany(bureau, 'former_name', info.formerName);
+    addMany(bureau, 'previous_address', info.previousAddresses);
+    addMany(bureau, 'employer', info.employers);
+  }
+
+  return items;
 }
 
 function calculateIIQSummary(

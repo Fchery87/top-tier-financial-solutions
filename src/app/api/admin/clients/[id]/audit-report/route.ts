@@ -83,6 +83,7 @@ export async function GET(
             reportDate: latestReport.reportDate?.toISOString() || new Date().toISOString(),
             bureauSummary: parsedData.bureauSummary || createEmptyBureauSummary(),
             bureauPersonalInfo: parsedData.bureauPersonalInfo,
+            personalInfoDisputes: parsedData.personalInfoDisputes,
             creditUtilization: parsedData.creditUtilization || createEmptyCreditUtilization(),
             derogatoryAccounts: parsedData.derogatoryAccounts || [],
             publicRecords: parsedData.publicRecords || [],

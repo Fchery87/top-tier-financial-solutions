@@ -2,7 +2,7 @@
 // Comprehensive report matching the PHP Twig template format
 // Includes: Cover Page, Welcome Letter, Credit Basics, Scores Summary, Account Analysis, Process Overview, Client Role
 
-import type { BureauSummary, BureauPersonalInfo, DerogatoryAccount, PublicRecord, BureauCreditUtilization } from './parsers/pdf-parser';
+import type { BureauSummary, BureauPersonalInfo, DerogatoryAccount, PublicRecord, BureauCreditUtilization, PersonalInfoDisputeItem } from './parsers/pdf-parser';
 
 export interface CreditAnalysisReportData {
   client: {
@@ -14,6 +14,7 @@ export interface CreditAnalysisReportData {
   reportDate: string;
   bureauSummary: BureauSummary;
   bureauPersonalInfo?: BureauPersonalInfo;
+  personalInfoDisputes?: PersonalInfoDisputeItem[];
   creditUtilization: BureauCreditUtilization;
   derogatoryAccounts: DerogatoryAccount[];
   publicRecords: PublicRecord[];
@@ -76,7 +77,140 @@ function getUtilizationImage(percent: number): string {
   return 'excellent';
 }
 
+// Check if values differ across bureaus (for highlighting discrepancies)
+function hasDiscrepancy(tu?: string, exp?: string, eq?: string): boolean {
+  const values = [tu, exp, eq].filter(v => v && v !== '-' && v.trim() !== '');
+  if (values.length <= 1) return false;
+  const normalized = values.map(v => v?.toLowerCase().trim());
+  return new Set(normalized).size > 1;
+}
 
+function renderPersonalInformationSection(data: CreditAnalysisReportData): string {
+  const personalInfo = data.bureauPersonalInfo;
+  
+  if (!personalInfo) {
+    return '';
+  }
+
+  // Check for discrepancies
+  const nameDiscrepancy = hasDiscrepancy(
+    personalInfo.transunion.name,
+    personalInfo.experian.name,
+    personalInfo.equifax.name
+  );
+  const dobDiscrepancy = hasDiscrepancy(
+    personalInfo.transunion.dateOfBirth,
+    personalInfo.experian.dateOfBirth,
+    personalInfo.equifax.dateOfBirth
+  );
+  const addressDiscrepancy = hasDiscrepancy(
+    personalInfo.transunion.currentAddress,
+    personalInfo.experian.currentAddress,
+    personalInfo.equifax.currentAddress
+  );
+
+  const hasAnyDiscrepancy = nameDiscrepancy || dobDiscrepancy || addressDiscrepancy;
+
+  // Collect all previous addresses and employers
+  const tuPrevAddresses = personalInfo.transunion.previousAddresses || [];
+  const expPrevAddresses = personalInfo.experian.previousAddresses || [];
+  const eqPrevAddresses = personalInfo.equifax.previousAddresses || [];
+  const maxPrevAddresses = Math.max(tuPrevAddresses.length, expPrevAddresses.length, eqPrevAddresses.length);
+
+  const tuEmployers = personalInfo.transunion.employers || [];
+  const expEmployers = personalInfo.experian.employers || [];
+  const eqEmployers = personalInfo.equifax.employers || [];
+  const maxEmployers = Math.max(tuEmployers.length, expEmployers.length, eqEmployers.length);
+
+  const tuAkas = personalInfo.transunion.alsoKnownAs || [];
+  const expAkas = personalInfo.experian.alsoKnownAs || [];
+  const eqAkas = personalInfo.equifax.alsoKnownAs || [];
+  const maxAkas = Math.max(tuAkas.length, expAkas.length, eqAkas.length);
+
+  return `
+    <h3>Personal Information</h3>
+    <p>The credit bureaus maintain personal information about you. Discrepancies across bureaus can indicate data entry errors, mixed credit files, or potential identity theft. Under Metro 2 compliance, furnishers must report accurate consumer information.</p>
+    
+    ${hasAnyDiscrepancy ? `
+    <div class="info-box warning" style="margin-bottom: 20px;">
+      <strong>⚠️ Discrepancies Detected</strong>
+      <p style="margin-top: 8px;">We found differences in your personal information across bureaus. This may indicate:</p>
+      <ul style="margin-left: 20px; margin-top: 8px;">
+        ${nameDiscrepancy ? '<li>Name variations that could affect credit matching</li>' : ''}
+        ${dobDiscrepancy ? '<li>Date of birth discrepancies that may indicate mixed files</li>' : ''}
+        ${addressDiscrepancy ? '<li>Address differences that could impact identity verification</li>' : ''}
+      </ul>
+      <p style="margin-top: 8px;"><strong>Recommendation:</strong> These items should be reviewed and potentially disputed to ensure accurate reporting.</p>
+    </div>
+    ` : ''}
+    
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th class="text-center">TransUnion</th>
+          <th class="text-center">Experian</th>
+          <th class="text-center">Equifax</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="${nameDiscrepancy ? 'background: #FEF3C7;' : ''}">
+          <td><strong>Name</strong>${nameDiscrepancy ? ' ⚠️' : ''}</td>
+          <td class="text-center">${personalInfo.transunion.name || '-'}</td>
+          <td class="text-center">${personalInfo.experian.name || '-'}</td>
+          <td class="text-center">${personalInfo.equifax.name || '-'}</td>
+        </tr>
+        <tr style="${dobDiscrepancy ? 'background: #FEF3C7;' : ''}">
+          <td><strong>Date of Birth</strong>${dobDiscrepancy ? ' ⚠️' : ''}</td>
+          <td class="text-center">${personalInfo.transunion.dateOfBirth || '-'}</td>
+          <td class="text-center">${personalInfo.experian.dateOfBirth || '-'}</td>
+          <td class="text-center">${personalInfo.equifax.dateOfBirth || '-'}</td>
+        </tr>
+        <tr style="${addressDiscrepancy ? 'background: #FEF3C7;' : ''}">
+          <td><strong>Current Address</strong>${addressDiscrepancy ? ' ⚠️' : ''}</td>
+          <td class="text-center" style="font-size: 9pt;">${personalInfo.transunion.currentAddress || '-'}</td>
+          <td class="text-center" style="font-size: 9pt;">${personalInfo.experian.currentAddress || '-'}</td>
+          <td class="text-center" style="font-size: 9pt;">${personalInfo.equifax.currentAddress || '-'}</td>
+        </tr>
+        ${maxPrevAddresses > 0 ? Array.from({ length: maxPrevAddresses }, (_, i) => `
+        <tr>
+          <td>${i === 0 ? '<strong>Previous Addresses</strong>' : ''}</td>
+          <td class="text-center" style="font-size: 9pt;">${tuPrevAddresses[i] || '-'}</td>
+          <td class="text-center" style="font-size: 9pt;">${expPrevAddresses[i] || '-'}</td>
+          <td class="text-center" style="font-size: 9pt;">${eqPrevAddresses[i] || '-'}</td>
+        </tr>
+        `).join('') : ''}
+        ${maxEmployers > 0 ? Array.from({ length: maxEmployers }, (_, i) => `
+        <tr>
+          <td>${i === 0 ? '<strong>Employers</strong>' : ''}</td>
+          <td class="text-center">${tuEmployers[i] || '-'}</td>
+          <td class="text-center">${expEmployers[i] || '-'}</td>
+          <td class="text-center">${eqEmployers[i] || '-'}</td>
+        </tr>
+        `).join('') : ''}
+        ${maxAkas > 0 ? Array.from({ length: maxAkas }, (_, i) => `
+        <tr>
+          <td>${i === 0 ? '<strong>Also Known As</strong>' : ''}</td>
+          <td class="text-center">${tuAkas[i] || '-'}</td>
+          <td class="text-center">${expAkas[i] || '-'}</td>
+          <td class="text-center">${eqAkas[i] || '-'}</td>
+        </tr>
+        `).join('') : ''}
+      </tbody>
+    </table>
+    
+    <div class="info-box tip" style="margin-top: 20px;">
+      <strong>Why Personal Information Matters</strong>
+      <p style="margin-top: 8px;">Under Metro 2 guidelines, credit bureaus must maintain accurate consumer identifying information. Incorrect names, addresses, or birthdates can:</p>
+      <ul style="margin-left: 20px; margin-top: 8px;">
+        <li>Cause accounts to be incorrectly matched to your file</li>
+        <li>Lead to mixed credit files with another consumer</li>
+        <li>Trigger fraud alerts or identity verification failures</li>
+        <li>Affect your ability to obtain credit, employment, or housing</li>
+      </ul>
+    </div>
+  `;
+}
 
 export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData): string {
   const company = { ...DEFAULT_COMPANY_INFO, ...data.companyInfo };
@@ -1107,6 +1241,8 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
         </tr>
       </tbody>
     </table>
+    
+    ${renderPersonalInformationSection(data)}
     
     <div class="page-break"></div>
     

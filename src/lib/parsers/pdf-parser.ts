@@ -134,6 +134,19 @@ export interface BureauCreditUtilization {
   total: CreditUtilization;
 }
 
+// Two-year payment history summary per bureau
+export interface PaymentHistorySummary {
+  lateCount30: number;
+  lateCount60: number;
+  lateCount90: number;
+  lateCount120: number;
+  lateCount150: number;
+  lateCount180: number;
+  chargeOffCount: number;
+  collectionCount: number;
+  maxLateDays: number; // 0, 30, 60, 90, 120, 150, 180
+}
+
 // Derogatory account with per-bureau details
 export interface DerogatoryAccount {
   creditorName: string;
@@ -142,16 +155,19 @@ export interface DerogatoryAccount {
     accountStatus?: string;
     accountDate?: string;
     paymentStatus?: string;
+    paymentHistory?: PaymentHistorySummary;
   };
   experian: {
     accountStatus?: string;
     accountDate?: string;
     paymentStatus?: string;
+    paymentHistory?: PaymentHistorySummary;
   };
   equifax: {
     accountStatus?: string;
     accountDate?: string;
     paymentStatus?: string;
+    paymentHistory?: PaymentHistorySummary;
   };
 }
 
@@ -181,6 +197,22 @@ export interface BureauPersonalInfo {
   equifax: PersonalInfoPerBureau;
 }
 
+// Personal information dispute types for generating dispute letters
+export type PersonalInfoDisputeType =
+  | 'name'
+  | 'also_known_as'
+  | 'former_name'
+  | 'date_of_birth'
+  | 'current_address'
+  | 'previous_address'
+  | 'employer';
+
+export interface PersonalInfoDisputeItem {
+  type: PersonalInfoDisputeType;
+  bureau: 'transunion' | 'experian' | 'equifax';
+  value: string;
+}
+
 // Extended parsed data with bureau-specific details
 export interface ExtendedParsedCreditData extends ParsedCreditData {
   bureauSummary?: BureauSummary;
@@ -188,6 +220,7 @@ export interface ExtendedParsedCreditData extends ParsedCreditData {
   derogatoryAccounts?: DerogatoryAccount[];
   publicRecords?: PublicRecord[];
   bureauPersonalInfo?: BureauPersonalInfo;
+  personalInfoDisputes?: PersonalInfoDisputeItem[];
 }
 
 const NEGATIVE_KEYWORDS = [
