@@ -107,7 +107,18 @@ interface CreditAccount {
   credit_limit: number | null;
   payment_status: string | null;
   date_opened: string | null;
-  bureau: string | null;
+  bureau: string | null; // Legacy field
+  // Per-bureau presence fields
+  bureaus?: string[];
+  on_transunion?: boolean;
+  on_experian?: boolean;
+  on_equifax?: boolean;
+  transunion_date?: string | null;
+  experian_date?: string | null;
+  equifax_date?: string | null;
+  transunion_balance?: number | null;
+  experian_balance?: number | null;
+  equifax_balance?: number | null;
   is_negative: boolean;
   risk_level: string | null;
 }
@@ -119,7 +130,18 @@ interface NegativeItem {
   original_creditor: string | null;
   amount: number | null;
   date_reported: string | null;
-  bureau: string | null;
+  bureau: string | null; // Legacy field
+  // Per-bureau presence fields
+  bureaus?: string[];
+  on_transunion?: boolean;
+  on_experian?: boolean;
+  on_equifax?: boolean;
+  transunion_date?: string | null;
+  experian_date?: string | null;
+  equifax_date?: string | null;
+  transunion_status?: string | null;
+  experian_status?: string | null;
+  equifax_status?: string | null;
   risk_severity: string;
   recommended_action: string | null;
   dispute_reason: string | null;
@@ -158,6 +180,24 @@ interface ScoreHistory {
 
 const statusOptions = ['pending', 'active', 'paused', 'completed', 'cancelled'];
 const bureauOptions = ['transunion', 'experian', 'equifax', 'combined'];
+
+// Helper function to check if account/item appears on a specific bureau
+// Uses new per-bureau boolean fields with fallback to legacy bureau field
+function appearsOnBureau(item: { bureau: string | null; on_transunion?: boolean; on_experian?: boolean; on_equifax?: boolean; bureaus?: string[] }, bureau: string): boolean {
+  const bureauLower = bureau.toLowerCase();
+  
+  // Check new per-bureau boolean fields first
+  if (bureauLower === 'transunion' && item.on_transunion !== undefined) return item.on_transunion;
+  if (bureauLower === 'experian' && item.on_experian !== undefined) return item.on_experian;
+  if (bureauLower === 'equifax' && item.on_equifax !== undefined) return item.on_equifax;
+  
+  // Check bureaus array if available
+  if (item.bureaus && item.bureaus.length > 0) return item.bureaus.includes(bureauLower);
+  
+  // Fallback to legacy logic
+  if (!item.bureau || item.bureau === 'combined') return true;
+  return item.bureau.toLowerCase() === bureauLower;
+}
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -949,6 +989,7 @@ export default function ClientDetailPage() {
                           <tr className="border-b border-border">
                             <th className="text-left p-2 font-medium">Creditor</th>
                             <th className="text-left p-2 font-medium">Type</th>
+                            <th className="text-left p-2 font-medium">Bureaus</th>
                             <th className="text-right p-2 font-medium">Balance</th>
                             <th className="text-right p-2 font-medium">Limit</th>
                             <th className="text-left p-2 font-medium">Status</th>
@@ -962,6 +1003,39 @@ export default function ClientDetailPage() {
                                 {account.account_number && <p className="text-xs text-muted-foreground">****{account.account_number.slice(-4)}</p>}
                               </td>
                               <td className="p-2 text-muted-foreground capitalize">{account.account_type?.replace('_', ' ') || '—'}</td>
+                              <td className="p-2">
+                                {/* Bureau Indicators - Show which bureaus this account appears on */}
+                                <div className="flex items-center gap-1">
+                                  {['transunion', 'experian', 'equifax'].map((bureau) => {
+                                    // Uses new per-bureau boolean fields with fallback to legacy logic
+                                    const onBureau = appearsOnBureau(account, bureau);
+                                    // Get bureau-specific balance for tooltip
+                                    const bureauBalance = bureau === 'transunion' ? account.transunion_balance 
+                                      : bureau === 'experian' ? account.experian_balance 
+                                      : account.equifax_balance;
+                                    const bureauDate = bureau === 'transunion' ? account.transunion_date 
+                                      : bureau === 'experian' ? account.experian_date 
+                                      : account.equifax_date;
+                                    return (
+                                      <span
+                                        key={bureau}
+                                        className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                          onBureau
+                                            ? bureau === 'transunion' ? 'bg-blue-500/20 text-blue-500' :
+                                              bureau === 'experian' ? 'bg-purple-500/20 text-purple-500' :
+                                              'bg-green-500/20 text-green-500'
+                                            : 'bg-muted/30 text-muted-foreground/30'
+                                        }`}
+                                        title={onBureau 
+                                          ? `${bureau.charAt(0).toUpperCase() + bureau.slice(1)}${bureauBalance ? ` - $${(bureauBalance / 100).toFixed(2)}` : ''}${bureauDate ? ` (${new Date(bureauDate).toLocaleDateString()})` : ''}`
+                                          : `Not reported on ${bureau.charAt(0).toUpperCase() + bureau.slice(1)}`}
+                                      >
+                                        {bureau === 'transunion' ? 'TU' : bureau === 'experian' ? 'EXP' : 'EQ'}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
                               <td className="p-2 text-right">{account.balance ? formatCurrency(account.balance) : '—'}</td>
                               <td className="p-2 text-right">{account.credit_limit ? formatCurrency(account.credit_limit) : '—'}</td>
                               <td className="p-2">

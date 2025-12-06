@@ -12,7 +12,13 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getFileFromR2 } from './r2-storage';
-import { parsePdfCreditReport, type ParsedCreditData, type ParsedConsumerProfile } from './parsers/pdf-parser';
+import { 
+  parsePdfCreditReport, 
+  type ParsedCreditData, 
+  type ParsedConsumerProfile,
+  type ExtendedParsedCreditData,
+  type DerogatoryAccount,
+} from './parsers/pdf-parser';
 import { parseHtmlCreditReport } from './parsers/html-parser';
 import {
   calculateCompletenessScore,
@@ -21,6 +27,33 @@ import {
   isAccountNegative,
   calculateRiskLevel,
 } from './parsers/metro2-mapping';
+
+// Helper function to check if parsed data has extended bureau info
+function isExtendedParsedData(data: ParsedCreditData): data is ExtendedParsedCreditData {
+  return 'derogatoryAccounts' in data && Array.isArray((data as ExtendedParsedCreditData).derogatoryAccounts);
+}
+
+// Helper to find matching derogatory account by creditor name
+function findDerogatoryMatch(
+  creditorName: string, 
+  derogatoryAccounts: DerogatoryAccount[] | undefined
+): DerogatoryAccount | undefined {
+  if (!derogatoryAccounts) return undefined;
+  const normalizedName = creditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return derogatoryAccounts.find(da => {
+    const daNormalized = da.creditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return daNormalized === normalizedName || 
+           daNormalized.includes(normalizedName) || 
+           normalizedName.includes(daNormalized);
+  });
+}
+
+// Helper to parse date string from derogatory account
+function parseBureauDate(dateStr: string | undefined): Date | undefined {
+  if (!dateStr || dateStr === '-' || dateStr === '') return undefined;
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? undefined : parsed;
+}
 
 export async function analyzeCreditReport(reportId: string): Promise<void> {
   // Get the report
@@ -107,6 +140,29 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         accountCategory: account.accountType as any,
       });
       
+      // Determine per-bureau presence for credit accounts
+      // For accounts, we use the single bureau field since accounts typically come per-bureau
+      let accountOnTransunion = false;
+      let accountOnExperian = false;
+      let accountOnEquifax = false;
+      
+      if (report.bureau) {
+        const bureauLower = report.bureau.toLowerCase();
+        accountOnTransunion = bureauLower === 'transunion';
+        accountOnExperian = bureauLower === 'experian';
+        accountOnEquifax = bureauLower === 'equifax';
+      } else if (account.bureau) {
+        const bureauLower = account.bureau.toLowerCase();
+        accountOnTransunion = bureauLower === 'transunion';
+        accountOnExperian = bureauLower === 'experian';
+        accountOnEquifax = bureauLower === 'equifax';
+      } else {
+        // Combined report - mark all as true (will be refined by derogatory match if available)
+        accountOnTransunion = true;
+        accountOnExperian = true;
+        accountOnEquifax = true;
+      }
+      
       await db.insert(creditAccounts).values({
         id: accountId,
         creditReportId: reportId,
@@ -123,7 +179,17 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         paymentStatus: account.paymentStatus,
         dateOpened: account.dateOpened,
         dateReported: account.dateReported,
-        bureau: report.bureau,
+        bureau: report.bureau, // Legacy field for backward compatibility
+        // Per-bureau presence fields
+        onTransunion: accountOnTransunion,
+        onExperian: accountOnExperian,
+        onEquifax: accountOnEquifax,
+        transunionDate: accountOnTransunion ? account.dateReported : undefined,
+        experianDate: accountOnExperian ? account.dateReported : undefined,
+        equifaxDate: accountOnEquifax ? account.dateReported : undefined,
+        transunionBalance: accountOnTransunion ? account.balance : undefined,
+        experianBalance: accountOnExperian ? account.balance : undefined,
+        equifaxBalance: accountOnEquifax ? account.balance : undefined,
         isNegative: isNegativeCalc,
         riskLevel: riskLevelCalc,
         remarks: missingFields.length > 0 
@@ -135,6 +201,9 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
 
     // Store negative items and calculate FCRA compliance
     // CRITICAL FIX: Link negative items to their corresponding credit accounts
+    // ENHANCEMENT: Extract per-bureau presence data from ExtendedParsedCreditData
+    const derogatoryAccounts = isExtendedParsedData(parsedData) ? parsedData.derogatoryAccounts : undefined;
+    
     for (const item of parsedData.negativeItems) {
       const negativeItemId = randomUUID();
       
@@ -159,6 +228,51 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         }
       }
       
+      // Find matching derogatory account for per-bureau data
+      const derogatoryMatch = findDerogatoryMatch(item.creditorName, derogatoryAccounts);
+      
+      // Determine per-bureau presence
+      // If we have derogatory match with per-bureau data, use it
+      // Otherwise, fall back to report.bureau (single bureau report) or mark all as true (combined)
+      let onTransunion = false;
+      let onExperian = false;
+      let onEquifax = false;
+      let transunionDate: Date | undefined;
+      let experianDate: Date | undefined;
+      let equifaxDate: Date | undefined;
+      let transunionStatus: string | undefined;
+      let experianStatus: string | undefined;
+      let equifaxStatus: string | undefined;
+      
+      if (derogatoryMatch) {
+        // Use per-bureau data from derogatory account
+        onTransunion = !!(derogatoryMatch.transunion?.accountDate && derogatoryMatch.transunion.accountDate !== '-');
+        onExperian = !!(derogatoryMatch.experian?.accountDate && derogatoryMatch.experian.accountDate !== '-');
+        onEquifax = !!(derogatoryMatch.equifax?.accountDate && derogatoryMatch.equifax.accountDate !== '-');
+        transunionDate = parseBureauDate(derogatoryMatch.transunion?.accountDate);
+        experianDate = parseBureauDate(derogatoryMatch.experian?.accountDate);
+        equifaxDate = parseBureauDate(derogatoryMatch.equifax?.accountDate);
+        transunionStatus = derogatoryMatch.transunion?.accountStatus || derogatoryMatch.transunion?.paymentStatus;
+        experianStatus = derogatoryMatch.experian?.accountStatus || derogatoryMatch.experian?.paymentStatus;
+        equifaxStatus = derogatoryMatch.equifax?.accountStatus || derogatoryMatch.equifax?.paymentStatus;
+      } else if (report.bureau) {
+        // Single bureau report - mark only that bureau as present
+        const bureauLower = report.bureau.toLowerCase();
+        onTransunion = bureauLower === 'transunion';
+        onExperian = bureauLower === 'experian';
+        onEquifax = bureauLower === 'equifax';
+        // Set date for the reporting bureau
+        if (onTransunion) transunionDate = item.dateReported || undefined;
+        if (onExperian) experianDate = item.dateReported || undefined;
+        if (onEquifax) equifaxDate = item.dateReported || undefined;
+      } else {
+        // Combined report without derogatory match - conservatively mark all as true
+        // This ensures items aren't accidentally filtered out
+        onTransunion = true;
+        onExperian = true;
+        onEquifax = true;
+      }
+      
       await db.insert(negativeItems).values({
         id: negativeItemId,
         creditReportId: reportId,
@@ -170,7 +284,17 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         amount: item.amount,
         dateReported: item.dateReported,
         dateOfLastActivity: item.dateOfLastActivity, // Add this field for DOFD analysis
-        bureau: report.bureau,
+        bureau: report.bureau, // Legacy field for backward compatibility
+        // Per-bureau presence fields
+        onTransunion,
+        onExperian,
+        onEquifax,
+        transunionDate,
+        experianDate,
+        equifaxDate,
+        transunionStatus,
+        experianStatus,
+        equifaxStatus,
         riskSeverity: item.riskSeverity,
         recommendedAction: getRecommendedAction(item),
         createdAt: new Date(),

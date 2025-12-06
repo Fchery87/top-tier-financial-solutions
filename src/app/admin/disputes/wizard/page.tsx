@@ -39,7 +39,18 @@ interface NegativeItem {
   item_type: string;
   amount: number | null;
   date_reported: string | null;
-  bureau: string | null;
+  bureau: string | null; // Legacy field
+  // Per-bureau presence fields
+  bureaus?: string[]; // Computed array: ['transunion', 'experian', 'equifax']
+  on_transunion?: boolean;
+  on_experian?: boolean;
+  on_equifax?: boolean;
+  transunion_date?: string | null;
+  experian_date?: string | null;
+  equifax_date?: string | null;
+  transunion_status?: string | null;
+  experian_status?: string | null;
+  equifax_status?: string | null;
   risk_severity: string;
   recommended_action: string | null;
 }
@@ -141,6 +152,37 @@ const BUREAUS = [
   { code: 'experian', label: 'Experian' },
   { code: 'equifax', label: 'Equifax' },
 ];
+
+// Helper function to check if a negative item appears on a specific bureau
+// Uses the new per-bureau boolean fields, with fallback to legacy bureau field
+function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean {
+  const bureauLower = bureau.toLowerCase();
+  
+  // First, check the new per-bureau boolean fields
+  if (bureauLower === 'transunion' && item.on_transunion !== undefined) {
+    return item.on_transunion;
+  }
+  if (bureauLower === 'experian' && item.on_experian !== undefined) {
+    return item.on_experian;
+  }
+  if (bureauLower === 'equifax' && item.on_equifax !== undefined) {
+    return item.on_equifax;
+  }
+  
+  // Check the bureaus array if available
+  if (item.bureaus && item.bureaus.length > 0) {
+    return item.bureaus.includes(bureauLower);
+  }
+  
+  // Fallback to legacy bureau field logic
+  // If no specific bureau, assume it appears on all bureaus (conservative)
+  if (!item.bureau || item.bureau === 'combined') {
+    return true;
+  }
+  
+  // Otherwise, check if legacy bureau matches
+  return item.bureau.toLowerCase() === bureauLower;
+}
 
 export default function DisputeWizardPage() {
   const router = useRouter();
@@ -406,18 +448,35 @@ export default function DisputeWizardPage() {
     }
 
     // Combined letter mode: one letter per bureau with all selected items
+    // FIX: Filter items by bureau - only include items that appear on each specific bureau
     if (combineItemsPerBureau && targetRecipient === 'bureau') {
       const totalLetters = bureausToUse.length;
       let completed = 0;
 
       for (const bureau of bureausToUse) {
+        // Filter items for this specific bureau
+        // Include items where: bureau matches, bureau is null (combined report), or bureau is 'combined'
+        const itemsForThisBureau = selectedItems.filter(itemId => {
+          const item = negativeItems.find(i => i.id === itemId);
+          if (!item) return false;
+          // Include if: item has no specific bureau (null/combined) OR item's bureau matches target bureau
+          return !item.bureau || item.bureau === 'combined' || item.bureau.toLowerCase() === bureau.toLowerCase();
+        });
+
+        // Skip this bureau if no items apply to it
+        if (itemsForThisBureau.length === 0) {
+          completed++;
+          setGenerationProgress(Math.round((completed / totalLetters) * 100));
+          continue;
+        }
+
         try {
           const response = await fetch('/api/admin/disputes/generate-letter', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               clientId: selectedClient.id,
-              negativeItemIds: selectedItems,
+              negativeItemIds: itemsForThisBureau, // Only items for this bureau
               bureau: bureau,
               disputeType: selectedDisputeType,
               round: disputeRound,
@@ -437,8 +496,8 @@ export default function DisputeWizardPage() {
             const data = await response.json();
             letters.push({
               bureau: bureau,
-              itemId: selectedItems[0], // Primary item for reference
-              itemIds: selectedItems,
+              itemId: itemsForThisBureau[0], // Primary item for reference
+              itemIds: itemsForThisBureau, // Only items for this bureau
               content: data.letter_content,
               combined: true,
             });
@@ -451,9 +510,21 @@ export default function DisputeWizardPage() {
         setGenerationProgress(Math.round((completed / totalLetters) * 100));
       }
     } else {
-      // Individual letter mode: one letter per item per bureau (original behavior)
-      const totalLetters = selectedItems.length * bureausToUse.length;
+      // Individual letter mode: one letter per item per bureau
+      // FIX: Only generate letters for bureaus where each item actually appears
       let completed = 0;
+      
+      // Calculate total letters considering bureau filtering
+      let totalLetters = 0;
+      for (const itemId of selectedItems) {
+        const item = negativeItems.find(i => i.id === itemId);
+        if (!item) continue;
+        for (const bureau of bureausToUse) {
+          // Only count if item appears on this bureau
+          const itemApplies = !item.bureau || item.bureau === 'combined' || item.bureau.toLowerCase() === bureau.toLowerCase();
+          if (itemApplies) totalLetters++;
+        }
+      }
 
       for (const itemId of selectedItems) {
         const item = negativeItems.find(i => i.id === itemId);
@@ -465,6 +536,12 @@ export default function DisputeWizardPage() {
           : undefined;
 
         for (const bureau of bureausToUse) {
+          // FIX: Only generate letter if item appears on this bureau
+          // Uses new per-bureau boolean fields with fallback to legacy logic
+          if (!itemAppearsOnBureau(item, bureau)) {
+            continue; // Skip - this item doesn't appear on this bureau
+          }
+
           try {
             const response = await fetch('/api/admin/disputes/generate-letter', {
               method: 'POST',
@@ -990,7 +1067,7 @@ export default function DisputeWizardPage() {
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-medium">{item.creditor_name}</p>
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                                   item.risk_severity === 'severe' ? 'bg-red-500/20 text-red-400' :
@@ -1003,8 +1080,40 @@ export default function DisputeWizardPage() {
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
                                 {formatItemType(item.item_type)} • {formatCurrency(item.amount)}
-                                {item.bureau && ` • ${item.bureau.charAt(0).toUpperCase() + item.bureau.slice(1)}`}
                               </p>
+                              {/* Bureau Indicators - Show which bureaus this item appears on */}
+                              <div className="flex items-center gap-1.5 mt-2">
+                                <span className="text-xs text-muted-foreground mr-1">Bureaus:</span>
+                                {['transunion', 'experian', 'equifax'].map((bureau) => {
+                                  // Uses new per-bureau boolean fields with fallback to legacy logic
+                                  const appearsOn = itemAppearsOnBureau(item, bureau);
+                                  // Get bureau-specific date for tooltip
+                                  const bureauDate = bureau === 'transunion' ? item.transunion_date 
+                                    : bureau === 'experian' ? item.experian_date 
+                                    : item.equifax_date;
+                                  const dateStr = bureauDate ? new Date(bureauDate).toLocaleDateString() : '';
+                                  const bureauStatus = bureau === 'transunion' ? item.transunion_status 
+                                    : bureau === 'experian' ? item.experian_status 
+                                    : item.equifax_status;
+                                  return (
+                                    <span
+                                      key={bureau}
+                                      className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                        appearsOn
+                                          ? bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
+                                            bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
+                                            'bg-green-500/20 text-green-400'
+                                          : 'bg-muted/50 text-muted-foreground/50 line-through'
+                                      }`}
+                                      title={appearsOn 
+                                        ? `${bureau}${dateStr ? ` - ${dateStr}` : ''}${bureauStatus ? ` - ${bureauStatus}` : ''}` 
+                                        : `Not reported on ${bureau}`}
+                                    >
+                                      {bureau === 'transunion' ? 'TU' : bureau === 'experian' ? 'EXP' : 'EQ'}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </div>
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                               isSelected

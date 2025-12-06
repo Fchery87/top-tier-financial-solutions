@@ -160,36 +160,74 @@ export async function GET(
         created_at: latestAnalysis.createdAt?.toISOString(),
         recommendations,
       } : null,
-      credit_accounts: accountsResult.map(a => ({
-        id: a.id,
-        creditor_name: a.creditorName,
-        account_number: a.accountNumber,
-        account_type: a.accountType,
-        account_status: a.accountStatus,
-        balance: a.balance,
-        credit_limit: a.creditLimit,
-        high_credit: a.highCredit,
-        monthly_payment: a.monthlyPayment,
-        past_due_amount: a.pastDueAmount,
-        payment_status: a.paymentStatus,
-        date_opened: a.dateOpened?.toISOString(),
-        bureau: a.bureau,
-        is_negative: a.isNegative,
-        risk_level: a.riskLevel,
-      })),
-      negative_items: negativeItemsResult.map(n => ({
-        id: n.id,
-        item_type: n.itemType,
-        creditor_name: n.creditorName,
-        original_creditor: n.originalCreditor,
-        amount: n.amount,
-        date_reported: n.dateReported?.toISOString(),
-        bureau: n.bureau,
-        risk_severity: n.riskSeverity,
-        recommended_action: n.recommendedAction,
-        dispute_reason: n.disputeReason,
-        notes: n.notes,
-      })),
+      credit_accounts: accountsResult.map(a => {
+        // Compute bureaus array from per-bureau booleans
+        const bureaus: string[] = [];
+        if (a.onTransunion) bureaus.push('transunion');
+        if (a.onExperian) bureaus.push('experian');
+        if (a.onEquifax) bureaus.push('equifax');
+        
+        return {
+          id: a.id,
+          creditor_name: a.creditorName,
+          account_number: a.accountNumber,
+          account_type: a.accountType,
+          account_status: a.accountStatus,
+          balance: a.balance,
+          credit_limit: a.creditLimit,
+          high_credit: a.highCredit,
+          monthly_payment: a.monthlyPayment,
+          past_due_amount: a.pastDueAmount,
+          payment_status: a.paymentStatus,
+          date_opened: a.dateOpened?.toISOString(),
+          bureau: a.bureau, // Legacy field
+          // Per-bureau presence data
+          bureaus, // Computed array of bureau names
+          on_transunion: a.onTransunion ?? false,
+          on_experian: a.onExperian ?? false,
+          on_equifax: a.onEquifax ?? false,
+          transunion_date: a.transunionDate?.toISOString(),
+          experian_date: a.experianDate?.toISOString(),
+          equifax_date: a.equifaxDate?.toISOString(),
+          transunion_balance: a.transunionBalance,
+          experian_balance: a.experianBalance,
+          equifax_balance: a.equifaxBalance,
+          is_negative: a.isNegative,
+          risk_level: a.riskLevel,
+        };
+      }),
+      negative_items: negativeItemsResult.map(n => {
+        // Compute bureaus array from per-bureau booleans
+        const bureaus: string[] = [];
+        if (n.onTransunion) bureaus.push('transunion');
+        if (n.onExperian) bureaus.push('experian');
+        if (n.onEquifax) bureaus.push('equifax');
+        
+        return {
+          id: n.id,
+          item_type: n.itemType,
+          creditor_name: n.creditorName,
+          original_creditor: n.originalCreditor,
+          amount: n.amount,
+          date_reported: n.dateReported?.toISOString(),
+          bureau: n.bureau, // Legacy field
+          // Per-bureau presence data
+          bureaus, // Computed array of bureau names
+          on_transunion: n.onTransunion ?? false,
+          on_experian: n.onExperian ?? false,
+          on_equifax: n.onEquifax ?? false,
+          transunion_date: n.transunionDate?.toISOString(),
+          experian_date: n.experianDate?.toISOString(),
+          equifax_date: n.equifaxDate?.toISOString(),
+          transunion_status: n.transunionStatus,
+          experian_status: n.experianStatus,
+          equifax_status: n.equifaxStatus,
+          risk_severity: n.riskSeverity,
+          recommended_action: n.recommendedAction,
+          dispute_reason: n.disputeReason,
+          notes: n.notes,
+        };
+      }),
       negative_items_count: negativeItemsResult.length,
       disputes: disputesResult.map(d => ({
         id: d.id,

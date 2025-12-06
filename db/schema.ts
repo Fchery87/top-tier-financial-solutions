@@ -434,7 +434,17 @@ export const creditAccounts = pgTable('credit_accounts', {
   paymentStatus: text('payment_status'), // 'current' | '30_days_late' | '60_days_late' | '90_days_late' | '120_days_late' | 'collection'
   dateOpened: timestamp('date_opened'),
   dateReported: timestamp('date_reported'),
-  bureau: text('bureau'), // 'transunion' | 'experian' | 'equifax'
+  bureau: text('bureau'), // Legacy field for backward compatibility
+  // Per-bureau presence fields - accurate tracking of which bureaus report this account
+  onTransunion: boolean('on_transunion').default(false),
+  onExperian: boolean('on_experian').default(false),
+  onEquifax: boolean('on_equifax').default(false),
+  transunionDate: timestamp('transunion_date'), // Date reported on TransUnion
+  experianDate: timestamp('experian_date'), // Date reported on Experian
+  equifaxDate: timestamp('equifax_date'), // Date reported on Equifax
+  transunionBalance: integer('transunion_balance'), // Balance per bureau (may differ)
+  experianBalance: integer('experian_balance'),
+  equifaxBalance: integer('equifax_balance'),
   isNegative: boolean('is_negative').default(false),
   riskLevel: text('risk_level'), // 'low' | 'medium' | 'high' | 'severe'
   remarks: text('remarks'),
@@ -456,7 +466,17 @@ export const negativeItems = pgTable('negative_items', {
   amount: integer('amount'),
   dateReported: timestamp('date_reported'),
   dateOfLastActivity: timestamp('date_of_last_activity'),
-  bureau: text('bureau'), // 'transunion' | 'experian' | 'equifax'
+  bureau: text('bureau'), // Legacy field for backward compatibility
+  // Per-bureau presence fields - accurate tracking of which bureaus report this item
+  onTransunion: boolean('on_transunion').default(false),
+  onExperian: boolean('on_experian').default(false),
+  onEquifax: boolean('on_equifax').default(false),
+  transunionDate: timestamp('transunion_date'), // Date reported on TransUnion
+  experianDate: timestamp('experian_date'), // Date reported on Experian
+  equifaxDate: timestamp('equifax_date'), // Date reported on Equifax
+  transunionStatus: text('transunion_status'), // Status per bureau (may differ)
+  experianStatus: text('experian_status'),
+  equifaxStatus: text('equifax_status'),
   riskSeverity: text('risk_severity').default('medium'), // 'low' | 'medium' | 'high' | 'severe'
   scoreImpact: text('score_impact'), // estimated impact description
   recommendedAction: text('recommended_action'), // 'dispute' | 'pay_for_delete' | 'settle' | 'goodwill_letter' | 'wait' | 'none'
