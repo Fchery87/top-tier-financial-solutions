@@ -512,6 +512,39 @@ export const consumerProfiles = pgTable('consumer_profiles', {
   index("consumer_profiles_creditReportId_idx").on(table.creditReportId),
 ]);
 
+// Personal information disputes (names, addresses, DOB, employers)
+export const personalInfoDisputes = pgTable('personal_info_disputes', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  creditReportId: text('credit_report_id').references(() => creditReports.id, { onDelete: 'cascade' }),
+  bureau: text('bureau').notNull(),
+  type: text('type').notNull(), // name | aka | dob | address | employer
+  value: text('value').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('personal_info_disputes_clientId_idx').on(table.clientId),
+  index('personal_info_disputes_creditReportId_idx').on(table.creditReportId),
+  index('personal_info_disputes_bureau_idx').on(table.bureau),
+]);
+
+// Inquiry disputes (hard inquiries with FCRA timing flags)
+export const inquiryDisputes = pgTable('inquiry_disputes', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  creditReportId: text('credit_report_id').references(() => creditReports.id, { onDelete: 'cascade' }),
+  creditorName: text('creditor_name').notNull(),
+  bureau: text('bureau'),
+  inquiryDate: timestamp('inquiry_date'),
+  inquiryType: text('inquiry_type'),
+  isPastFcraLimit: boolean('is_past_fcra_limit').default(false),
+  daysSinceInquiry: integer('days_since_inquiry'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('inquiry_disputes_clientId_idx').on(table.clientId),
+  index('inquiry_disputes_creditReportId_idx').on(table.creditReportId),
+  index('inquiry_disputes_bureau_idx').on(table.bureau),
+]);
+
 // Bureau discrepancies (cross-bureau comparison findings)
 export const bureauDiscrepancies = pgTable('bureau_discrepancies', {
   id: text('id').primaryKey(),
@@ -851,6 +884,8 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   consumerProfiles: many(consumerProfiles),
   bureauDiscrepancies: many(bureauDiscrepancies),
   fcraComplianceItems: many(fcraComplianceItems),
+  personalInfoDisputes: many(personalInfoDisputes),
+  inquiryDisputes: many(inquiryDisputes),
   scoreHistory: many(creditScoreHistory),
 }));
 
@@ -862,6 +897,28 @@ export const consumerProfilesRelations = relations(consumerProfiles, ({ one }) =
   }),
   creditReport: one(creditReports, {
     fields: [consumerProfiles.creditReportId],
+    references: [creditReports.id],
+  }),
+}));
+
+export const personalInfoDisputesRelations = relations(personalInfoDisputes, ({ one }) => ({
+  client: one(clients, {
+    fields: [personalInfoDisputes.clientId],
+    references: [clients.id],
+  }),
+  creditReport: one(creditReports, {
+    fields: [personalInfoDisputes.creditReportId],
+    references: [creditReports.id],
+  }),
+}));
+
+export const inquiryDisputesRelations = relations(inquiryDisputes, ({ one }) => ({
+  client: one(clients, {
+    fields: [inquiryDisputes.clientId],
+    references: [clients.id],
+  }),
+  creditReport: one(creditReports, {
+    fields: [inquiryDisputes.creditReportId],
     references: [creditReports.id],
   }),
 }));
@@ -897,6 +954,8 @@ export const creditReportsRelations = relations(creditReports, ({ one, many }) =
   }),
   accounts: many(creditAccounts),
   negativeItems: many(negativeItems),
+  personalInfoDisputes: many(personalInfoDisputes),
+  inquiryDisputes: many(inquiryDisputes),
 }));
 
 export const creditAccountsRelations = relations(creditAccounts, ({ one, many }) => ({

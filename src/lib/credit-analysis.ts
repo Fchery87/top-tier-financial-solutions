@@ -8,6 +8,8 @@ import {
   consumerProfiles,
   bureauDiscrepancies,
   fcraComplianceItems,
+  personalInfoDisputes,
+  inquiryDisputes,
 } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -78,6 +80,8 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     await db.delete(negativeItems).where(eq(negativeItems.creditReportId, reportId));
     await db.delete(creditAccounts).where(eq(creditAccounts.creditReportId, reportId));
     await db.delete(consumerProfiles).where(eq(consumerProfiles.creditReportId, reportId));
+    await db.delete(personalInfoDisputes).where(eq(personalInfoDisputes.creditReportId, reportId));
+    await db.delete(inquiryDisputes).where(eq(inquiryDisputes.creditReportId, reportId));
     await db.delete(fcraComplianceItems).where(eq(fcraComplianceItems.clientId, report.clientId));
 
     // Get file from R2
@@ -216,8 +220,46 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     // Store negative items and calculate FCRA compliance
     // CRITICAL FIX: Link negative items to their corresponding credit accounts
     // ENHANCEMENT: Extract per-bureau presence data from ExtendedParsedCreditData
-    const derogatoryAccounts = isExtendedParsedData(parsedData) ? parsedData.derogatoryAccounts : undefined;
+    const extendedData = isExtendedParsedData(parsedData) ? parsedData : undefined;
+    const derogatoryAccounts = extendedData ? extendedData.derogatoryAccounts : undefined;
+    const personalInfoDisputesList = extendedData?.personalInfoDisputes || [];
+    const inquiryDisputesList = extendedData?.inquiryDisputes || [];
     
+    // Persist personal info disputes (names, DOB, addresses, employers)
+    if (personalInfoDisputesList.length > 0) {
+      for (const item of personalInfoDisputesList) {
+        await db.insert(personalInfoDisputes).values({
+          id: randomUUID(),
+          clientId: report.clientId,
+          creditReportId: reportId,
+          bureau: item.bureau,
+          type: item.type,
+          value: item.value,
+          createdAt: new Date(),
+        });
+      }
+    }
+
+    // Persist inquiry disputes with FCRA limit flag
+    if (inquiryDisputesList.length > 0) {
+      for (const inq of inquiryDisputesList) {
+        await db.insert(inquiryDisputes).values({
+          id: randomUUID(),
+          clientId: report.clientId,
+          creditReportId: reportId,
+          creditorName: inq.creditorName,
+          bureau: inq.bureau,
+          inquiryDate: inq.inquiryDate,
+          inquiryType: inq.inquiryType,
+          isPastFcraLimit: inq.isPastFcraLimit,
+          daysSinceInquiry: inq.daysSinceInquiry,
+          createdAt: new Date(),
+        });
+      }
+    }
+    
+    const negativeItemDedup = new Set<string>();
+
     for (const item of parsedData.negativeItems) {
       const negativeItemId = randomUUID();
       
@@ -288,6 +330,21 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         onExperian = true;
         onEquifax = true;
       }
+
+      // Deduplication: key by creditor + bureau + itemType + accountNumber
+      const buildDedupKey = (bureauKey: string) => `${(item.creditorName || '').toLowerCase()}|${bureauKey}|${item.itemType}|${item.accountNumber || ''}`;
+      const bureauKeys: string[] = [];
+      if (onTransunion) bureauKeys.push('transunion');
+      if (onExperian) bureauKeys.push('experian');
+      if (onEquifax) bureauKeys.push('equifax');
+      if (bureauKeys.length === 0) {
+        bureauKeys.push(item.bureau?.toLowerCase() || 'combined');
+      }
+
+      if (bureauKeys.some(key => negativeItemDedup.has(buildDedupKey(key)))) {
+        continue; // Skip duplicate insert for the same bureau grouping
+      }
+      bureauKeys.forEach(key => negativeItemDedup.add(buildDedupKey(key)));
       
       await db.insert(negativeItems).values({
         id: negativeItemId,

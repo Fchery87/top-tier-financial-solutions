@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user } from '@/db/schema';
+import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user, personalInfoDisputes, inquiryDisputes } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
@@ -96,6 +96,19 @@ export async function GET(
       .from(disputes)
       .where(eq(disputes.clientId, id))
       .orderBy(desc(disputes.createdAt));
+
+    // Get personal info and inquiry disputes (PII + inquiries from parser)
+    const personalInfoDisputesResult = await db
+      .select()
+      .from(personalInfoDisputes)
+      .where(eq(personalInfoDisputes.clientId, id))
+      .orderBy(desc(personalInfoDisputes.createdAt));
+
+    const inquiryDisputesResult = await db
+      .select()
+      .from(inquiryDisputes)
+      .where(eq(inquiryDisputes.clientId, id))
+      .orderBy(desc(inquiryDisputes.createdAt));
 
     // Get score history for timeline
     const scoreHistoryResult = await db
@@ -229,6 +242,23 @@ export async function GET(
         };
       }),
       negative_items_count: negativeItemsResult.length,
+      personal_info_disputes: personalInfoDisputesResult.map(p => ({
+        id: p.id,
+        bureau: p.bureau,
+        type: p.type,
+        value: p.value,
+        created_at: p.createdAt?.toISOString(),
+      })),
+      inquiry_disputes: inquiryDisputesResult.map(i => ({
+        id: i.id,
+        creditor_name: i.creditorName,
+        bureau: i.bureau,
+        inquiry_date: i.inquiryDate?.toISOString(),
+        inquiry_type: i.inquiryType,
+        is_past_fcra_limit: i.isPastFcraLimit,
+        days_since_inquiry: i.daysSinceInquiry,
+        created_at: i.createdAt?.toISOString(),
+      })),
       disputes: disputesResult.map(d => ({
         id: d.id,
         bureau: d.bureau,

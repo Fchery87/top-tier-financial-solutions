@@ -15,6 +15,23 @@ const HIGH_RISK_CODES = new Set([
   'mixed_file',
 ]);
 
+type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
+
+interface DisputeItemPayload {
+  id: string;
+  kind?: DisputeItemKind;
+  bureau?: string | null;
+  creditorName?: string;
+  originalCreditor?: string | null;
+  accountNumber?: string | null;
+  itemType?: string;
+  amount?: number | null;
+  value?: string | null;
+  inquiryDate?: string | null;
+  dateReported?: string | null;
+  riskSeverity?: string | null;
+}
+
 async function validateAdmin() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -44,6 +61,7 @@ export async function POST(request: NextRequest) {
       clientId,
       negativeItemId,
       negativeItemIds, // Support for multiple items
+      disputeItems, // New: generic dispute item payloads
       bureau,
       disputeType,
       round,
@@ -65,19 +83,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!reasonCodes || reasonCodes.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one reason code is required' },
+        { status: 400 }
+      );
+    }
+
     if (
       reasonCodes.some((code: string) => HIGH_RISK_CODES.has(code)) &&
       (!evidenceDocumentIds || evidenceDocumentIds.length === 0)
     ) {
       return NextResponse.json(
         { error: 'High-risk reason codes require evidenceDocumentIds.' },
-        { status: 400 }
-      );
-    }
-
-    if (!reasonCodes || reasonCodes.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one reason code is required' },
         { status: 400 }
       );
     }
@@ -107,21 +125,45 @@ export async function POST(request: NextRequest) {
       }));
     }
 
-    // Handle multi-item combined letter
-    if (combineItems && negativeItemIds && negativeItemIds.length > 0) {
-      // Fetch all negative items
-      const items = await Promise.all(
-        negativeItemIds.map(async (itemId: string) => {
-          const [item] = await db
-            .select()
-            .from(negativeItems)
-            .where(eq(negativeItems.id, itemId))
-            .limit(1);
-          return item;
-        })
-      );
+    const mapPayloadToItemData = (payload?: DisputeItemPayload | null) => ({
+      creditorName: payload?.creditorName || (payload?.kind === 'personal' ? 'Personal Information' : payload?.kind === 'inquiry' ? 'Inquiry' : 'Unknown Creditor'),
+      originalCreditor: payload?.originalCreditor || undefined,
+      accountNumber: payload?.accountNumber || (payload?.kind === 'personal' ? payload?.value : undefined) || undefined,
+      itemType: payload?.itemType || 'unknown',
+      amount: payload?.amount || undefined,
+      dateReported: payload?.dateReported || payload?.inquiryDate || undefined,
+      bureau: payload?.bureau || bureau,
+    });
 
-      const validItems = items.filter(Boolean);
+    // Handle multi-item combined letter
+    if (combineItems && ((disputeItems && disputeItems.length > 0) || (negativeItemIds && negativeItemIds.length > 0))) {
+      // Use provided dispute items if available, otherwise fetch legacy negative items
+      const itemPayloads: DisputeItemPayload[] = disputeItems && disputeItems.length > 0
+        ? disputeItems
+        : (await Promise.all(
+            (negativeItemIds || []).map(async (itemId: string) => {
+              const [item] = await db
+                .select()
+                .from(negativeItems)
+                .where(eq(negativeItems.id, itemId))
+                .limit(1);
+              if (!item) return null;
+              return {
+                id: item.id,
+                kind: 'tradeline',
+                bureau: bureau,
+                creditorName: item.creditorName,
+                originalCreditor: item.originalCreditor,
+                accountNumber: item.accountNumber || item.id?.slice(-8),
+                itemType: item.itemType,
+                amount: item.amount,
+                dateReported: item.dateReported?.toISOString(),
+                riskSeverity: item.riskSeverity,
+              } satisfies DisputeItemPayload;
+            })
+          )).filter(Boolean) as DisputeItemPayload[];
+
+      const validItems = itemPayloads.filter(Boolean) as DisputeItemPayload[];
 
       if (validItems.length === 0) {
         return NextResponse.json({ error: 'No valid items found' }, { status: 400 });
@@ -140,13 +182,7 @@ export async function POST(request: NextRequest) {
           zip: undefined,
         },
         items: validItems.map(item => ({
-          creditorName: item.creditorName,
-          originalCreditor: item.originalCreditor || undefined,
-          accountNumber: item.id.slice(-8),
-          itemType: item.itemType,
-          amount: item.amount || undefined,
-          dateReported: item.dateReported?.toISOString(),
-          bureau: bureau,
+          ...mapPayloadToItemData(item),
         })),
         bureau: bureau,
         reasonCodes: reasonCodes,
@@ -164,23 +200,40 @@ export async function POST(request: NextRequest) {
         dispute_type: disputeType || 'standard',
         reason_codes: reasonCodes,
         item_count: validItems.length,
-        item_ids: negativeItemIds,
+        item_ids: validItems.map((i: DisputeItemPayload) => i.id),
         combined: true,
       });
     }
 
     // Single item letter (original behavior)
-    let negativeItem = null;
-    if (negativeItemId) {
+    let itemPayload: DisputeItemPayload | null = null;
+    if (disputeItems && disputeItems.length > 0) {
+      itemPayload = disputeItems[0];
+    } else if (negativeItemId) {
       const [item] = await db
         .select()
         .from(negativeItems)
         .where(eq(negativeItems.id, negativeItemId))
         .limit(1);
-      negativeItem = item;
+      if (item) {
+        itemPayload = {
+          id: item.id,
+          kind: 'tradeline',
+          bureau: bureau,
+          creditorName: item.creditorName,
+          originalCreditor: item.originalCreditor,
+          accountNumber: item.accountNumber || item.id?.slice(-8),
+          itemType: item.itemType,
+          amount: item.amount,
+          dateReported: item.dateReported?.toISOString(),
+          riskSeverity: item.riskSeverity,
+        };
+      }
     }
 
     // Generate the letter using AI
+    const payloadData = mapPayloadToItemData(itemPayload || body);
+
     const letterContent = await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
       round: round || 1,
@@ -198,12 +251,12 @@ export async function POST(request: NextRequest) {
         zip: undefined,
       },
       itemData: {
-        creditorName: negativeItem?.creditorName || body.creditorName || 'Unknown Creditor',
-        originalCreditor: negativeItem?.originalCreditor || undefined,
-        accountNumber: negativeItem?.id?.slice(-8) || body.accountNumber || undefined,
-        itemType: negativeItem?.itemType || body.itemType || 'unknown',
-        amount: negativeItem?.amount || body.amount || undefined,
-        dateReported: negativeItem?.dateReported?.toISOString() || undefined,
+        creditorName: payloadData.creditorName,
+        originalCreditor: payloadData.originalCreditor,
+        accountNumber: payloadData.accountNumber,
+        itemType: payloadData.itemType,
+        amount: payloadData.amount,
+        dateReported: payloadData.dateReported,
         bureau: bureau,
       },
       reasonCodes: reasonCodes,

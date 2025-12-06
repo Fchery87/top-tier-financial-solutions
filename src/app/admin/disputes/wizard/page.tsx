@@ -38,6 +38,7 @@ interface NegativeItem {
   id: string;
   creditor_name: string;
   original_creditor: string | null;
+  account_number?: string | null;
   item_type: string;
   amount: number | null;
   date_reported: string | null;
@@ -55,6 +56,23 @@ interface NegativeItem {
   equifax_status?: string | null;
   risk_severity: string;
   recommended_action: string | null;
+}
+
+interface PersonalInfoItem {
+  id: string;
+  bureau: string;
+  type: string;
+  value: string;
+}
+
+interface InquiryItem {
+  id: string;
+  creditor_name: string;
+  bureau: string | null;
+  inquiry_date?: string | null;
+  inquiry_type?: string | null;
+  is_past_fcra_limit?: boolean | null;
+  days_since_inquiry?: number | null;
 }
 
 // Per-item dispute instruction (set during item selection)
@@ -173,6 +191,25 @@ const BUREAUS = [
   { code: 'equifax', label: 'Equifax' },
 ];
 
+type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
+
+interface DisputeItemPayload {
+  id: string;
+  kind: DisputeItemKind;
+  bureau?: string | null;
+  creditorName?: string;
+  originalCreditor?: string | null;
+  accountNumber?: string | null;
+  itemType?: string;
+  amount?: number | null;
+  value?: string;
+  inquiryDate?: string | null;
+  inquiryType?: string | null;
+  isPastFcraLimit?: boolean | null;
+  daysSinceInquiry?: number | null;
+  riskSeverity?: string | null;
+}
+
 // Helper function to check if a negative item appears on a specific bureau
 // Uses the new per-bureau boolean fields, with fallback to legacy bureau field
 function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean {
@@ -218,6 +255,11 @@ export default function DisputeWizardPage() {
   // Step 2 - Item Selection
   const [negativeItems, setNegativeItems] = React.useState<NegativeItem[]>([]);
   const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
+  const [personalInfoItems, setPersonalInfoItems] = React.useState<PersonalInfoItem[]>([]);
+  const [selectedPersonalItems, setSelectedPersonalItems] = React.useState<string[]>([]);
+  const [inquiryItems, setInquiryItems] = React.useState<InquiryItem[]>([]);
+  const [selectedInquiryItems, setSelectedInquiryItems] = React.useState<string[]>([]);
+  const [activeTab, setActiveTab] = React.useState<'tradelines' | 'personal' | 'inquiries'>('tradelines');
   const [loadingItems, setLoadingItems] = React.useState(false);
   
   // Per-item dispute instructions (for template mode)
@@ -271,6 +313,8 @@ export default function DisputeWizardPage() {
     bureau: string;
     itemId: string;
     itemIds?: string[]; // For combined letters
+    items?: DisputeItemPayload[];
+    itemKind?: DisputeItemKind;
     content: string;
     combined: boolean;
   }>>([]);
@@ -308,6 +352,10 @@ export default function DisputeWizardPage() {
       if (response.ok) {
         const data = await response.json();
         setNegativeItems(data.negative_items || []);
+        setPersonalInfoItems(data.personal_info_disputes || []);
+        setInquiryItems(data.inquiry_disputes || []);
+        setSelectedPersonalItems([]);
+        setSelectedInquiryItems([]);
       }
     } catch (error) {
       console.error('Error fetching negative items:', error);
@@ -508,7 +556,60 @@ export default function DisputeWizardPage() {
   // Generate letters
   // Accepts optional analysis data to avoid React state timing issues
   const generateLetters = async (analysisData?: { analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null) => {
-    if (!selectedClient || selectedItems.length === 0) {
+    if (!selectedClient) {
+      return;
+    }
+
+    const selectedTradelines = negativeItems.filter(i => selectedItems.includes(i.id));
+    const selectedPersonal = personalInfoItems.filter(i => selectedPersonalItems.includes(i.id));
+    const selectedInquiries = inquiryItems.filter(i => selectedInquiryItems.includes(i.id));
+
+    const selectedDisputeItems: Array<{ kind: DisputeItemKind; raw: NegativeItem | PersonalInfoItem | InquiryItem; payload: DisputeItemPayload }>
+      = [
+        ...selectedTradelines.map(item => ({
+          kind: 'tradeline' as const,
+          raw: item,
+          payload: {
+            id: item.id,
+            kind: 'tradeline',
+            bureau: item.bureau,
+            creditorName: item.creditor_name,
+            originalCreditor: item.original_creditor,
+            accountNumber: item.account_number,
+            itemType: item.item_type,
+            amount: item.amount,
+            riskSeverity: item.risk_severity,
+          },
+        })),
+        ...selectedPersonal.map(item => ({
+          kind: 'personal' as const,
+          raw: item,
+          payload: {
+            id: item.id,
+            kind: 'personal',
+            bureau: item.bureau,
+            itemType: `personal_info_${item.type}`,
+            value: item.value,
+          },
+        })),
+        ...selectedInquiries.map(item => ({
+          kind: 'inquiry' as const,
+          raw: item,
+          payload: {
+            id: item.id,
+            kind: 'inquiry',
+            bureau: item.bureau,
+            creditorName: item.creditor_name,
+            itemType: 'inquiry',
+            inquiryDate: item.inquiry_date,
+            inquiryType: item.inquiry_type,
+            isPastFcraLimit: item.is_past_fcra_limit,
+            daysSinceInquiry: item.days_since_inquiry,
+          },
+        })),
+      ];
+
+    if (selectedDisputeItems.length === 0) {
       return;
     }
 
@@ -517,9 +618,21 @@ export default function DisputeWizardPage() {
     const effectiveSummary = analysisData?.summary || aiAnalysisSummary;
 
     // For AI mode, we use AI analysis; for template mode, we use per-item instructions
-    const reasonCodesToUse = generationMethod === 'ai' 
+    const baseReasonCodes = generationMethod === 'ai' 
       ? (effectiveSummary?.allReasonCodes || ['verification_required', 'inaccurate_reporting'])
-      : []; // Template mode now uses per-item instructions
+      : [];
+
+    const reasonCodeSet = new Set(baseReasonCodes);
+    if (selectedPersonal.length > 0) {
+      reasonCodeSet.add('verification_required');
+      reasonCodeSet.add('inaccurate_reporting');
+    }
+    if (selectedInquiries.length > 0) {
+      reasonCodeSet.add(selectedInquiries.some(i => i.is_past_fcra_limit) ? 'obsolete' : 'unauthorized_inquiry');
+      reasonCodeSet.add('verification_required');
+    }
+
+    const reasonCodesToUse = Array.from(reasonCodeSet);
 
     setGenerating(true);
     setGenerationProgress(0);
@@ -543,28 +656,25 @@ export default function DisputeWizardPage() {
       });
     }
 
+    const itemAppliesToBureau = (entry: { kind: DisputeItemKind; raw: NegativeItem | PersonalInfoItem | InquiryItem; payload: DisputeItemPayload }, bureau: string) => {
+      if (entry.kind === 'tradeline') {
+        return itemAppearsOnBureau(entry.raw as NegativeItem, bureau);
+      }
+      return !entry.payload.bureau || entry.payload.bureau.toLowerCase() === bureau.toLowerCase();
+    };
+
     // Combined letter mode: one letter per bureau with all selected items
-    // FIX: Filter items by bureau - only include items that appear on each specific bureau
     if (combineItemsPerBureau && targetRecipient === 'bureau') {
-      const totalLetters = bureausToUse.length;
+      const bureausWithItems = bureausToUse.filter(bureau =>
+        selectedDisputeItems.some(entry => itemAppliesToBureau(entry, bureau))
+      );
+      const totalLetters = bureausWithItems.length;
       let completed = 0;
 
-      for (const bureau of bureausToUse) {
-        // Filter items for this specific bureau
-        // Include items where: bureau matches, bureau is null (combined report), or bureau is 'combined'
-        const itemsForThisBureau = selectedItems.filter(itemId => {
-          const item = negativeItems.find(i => i.id === itemId);
-          if (!item) return false;
-          // Include if: item has no specific bureau (null/combined) OR item's bureau matches target bureau
-          return !item.bureau || item.bureau === 'combined' || item.bureau.toLowerCase() === bureau.toLowerCase();
-        });
-
-        // Skip this bureau if no items apply to it
-        if (itemsForThisBureau.length === 0) {
-          completed++;
-          setGenerationProgress(Math.round((completed / totalLetters) * 100));
-          continue;
-        }
+      for (const bureau of bureausWithItems) {
+        const itemsForThisBureau = selectedDisputeItems
+          .filter(entry => itemAppliesToBureau(entry, bureau))
+          .map(entry => entry.payload);
 
         try {
           const response = await fetch('/api/admin/disputes/generate-letter', {
@@ -572,11 +682,11 @@ export default function DisputeWizardPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               clientId: selectedClient.id,
-              negativeItemIds: itemsForThisBureau,
-              bureau: bureau,
+              disputeItems: itemsForThisBureau,
+              bureau,
               disputeType: selectedDisputeType,
               round: disputeRound,
-              targetRecipient: targetRecipient,
+              targetRecipient,
               reasonCodes: reasonCodesToUse,
               customReason: customReason || undefined,
               combineItems: true,
@@ -590,9 +700,10 @@ export default function DisputeWizardPage() {
           if (response.ok) {
             const data = await response.json();
             letters.push({
-              bureau: bureau,
-              itemId: itemsForThisBureau[0], // Primary item for reference
-              itemIds: itemsForThisBureau, // Only items for this bureau
+              bureau,
+              itemId: itemsForThisBureau[0]?.id || '',
+              itemIds: itemsForThisBureau.map(i => i.id),
+              items: itemsForThisBureau,
               content: data.letter_content,
               combined: true,
             });
@@ -602,82 +713,69 @@ export default function DisputeWizardPage() {
         }
 
         completed++;
-        setGenerationProgress(Math.round((completed / totalLetters) * 100));
+        setGenerationProgress(totalLetters === 0 ? 0 : Math.round((completed / totalLetters) * 100));
       }
     } else {
       // Individual letter mode: one letter per item per bureau
-      // FIX: Only generate letters for bureaus where each item actually appears
+      const itemBureauPairs = selectedDisputeItems.flatMap(entry => {
+        if (targetRecipient !== 'bureau') {
+          return [{ entry, bureau: entry.payload.bureau || 'transunion' }];
+        }
+        return bureausToUse
+          .filter(bureau => itemAppliesToBureau(entry, bureau))
+          .map(bureau => ({ entry, bureau }));
+      });
+
       let completed = 0;
-      
-      // Calculate total letters considering bureau filtering
-      let totalLetters = 0;
-      for (const itemId of selectedItems) {
-        const item = negativeItems.find(i => i.id === itemId);
-        if (!item) continue;
-        for (const bureau of bureausToUse) {
-          // Only count if item appears on this bureau
-          const itemApplies = !item.bureau || item.bureau === 'combined' || item.bureau.toLowerCase() === bureau.toLowerCase();
-          if (itemApplies) totalLetters++;
-        }
-      }
+      const totalLetters = itemBureauPairs.length;
 
-      for (const itemId of selectedItems) {
-        const item = negativeItems.find(i => i.id === itemId);
-        if (!item) continue;
+      for (const { entry, bureau } of itemBureauPairs) {
+        const itemInstruction = generationMethod === 'template' && entry.kind === 'tradeline'
+          ? getInstructionText(entry.payload.id)
+          : customReason || undefined;
 
-        // Get per-item instruction for template mode
-        const itemInstruction = generationMethod === 'template' 
-          ? getInstructionText(itemId)
-          : undefined;
+        try {
+          const response = await fetch('/api/admin/disputes/generate-letter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clientId: selectedClient.id,
+              disputeItems: [entry.payload],
+              bureau: targetRecipient === 'bureau' ? bureau : entry.payload.bureau || 'transunion',
+              disputeType: selectedDisputeType,
+              round: disputeRound,
+              targetRecipient,
+              reasonCodes: reasonCodesToUse,
+              customReason: itemInstruction || undefined,
+              creditorName: entry.payload.creditorName,
+              itemType: entry.payload.itemType,
+              amount: entry.payload.amount,
+              methodology: methodologyToUse,
+              disputeInstruction: itemInstruction,
+              metro2Violations: generationMethod === 'ai' && entry.kind === 'tradeline'
+                ? effectiveAnalyses.find(a => a.itemId === entry.payload.id)?.metro2Violations
+                : undefined,
+              evidenceDocumentIds: selectedEvidenceIds.length > 0 ? selectedEvidenceIds : undefined,
+            }),
+          });
 
-        for (const bureau of bureausToUse) {
-          // FIX: Only generate letter if item appears on this bureau
-          // Uses new per-bureau boolean fields with fallback to legacy logic
-          if (!itemAppearsOnBureau(item, bureau)) {
-            continue; // Skip - this item doesn't appear on this bureau
-          }
-
-          try {
-            const response = await fetch('/api/admin/disputes/generate-letter', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                clientId: selectedClient.id,
-                negativeItemId: itemId,
-                bureau: targetRecipient === 'bureau' ? bureau : item.bureau || 'transunion',
-                disputeType: selectedDisputeType,
-                round: disputeRound,
-                targetRecipient: targetRecipient,
-                reasonCodes: reasonCodesToUse,
-                customReason: itemInstruction || customReason || undefined,
-                creditorName: item.creditor_name,
-                itemType: item.item_type,
-                amount: item.amount,
-                methodology: methodologyToUse,
-                disputeInstruction: itemInstruction,
-                metro2Violations: generationMethod === 'ai' 
-                  ? effectiveAnalyses.find(a => a.itemId === itemId)?.metro2Violations 
-                  : undefined,
-                evidenceDocumentIds: selectedEvidenceIds.length > 0 ? selectedEvidenceIds : undefined,
-              }),
+          if (response.ok) {
+            const data = await response.json();
+            letters.push({
+              bureau,
+              itemId: entry.payload.id,
+                itemKind: entry.kind,
+                items: [entry.payload],
+              content: data.letter_content,
+              combined: false,
             });
-
-            if (response.ok) {
-              const data = await response.json();
-              letters.push({
-                bureau: bureau,
-                itemId: itemId,
-                content: data.letter_content,
-                combined: false,
-              });
-            }
-          } catch (error) {
-            console.error('Error generating letter:', error);
           }
-
-          completed++;
-          setGenerationProgress(Math.round((completed / totalLetters) * 100));
+        } catch (error) {
+          console.error('Error generating letter:', error);
         }
+
+        completed++;
+        setGenerationProgress(totalLetters === 0 ? 0 : Math.round((completed / totalLetters) * 100));
       }
     }
 
@@ -689,7 +787,12 @@ export default function DisputeWizardPage() {
   const handleSelectClient = (client: Client) => {
     setSelectedClient(client);
     setSelectedItems([]);
+    setSelectedPersonalItems([]);
+    setSelectedInquiryItems([]);
     setNegativeItems([]);
+    setPersonalInfoItems([]);
+    setInquiryItems([]);
+    setActiveTab('tradelines');
   };
 
   const handleToggleItem = (itemId: string) => {
@@ -742,6 +845,7 @@ export default function DisputeWizardPage() {
       // Create disputes for each generated letter
       for (const letter of generatedLetters) {
         const item = negativeItems.find(i => i.id === letter.itemId);
+        const payload = letter.items?.[0];
         
         await fetch('/api/admin/disputes', {
           method: 'POST',
@@ -758,8 +862,8 @@ export default function DisputeWizardPage() {
             trackingNumber: bulkTrackingNumber || null,
             sentAt: sendDate.toISOString(),
             responseDeadline: responseDeadline.toISOString(),
-            creditorName: item?.creditor_name,
-            accountNumber: item?.amount ? `****${String(item.amount).slice(-4)}` : null,
+            creditorName: payload?.creditorName || item?.creditor_name,
+            accountNumber: payload?.accountNumber || item?.account_number || null,
             generatedByAi: generationMethod === 'ai',
           }),
         });
@@ -779,6 +883,7 @@ export default function DisputeWizardPage() {
       case 1:
         return selectedClient !== null;
       case 2:
+        const totalSelected = selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length;
         // For template mode, all selected items must have dispute instructions
         if (generationMethod === 'template') {
           const allItemsHaveInstructions = selectedItems.every(itemId => {
@@ -788,10 +893,10 @@ export default function DisputeWizardPage() {
             if (instruction.instructionType === 'custom' && instruction.customText && instruction.customText.trim().length > 0) return true;
             return false;
           });
-          return selectedItems.length > 0 && allItemsHaveInstructions;
+          return totalSelected > 0 && allItemsHaveInstructions;
         }
-        // AI mode just needs selected items
-        return selectedItems.length > 0;
+        // AI mode just needs at least one selected item across buckets
+        return totalSelected > 0;
       case 3:
         // Step 3 is the config step before generation
         if (discrepancySummary?.highSeverity && discrepancySummary.highSeverity > 0) return false;
@@ -806,6 +911,10 @@ export default function DisputeWizardPage() {
 
   const formatItemType = (type: string) => {
     return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+
+  const formatPersonalInfoType = (type: string) => {
+    return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   };
 
   const formatCurrency = (cents: number | null) => {
@@ -1014,6 +1123,168 @@ export default function DisputeWizardPage() {
                   ))}
                 </div>
               )}
+
+              {activeTab === 'personal' && (
+                <>
+                  {loadingItems ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-secondary" />
+                    </div>
+                  ) : personalInfoItems.length === 0 ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No personal information discrepancies found.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Upload and parse a report to pull PII items.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-muted-foreground">
+                          {selectedPersonalItems.length} of {personalInfoItems.length} items selected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedPersonalItems.length === personalInfoItems.length) {
+                              setSelectedPersonalItems([]);
+                            } else {
+                              setSelectedPersonalItems(personalInfoItems.map(p => p.id));
+                            }
+                          }}
+                        >
+                          {selectedPersonalItems.length === personalInfoItems.length ? 'Deselect All' : 'Select All'}
+                        </Button>
+                      </div>
+
+                      {personalInfoItems.map(item => {
+                        const isSelected = selectedPersonalItems.includes(item.id);
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-lg border p-4 cursor-pointer transition ${
+                              isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'
+                            }`}
+                            onClick={() => {
+                              setSelectedPersonalItems(prev => prev.includes(item.id)
+                                ? prev.filter(id => id !== item.id)
+                                : [...prev, item.id]);
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium">{formatPersonalInfoType(item.type)}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
+                                    item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
+                                    'bg-green-500/20 text-green-400'
+                                  }`}>
+                                    {item.bureau === 'transunion' ? 'TransUnion' : item.bureau === 'experian' ? 'Experian' : 'Equifax'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{item.value}</p>
+                              </div>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                isSelected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'
+                              }`}>
+                                {isSelected && <Check className="w-3 h-3 text-primary" />}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'inquiries' && (
+                <>
+                  {loadingItems ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-secondary" />
+                    </div>
+                  ) : inquiryItems.length === 0 ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No inquiries available for dispute.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Upload and parse a report to pull inquiry history.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-muted-foreground">
+                          {selectedInquiryItems.length} of {inquiryItems.length} inquiries selected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedInquiryItems.length === inquiryItems.length) {
+                              setSelectedInquiryItems([]);
+                            } else {
+                              setSelectedInquiryItems(inquiryItems.map(i => i.id));
+                            }
+                          }}
+                        >
+                          {selectedInquiryItems.length === inquiryItems.length ? 'Deselect All' : 'Select All'}
+                        </Button>
+                      </div>
+
+                      {inquiryItems.map(item => {
+                        const isSelected = selectedInquiryItems.includes(item.id);
+                        const bureauLabel = item.bureau ? item.bureau.charAt(0).toUpperCase() + item.bureau.slice(1) : 'All Bureaus';
+                        const inquiryDate = item.inquiry_date ? new Date(item.inquiry_date).toLocaleDateString() : 'Unknown date';
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-lg border p-4 cursor-pointer transition ${
+                              isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'
+                            }`}
+                            onClick={() => {
+                              setSelectedInquiryItems(prev => prev.includes(item.id)
+                                ? prev.filter(id => id !== item.id)
+                                : [...prev, item.id]);
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium">{item.creditor_name}</p>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
+                                    item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
+                                    item.bureau === 'equifax' ? 'bg-green-500/20 text-green-400' : 'bg-muted/50 text-muted-foreground'
+                                  }`}>
+                                    {item.bureau ? bureauLabel : 'All bureaus'}
+                                  </span>
+                                  {item.is_past_fcra_limit && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">
+                                      FCRA violation
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {inquiryDate} {item.inquiry_type ? `• ${item.inquiry_type}` : ''}
+                                </p>
+                                {item.days_since_inquiry !== undefined && item.days_since_inquiry !== null && (
+                                  <p className="text-xs text-muted-foreground">{item.days_since_inquiry} days old</p>
+                                )}
+                              </div>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                isSelected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'
+                              }`}>
+                                {isSelected && <Check className="w-3 h-3 text-primary" />}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1022,9 +1293,9 @@ export default function DisputeWizardPage() {
         {currentStep === 2 && (
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader>
-              <CardTitle>Select Negative Items</CardTitle>
+              <CardTitle>Select Dispute Items</CardTitle>
               <CardDescription>
-                Choose items to dispute for {selectedClient?.first_name} {selectedClient?.last_name}
+                Choose tradelines, personal info, or inquiries to dispute for {selectedClient?.first_name} {selectedClient?.last_name}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1037,6 +1308,27 @@ export default function DisputeWizardPage() {
                   </p>
                 </div>
               )}
+
+              {/* Item type tabs */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { key: 'tradelines' as const, label: `Tradelines (${negativeItems.length})` },
+                  { key: 'personal' as const, label: `Personal Info (${personalInfoItems.length})` },
+                  { key: 'inquiries' as const, label: `Inquiries (${inquiryItems.length})` },
+                ].map(tab => (
+                  <Button
+                    key={tab.key}
+                    variant={activeTab === tab.key ? 'secondary' : 'outline'}
+                    size="sm"
+                    onClick={() => setActiveTab(tab.key)}
+                  >
+                    {tab.label}
+                  </Button>
+                ))}
+                <span className="text-sm text-muted-foreground ml-auto">
+                  Selected: {selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length}
+                </span>
+              </div>
               
               {/* Info box for AI mode */}
               {generationMethod === 'ai' && (
@@ -1048,93 +1340,126 @@ export default function DisputeWizardPage() {
                 </div>
               )}
               
-              {/* Triage Quick Actions */}
-              {triageQuickActions.length > 0 && (
-                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm font-medium text-purple-400">Quick Actions</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {triageQuickActions.map((action) => (
-                      <Button
-                        key={action.id}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs border-purple-500/30 hover:bg-purple-500/10"
-                        onClick={() => {
-                          setSelectedItems(prev => [...new Set([...prev, ...action.itemIds])]);
-                          if (generationMethod === 'template') {
-                            setItemDisputeInstructions(prev => {
-                              const newMap = new Map(prev);
-                              action.itemIds.forEach(id => {
-                                if (!newMap.has(id)) {
-                                  newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
-                                }
-                              });
-                              return newMap;
-                            });
-                          }
-                        }}
-                      >
-                        <Check className="w-3 h-3 mr-1" />
-                        {action.label} ({action.count})
-                      </Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Click to quickly select items by category
-                  </p>
-                </div>
-              )}
-              
-              {loadingItems ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-secondary" />
-                </div>
-              ) : negativeItems.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No negative items found for this client.</p>
-                  <p className="text-sm text-muted-foreground mt-1">Upload and analyze a credit report first.</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {selectedItems.length} of {negativeItems.length} items selected
-                    </span>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Select by Bureau */}
-                      {['transunion', 'experian', 'equifax'].map((bureau) => {
-                        const bureauItems = negativeItems.filter(i => i.bureau === bureau);
-                        if (bureauItems.length === 0) return null;
-                        const allSelected = bureauItems.every(i => selectedItems.includes(i.id));
-                        return (
+              {activeTab === 'tradelines' && (
+                <>
+                  {/* Triage Quick Actions */}
+                  {triageQuickActions.length > 0 && (
+                    <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Zap className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm font-medium text-purple-400">Quick Actions</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {triageQuickActions.map((action) => (
                           <Button
-                            key={bureau}
-                            variant={allSelected ? 'secondary' : 'outline'}
+                            key={action.id}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs border-purple-500/30 hover:bg-purple-500/10"
+                            onClick={() => {
+                              setSelectedItems(prev => [...new Set([...prev, ...action.itemIds])]);
+                              if (generationMethod === 'template') {
+                                setItemDisputeInstructions(prev => {
+                                  const newMap = new Map(prev);
+                                  action.itemIds.forEach(id => {
+                                    if (!newMap.has(id)) {
+                                      newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
+                                    }
+                                  });
+                                  return newMap;
+                                });
+                              }
+                            }}
+                          >
+                            <Check className="w-3 h-3 mr-1" />
+                            {action.label} ({action.count})
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Click to quickly select items by category
+                      </p>
+                    </div>
+                  )}
+
+                  {loadingItems ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-secondary" />
+                    </div>
+                  ) : negativeItems.length === 0 ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No negative items found for this client.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Upload and analyze a credit report first.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          {selectedItems.length} of {negativeItems.length} items selected
+                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Select by Bureau */}
+                          {['transunion', 'experian', 'equifax'].map((bureau) => {
+                            const bureauItems = negativeItems.filter(i => i.bureau === bureau || itemAppearsOnBureau(i, bureau));
+                            if (bureauItems.length === 0) return null;
+                            const allSelected = bureauItems.every(i => selectedItems.includes(i.id));
+                            return (
+                              <Button
+                                key={bureau}
+                                variant={allSelected ? 'secondary' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                  if (allSelected) {
+                                    // Deselect: remove items and their instructions
+                                    const idsToRemove = bureauItems.map(i => i.id);
+                                    setSelectedItems(prev => prev.filter(id => !idsToRemove.includes(id)));
+                                    if (generationMethod === 'template') {
+                                      setItemDisputeInstructions(prev => {
+                                        const newMap = new Map(prev);
+                                        idsToRemove.forEach(id => newMap.delete(id));
+                                        return newMap;
+                                      });
+                                    }
+                                  } else {
+                                    // Select: add items and initialize their instructions
+                                    const newIds = bureauItems.map(i => i.id);
+                                    setSelectedItems(prev => [...new Set([...prev, ...newIds])]);
+                                    if (generationMethod === 'template') {
+                                      setItemDisputeInstructions(prev => {
+                                        const newMap = new Map(prev);
+                                        newIds.forEach(id => {
+                                          if (!newMap.has(id)) {
+                                            newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
+                                          }
+                                        });
+                                        return newMap;
+                                      });
+                                    }
+                                  }
+                                }}
+                              >
+                                {bureau.charAt(0).toUpperCase() + bureau.slice(1)}
+                                <span className="ml-1 text-xs opacity-70">({bureauItems.length})</span>
+                              </Button>
+                            );
+                          })}
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (allSelected) {
-                                // Deselect: remove items and their instructions
-                                const idsToRemove = bureauItems.map(i => i.id);
-                                setSelectedItems(prev => prev.filter(id => !idsToRemove.includes(id)));
-                                if (generationMethod === 'template') {
-                                  setItemDisputeInstructions(prev => {
-                                    const newMap = new Map(prev);
-                                    idsToRemove.forEach(id => newMap.delete(id));
-                                    return newMap;
-                                  });
-                                }
+                              if (selectedItems.length === negativeItems.length) {
+                                // Deselect all
+                                setSelectedItems([]);
+                                setItemDisputeInstructions(new Map());
                               } else {
-                                // Select: add items and initialize their instructions
-                                const newIds = bureauItems.map(i => i.id);
-                                setSelectedItems(prev => [...new Set([...prev, ...newIds])]);
+                                // Select all
+                                const allIds = negativeItems.map(i => i.id);
+                                setSelectedItems(allIds);
                                 if (generationMethod === 'template') {
                                   setItemDisputeInstructions(prev => {
                                     const newMap = new Map(prev);
-                                    newIds.forEach(id => {
+                                    allIds.forEach(id => {
                                       if (!newMap.has(id)) {
                                         newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
                                       }
@@ -1145,165 +1470,136 @@ export default function DisputeWizardPage() {
                               }
                             }}
                           >
-                            {bureau.charAt(0).toUpperCase() + bureau.slice(1)}
-                            <span className="ml-1 text-xs opacity-70">({bureauItems.length})</span>
+                            {selectedItems.length === negativeItems.length ? 'Deselect All' : 'Select All'}
                           </Button>
+                        </div>
+                      </div>
+
+                      {negativeItems.map((item) => {
+                        const isSelected = selectedItems.includes(item.id);
+                        const instruction = itemDisputeInstructions.get(item.id);
+                        const showInstructionUI = isSelected && generationMethod === 'template';
+                        
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-lg border transition-all ${
+                              isSelected
+                                ? 'border-secondary bg-secondary/10'
+                                : 'border-border hover:border-secondary/50'
+                            }`}
+                          >
+                            {/* Item Header - Clickable to select/deselect */}
+                            <div
+                              className="p-4 cursor-pointer"
+                              onClick={() => handleToggleItem(item.id)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-medium">{item.creditor_name}</p>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                      item.risk_severity === 'severe' ? 'bg-red-500/20 text-red-400' :
+                                      item.risk_severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                                      item.risk_severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                      'bg-green-500/20 text-green-400'
+                                    }`}>
+                                      {item.risk_severity}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {formatItemType(item.item_type)} • {formatCurrency(item.amount)}
+                                  </p>
+                                  {/* Bureau Indicators - Show which bureaus this item appears on */}
+                                  <div className="flex items-center gap-1.5 mt-2">
+                                    <span className="text-xs text-muted-foreground mr-1">Bureaus:</span>
+                                    {['transunion', 'experian', 'equifax'].map((bureau) => {
+                                      // Uses new per-bureau boolean fields with fallback to legacy logic
+                                      const appearsOn = itemAppearsOnBureau(item, bureau);
+                                      // Get bureau-specific date for tooltip
+                                      const bureauDate = bureau === 'transunion' ? item.transunion_date 
+                                        : bureau === 'experian' ? item.experian_date 
+                                        : item.equifax_date;
+                                      const dateStr = bureauDate ? new Date(bureauDate).toLocaleDateString() : '';
+                                      const bureauStatus = bureau === 'transunion' ? item.transunion_status 
+                                        : bureau === 'experian' ? item.experian_status 
+                                        : item.equifax_status;
+                                      return (
+                                        <span
+                                          key={bureau}
+                                          className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                            appearsOn
+                                              ? bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
+                                                bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
+                                                'bg-green-500/20 text-green-400'
+                                              : 'bg-muted/50 text-muted-foreground/50 line-through'
+                                          }`}
+                                          title={appearsOn 
+                                            ? `${bureau}${dateStr ? ` - ${dateStr}` : ''}${bureauStatus ? ` - ${bureauStatus}` : ''}` 
+                                            : `Not reported on ${bureau}`}
+                                        >
+                                          {bureau === 'transunion' ? 'TU' : bureau === 'experian' ? 'EXP' : 'EQ'}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                  isSelected
+                                    ? 'border-secondary bg-secondary'
+                                    : 'border-muted-foreground/30'
+                                }`}>
+                                  {isSelected && (
+                                    <Check className="w-3 h-3 text-primary" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Per-Item Dispute Instruction (Template Mode Only) */}
+                            {showInstructionUI && (
+                              <div 
+                                className="px-4 pb-4 pt-2 border-t border-border/50 space-y-3"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <label className="text-xs font-medium text-muted-foreground">Dispute Instruction</label>
+                                <select
+                                  className="w-full p-2 rounded-md border border-border bg-background text-sm"
+                                  value={instruction?.presetCode || ''}
+                                  onChange={(e) => updateItemInstruction(item.id, 'preset', e.target.value)}
+                                >
+                                  <option value="">Select dispute reason...</option>
+                                  {PRESET_DISPUTE_INSTRUCTIONS.map((preset) => (
+                                    <option key={preset.code} value={preset.code}>
+                                      {preset.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                
+                                {/* Custom text field when "Custom Instruction" is selected */}
+                                {instruction?.presetCode === 'custom' && (
+                                  <textarea
+                                    className="w-full p-2 rounded-md border border-border bg-background text-sm min-h-[80px]"
+                                    placeholder="Enter your custom dispute instruction for this account..."
+                                    value={instruction?.customText || ''}
+                                    onChange={(e) => updateItemInstruction(item.id, 'custom', e.target.value)}
+                                  />
+                                )}
+                                
+                                {/* Show selected instruction preview */}
+                                {instruction?.presetCode && instruction.presetCode !== 'custom' && (
+                                  <p className="text-xs text-muted-foreground italic">
+                                    {PRESET_DISPUTE_INSTRUCTIONS.find(p => p.code === instruction.presetCode)?.description}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (selectedItems.length === negativeItems.length) {
-                            // Deselect all
-                            setSelectedItems([]);
-                            setItemDisputeInstructions(new Map());
-                          } else {
-                            // Select all
-                            const allIds = negativeItems.map(i => i.id);
-                            setSelectedItems(allIds);
-                            if (generationMethod === 'template') {
-                              setItemDisputeInstructions(prev => {
-                                const newMap = new Map(prev);
-                                allIds.forEach(id => {
-                                  if (!newMap.has(id)) {
-                                    newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
-                                  }
-                                });
-                                return newMap;
-                              });
-                            }
-                          }
-                        }}
-                      >
-                        {selectedItems.length === negativeItems.length ? 'Deselect All' : 'Select All'}
-                      </Button>
                     </div>
-                  </div>
-
-                  {negativeItems.map((item) => {
-                    const isSelected = selectedItems.includes(item.id);
-                    const instruction = itemDisputeInstructions.get(item.id);
-                    const showInstructionUI = isSelected && generationMethod === 'template';
-                    
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-lg border transition-all ${
-                          isSelected
-                            ? 'border-secondary bg-secondary/10'
-                            : 'border-border hover:border-secondary/50'
-                        }`}
-                      >
-                        {/* Item Header - Clickable to select/deselect */}
-                        <div
-                          className="p-4 cursor-pointer"
-                          onClick={() => handleToggleItem(item.id)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium">{item.creditor_name}</p>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  item.risk_severity === 'severe' ? 'bg-red-500/20 text-red-400' :
-                                  item.risk_severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                                  item.risk_severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  'bg-green-500/20 text-green-400'
-                                }`}>
-                                  {item.risk_severity}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {formatItemType(item.item_type)} • {formatCurrency(item.amount)}
-                              </p>
-                              {/* Bureau Indicators - Show which bureaus this item appears on */}
-                              <div className="flex items-center gap-1.5 mt-2">
-                                <span className="text-xs text-muted-foreground mr-1">Bureaus:</span>
-                                {['transunion', 'experian', 'equifax'].map((bureau) => {
-                                  // Uses new per-bureau boolean fields with fallback to legacy logic
-                                  const appearsOn = itemAppearsOnBureau(item, bureau);
-                                  // Get bureau-specific date for tooltip
-                                  const bureauDate = bureau === 'transunion' ? item.transunion_date 
-                                    : bureau === 'experian' ? item.experian_date 
-                                    : item.equifax_date;
-                                  const dateStr = bureauDate ? new Date(bureauDate).toLocaleDateString() : '';
-                                  const bureauStatus = bureau === 'transunion' ? item.transunion_status 
-                                    : bureau === 'experian' ? item.experian_status 
-                                    : item.equifax_status;
-                                  return (
-                                    <span
-                                      key={bureau}
-                                      className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                                        appearsOn
-                                          ? bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
-                                            bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
-                                            'bg-green-500/20 text-green-400'
-                                          : 'bg-muted/50 text-muted-foreground/50 line-through'
-                                      }`}
-                                      title={appearsOn 
-                                        ? `${bureau}${dateStr ? ` - ${dateStr}` : ''}${bureauStatus ? ` - ${bureauStatus}` : ''}` 
-                                        : `Not reported on ${bureau}`}
-                                    >
-                                      {bureau === 'transunion' ? 'TU' : bureau === 'experian' ? 'EXP' : 'EQ'}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                              isSelected
-                                ? 'border-secondary bg-secondary'
-                                : 'border-muted-foreground/30'
-                            }`}>
-                              {isSelected && (
-                                <Check className="w-3 h-3 text-primary" />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Per-Item Dispute Instruction (Template Mode Only) */}
-                        {showInstructionUI && (
-                          <div 
-                            className="px-4 pb-4 pt-2 border-t border-border/50 space-y-3"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <label className="text-xs font-medium text-muted-foreground">Dispute Instruction</label>
-                            <select
-                              className="w-full p-2 rounded-md border border-border bg-background text-sm"
-                              value={instruction?.presetCode || ''}
-                              onChange={(e) => updateItemInstruction(item.id, 'preset', e.target.value)}
-                            >
-                              <option value="">Select dispute reason...</option>
-                              {PRESET_DISPUTE_INSTRUCTIONS.map((preset) => (
-                                <option key={preset.code} value={preset.code}>
-                                  {preset.label}
-                                </option>
-                              ))}
-                            </select>
-                            
-                            {/* Custom text field when "Custom Instruction" is selected */}
-                            {instruction?.presetCode === 'custom' && (
-                              <textarea
-                                className="w-full p-2 rounded-md border border-border bg-background text-sm min-h-[80px]"
-                                placeholder="Enter your custom dispute instruction for this account..."
-                                value={instruction?.customText || ''}
-                                onChange={(e) => updateItemInstruction(item.id, 'custom', e.target.value)}
-                              />
-                            )}
-                            
-                            {/* Show selected instruction preview */}
-                            {instruction?.presetCode && instruction.presetCode !== 'custom' && (
-                              <p className="text-xs text-muted-foreground italic">
-                                {PRESET_DISPUTE_INSTRUCTIONS.find(p => p.code === instruction.presetCode)?.description}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -1505,7 +1801,7 @@ export default function DisputeWizardPage() {
               </div>
 
               {/* Combined Letters Option */}
-              {targetRecipient === 'bureau' && selectedItems.length > 1 && (
+              {targetRecipient === 'bureau' && (selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length) > 1 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium">Letter Format</label>
                   <div className="space-y-2">
@@ -1526,7 +1822,7 @@ export default function DisputeWizardPage() {
                         <div>
                           <p className="font-medium">Combined Letter per Bureau (Recommended)</p>
                           <p className="text-sm text-muted-foreground">
-                            {selectedItems.length} items combined into {selectedBureaus.length} letter(s) - one per bureau
+                            {(selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length)} items combined into {selectedBureaus.length} letter(s) - one per bureau
                           </p>
                         </div>
                       </div>
@@ -1548,7 +1844,7 @@ export default function DisputeWizardPage() {
                         <div>
                           <p className="font-medium">Individual Letter per Item</p>
                           <p className="text-sm text-muted-foreground">
-                            {selectedItems.length * selectedBureaus.length} separate letters - one per item per bureau
+                            {(selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length) * selectedBureaus.length} separate letters - one per item per bureau
                           </p>
                         </div>
                       </div>
@@ -1766,10 +2062,22 @@ export default function DisputeWizardPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {generatedLetters.map((letter, index) => {
-                  const item = negativeItems.find(i => i.id === letter.itemId);
-                  const allItems = letter.combined && letter.itemIds
-                    ? letter.itemIds.map(id => negativeItems.find(i => i.id === id)).filter(Boolean)
-                    : [item].filter(Boolean);
+                  const payloadItems = letter.items && letter.items.length > 0
+                    ? letter.items
+                    : [];
+                  const primaryItem = payloadItems[0];
+
+                  const formatPayloadLabel = (payload: DisputeItemPayload) => {
+                    if (payload.kind === 'personal') {
+                      const type = payload.itemType?.replace('personal_info_', '') || 'personal info';
+                      return `${formatPersonalInfoType(type)} - ${payload.value || ''}`;
+                    }
+                    if (payload.kind === 'inquiry') {
+                      const date = payload.inquiryDate ? new Date(payload.inquiryDate).toLocaleDateString() : '';
+                      return `${payload.creditorName || 'Inquiry'}${date ? ` (${date})` : ''}`;
+                    }
+                    return `${payload.creditorName || 'Tradeline'}${payload.amount ? ` • ${formatCurrency(payload.amount)}` : ''}`;
+                  };
                   
                   return (
                     <div key={index} className="border border-border rounded-lg overflow-hidden">
@@ -1781,19 +2089,32 @@ export default function DisputeWizardPage() {
                                 <span className="px-2 py-0.5 text-xs bg-secondary/20 text-secondary rounded">
                                   Combined
                                 </span>
-                                {letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)} - {allItems.length} Account(s)
+                                {letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)} - {payloadItems.length} Item(s)
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {allItems.map((i: typeof item) => i?.creditor_name).join(', ')}
+                                {payloadItems.map((p) => formatPayloadLabel(p)).join(', ')}
                               </p>
                             </>
                           ) : (
                             <>
-                              <p className="font-medium">
-                                {item?.creditor_name || 'Unknown'} - {letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)}
+                              <p className="font-medium flex items-center gap-2">
+                                {primaryItem?.kind === 'tradeline' && (
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    primaryItem?.riskSeverity === 'severe' ? 'bg-red-500/20 text-red-400' :
+                                    primaryItem?.riskSeverity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                                    primaryItem?.riskSeverity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    'bg-green-500/20 text-green-400'
+                                  }`}>
+                                    {primaryItem?.riskSeverity || 'unknown'}
+                                  </span>
+                                )}
+                                {formatPayloadLabel(primaryItem || { id: '', kind: 'tradeline' })}
+                                <span className="text-xs text-muted-foreground">
+                                  ({letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)})
+                                </span>
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {formatItemType(item?.item_type || '')}
+                                {primaryItem?.itemType ? formatItemType(primaryItem.itemType) : ''}
                               </p>
                             </>
                           )}
@@ -1813,8 +2134,8 @@ export default function DisputeWizardPage() {
                             onClick={() => downloadLetter(
                               letter.content,
                               letter.combined
-                                ? `dispute-${letter.bureau}-combined-${allItems.length}-accounts.txt`
-                                : `dispute-${letter.bureau}-${item?.creditor_name?.replace(/\s+/g, '-')}.txt`
+                                ? `dispute-${letter.bureau}-combined-${payloadItems.length}-items.txt`
+                                : `dispute-${letter.bureau}-${primaryItem?.creditorName || 'item'}.txt`
                             )}
                           >
                             <Download className="w-4 h-4 mr-1" />
