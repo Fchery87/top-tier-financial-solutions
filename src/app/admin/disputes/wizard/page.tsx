@@ -1454,23 +1454,50 @@ export default function DisputeWizardPage() {
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                         <span className="text-sm text-muted-foreground">
                           {selectedPersonalItems.length} of {personalInfoItems.length} items selected
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (selectedPersonalItems.length === personalInfoItems.length) {
-                              setSelectedPersonalItems([]);
-                            } else {
-                              setSelectedPersonalItems(personalInfoItems.map(p => p.id));
-                            }
-                          }}
-                        >
-                          {selectedPersonalItems.length === personalInfoItems.length ? 'Deselect All' : 'Select All'}
-                        </Button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Select personal info by bureau */}
+                          {['transunion', 'experian', 'equifax'].map((bureau) => {
+                            const bureauItems = personalInfoItems.filter(p => p.bureau === bureau);
+                            if (bureauItems.length === 0) return null;
+                            const allSelected = bureauItems.every(p => selectedPersonalItems.includes(p.id));
+                            return (
+                              <Button
+                                key={bureau}
+                                variant={allSelected ? 'secondary' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                  if (allSelected) {
+                                    const idsToRemove = bureauItems.map(p => p.id);
+                                    setSelectedPersonalItems(prev => prev.filter(id => !idsToRemove.includes(id)));
+                                  } else {
+                                    const newIds = bureauItems.map(p => p.id);
+                                    setSelectedPersonalItems(prev => [...new Set([...prev, ...newIds])]);
+                                  }
+                                }}
+                              >
+                                {bureau.charAt(0).toUpperCase() + bureau.slice(1)}
+                                <span className="ml-1 text-xs opacity-70">({bureauItems.length})</span>
+                              </Button>
+                            );
+                          })}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (selectedPersonalItems.length === personalInfoItems.length) {
+                                setSelectedPersonalItems([]);
+                              } else {
+                                setSelectedPersonalItems(personalInfoItems.map(p => p.id));
+                              }
+                            }}
+                          >
+                            {selectedPersonalItems.length === personalInfoItems.length ? 'Deselect All' : 'Select All'}
+                          </Button>
+                        </div>
                       </div>
 
                       {personalInfoItems.map(item => {
@@ -1529,23 +1556,50 @@ export default function DisputeWizardPage() {
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                         <span className="text-sm text-muted-foreground">
                           {selectedInquiryItems.length} of {inquiryItems.length} inquiries selected
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (selectedInquiryItems.length === inquiryItems.length) {
-                              setSelectedInquiryItems([]);
-                            } else {
-                              setSelectedInquiryItems(inquiryItems.map(i => i.id));
-                            }
-                          }}
-                        >
-                          {selectedInquiryItems.length === inquiryItems.length ? 'Deselect All' : 'Select All'}
-                        </Button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Select inquiries by bureau */}
+                          {['transunion', 'experian', 'equifax'].map((bureau) => {
+                            const bureauItems = inquiryItems.filter(i => i.bureau === bureau);
+                            if (bureauItems.length === 0) return null;
+                            const allSelected = bureauItems.every(i => selectedInquiryItems.includes(i.id));
+                            return (
+                              <Button
+                                key={bureau}
+                                variant={allSelected ? 'secondary' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                  if (allSelected) {
+                                    const idsToRemove = bureauItems.map(i => i.id);
+                                    setSelectedInquiryItems(prev => prev.filter(id => !idsToRemove.includes(id)));
+                                  } else {
+                                    const newIds = bureauItems.map(i => i.id);
+                                    setSelectedInquiryItems(prev => [...new Set([...prev, ...newIds])]);
+                                  }
+                                }}
+                              >
+                                {bureau.charAt(0).toUpperCase() + bureau.slice(1)}
+                                <span className="ml-1 text-xs opacity-70">({bureauItems.length})</span>
+                              </Button>
+                            );
+                          })}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (selectedInquiryItems.length === inquiryItems.length) {
+                                setSelectedInquiryItems([]);
+                              } else {
+                                setSelectedInquiryItems(inquiryItems.map(i => i.id));
+                              }
+                            }}
+                          >
+                            {selectedInquiryItems.length === inquiryItems.length ? 'Deselect All' : 'Select All'}
+                          </Button>
+                        </div>
                       </div>
 
                       {inquiryItems.map(item => {

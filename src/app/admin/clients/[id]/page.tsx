@@ -801,7 +801,7 @@ export default function ClientDetailPage() {
                       <CardContent className="p-4 text-center">
                         <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-red-500" />
                         <p className="text-xl font-bold">{negativeItemsCount}</p>
-                        <p className="text-xs text-muted-foreground">Negative Items</p>
+                        <p className="text-xs text-muted-foreground">Negative Tradelines</p>
                       </CardContent>
                     </Card>
                     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
@@ -979,7 +979,7 @@ export default function ClientDetailPage() {
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader>
                     <CardTitle className="text-lg">Credit Accounts</CardTitle>
-                    <CardDescription>{creditAccounts.length} tradeline(s) on file</CardDescription>
+                    <CardDescription>{creditAccounts.length} account(s) on file (all tradelines)</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
