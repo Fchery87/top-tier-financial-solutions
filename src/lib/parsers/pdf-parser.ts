@@ -213,6 +213,17 @@ export interface PersonalInfoDisputeItem {
   value: string;
 }
 
+// Inquiry dispute item for disputing credit inquiries
+export interface InquiryDisputeItem {
+  type: 'inquiry';
+  creditorName: string;
+  bureau?: 'transunion' | 'experian' | 'equifax';
+  inquiryDate?: Date;
+  inquiryType?: string;
+  isPastFcraLimit: boolean;
+  daysSinceInquiry?: number;
+}
+
 // Extended parsed data with bureau-specific details
 export interface ExtendedParsedCreditData extends ParsedCreditData {
   bureauSummary?: BureauSummary;
@@ -221,6 +232,7 @@ export interface ExtendedParsedCreditData extends ParsedCreditData {
   publicRecords?: PublicRecord[];
   bureauPersonalInfo?: BureauPersonalInfo;
   personalInfoDisputes?: PersonalInfoDisputeItem[];
+  inquiryDisputes?: InquiryDisputeItem[];
 }
 
 const NEGATIVE_KEYWORDS = [

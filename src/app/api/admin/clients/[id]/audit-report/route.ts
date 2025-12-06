@@ -84,6 +84,7 @@ export async function GET(
             bureauSummary: parsedData.bureauSummary || createEmptyBureauSummary(),
             bureauPersonalInfo: parsedData.bureauPersonalInfo,
             personalInfoDisputes: parsedData.personalInfoDisputes,
+            inquiryDisputes: parsedData.inquiryDisputes,
             creditUtilization: parsedData.creditUtilization || createEmptyCreditUtilization(),
             derogatoryAccounts: parsedData.derogatoryAccounts || [],
             publicRecords: parsedData.publicRecords || [],

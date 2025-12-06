@@ -21,6 +21,7 @@ import type {
   PaymentHistorySummary,
   PersonalInfoDisputeType,
   PersonalInfoDisputeItem,
+  InquiryDisputeItem,
 } from './pdf-parser';
 import {
   StandardizedAccount,
@@ -214,6 +215,7 @@ export function parseIdentityIQReport(html: string): ExtendedParsedCreditData {
   const inquiries = extractIIQInquiries($);
   const negativeItems = buildNegativeItems(derogatoryAccounts, accounts);
   const personalInfoDisputes = buildPersonalInfoDisputes(bureauPersonalInfo);
+  const inquiryDisputes = buildInquiryDisputes(inquiries);
   const summary = calculateIIQSummary(accounts, bureauSummary);
 
   return {
@@ -230,6 +232,7 @@ export function parseIdentityIQReport(html: string): ExtendedParsedCreditData {
     derogatoryAccounts,
     publicRecords,
     personalInfoDisputes,
+    inquiryDisputes,
   } as ExtendedParsedCreditData;
 }
 
@@ -1272,6 +1275,55 @@ function buildPersonalInfoDisputes(
     addMany(bureau, 'former_name', info.formerName);
     addMany(bureau, 'previous_address', info.previousAddresses);
     addMany(bureau, 'employer', info.employers);
+  }
+
+  return items;
+}
+
+// FCRA allows inquiries to be reported for 2 years
+const INQUIRY_FCRA_LIMIT_MS = 1000 * 60 * 60 * 24 * 365 * 2; // 2 years in milliseconds
+
+function buildInquiryDisputes(inquiries: ParsedInquiry[]): InquiryDisputeItem[] {
+  const items: InquiryDisputeItem[] = [];
+  const now = Date.now();
+
+  for (const inq of inquiries) {
+    if (!inq.creditorName) continue;
+
+    let isPastFcraLimit = false;
+    let daysSinceInquiry: number | undefined;
+
+    if (inq.inquiryDate) {
+      const inquiryTime = inq.inquiryDate.getTime();
+      if (!Number.isNaN(inquiryTime)) {
+        const timeSinceInquiry = now - inquiryTime;
+        daysSinceInquiry = Math.floor(timeSinceInquiry / (1000 * 60 * 60 * 24));
+        isPastFcraLimit = timeSinceInquiry > INQUIRY_FCRA_LIMIT_MS;
+      }
+    }
+
+    // Normalize bureau name
+    let bureau: 'transunion' | 'experian' | 'equifax' | undefined;
+    if (inq.bureau) {
+      const bureauLower = inq.bureau.toLowerCase();
+      if (bureauLower.includes('transunion') || bureauLower === 'tu' || bureauLower === 'tuc') {
+        bureau = 'transunion';
+      } else if (bureauLower.includes('experian') || bureauLower === 'exp') {
+        bureau = 'experian';
+      } else if (bureauLower.includes('equifax') || bureauLower === 'eq' || bureauLower === 'eqf') {
+        bureau = 'equifax';
+      }
+    }
+
+    items.push({
+      type: 'inquiry',
+      creditorName: inq.creditorName,
+      bureau,
+      inquiryDate: inq.inquiryDate,
+      inquiryType: inq.inquiryType,
+      isPastFcraLimit,
+      daysSinceInquiry,
+    });
   }
 
   return items;

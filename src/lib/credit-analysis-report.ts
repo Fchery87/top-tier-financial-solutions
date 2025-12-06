@@ -2,7 +2,7 @@
 // Comprehensive report matching the PHP Twig template format
 // Includes: Cover Page, Welcome Letter, Credit Basics, Scores Summary, Account Analysis, Process Overview, Client Role
 
-import type { BureauSummary, BureauPersonalInfo, DerogatoryAccount, PublicRecord, BureauCreditUtilization, PersonalInfoDisputeItem } from './parsers/pdf-parser';
+import type { BureauSummary, BureauPersonalInfo, DerogatoryAccount, PublicRecord, BureauCreditUtilization, PersonalInfoDisputeItem, InquiryDisputeItem } from './parsers/pdf-parser';
 
 export interface CreditAnalysisReportData {
   client: {
@@ -15,6 +15,7 @@ export interface CreditAnalysisReportData {
   bureauSummary: BureauSummary;
   bureauPersonalInfo?: BureauPersonalInfo;
   personalInfoDisputes?: PersonalInfoDisputeItem[];
+  inquiryDisputes?: InquiryDisputeItem[];
   creditUtilization: BureauCreditUtilization;
   derogatoryAccounts: DerogatoryAccount[];
   publicRecords: PublicRecord[];
@@ -212,6 +213,80 @@ function renderPersonalInformationSection(data: CreditAnalysisReportData): strin
   `;
 }
 
+function renderInquiriesSection(data: CreditAnalysisReportData): string {
+  const { inquiries, inquiryDisputes } = data;
+  const inquiriesTotal = inquiries.length;
+  
+  // Count FCRA violations (inquiries past 2-year limit)
+  const fcraViolations = inquiryDisputes?.filter(inq => inq.isPastFcraLimit) || [];
+  const fcraViolationCount = fcraViolations.length;
+  
+  if (inquiriesTotal === 0) {
+    return `
+      <h3>Your Inquiries</h3>
+      <p>You have <strong>0</strong> inquiries on your reports.</p>
+      <p style="color: #059669; padding: 16px; background: #ECFDF5; border-radius: 12px; border: 1px solid #A7F3D0;">No recent inquiries found.</p>
+    `;
+  }
+
+  return `
+    <h3>Your Inquiries</h3>
+    <p>You have <strong>${inquiriesTotal}</strong> inquiries on your reports. Each time you apply for credit, it can lower your score. During credit repair, we strongly recommend that you <strong>do not apply for any new credit</strong>.</p>
+    
+    ${fcraViolationCount > 0 ? `
+    <div class="info-box important" style="margin: 20px 0;">
+      <strong>🚨 FCRA Violation Detected - ${fcraViolationCount} Inquiry(ies) Past Reporting Limit</strong>
+      <p style="margin-top: 8px;">Under the Fair Credit Reporting Act (FCRA) Section 605, credit inquiries may only be reported for <strong>2 years</strong> from the date of inquiry. The following inquiries have exceeded this limit and should be immediately removed:</p>
+      <ul style="margin-left: 20px; margin-top: 8px;">
+        ${fcraViolations.slice(0, 5).map(inq => `
+        <li><strong>${inq.creditorName}</strong> - ${inq.inquiryDate ? formatDate(inq.inquiryDate) : 'Unknown Date'} (${inq.daysSinceInquiry ? Math.floor(inq.daysSinceInquiry / 365) + ' years, ' + (inq.daysSinceInquiry % 365) + ' days ago' : 'Date unknown'})${inq.bureau ? ' - ' + inq.bureau.charAt(0).toUpperCase() + inq.bureau.slice(1) : ''}</li>
+        `).join('')}
+        ${fcraViolationCount > 5 ? `<li>+ ${fcraViolationCount - 5} more...</li>` : ''}
+      </ul>
+      <p style="margin-top: 12px;"><strong>Recommended Action:</strong> Dispute these inquiries citing FCRA Section 605 - Obsolete Information (15 U.S.C. § 1681c). Request immediate deletion as they exceed the maximum 2-year reporting period.</p>
+    </div>
+    ` : ''}
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Business</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Bureau</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(inquiryDisputes || inquiries.map(inq => ({ ...inq, type: 'inquiry' as const, isPastFcraLimit: false }))).slice(0, 20).map(inq => {
+          const isViolation = 'isPastFcraLimit' in inq && inq.isPastFcraLimit;
+          return `
+          <tr style="${isViolation ? 'background: #FEE2E2;' : ''}">
+            <td>${inq.creditorName}</td>
+            <td>${inq.inquiryType || '-'}</td>
+            <td>${inq.inquiryDate ? formatDate(inq.inquiryDate) : '-'}</td>
+            <td>${inq.bureau ? inq.bureau.charAt(0).toUpperCase() + inq.bureau.slice(1) : '-'}</td>
+            <td>${isViolation ? '<span style="color: #DC2626; font-weight: 600;">⚠️ FCRA VIOLATION</span>' : '<span style="color: #059669;">Within Limit</span>'}</td>
+          </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    ${inquiriesTotal > 20 ? `<p style="font-size: 0.85em; color: #64748B; margin-top: 12px;">+ ${inquiriesTotal - 20} more inquiries</p>` : ''}
+    
+    <div class="info-box tip" style="margin-top: 20px;">
+      <strong>About Credit Inquiries</strong>
+      <p style="margin-top: 8px;">Under FCRA guidelines:</p>
+      <ul style="margin-left: 20px; margin-top: 8px;">
+        <li>Hard inquiries can remain on your report for up to <strong>2 years</strong></li>
+        <li>They typically only affect your score for <strong>12 months</strong></li>
+        <li>Multiple inquiries for the same type of credit within 14-45 days often count as one</li>
+        <li>Soft inquiries (pre-approvals, personal checks) do not affect your score</li>
+      </ul>
+    </div>
+  `;
+}
+
 export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData): string {
   const company = { ...DEFAULT_COMPANY_INFO, ...data.companyInfo };
   const { client, bureauSummary, creditUtilization, derogatoryAccounts, publicRecords, inquiries } = data;
@@ -222,7 +297,6 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
   // Calculate totals
   const derogatoryTotal = derogatoryAccounts.length;
   const publicRecordsTotal = publicRecords.length;
-  const inquiriesTotal = inquiries.length;
   
 
 
@@ -1305,32 +1379,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
     </table>
     ` : '<p style="color: #059669; padding: 16px; background: #ECFDF5; border-radius: 12px; border: 1px solid #A7F3D0;">No public records found.</p>'}
     
-    <h3>Your Inquiries</h3>
-    <p>You have <strong>${inquiriesTotal}</strong> inquiries on your reports. Each time you apply for credit, it can lower your score. During credit repair, we strongly recommend that you <strong>do not apply for any new credit</strong>.</p>
-    
-    ${inquiriesTotal > 0 ? `
-    <table>
-      <thead>
-        <tr>
-          <th>Business</th>
-          <th>Type</th>
-          <th>Date</th>
-          <th>Bureau</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${inquiries.slice(0, 15).map(inq => `
-        <tr>
-          <td>${inq.creditorName}</td>
-          <td>${inq.inquiryType || '-'}</td>
-          <td>${inq.inquiryDate ? formatDate(inq.inquiryDate) : '-'}</td>
-          <td>${inq.bureau || '-'}</td>
-        </tr>
-        `).join('')}
-      </tbody>
-    </table>
-    ${inquiriesTotal > 15 ? `<p style="font-size: 0.85em; color: #64748B; margin-top: 12px;">+ ${inquiriesTotal - 15} more inquiries</p>` : ''}
-    ` : '<p style="color: #059669; padding: 16px; background: #ECFDF5; border-radius: 12px; border: 1px solid #A7F3D0;">No recent inquiries found.</p>'}
+    ${renderInquiriesSection(data)}
     
     <h3>Credit Utilization</h3>
     <p>Your credit utilization ratio is one of the most important factors in your credit score. We recommend keeping utilization below 30%, ideally under 10%.</p>
