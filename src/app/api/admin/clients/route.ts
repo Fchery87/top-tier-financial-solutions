@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { clients, consultationRequests, user, creditReports, creditAnalyses } from '@/db/schema';
+import { clients, consultationRequests, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';

@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { creditScoreHistory, clients } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isAdmin } from '@/lib/admin-auth';
-import { desc, sql, gte } from 'drizzle-orm';
+import { gte } from 'drizzle-orm';
 
 interface TrendPoint {
   date: string;

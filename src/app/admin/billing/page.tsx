@@ -11,9 +11,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
-  Settings,
-  Pencil,
-  Trash2
+  Pencil
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';

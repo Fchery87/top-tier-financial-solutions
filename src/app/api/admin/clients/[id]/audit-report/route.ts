@@ -10,7 +10,7 @@ import { generateAuditReportHTML, calculateProjectedScoreIncrease, type AuditRep
 import { generateCreditAnalysisReportHTML, type CreditAnalysisReportData } from '@/lib/credit-analysis-report';
 import { parseIdentityIQReport } from '@/lib/parsers/identityiq-parser';
 import { getFileFromR2 } from '@/lib/r2-storage';
-import type { BureauSummary, BureauCreditUtilization, DerogatoryAccount, PublicRecord, BureauPersonalInfo } from '@/lib/parsers/pdf-parser';
+import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({

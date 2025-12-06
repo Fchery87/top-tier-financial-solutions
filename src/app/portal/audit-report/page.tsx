@@ -19,29 +19,38 @@ export default function PortalAuditReportPage() {
   const [reportType, setReportType] = useState<'comprehensive' | 'simple'>('simple');
 
   useEffect(() => {
-    if (!authLoading && user) {
-      checkReportStatus();
-    }
-  }, [authLoading, user]);
+    let isMounted = true;
 
-  const checkReportStatus = async () => {
-    try {
-      const res = await fetch('/api/portal/audit-report');
-      if (res.ok) {
-        const data = await res.json();
-        setHasReport(data.has_report);
-        setClientName(data.client_name || '');
-        if (!data.has_report) {
-          setError(data.message || 'Your credit analysis report is not yet available.');
+    const checkReportStatus = async () => {
+      try {
+        const res = await fetch('/api/portal/audit-report');
+        if (res.ok) {
+          const data = await res.json();
+          if (!isMounted) return;
+          setHasReport(data.has_report);
+          setClientName(data.client_name || '');
+          if (!data.has_report) {
+            setError(data.message || 'Your credit analysis report is not yet available.');
+          }
+        } else if (isMounted) {
+          setError('Unable to load report status');
         }
-      } else {
-        setError('Unable to load report status');
+      } catch (err) {
+        console.error('Error checking report:', err);
+        if (isMounted) {
+          setError('Unable to connect to server');
+        }
       }
-    } catch (err) {
-      console.error('Error checking report:', err);
-      setError('Unable to connect to server');
+    };
+
+    if (!authLoading && user) {
+      void checkReportStatus();
     }
-  };
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading, user]);
 
   const handleIframeLoad = () => {
     setLoading(false);

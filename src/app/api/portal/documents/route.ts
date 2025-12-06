@@ -3,7 +3,7 @@ import { db } from '@/db/client';
 import { clientDocuments, clientCases } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 async function getAuthenticatedUser() {

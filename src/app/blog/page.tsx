@@ -38,7 +38,7 @@ async function getBlogPosts(): Promise<{ posts: BlogPost[]; categories: Category
 }
 
 export default async function BlogPage() {
-  const { posts, categories } = await getBlogPosts();
+  const { posts, categories: _categories } = await getBlogPosts();
   const featuredPosts = posts.filter((p) => p.is_featured);
   const regularPosts = posts.filter((p) => !p.is_featured);
 
@@ -143,7 +143,7 @@ export default async function BlogPage() {
               </FadeIn>
 
               <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(regularPosts.length > 0 ? regularPosts : posts).map((post, i) => (
+                {(regularPosts.length > 0 ? regularPosts : posts).map((post, _i) => (
                   <StaggerItem key={post.id}>
                     <Link href={`/blog/${post.slug}`}>
                       <Card className="h-full bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/50 transition-all duration-300 group">

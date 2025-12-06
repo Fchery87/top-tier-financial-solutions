@@ -4,8 +4,9 @@ import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { getSetting, setSetting, getSettingsByCategory, updateLLMConfig, getLLMConfig, clearSettingsCache } from '@/lib/settings-service';
-import { randomUUID } from 'crypto';
+import { setSetting, getSettingsByCategory, clearSettingsCache } from '@/lib/settings-service';
+
+type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
 
 // Check if user is super admin
 async function checkSuperAdmin() {
@@ -16,7 +17,8 @@ async function checkSuperAdmin() {
     return { authorized: false, error: 'Unauthorized' };
   }
 
-  if ((session.user as any).role !== 'super_admin') {
+  const userRole = (session.user as { role?: string }).role;
+  if (userRole !== 'super_admin') {
     return { authorized: false, error: 'Super admin access required' };
   }
 
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Parse values and hide secrets
     const parsedSettings = allSettings.map((setting) => {
-      let parsedValue: any;
+      let parsedValue: SettingValue;
       
       // Hide secret values in response
       if (setting.isSecret) {
@@ -96,14 +98,21 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const body: {
+      key?: string;
+      value?: unknown;
+      type?: 'string' | 'number' | 'boolean' | 'json';
+      category?: string;
+      description?: string;
+      isSecret?: boolean;
+    } = await request.json();
     const { key, value, type, category, description, isSecret } = body;
 
     if (!key || type === undefined) {
       return NextResponse.json({ error: 'Missing required fields: key, type' }, { status: 400 });
     }
 
-    await setSetting(key, value, type, category, description, isSecret, authCheck.userId);
+    await setSetting(key, value as SettingValue, type, category, description, isSecret, authCheck.userId);
 
     return NextResponse.json({ 
       success: true, 

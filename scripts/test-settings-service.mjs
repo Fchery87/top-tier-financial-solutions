@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 config();
 
 // Import the settings service
-const { getLLMConfig, getSetting, updateLLMConfig } = await import('../src/lib/settings-service.ts');
+const { getLLMConfig, getSetting } = await import('../src/lib/settings-service.ts');
 
 console.log('🧪 Testing Settings Service...\n');
 
@@ -39,7 +39,7 @@ try {
 console.log('3️⃣  Testing AI Letter Generator Integration...');
 try {
   // Import the letter generator
-  const { generateUniqueDisputeLetter } = await import('../src/lib/ai-letter-generator.ts');
+  const { generateUniqueDisputeLetter: _generateUniqueDisputeLetter } = await import('../src/lib/ai-letter-generator.ts');
   
   console.log('   ✅ AI Letter Generator imports successfully');
   console.log('   ✅ Will use database settings when generating letters');

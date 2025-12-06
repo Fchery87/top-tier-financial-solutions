@@ -617,7 +617,7 @@ export default function PortalPage() {
                         <Scale className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
                         <p className="text-muted-foreground">No disputes in progress yet.</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          We'll start disputing negative items once your credit report is analyzed.
+                          We&apos;ll start disputing negative items once your credit report is analyzed.
                         </p>
                       </div>
                     )}

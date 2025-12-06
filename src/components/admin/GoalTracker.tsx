@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Target, Loader2, Trophy, TrendingUp, Users } from 'lucide-react';
+import { Target, Loader2, Trophy, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 
 interface Goal {

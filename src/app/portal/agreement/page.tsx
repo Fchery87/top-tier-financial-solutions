@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { 
   Loader2, FileSignature, CheckCircle, AlertTriangle, 
-  ArrowLeft, Download, Printer, Clock, Shield
+  ArrowLeft, Clock, Shield
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay } from '@/components/ui/AnimatedBackground';

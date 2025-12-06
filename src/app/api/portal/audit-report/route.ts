@@ -4,11 +4,7 @@ import { clients, auditReports, creditAnalyses } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { eq, desc } from 'drizzle-orm';
-import { generateAuditReportHTML, type AuditReportData } from '@/lib/audit-report';
-import { generateCreditAnalysisReportHTML, type CreditAnalysisReportData } from '@/lib/credit-analysis-report';
-import { parseIdentityIQReport } from '@/lib/parsers/identityiq-parser';
-import { getFileFromR2 } from '@/lib/r2-storage';
-import { creditReports, negativeItems, creditAccounts } from '@/db/schema';
+
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
 
 async function getAuthenticatedUser() {
@@ -24,7 +20,7 @@ async function getAuthenticatedUser() {
 }
 
 // GET - Check if client has an audit report available
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -80,7 +76,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper functions for empty bureau data
-function createEmptyBureauSummary(): BureauSummary {
+function _createEmptyBureauSummary(): BureauSummary {
   const emptyMetrics = {
     creditScore: undefined,
     lenderRank: undefined,
@@ -104,7 +100,7 @@ function createEmptyBureauSummary(): BureauSummary {
   };
 }
 
-function createEmptyCreditUtilization(): BureauCreditUtilization {
+function _createEmptyCreditUtilization(): BureauCreditUtilization {
   const emptyUtil = { balance: 0, limit: 0, percent: 0, rating: 'no_data' as const };
   return {
     transunion: { ...emptyUtil },

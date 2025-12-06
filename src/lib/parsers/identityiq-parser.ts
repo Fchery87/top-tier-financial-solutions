@@ -556,7 +556,6 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
       // Find the data table within this account
       $accountTable.find('table.rpt_content_table.rpt_table4column').each((_, dataTable) => {
         const $dataTable = $(dataTable);
-        let rowIndex = 0;
         
         $dataTable.find('tr').each((_, row) => {
           const $row = $(row);
@@ -612,8 +611,6 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
               accountData.experian.pastDue = expValue;
               accountData.equifax.pastDue = eqValue;
             }
-            
-            rowIndex++;
           }
         });
       });
@@ -704,20 +701,41 @@ function createParsedAccount(
   const creditLimit = parseMoneyValue(data.creditLimit);
   const highCredit = parseMoneyValue(data.highCredit);
   
-  const accountStatus = determineAccountStatus(data.accountStatus || '');
-  const paymentStatus = determinePaymentStatus(data.paymentStatus || '');
+  let accountStatus = determineAccountStatus(data.accountStatus || '');
+  let paymentStatus = determinePaymentStatus(data.paymentStatus || '');
+  const accountTypeLower = (data.accountType || '').toLowerCase();
+
+  // Normalize collection/charge-off classification using both account type and payment status
+  if (accountTypeLower.includes('collection')) {
+    accountStatus = 'collection';
+    // Many IdentityIQ collection tradelines report "Collection/Chargeoff" as the payment status
+    if (!paymentStatus || paymentStatus === 'charge_off') {
+      paymentStatus = 'collection';
+    }
+  }
+
+  // If the status is generic derogatory/unknown, align it with the payment status signals
+  if ((!accountStatus || accountStatus === 'derogatory') && paymentStatus) {
+    if (paymentStatus === 'charge_off') {
+      accountStatus = 'charge_off';
+    } else if (paymentStatus === 'collection') {
+      accountStatus = 'collection';
+    }
+  }
   
   const account: ParsedAccount = {
     creditorName: creditorName.substring(0, 100),
     accountNumber: data.accountNumber !== '-' ? data.accountNumber : undefined,
-    accountType: data.accountType !== '-' ? data.accountType : 'other',
-    accountStatus,
+    accountType: data.accountType && data.accountType !== '-' 
+      ? data.accountType 
+      : accountTypeLower.includes('collection') ? 'collection' : 'other',
+    accountStatus: accountStatus || 'unknown',
     balance,
     creditLimit,
     highCredit,
     monthlyPayment: parseMoneyValue(data.monthlyPayment),
     pastDueAmount: parseMoneyValue(data.pastDue),
-    paymentStatus,
+    paymentStatus: paymentStatus || undefined,
     dateOpened: parseDate(data.dateOpened),
     bureau,
     isNegative: false,
@@ -855,7 +873,7 @@ function extractPublicRecords($: cheerio.CheerioAPI): PublicRecord[] {
         const $cells = $(row).find('td');
         
         if ($cells.length >= 4) {
-          const labelText = $($cells[0]).text().trim().toLowerCase();
+          const _labelText = $($cells[0]).text().trim().toLowerCase();
           
           // Row 1 typically has the type
           if (rowIdx === 1) {
@@ -1028,9 +1046,16 @@ function buildNegativeItems(
       addedCreditors.add(account.creditorName.toLowerCase());
       
       let itemType = 'derogatory';
-      if (account.accountStatus === 'collection') itemType = 'collection';
-      else if (account.accountStatus === 'charge_off') itemType = 'charge_off';
-      else if (account.paymentStatus?.includes('late')) itemType = 'late_payment';
+      const normalizedStatus = (account.accountStatus || '').toLowerCase();
+      const normalizedPayment = (account.paymentStatus || '').toLowerCase();
+
+      if (normalizedStatus === 'collection' || normalizedPayment.includes('collection')) {
+        itemType = 'collection';
+      } else if (normalizedStatus === 'charge_off' || normalizedPayment.includes('charge')) {
+        itemType = 'charge_off';
+      } else if (normalizedPayment.includes('late')) {
+        itemType = 'late_payment';
+      }
 
       // Extract original creditor from creditor name if present
       const { creditorName, originalCreditor } = extractOriginalCreditor(account.creditorName);
@@ -1303,8 +1328,11 @@ function getBureauName(columnIndex: number): 'transunion' | 'experian' | 'equifa
   return 'equifax';
 }
 
-function determineAccountStatus(text: string): string {
-  const lower = text.toLowerCase();
+function determineAccountStatus(text: string): string | undefined {
+  const cleaned = text.trim();
+  if (!cleaned || cleaned === '-') return undefined;
+  
+  const lower = cleaned.toLowerCase();
   if (lower.includes('closed')) return 'closed';
   if (lower.includes('collection')) return 'collection';
   if (lower.includes('charge') && lower.includes('off')) return 'charge_off';
@@ -1315,15 +1343,20 @@ function determineAccountStatus(text: string): string {
   return 'unknown';
 }
 
-function determinePaymentStatus(text: string): string {
-  const lower = text.toLowerCase();
+function determinePaymentStatus(text: string): string | undefined {
+  const cleaned = text.trim();
+  if (!cleaned || cleaned === '-') return undefined;
+
+  const lower = cleaned.toLowerCase();
+  // Normalize charge-off ahead of collection when both terms appear (e.g., "Collection/Chargeoff")
+  if ((lower.includes('charge') && lower.includes('off')) || lower.includes('chargeoff')) return 'charge_off';
+  if (lower.includes('collection')) return 'collection';
   if (lower.includes('180') && lower.includes('late')) return '180_days_late';
   if (lower.includes('150') && lower.includes('late')) return '150_days_late';
   if (lower.includes('120') && lower.includes('late')) return '120_days_late';
   if (lower.includes('90') && lower.includes('late')) return '90_days_late';
   if (lower.includes('60') && lower.includes('late')) return '60_days_late';
   if (lower.includes('30') && lower.includes('late')) return '30_days_late';
-  if (lower.includes('collection') || lower.includes('chargeoff')) return 'collection';
   if (lower.includes('current') || lower.includes('pays as agreed') || lower.includes('ok')) return 'current';
-  return text || 'unknown';
+  return cleaned;
 }

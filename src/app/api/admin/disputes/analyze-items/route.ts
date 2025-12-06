@@ -9,7 +9,6 @@ import {
   analyzeNegativeItems,
   getBestMethodologyForBatch,
   consolidateReasonCodes,
-  type ItemAnalysisResult,
 } from '@/lib/ai-letter-generator';
 
 async function validateAdmin() {

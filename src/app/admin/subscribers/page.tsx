@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Users, UserMinus, TrendingUp, Loader2, Download } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
@@ -51,6 +51,7 @@ export default function SubscribersAdminPage() {
 
   React.useEffect(() => {
     fetchSubscribers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const handleExport = () => {

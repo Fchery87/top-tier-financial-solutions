@@ -10,8 +10,6 @@ import {
   Loader2,
   Trash2,
   Edit2,
-  Calendar,
-  User,
   AlertCircle,
   Clock
 } from 'lucide-react';
@@ -20,7 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { DataTable } from '@/components/admin/DataTable';
 import { Pagination } from '@/components/admin/Pagination';
-import { StatusBadge } from '@/components/admin/StatusBadge';
+
 
 interface Task {
   id: string;
@@ -59,7 +57,7 @@ const priorityOptions = [
   { value: 'low', label: 'Low' },
 ];
 
-const getStatusVariant = (status: string) => {
+const _getStatusVariant = (status: string) => {
   switch (status) {
     case 'done': return 'success';
     case 'in_progress': return 'info';

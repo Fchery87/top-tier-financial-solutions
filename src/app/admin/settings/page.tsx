@@ -7,12 +7,10 @@ import {
   Sparkles,
   Database,
   Key,
-  Zap,
   Save,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  RefreshCw,
   Eye,
   EyeOff,
   TestTube2,
@@ -41,8 +39,10 @@ interface SystemSetting {
   category: string;
   description: string | null;
   isSecret: boolean;
-  parsedValue: any;
+  parsedValue: SettingValue;
 }
+
+type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
 
 export default function SettingsPage() {
   const [llmConfig, setLlmConfig] = React.useState<LLMConfig | null>(null);
@@ -90,7 +90,7 @@ export default function SettingsPage() {
     loadData();
   }, [fetchLLMConfig, fetchAllSettings]);
 
-  const handleConfigChange = (field: keyof LLMConfig, value: any) => {
+  const handleConfigChange = (field: keyof LLMConfig, value: string | number | boolean) => {
     setEditedConfig(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
     setTestResult(null);
@@ -101,10 +101,10 @@ export default function SettingsPage() {
 
     setSaving(true);
     try {
-      const updates: any = {};
-      Object.keys(editedConfig).forEach(key => {
-        if (editedConfig[key as keyof LLMConfig] !== undefined) {
-          updates[key] = editedConfig[key as keyof LLMConfig];
+      const updates: Partial<LLMConfig> = {};
+      (Object.keys(editedConfig) as (keyof LLMConfig)[]).forEach(key => {
+        if (editedConfig[key] !== undefined) {
+          (updates as Record<string, unknown>)[key] = editedConfig[key];
         }
       });
 
@@ -136,7 +136,7 @@ export default function SettingsPage() {
 
     try {
       // If there are unsaved changes, test with those
-      const testConfig = { ...llmConfig, ...editedConfig };
+      const _testConfig = { ...llmConfig, ...editedConfig };
       
       // Save first if there are changes
       if (hasChanges) {
@@ -172,24 +172,27 @@ export default function SettingsPage() {
           message: `✗ Connection failed: ${data.error || 'Unknown error'}` 
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Network error';
       setTestResult({ 
         success: false, 
-        message: `✗ Test failed: ${error.message || 'Network error'}` 
+        message: `✗ Test failed: ${message || 'Network error'}` 
       });
     } finally {
       setTesting(false);
     }
   };
 
-  const getCurrentValue = (field: keyof LLMConfig) => {
-    if (editedConfig[field] !== undefined) {
-      return editedConfig[field];
+  const getCurrentValue = (field: keyof LLMConfig): string | number | undefined => {
+    const edited = editedConfig[field];
+    if (edited !== undefined) {
+      return typeof edited === 'boolean' ? String(edited) : edited as string | number;
     }
-    return llmConfig?.[field];
+    const current = llmConfig?.[field];
+    return typeof current === 'boolean' ? String(current) : current as string | number | undefined;
   };
 
-  const llmSettingsCount = allSettings.filter(s => s.category === 'llm').length;
+  const _llmSettingsCount = allSettings.filter(s => s.category === 'llm').length;
   const totalSettingsCount = allSettings.length;
 
   if (loading) {
@@ -228,7 +231,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSaveConfig}
             disabled={!hasChanges || saving}
-            variant="default"
+            variant="primary"
             size="md"
           >
             {saving ? (

@@ -15,7 +15,7 @@
 
 import { db } from '../db/client';
 import { creditAccounts, negativeItems } from '../db/schema';
-import { isNull, or, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 async function backfillBureauFields() {
   console.log('Starting backfill of per-bureau presence fields...\n');

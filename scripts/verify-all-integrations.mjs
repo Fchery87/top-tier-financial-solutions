@@ -42,7 +42,7 @@ console.log('\n2️⃣  Drizzle ORM Integration');
 console.log('-'.repeat(60));
 try {
   const sql = neon(process.env.DATABASE_URL);
-  const db = drizzle(sql);
+  const _db = drizzle(sql);
   
   const tableCount = await sql`
     SELECT COUNT(*) as count 
@@ -108,8 +108,8 @@ try {
   
   console.log('   🤖 LLM Configuration:');
   llmSettings.forEach(s => {
-    const value = s.is_secret ? '••••••' : s.setting_value;
-    console.log(`      ✓ ${s.setting_key}: ${s.setting_value}`);
+    const displayValue = s.is_secret ? '••••••' : s.setting_value;
+    console.log(`      ✓ ${s.setting_key}: ${displayValue}`);
   });
   
 } catch (error) {

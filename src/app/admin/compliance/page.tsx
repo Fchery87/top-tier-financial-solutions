@@ -10,7 +10,6 @@ import {
   Clock,
   DollarSign,
   MessageCircle,
-  Users,
   Loader2,
   ExternalLink,
   XCircle

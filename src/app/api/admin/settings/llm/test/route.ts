@@ -12,7 +12,8 @@ async function checkSuperAdmin() {
     return { authorized: false, error: 'Unauthorized' };
   }
 
-  if ((session.user as any).role !== 'super_admin') {
+  const userRole = (session.user as { role?: string }).role;
+  if (userRole !== 'super_admin') {
     return { authorized: false, error: 'Super admin access required' };
   }
 
@@ -23,7 +24,7 @@ async function checkSuperAdmin() {
  * POST /api/admin/settings/llm/test
  * Test LLM connection with current configuration
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   const authCheck = await checkSuperAdmin();
   if (!authCheck.authorized) {
     return NextResponse.json({ error: authCheck.error }, { status: 403 });
@@ -129,11 +130,12 @@ export async function POST(request: NextRequest) {
           message: `Unknown provider: ${config.provider}` 
         }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Connection test failed';
     console.error('Error testing LLM connection:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Connection test failed' 
+      error: message 
     }, { status: 500 });
   }
 }

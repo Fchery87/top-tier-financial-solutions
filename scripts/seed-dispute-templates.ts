@@ -207,7 +207,7 @@ const DISPUTE_TEMPLATES = [
   },
 ];
 
-function generateTemplateContent(template: typeof DISPUTE_TEMPLATES[0]): string {
+function generateTemplateContent(_template: typeof DISPUTE_TEMPLATES[0]): string {
   const baseContent = `{{current_date}}
 
 {{recipient_address}}

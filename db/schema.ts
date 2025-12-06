@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, serial, text, timestamp, unique, boolean, integer, index } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, serial, text, timestamp, boolean, integer, index } from 'drizzle-orm/pg-core';
 import { relations } from "drizzle-orm";
 
 // Enums
@@ -666,6 +666,9 @@ export const disputes = pgTable('disputes', {
   fcraSections: text('fcra_sections'), // JSON array of FCRA sections cited in letter
   escalationHistory: text('escalation_history'), // JSON array of round progression history
   priorDisputeId: text('prior_dispute_id'), // Reference to previous dispute in escalation chain
+  // NEW: Response clock & evidence tracking
+  escalationReadyAt: timestamp('escalation_ready_at'), // When escalation becomes available (30/45 days after sent)
+  evidenceDocumentIds: text('evidence_document_ids'), // JSON array of clientDocuments IDs attached as evidence
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
@@ -675,6 +678,7 @@ export const disputes = pgTable('disputes', {
   index("disputes_status_idx").on(table.status),
   index("disputes_responseDeadline_idx").on(table.responseDeadline),
   index("disputes_methodology_idx").on(table.methodology),
+  index("disputes_escalationReadyAt_idx").on(table.escalationReadyAt),
 ]);
 
 // Dispute letter templates
@@ -686,6 +690,7 @@ export const disputeLetterTemplates = pgTable('dispute_letter_templates', {
   targetRecipient: text('target_recipient').default('bureau'), // 'bureau' | 'creditor' | 'collector'
   content: text('content').notNull(), // Template with placeholders like {{client_name}}, {{account_number}}, etc.
   variables: text('variables'), // JSON array of available variables
+  evidenceRequirements: text('evidence_requirements'), // JSON: { required: boolean, documentTypes: string[], prompt: string }
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

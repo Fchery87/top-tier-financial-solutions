@@ -28,7 +28,7 @@ export function Header() {
   const [mounted, setMounted] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: _isLoading } = useAuth();
 
   // Prevent hydration mismatch by only showing auth-dependent UI after mount
   React.useEffect(() => {

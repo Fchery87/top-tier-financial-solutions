@@ -7,6 +7,13 @@ import { clients, negativeItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateUniqueDisputeLetter, generateMultiItemDisputeLetter, DISPUTE_REASON_CODES } from '@/lib/ai-letter-generator';
 
+const HIGH_RISK_CODES = new Set([
+  'identity_theft',
+  'not_mine',
+  'never_late',
+  'mixed_file',
+]);
+
 async function validateAdmin() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -47,11 +54,22 @@ export async function POST(request: NextRequest) {
       metro2Violations, // NEW: Specific Metro 2 field violations
       priorDisputeDate, // NEW: For method of verification letters
       priorDisputeResult, // NEW: Result of prior dispute
+      evidenceDocumentIds, // Optional: evidence attachments (clientDocuments IDs)
     } = body;
 
     if (!clientId || !bureau) {
       return NextResponse.json(
         { error: 'Client ID and bureau are required' },
+        { status: 400 }
+      );
+    }
+
+    if (
+      reasonCodes.some((code: string) => HIGH_RISK_CODES.has(code)) &&
+      (!evidenceDocumentIds || evidenceDocumentIds.length === 0)
+    ) {
+      return NextResponse.json(
+        { error: 'High-risk reason codes require evidenceDocumentIds.' },
         { status: 400 }
       );
     }

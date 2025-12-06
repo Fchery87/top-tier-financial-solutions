@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clientCases, caseUpdates } from '@/db/schema';
 import { auth } from '@/lib/auth';

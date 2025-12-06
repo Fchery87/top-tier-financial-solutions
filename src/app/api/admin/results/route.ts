@@ -4,7 +4,7 @@ import { disputes, clients, negativeItems, creditScoreHistory } from '@/db/schem
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { eq, and, gte, desc, sql } from 'drizzle-orm';
+import { eq, and, gte, desc } from 'drizzle-orm';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({

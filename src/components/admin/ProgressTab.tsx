@@ -12,7 +12,6 @@ import {
   Trophy,
   ArrowRight,
   GitCompare,
-  Calendar,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';

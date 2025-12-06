@@ -29,8 +29,7 @@ import {
   FileBarChart,
   ExternalLink,
   Printer,
-  Wand2,
-  LayoutGrid
+  Wand2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -530,7 +529,7 @@ export default function ClientDetailPage() {
     }
   };
 
-  const handleGenerateReport = async (openInNewTab: boolean = true, reportType: 'comprehensive' | 'simple' = 'simple') => {
+  const handleGenerateReport = async (openInNewTab: boolean = true, _reportType: 'comprehensive' | 'simple' = 'simple') => {
     setGeneratingReport(true);
     try {
       if (openInNewTab) {

@@ -642,7 +642,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {stats.recentActivity.map((item, index) => (
+                    {stats.recentActivity.map((item, _index) => (
                       <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                         <div className={`mt-0.5 p-1.5 rounded-full ${
                           item.type === 'dispute' ? 'bg-purple-500/10' : 'bg-blue-500/10'

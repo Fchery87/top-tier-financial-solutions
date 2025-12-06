@@ -9,7 +9,7 @@ import {
   bureauDiscrepancies,
   fcraComplianceItems,
 } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getFileFromR2 } from './r2-storage';
 import { 
@@ -22,10 +22,10 @@ import {
 import { parseHtmlCreditReport } from './parsers/html-parser';
 import {
   calculateCompletenessScore,
-  calculateFcraComplianceDate,
   FCRA_REPORTING_LIMITS,
   isAccountNegative,
   calculateRiskLevel,
+  type StandardizedAccount,
 } from './parsers/metro2-mapping';
 
 // Helper function to check if parsed data has extended bureau info
@@ -114,30 +114,34 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       const lookupKey = `${account.creditorName}|${account.accountNumber || ''}`.toLowerCase();
       accountIdMap.set(lookupKey, accountId);
       
+      const accountStatus = account.accountStatus as StandardizedAccount['accountStatus'] | undefined;
+      const paymentStatus = account.paymentStatus as StandardizedAccount['paymentStatus'] | undefined;
+      const accountCategory = account.accountType as StandardizedAccount['accountCategory'] | undefined;
+
       // Calculate completeness score
       const { score: completenessScore, missingFields } = calculateCompletenessScore({
         creditorName: account.creditorName,
         accountNumber: account.accountNumber,
         accountType: account.accountType,
-        accountStatus: account.accountStatus as any,
+        accountStatus,
         balance: account.balance,
         creditLimit: account.creditLimit,
         highCredit: account.highCredit,
         dateOpened: account.dateOpened,
         dateReported: account.dateReported,
-        paymentStatus: account.paymentStatus as any,
+        paymentStatus,
       });
       
       // Re-calculate negative status and risk using metro2 functions
       const isNegativeCalc = isAccountNegative({
-        accountStatus: account.accountStatus as any,
-        paymentStatus: account.paymentStatus as any,
+        accountStatus,
+        paymentStatus,
         pastDueAmount: account.pastDueAmount,
       });
       const riskLevelCalc = calculateRiskLevel({
-        accountStatus: account.accountStatus as any,
-        paymentStatus: account.paymentStatus as any,
-        accountCategory: account.accountType as any,
+        accountStatus,
+        paymentStatus,
+        accountCategory,
       });
       
       // Determine per-bureau presence for credit accounts
@@ -146,16 +150,26 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       let accountOnExperian = false;
       let accountOnEquifax = false;
       
-      if (report.bureau) {
-        const bureauLower = report.bureau.toLowerCase();
-        accountOnTransunion = bureauLower === 'transunion';
-        accountOnExperian = bureauLower === 'experian';
-        accountOnEquifax = bureauLower === 'equifax';
+      const specificBureaus = ['transunion', 'experian', 'equifax'];
+      const reportBureauLower = report.bureau?.toLowerCase();
+      
+      if (reportBureauLower && specificBureaus.includes(reportBureauLower)) {
+        // Single specific bureau report
+        accountOnTransunion = reportBureauLower === 'transunion';
+        accountOnExperian = reportBureauLower === 'experian';
+        accountOnEquifax = reportBureauLower === 'equifax';
       } else if (account.bureau) {
-        const bureauLower = account.bureau.toLowerCase();
-        accountOnTransunion = bureauLower === 'transunion';
-        accountOnExperian = bureauLower === 'experian';
-        accountOnEquifax = bureauLower === 'equifax';
+        const accountBureauLower = account.bureau.toLowerCase();
+        if (specificBureaus.includes(accountBureauLower)) {
+          accountOnTransunion = accountBureauLower === 'transunion';
+          accountOnExperian = accountBureauLower === 'experian';
+          accountOnEquifax = accountBureauLower === 'equifax';
+        } else {
+          // Account bureau is "combined" or unknown - mark all as true
+          accountOnTransunion = true;
+          accountOnExperian = true;
+          accountOnEquifax = true;
+        }
       } else {
         // Combined report - mark all as true (will be refined by derogatory match if available)
         accountOnTransunion = true;
@@ -244,6 +258,9 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       let experianStatus: string | undefined;
       let equifaxStatus: string | undefined;
       
+      const specificBureausForItem = ['transunion', 'experian', 'equifax'];
+      const reportBureauLowerForItem = report.bureau?.toLowerCase();
+      
       if (derogatoryMatch) {
         // Use per-bureau data from derogatory account
         onTransunion = !!(derogatoryMatch.transunion?.accountDate && derogatoryMatch.transunion.accountDate !== '-');
@@ -255,18 +272,17 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         transunionStatus = derogatoryMatch.transunion?.accountStatus || derogatoryMatch.transunion?.paymentStatus;
         experianStatus = derogatoryMatch.experian?.accountStatus || derogatoryMatch.experian?.paymentStatus;
         equifaxStatus = derogatoryMatch.equifax?.accountStatus || derogatoryMatch.equifax?.paymentStatus;
-      } else if (report.bureau) {
-        // Single bureau report - mark only that bureau as present
-        const bureauLower = report.bureau.toLowerCase();
-        onTransunion = bureauLower === 'transunion';
-        onExperian = bureauLower === 'experian';
-        onEquifax = bureauLower === 'equifax';
+      } else if (reportBureauLowerForItem && specificBureausForItem.includes(reportBureauLowerForItem)) {
+        // Single specific bureau report - mark only that bureau as present
+        onTransunion = reportBureauLowerForItem === 'transunion';
+        onExperian = reportBureauLowerForItem === 'experian';
+        onEquifax = reportBureauLowerForItem === 'equifax';
         // Set date for the reporting bureau
         if (onTransunion) transunionDate = item.dateReported || undefined;
         if (onExperian) experianDate = item.dateReported || undefined;
         if (onEquifax) equifaxDate = item.dateReported || undefined;
       } else {
-        // Combined report without derogatory match - conservatively mark all as true
+        // Combined report or unknown bureau without derogatory match - conservatively mark all as true
         // This ensures items aren't accidentally filtered out
         onTransunion = true;
         onExperian = true;
@@ -632,7 +648,7 @@ async function detectBureauDiscrepancies(clientId: string): Promise<void> {
   }
   
   // Check for account discrepancies
-  for (const [creditorKey, accounts] of accountsByCreditor) {
+  for (const [_creditorKey, accounts] of accountsByCreditor) {
     if (accounts.length < 2) continue; // Need at least 2 bureaus to compare
     
     // Get values by bureau

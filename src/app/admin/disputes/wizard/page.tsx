@@ -16,7 +16,6 @@ import {
   Loader2,
   Copy,
   Download,
-  RefreshCw,
   AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -221,6 +220,10 @@ export default function DisputeWizardPage() {
   const [aiAnalysisSummary, setAiAnalysisSummary] = React.useState<AIAnalysisSummary | null>(null);
   const [analyzingItems, setAnalyzingItems] = React.useState(false);
 
+  // Discrepancy preflight
+  const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
+  const [loadingDiscrepancies, setLoadingDiscrepancies] = React.useState(false);
+
   // Both modes use 4 steps now
   const maxSteps = WIZARD_STEPS.length;
   const reviewStepId = 4;
@@ -279,6 +282,28 @@ export default function DisputeWizardPage() {
       console.error('Error fetching negative items:', error);
     } finally {
       setLoadingItems(false);
+    }
+  };
+
+  // Fetch discrepancies summary for preflight guardrails
+  const fetchDiscrepancies = async (clientId: string) => {
+    setLoadingDiscrepancies(true);
+    try {
+      const response = await fetch(`/api/admin/disputes/discrepancies?clientId=${clientId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDiscrepancySummary({
+          total: data.summary?.total ?? 0,
+          highSeverity: data.summary?.highSeverity ?? 0,
+        });
+      } else {
+        setDiscrepancySummary(null);
+      }
+    } catch (error) {
+      console.error('Error fetching discrepancies:', error);
+      setDiscrepancySummary(null);
+    } finally {
+      setLoadingDiscrepancies(false);
     }
   };
 
@@ -406,6 +431,7 @@ export default function DisputeWizardPage() {
   React.useEffect(() => {
     if (selectedClient) {
       fetchNegativeItems(selectedClient.id);
+      fetchDiscrepancies(selectedClient.id);
     }
   }, [selectedClient]);
 
@@ -700,6 +726,7 @@ export default function DisputeWizardPage() {
         return selectedItems.length > 0;
       case 3:
         // Step 3 is the config step before generation
+        if (discrepancySummary?.highSeverity && discrepancySummary.highSeverity > 0) return false;
         return targetRecipient === 'bureau' ? selectedBureaus.length > 0 : true;
       case 4:
         // Step 4 is Review for both modes
@@ -1182,6 +1209,21 @@ export default function DisputeWizardPage() {
               <CardDescription>Configure the dispute round and recipients</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Discrepancy guardrail */}
+              {loadingDiscrepancies ? (
+                <div className="p-3 rounded-lg bg-muted/40 border border-border/50 text-sm text-muted-foreground">
+                  Checking for bureau discrepancies...
+                </div>
+              ) : discrepancySummary?.highSeverity ? (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-200">
+                  {discrepancySummary.highSeverity} high-severity discrepancies must be resolved before generating letters.
+                  Resolve them in the Discrepancies panel, then refresh.
+                </div>
+              ) : discrepancySummary ? (
+                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-200">
+                  No blocking discrepancies detected. ({discrepancySummary.total} total open discrepancies)
+                </div>
+              ) : null}
               {/* Round Selection */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Dispute Round</label>

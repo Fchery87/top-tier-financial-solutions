@@ -3,7 +3,7 @@ import path from 'path';
 import yaml from 'js-yaml';
 
 // Check if running in serverless environment (no file system access)
-const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.CLOUDFLARE_WORKER;
+const _isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.CLOUDFLARE_WORKER;
 
 // Type definitions for dispute configuration
 export interface LegalCitation {
@@ -313,7 +313,7 @@ export function loadStrategiesConfig(): DisputeStrategiesConfig {
     const fileContents = fs.readFileSync(configPath, 'utf8');
     strategiesConfig = yaml.load(fileContents) as DisputeStrategiesConfig;
     return strategiesConfig;
-  } catch (error) {
+  } catch {
     // Fall back to embedded config for serverless environments
     console.warn('Using embedded dispute strategies config (file system not available)');
     strategiesConfig = EMBEDDED_STRATEGIES_CONFIG;
@@ -519,7 +519,7 @@ export function loadPromptConfig(methodology: string): PromptConfig | null {
       promptConfigs.set(methodology, config);
       return config;
     }
-  } catch (error) {
+  } catch {
     console.warn(`File system error loading prompt for ${methodology}, using embedded config`);
   }
 

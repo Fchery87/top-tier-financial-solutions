@@ -4,7 +4,7 @@ import { clientNotes, clients, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { desc, count, eq, and } from 'drizzle-orm';
+import { desc, count, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 async function validateAdmin() {

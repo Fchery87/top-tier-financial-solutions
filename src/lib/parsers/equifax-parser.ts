@@ -7,6 +7,7 @@ import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry
 import {
   isAccountNegative,
   calculateRiskLevel,
+  type StandardizedAccount,
 } from './metro2-mapping';
 
 // Equifax-specific CSS selectors
@@ -92,7 +93,7 @@ function extractEQScores($: cheerio.CheerioAPI, text: string): ParsedCreditData[
   const scores: ParsedCreditData['scores'] = {};
 
   // Try FICO Score first (common for Equifax)
-  let ficoMatch = text.match(EQ_PATTERNS.ficoScore);
+  const ficoMatch = text.match(EQ_PATTERNS.ficoScore);
   if (ficoMatch) {
     const score = parseInt(ficoMatch[1]);
     if (score >= 300 && score <= 850) {
@@ -288,8 +289,8 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element, headers: Map<string,
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+  account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
 
   return account;
 }
@@ -324,8 +325,8 @@ function parseAccountSection($: cheerio.CheerioAPI, section: Element): ParsedAcc
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+  account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
 
   return account;
 }
@@ -357,15 +358,15 @@ function parseTextAccounts(text: string): ParsedAccount[] {
       riskLevel: 'low',
     };
 
-    account.isNegative = isAccountNegative(account as any);
-    account.riskLevel = calculateRiskLevel(account as any);
+    account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+    account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
     accounts.push(account);
   }
 
   return accounts;
 }
 
-function extractEQNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, text: string): ParsedNegativeItem[] {
+function extractEQNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, _text: string): ParsedNegativeItem[] {
   const items: ParsedNegativeItem[] = [];
 
   for (const account of accounts) {

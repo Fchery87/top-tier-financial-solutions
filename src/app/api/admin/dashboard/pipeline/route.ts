@@ -63,8 +63,8 @@ async function validateAdminAccess() {
   };
 }
 
-export async function GET(request: NextRequest) {
-  const { authorized, user: adminUser, role } = await validateAdminAccess();
+export async function GET(_request: NextRequest) {
+  const { authorized } = await validateAdminAccess();
   if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

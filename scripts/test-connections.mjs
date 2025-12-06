@@ -28,7 +28,7 @@ try {
 console.log('2️⃣  Testing Drizzle ORM...');
 try {
   const sql = neon(process.env.DATABASE_URL);
-  const db = drizzle(sql);
+  const _db = drizzle(sql);
   
   // Test a simple query
   const tables = await sql`

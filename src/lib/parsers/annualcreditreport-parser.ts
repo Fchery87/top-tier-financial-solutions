@@ -7,6 +7,7 @@ import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry
 import {
   isAccountNegative,
   calculateRiskLevel,
+  type StandardizedAccount,
 } from './metro2-mapping';
 
 // AnnualCreditReport.com specific selectors
@@ -59,6 +60,14 @@ const ACR_PATTERNS = {
   dateReported: /(?:Date\s*Reported|Last\s*Reported|Reported)[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
   paymentHistory: /(?:Payment\s*History)[:\s]*([\dOKXCL\s-]+)/i,
 };
+
+const toStandardizedAccount = (account: ParsedAccount): Partial<StandardizedAccount> => ({
+  accountStatus: account.accountStatus as StandardizedAccount['accountStatus'] | undefined,
+  paymentStatus: account.paymentStatus as StandardizedAccount['paymentStatus'] | undefined,
+  accountCategory: account.accountType as StandardizedAccount['accountCategory'] | undefined,
+  balance: account.balance,
+  pastDueAmount: account.pastDueAmount,
+});
 
 export function parseAnnualCreditReport(html: string): ParsedCreditData {
   const $ = cheerio.load(html);
@@ -251,8 +260,9 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element, headers: Map<string,
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  const standardizedAccount = toStandardizedAccount(account);
+  account.isNegative = isAccountNegative(standardizedAccount);
+  account.riskLevel = calculateRiskLevel(standardizedAccount);
 
   return account;
 }
@@ -282,8 +292,9 @@ function parseAccountSection($: cheerio.CheerioAPI, section: Element): ParsedAcc
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  const standardizedAccount = toStandardizedAccount(account);
+  account.isNegative = isAccountNegative(standardizedAccount);
+  account.riskLevel = calculateRiskLevel(standardizedAccount);
 
   return account;
 }
@@ -314,15 +325,16 @@ function parseTextAccounts(text: string): ParsedAccount[] {
       riskLevel: 'low',
     };
 
-    account.isNegative = isAccountNegative(account as any);
-    account.riskLevel = calculateRiskLevel(account as any);
+    const standardizedAccount = toStandardizedAccount(account);
+    account.isNegative = isAccountNegative(standardizedAccount);
+    account.riskLevel = calculateRiskLevel(standardizedAccount);
     accounts.push(account);
   }
 
   return accounts;
 }
 
-function extractACRNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, text: string): ParsedNegativeItem[] {
+function extractACRNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, _text: string): ParsedNegativeItem[] {
   const items: ParsedNegativeItem[] = [];
 
   // From accounts

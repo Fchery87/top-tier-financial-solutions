@@ -4,7 +4,7 @@ import { blogCategories } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { asc, count } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 async function validateAdmin() {
@@ -33,7 +33,7 @@ function slugify(text: string): string {
     .trim();
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

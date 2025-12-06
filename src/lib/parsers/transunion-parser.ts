@@ -7,6 +7,7 @@ import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry
 import {
   isAccountNegative,
   calculateRiskLevel,
+  type StandardizedAccount,
 } from './metro2-mapping';
 
 // TransUnion-specific CSS selectors
@@ -277,8 +278,8 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element, headers: Map<string,
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+  account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
 
   return account;
 }
@@ -313,8 +314,8 @@ function parseTradelineSection($: cheerio.CheerioAPI, section: Element): ParsedA
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+  account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
 
   return account;
 }
@@ -346,15 +347,15 @@ function parseTextAccounts(text: string): ParsedAccount[] {
       riskLevel: 'low',
     };
 
-    account.isNegative = isAccountNegative(account as any);
-    account.riskLevel = calculateRiskLevel(account as any);
+    account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+    account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
     accounts.push(account);
   }
 
   return accounts;
 }
 
-function extractTUNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, text: string): ParsedNegativeItem[] {
+function extractTUNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, _text: string): ParsedNegativeItem[] {
   const items: ParsedNegativeItem[] = [];
 
   for (const account of accounts) {

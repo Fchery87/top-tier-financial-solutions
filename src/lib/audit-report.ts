@@ -103,7 +103,7 @@ function getScoreRating(score: number | null): { label: string; color: string; b
   return { label: 'Very Poor', color: '#ef4444', bgColor: '#fee2e2' };
 }
 
-function getSeverityStyle(severity: string): { color: string; bgColor: string } {
+function _getSeverityStyle(severity: string): { color: string; bgColor: string } {
   switch (severity) {
     case 'severe': return { color: '#dc2626', bgColor: '#fee2e2' };
     case 'high': return { color: '#ea580c', bgColor: '#ffedd5' };
@@ -312,7 +312,7 @@ export function generateAuditReportHTML(data: AuditReportData): string {
   };
 
   // Group negative items by type
-  const itemsByType = data.negativeItems.reduce((acc, item) => {
+  const _itemsByType = data.negativeItems.reduce((acc, item) => {
     const type = item.itemType;
     if (!acc[type]) acc[type] = [];
     acc[type].push(item);

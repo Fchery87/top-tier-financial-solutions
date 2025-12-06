@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { blogPosts, blogCategories, user } from '@/db/schema';
-import { desc, eq, and } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '10');
-  const category = searchParams.get('category');
+  const _category = searchParams.get('category');
   const offset = (page - 1) * limit;
 
   try {
-    let query = db
+    const query = db
       .select({
         id: blogPosts.id,
         title: blogPosts.title,

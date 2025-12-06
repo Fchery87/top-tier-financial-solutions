@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { clientAgreements, disclosureAcknowledgments, clients, user } from '@/db/schema';
+import { clientAgreements, disclosureAcknowledgments, clients } from '@/db/schema';
 import { eq, and, desc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 
 // GET - Get client's pending or most recent agreement
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) {

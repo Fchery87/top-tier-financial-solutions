@@ -9,9 +9,6 @@ import {
   CheckCircle2,
   RefreshCw,
   Loader2,
-  Calendar,
-  User,
-  ArrowRight,
   Sparkles,
   Target,
   Award,
@@ -165,7 +162,7 @@ export default function ResultsPage() {
             <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
             <p className="text-muted-foreground">No results data available yet.</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Log dispute responses as "Deleted" to track wins here.
+              Log dispute responses as “Deleted” to track wins here.
             </p>
           </CardContent>
         </Card>

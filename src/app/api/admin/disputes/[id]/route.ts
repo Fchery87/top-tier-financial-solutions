@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
 import { disputes, negativeItems, clients } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { triggerAutomation } from '@/lib/email-service';

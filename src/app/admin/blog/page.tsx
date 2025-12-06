@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, FileText, Eye, EyeOff, Pencil, Trash2, Loader2, Star } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Plus, Pencil, Trash2, Loader2, Star } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';

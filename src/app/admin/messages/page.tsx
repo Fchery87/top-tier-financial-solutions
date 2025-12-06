@@ -7,7 +7,6 @@ import {
   Send, 
   Loader2, 
   User,
-  Clock,
   ArrowLeft,
   Plus,
   X,
@@ -126,6 +125,7 @@ export default function MessagesPage() {
     if (selectedThread) {
       fetchMessages(selectedThread.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedThread]);
 
   React.useEffect(() => {

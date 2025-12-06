@@ -23,6 +23,9 @@ const migrations = [
   `ALTER TABLE "negative_items" ADD COLUMN IF NOT EXISTS "transunion_status" text`,
   `ALTER TABLE "negative_items" ADD COLUMN IF NOT EXISTS "experian_status" text`,
   `ALTER TABLE "negative_items" ADD COLUMN IF NOT EXISTS "equifax_status" text`,
+  // Disputes table - escalation and evidence columns
+  `ALTER TABLE "disputes" ADD COLUMN IF NOT EXISTS "escalation_ready_at" timestamp`,
+  `ALTER TABLE "disputes" ADD COLUMN IF NOT EXISTS "evidence_document_ids" text`,
 ];
 
 async function runMigration() {
@@ -33,11 +36,12 @@ async function runMigration() {
       console.log(`Executing: ${migration.substring(0, 60)}...`);
       await db.execute(sql.raw(migration));
       console.log('  ✓ Success\n');
-    } catch (error: any) {
-      if (error.message?.includes('already exists')) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('already exists')) {
         console.log('  ⚠ Column already exists, skipping\n');
       } else {
-        console.error('  ✗ Error:', error.message);
+        console.error('  ✗ Error:', message);
       }
     }
   }
@@ -47,7 +51,8 @@ async function runMigration() {
 
 runMigration()
   .then(() => process.exit(0))
-  .catch((err) => {
-    console.error('Migration failed:', err);
+  .catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Migration failed:', message);
     process.exit(1);
   });

@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
-import { creditReports, creditAccounts, negativeItems, creditAnalyses } from '@/db/schema';
+import { creditReports, creditAccounts, negativeItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromR2 } from '@/lib/r2-storage';
 

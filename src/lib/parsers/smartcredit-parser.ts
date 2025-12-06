@@ -8,6 +8,7 @@ import {
   StandardizedConsumerProfile,
   isAccountNegative,
   calculateRiskLevel,
+  type StandardizedAccount,
 } from './metro2-mapping';
 
 // SmartCredit-specific CSS selectors
@@ -247,13 +248,13 @@ function parseAccountElement($: cheerio.CheerioAPI, el: Element): ParsedAccount 
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+  account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
 
   return account;
 }
 
-function extractSCNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, text: string): ParsedNegativeItem[] {
+function extractSCNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, _text: string): ParsedNegativeItem[] {
   const negativeItems: ParsedNegativeItem[] = [];
 
   // From accounts
@@ -453,8 +454,8 @@ function extractAccountsFromText(text: string): ParsedAccount[] {
       riskLevel: 'low',
     };
 
-    account.isNegative = isAccountNegative(account as any);
-    account.riskLevel = calculateRiskLevel(account as any);
+    account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+    account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
     accounts.push(account);
   }
 

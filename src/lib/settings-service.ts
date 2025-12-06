@@ -9,15 +9,18 @@ import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
+type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
+type CachedSetting = { value: SettingValue; expiresAt: number };
+
 // In-memory cache for settings (TTL: 5 minutes)
-const settingsCache = new Map<string, { value: any; expiresAt: number }>();
+const settingsCache = new Map<string, CachedSetting>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Get a setting value by key
  * Uses cache when available, falls back to database
  */
-export async function getSetting(key: string): Promise<any> {
+export async function getSetting(key: string): Promise<SettingValue> {
   // Check cache first
   const cached = settingsCache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
@@ -36,7 +39,7 @@ export async function getSetting(key: string): Promise<any> {
   }
 
   const settingData = setting[0];
-  let parsedValue: any;
+  let parsedValue: SettingValue;
 
   // Parse value based on type
   switch (settingData.settingType) {
@@ -72,7 +75,7 @@ export async function getSetting(key: string): Promise<any> {
  */
 export async function getSettingWithDefault<T>(key: string, defaultValue: T): Promise<T> {
   const value = await getSetting(key);
-  return value !== null ? value : defaultValue;
+  return value !== null ? (value as T) : defaultValue;
 }
 
 /**
@@ -81,7 +84,7 @@ export async function getSettingWithDefault<T>(key: string, defaultValue: T): Pr
  */
 export async function setSetting(
   key: string,
-  value: any,
+  value: SettingValue,
   type: 'string' | 'number' | 'boolean' | 'json',
   category: string = 'general',
   description?: string,
@@ -161,17 +164,14 @@ export function clearSettingsCache(): void {
   settingsCache.clear();
 }
 
-/**
- * Get all settings in a category
- */
-export async function getSettingsByCategory(category: string): Promise<any[]> {
+export async function getSettingsByCategory(category: string): Promise<Array<typeof systemSettings.$inferSelect & { parsedValue: SettingValue }>> {
   const settings = await db
     .select()
     .from(systemSettings)
     .where(eq(systemSettings.category, category));
 
   return settings.map((setting) => {
-    let parsedValue: any;
+    let parsedValue: SettingValue;
     switch (setting.settingType) {
       case 'number':
         parsedValue = parseFloat(setting.settingValue || '0');
@@ -215,7 +215,7 @@ export interface LLMConfig {
  * Falls back to environment variables if not set in database
  */
 export async function getLLMConfig(): Promise<LLMConfig> {
-  const provider = await getSettingWithDefault<string>('llm.provider', 'google');
+  const provider = await getSettingWithDefault<string>('llm.provider', 'google') as LLMConfig['provider'];
   const model = await getSettingWithDefault<string>(
     'llm.model',
     'gemini-2.0-flash-exp' // Default to Gemini 2.5 Flash preview
@@ -226,7 +226,7 @@ export async function getLLMConfig(): Promise<LLMConfig> {
   const maxTokens = await getSettingWithDefault<number>('llm.max_tokens', 4096);
 
   // Prefer database API key, fall back to environment variable
-  let apiKey = apiKeyFromDb;
+  let apiKey: string | undefined = typeof apiKeyFromDb === 'string' ? apiKeyFromDb : undefined;
   if (!apiKey) {
     switch (provider) {
       case 'google':
@@ -247,10 +247,10 @@ export async function getLLMConfig(): Promise<LLMConfig> {
   }
 
   return {
-    provider: provider as any,
+    provider,
     model,
     apiKey,
-    apiEndpoint,
+    apiEndpoint: typeof apiEndpoint === 'string' ? apiEndpoint : undefined,
     temperature,
     maxTokens,
   };

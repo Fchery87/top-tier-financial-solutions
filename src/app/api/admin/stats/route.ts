@@ -16,7 +16,7 @@ import {
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { count, eq, and, or, sql, desc, isNull, lt, gt, gte, lte, between } from 'drizzle-orm';
+import { count, eq, and, or, desc, isNull, lt, gte, lte } from 'drizzle-orm';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({

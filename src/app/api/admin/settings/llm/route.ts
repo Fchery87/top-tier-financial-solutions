@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { getLLMConfig, updateLLMConfig, clearSettingsCache } from '@/lib/settings-service';
+import { getLLMConfig, updateLLMConfig, clearSettingsCache, type LLMConfig } from '@/lib/settings-service';
 
 // Check if user is super admin
 async function checkSuperAdmin() {
@@ -12,7 +12,8 @@ async function checkSuperAdmin() {
     return { authorized: false, error: 'Unauthorized' };
   }
 
-  if ((session.user as any).role !== 'super_admin') {
+  const userRole = (session.user as { role?: string }).role;
+  if (userRole !== 'super_admin') {
     return { authorized: false, error: 'Super admin access required' };
   }
 
@@ -23,7 +24,7 @@ async function checkSuperAdmin() {
  * GET /api/admin/settings/llm
  * Get current LLM configuration
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const authCheck = await checkSuperAdmin();
   if (!authCheck.authorized) {
     return NextResponse.json({ error: authCheck.error }, { status: 403 });
@@ -59,10 +60,10 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const body: Partial<LLMConfig> = await request.json();
     const { provider, model, apiKey, apiEndpoint, temperature, maxTokens } = body;
 
-    const updates: any = {};
+    const updates: Partial<LLMConfig> = {};
     if (provider !== undefined) updates.provider = provider;
     if (model !== undefined) updates.model = model;
     if (apiKey !== undefined && apiKey !== '') updates.apiKey = apiKey;

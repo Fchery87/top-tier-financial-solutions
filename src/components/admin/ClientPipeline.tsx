@@ -4,16 +4,13 @@ import * as React from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  User, 
   GripVertical, 
-  TrendingUp, 
   Clock, 
   ChevronRight,
   Loader2,
   Users
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { useAdminRole } from '@/contexts/AdminContext';
 
 interface PipelineClient {
   id: string;

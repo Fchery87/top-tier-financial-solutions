@@ -2,11 +2,12 @@
 // Handles HTML reports exported from PrivacyGuard monitoring service
 
 import * as cheerio from 'cheerio';
-import type { AnyNode, Element } from 'domhandler';
+import type { Element } from 'domhandler';
 import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry } from './pdf-parser';
 import {
   StandardizedConsumerProfile,
   isAccountNegative,
+  type StandardizedAccount,
   calculateRiskLevel,
 } from './metro2-mapping';
 
@@ -248,8 +249,8 @@ function parseTableRowAccount($: cheerio.CheerioAPI, row: Element, headers: Map<
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+  account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
 
   return account;
 }
@@ -278,8 +279,8 @@ function parseDetailSection($: cheerio.CheerioAPI, el: Element): ParsedAccount |
     riskLevel: 'low',
   };
 
-  account.isNegative = isAccountNegative(account as any);
-  account.riskLevel = calculateRiskLevel(account as any);
+  account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+  account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
 
   return account;
 }
@@ -308,15 +309,15 @@ function extractTextAccounts(text: string): ParsedAccount[] {
       riskLevel: 'low',
     };
 
-    account.isNegative = isAccountNegative(account as any);
-    account.riskLevel = calculateRiskLevel(account as any);
+    account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
+    account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
     accounts.push(account);
   }
 
   return accounts;
 }
 
-function extractPGNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, text: string): ParsedNegativeItem[] {
+function extractPGNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, _text: string): ParsedNegativeItem[] {
   const items: ParsedNegativeItem[] = [];
 
   // From accounts

@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify all required disclosures are acknowledged
-    const requiredDisclosures = await db
+    const _requiredDisclosures = await db
       .select()
       .from(disclosureAcknowledgments)
       .where(eq(disclosureAcknowledgments.agreementId, agreementId));

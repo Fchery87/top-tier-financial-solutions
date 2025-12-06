@@ -16,20 +16,28 @@ export default function AuditReportPage() {
   const [reportType, setReportType] = useState<'comprehensive' | 'simple'>('simple');
 
   useEffect(() => {
-    fetchClientName();
-  }, [clientId]);
+    let isMounted = true;
 
-  const fetchClientName = async () => {
-    try {
-      const res = await fetch(`/api/admin/clients/${clientId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setClientName(`${data.client.first_name} ${data.client.last_name}`);
+    const loadClientName = async () => {
+      try {
+        const res = await fetch(`/api/admin/clients/${clientId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setClientName(`${data.client.first_name} ${data.client.last_name}`);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching client:', err);
       }
-    } catch (err) {
-      console.error('Error fetching client:', err);
-    }
-  };
+    };
+
+    void loadClientName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [clientId]);
 
   const handleIframeLoad = () => {
     setLoading(false);
@@ -188,7 +196,7 @@ export default function AuditReportPage() {
         {/* Footer Info */}
         <div className="mt-6 text-center text-sm text-muted-foreground">
           <p>
-            Use the <strong>Print</strong> button to print directly or save as PDF using your browser's print dialog.
+            Use the <strong>Print</strong> button to print directly or save as PDF using your browser&apos;s print dialog.
           </p>
           <p className="mt-1">
             The comprehensive report includes educational content and detailed analysis.

@@ -28,7 +28,7 @@ async function validateAdminAccess() {
   return await isAdmin(session.user.email);
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const authorized = await validateAdminAccess();
   if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

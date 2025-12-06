@@ -63,7 +63,7 @@ function MiniLineChart({ data, width = 300, height = 100 }: { data: TrendPoint[]
 
   // Format month label
   const formatMonth = (dateStr: string) => {
-    const [year, month] = dateStr.split('-');
+    const [_year, month] = dateStr.split('-');
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return monthNames[parseInt(month) - 1];
   };

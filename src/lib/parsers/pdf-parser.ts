@@ -1,12 +1,5 @@
 // PDF parsing utility - using pdf-parse v1.x simple API
 import { detectPdfSource, type SourceDetectionResult } from './detect-source';
-import {
-  isAccountNegative,
-  calculateRiskLevel,
-  calculateCompletenessScore,
-  calculateFcraComplianceDate,
-  FCRA_REPORTING_LIMITS,
-} from './metro2-mapping';
 
 async function parsePdf(buffer: Buffer): Promise<{ text: string; numpages: number }> {
   // Dynamic require to avoid build-time bundling issues
@@ -196,15 +189,6 @@ export interface ExtendedParsedCreditData extends ParsedCreditData {
   publicRecords?: PublicRecord[];
   bureauPersonalInfo?: BureauPersonalInfo;
 }
-
-const SCORE_PATTERNS = [
-  /TransUnion[:\s]*(\d{3})/i,
-  /Experian[:\s]*(\d{3})/i,
-  /Equifax[:\s]*(\d{3})/i,
-  /FICO[:\s]*Score[:\s]*(\d{3})/i,
-  /VantageScore[:\s]*(\d{3})/i,
-  /Credit\s*Score[:\s]*(\d{3})/i,
-];
 
 const NEGATIVE_KEYWORDS = [
   'collection',

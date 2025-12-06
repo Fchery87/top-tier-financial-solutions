@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { clients, creditReports, creditAnalyses, negativeItems, creditAccounts, creditScoreHistory } from '@/db/schema';
+import { clients, creditReports, negativeItems, creditAccounts, creditScoreHistory } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
-import { eq, desc, and, inArray } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({

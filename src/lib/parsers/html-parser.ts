@@ -193,7 +193,7 @@ function extractAccounts($: cheerio.CheerioAPI, text: string): ParsedAccount[] {
   return accounts;
 }
 
-function parseTableRow($: cheerio.CheerioAPI, cells: cheerio.Cheerio<AnyNode>, contextText: string): ParsedAccount | null {
+function parseTableRow($: cheerio.CheerioAPI, cells: cheerio.Cheerio<AnyNode>, _contextText: string): ParsedAccount | null {
   const cellTexts = cells.map((_, cell) => $(cell).text().trim()).get();
   
   // Try to identify columns
@@ -281,7 +281,7 @@ function parseAccountSection(section: string): ParsedAccount | null {
   };
 }
 
-function extractNegativeItems(accounts: ParsedAccount[], text: string): ParsedNegativeItem[] {
+function extractNegativeItems(accounts: ParsedAccount[], _text: string): ParsedNegativeItem[] {
   const negativeItems: ParsedNegativeItem[] = [];
   
   for (const account of accounts) {
@@ -302,7 +302,7 @@ function extractNegativeItems(accounts: ParsedAccount[], text: string): ParsedNe
   return negativeItems;
 }
 
-function extractInquiries($: cheerio.CheerioAPI, text: string): ParsedInquiry[] {
+function extractInquiries($: cheerio.CheerioAPI, _text: string): ParsedInquiry[] {
   const inquiries: ParsedInquiry[] = [];
   
   // Try to find inquiry section
