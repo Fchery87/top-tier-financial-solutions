@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Users, 
   Mail, 
@@ -63,10 +63,15 @@ const statusOptions = [
 
 export default function ClientsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [clients, setClients] = React.useState<Client[]>([]);
   const [leads, setLeads] = React.useState<Lead[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [selectedStatus, setSelectedStatus] = React.useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = React.useState<string>(() => {
+    const fromUrl = searchParams.get('status');
+    const allowed = statusOptions.map((option) => option.value);
+    return fromUrl && allowed.includes(fromUrl) ? fromUrl : 'all';
+  });
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showConvertModal, setShowConvertModal] = React.useState(false);

@@ -193,115 +193,127 @@ export default function AdminDashboard() {
         className="space-y-4"
       >
         <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${metricGridGap}`}>
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-            <CardContent className={metricCardPadding}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Users className="w-4 h-4 text-blue-500" />
+          <Link href="/admin/clients?status=active" className="block">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all cursor-pointer">
+              <CardContent className={metricCardPadding}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <Users className="w-4 h-4 text-blue-500" />
+                  </div>
                 </div>
-              </div>
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-foreground">{stats?.activeClients ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Active Clients</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-foreground">{stats?.activeClients ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">Active Clients</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-            <CardContent className={metricCardPadding}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <Scale className="w-4 h-4 text-purple-500" />
+          <Link href="/admin/disputes?awaiting_response=true" className="block">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all cursor-pointer">
+              <CardContent className={metricCardPadding}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-purple-500/10">
+                    <Scale className="w-4 h-4 text-purple-500" />
+                  </div>
                 </div>
-              </div>
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-foreground">{stats?.disputesPending ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Open Disputes</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-foreground">{stats?.disputesPending ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">Open Disputes</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-            <CardContent className={metricCardPadding}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-orange-500/10">
-                  <FileWarning className="w-4 h-4 text-orange-500" />
+          <Link href="/admin/disputes?status=draft" className="block">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all cursor-pointer">
+              <CardContent className={metricCardPadding}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-orange-500/10">
+                    <FileWarning className="w-4 h-4 text-orange-500" />
+                  </div>
                 </div>
-              </div>
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-foreground">{stats?.totalNegativeItems ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Negative Tradelines</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-foreground">{stats?.totalNegativeItems ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">Negative Tradelines</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-            <CardContent className={metricCardPadding}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-emerald-500/10">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          <Link href="/admin/results?range=month" className="block">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all cursor-pointer">
+              <CardContent className={metricCardPadding}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-emerald-500/10">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
                 </div>
-              </div>
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Items Removed (30d)</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">Items Removed (30d)</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 ${metricGridGap}`}>
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-            <CardContent className={metricCardPadding}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-cyan-500/10">
-                  <BarChart3 className="w-4 h-4 text-cyan-500" />
+          <Link href="/admin/results?range=all" className="block">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all cursor-pointer">
+              <CardContent className={metricCardPadding}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-cyan-500/10">
+                    <BarChart3 className="w-4 h-4 text-cyan-500" />
+                  </div>
                 </div>
-              </div>
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-foreground">{stats?.avgCreditScore || '—'}</p>
-                  <p className="text-xs text-muted-foreground">Average Credit Score</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-foreground">{stats?.avgCreditScore || '—'}</p>
+                    <p className="text-xs text-muted-foreground">Average Credit Score</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all">
-            <CardContent className={metricCardPadding}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <Target className="w-4 h-4 text-green-500" />
+          <Link href="/admin/results?range=all" className="block">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all cursor-pointer">
+              <CardContent className={metricCardPadding}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <Target className="w-4 h-4 text-green-500" />
+                  </div>
                 </div>
-              </div>
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-foreground">{stats?.successRate ?? 0}%</p>
-                  <p className="text-xs text-muted-foreground">Dispute Success Rate</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-foreground">{stats?.successRate ?? 0}%</p>
+                    <p className="text-xs text-muted-foreground">Dispute Success Rate</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </motion.div>
 

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Trophy,
   TrendingUp,
@@ -53,9 +54,13 @@ interface ResultsStats {
 }
 
 export default function ResultsPage() {
+  const searchParams = useSearchParams();
   const [stats, setStats] = React.useState<ResultsStats | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [timeRange, setTimeRange] = React.useState<'week' | 'month' | 'all'>('month');
+  const [timeRange, setTimeRange] = React.useState<'week' | 'month' | 'all'>(() => {
+    const fromUrl = searchParams.get('range');
+    return fromUrl === 'week' || fromUrl === 'month' || fromUrl === 'all' ? fromUrl : 'month';
+  });
 
   const fetchResults = React.useCallback(async () => {
     setLoading(true);

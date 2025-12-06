@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Scale,
   Filter,
@@ -68,12 +69,21 @@ const OUTCOME_OPTIONS = [
 ];
 
 export default function DisputesPage() {
+  const searchParams = useSearchParams();
   const [disputes, setDisputes] = React.useState<Dispute[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [selectedStatus, setSelectedStatus] = React.useState('all');
-  const [selectedBureau, setSelectedBureau] = React.useState('all');
-  const [showOverdueOnly, setShowOverdueOnly] = React.useState(false);
-  const [showAwaitingOnly, setShowAwaitingOnly] = React.useState(false);
+  const [selectedStatus, setSelectedStatus] = React.useState(() => {
+    const fromUrl = searchParams.get('status');
+    const valid = STATUS_OPTIONS.map((opt) => opt.value);
+    return fromUrl && valid.includes(fromUrl) ? fromUrl : 'all';
+  });
+  const [selectedBureau, setSelectedBureau] = React.useState(() => {
+    const fromUrl = searchParams.get('bureau');
+    const valid = BUREAU_OPTIONS.map((opt) => opt.value);
+    return fromUrl && valid.includes(fromUrl) ? fromUrl : 'all';
+  });
+  const [showOverdueOnly, setShowOverdueOnly] = React.useState(() => searchParams.get('overdue') === 'true');
+  const [showAwaitingOnly, setShowAwaitingOnly] = React.useState(() => searchParams.get('awaiting_response') === 'true');
 
   // Response modal state
   const [selectedDispute, setSelectedDispute] = React.useState<Dispute | null>(null);
