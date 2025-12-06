@@ -1123,168 +1123,6 @@ export default function DisputeWizardPage() {
                   ))}
                 </div>
               )}
-
-              {activeTab === 'personal' && (
-                <>
-                  {loadingItems ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-secondary" />
-                    </div>
-                  ) : personalInfoItems.length === 0 ? (
-                    <div className="text-center py-8">
-                      <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No personal information discrepancies found.</p>
-                      <p className="text-sm text-muted-foreground mt-1">Upload and parse a report to pull PII items.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">
-                          {selectedPersonalItems.length} of {personalInfoItems.length} items selected
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (selectedPersonalItems.length === personalInfoItems.length) {
-                              setSelectedPersonalItems([]);
-                            } else {
-                              setSelectedPersonalItems(personalInfoItems.map(p => p.id));
-                            }
-                          }}
-                        >
-                          {selectedPersonalItems.length === personalInfoItems.length ? 'Deselect All' : 'Select All'}
-                        </Button>
-                      </div>
-
-                      {personalInfoItems.map(item => {
-                        const isSelected = selectedPersonalItems.includes(item.id);
-                        return (
-                          <div
-                            key={item.id}
-                            className={`rounded-lg border p-4 cursor-pointer transition ${
-                              isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'
-                            }`}
-                            onClick={() => {
-                              setSelectedPersonalItems(prev => prev.includes(item.id)
-                                ? prev.filter(id => id !== item.id)
-                                : [...prev, item.id]);
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium">{formatPersonalInfoType(item.type)}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                    item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
-                                    item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
-                                    'bg-green-500/20 text-green-400'
-                                  }`}>
-                                    {item.bureau === 'transunion' ? 'TransUnion' : item.bureau === 'experian' ? 'Experian' : 'Equifax'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{item.value}</p>
-                              </div>
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                isSelected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'
-                              }`}>
-                                {isSelected && <Check className="w-3 h-3 text-primary" />}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activeTab === 'inquiries' && (
-                <>
-                  {loadingItems ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-secondary" />
-                    </div>
-                  ) : inquiryItems.length === 0 ? (
-                    <div className="text-center py-8">
-                      <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No inquiries available for dispute.</p>
-                      <p className="text-sm text-muted-foreground mt-1">Upload and parse a report to pull inquiry history.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">
-                          {selectedInquiryItems.length} of {inquiryItems.length} inquiries selected
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (selectedInquiryItems.length === inquiryItems.length) {
-                              setSelectedInquiryItems([]);
-                            } else {
-                              setSelectedInquiryItems(inquiryItems.map(i => i.id));
-                            }
-                          }}
-                        >
-                          {selectedInquiryItems.length === inquiryItems.length ? 'Deselect All' : 'Select All'}
-                        </Button>
-                      </div>
-
-                      {inquiryItems.map(item => {
-                        const isSelected = selectedInquiryItems.includes(item.id);
-                        const bureauLabel = item.bureau ? item.bureau.charAt(0).toUpperCase() + item.bureau.slice(1) : 'All Bureaus';
-                        const inquiryDate = item.inquiry_date ? new Date(item.inquiry_date).toLocaleDateString() : 'Unknown date';
-                        return (
-                          <div
-                            key={item.id}
-                            className={`rounded-lg border p-4 cursor-pointer transition ${
-                              isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'
-                            }`}
-                            onClick={() => {
-                              setSelectedInquiryItems(prev => prev.includes(item.id)
-                                ? prev.filter(id => id !== item.id)
-                                : [...prev, item.id]);
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="font-medium">{item.creditor_name}</p>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                    item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
-                                    item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
-                                    item.bureau === 'equifax' ? 'bg-green-500/20 text-green-400' : 'bg-muted/50 text-muted-foreground'
-                                  }`}>
-                                    {item.bureau ? bureauLabel : 'All bureaus'}
-                                  </span>
-                                  {item.is_past_fcra_limit && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">
-                                      FCRA violation
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {inquiryDate} {item.inquiry_type ? `• ${item.inquiry_type}` : ''}
-                                </p>
-                                {item.days_since_inquiry !== undefined && item.days_since_inquiry !== null && (
-                                  <p className="text-xs text-muted-foreground">{item.days_since_inquiry} days old</p>
-                                )}
-                              </div>
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                isSelected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'
-                              }`}>
-                                {isSelected && <Check className="w-3 h-3 text-primary" />}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
             </CardContent>
           </Card>
         )}
@@ -1594,6 +1432,168 @@ export default function DisputeWizardPage() {
                                 )}
                               </div>
                             )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'personal' && (
+                <>
+                  {loadingItems ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-secondary" />
+                    </div>
+                  ) : personalInfoItems.length === 0 ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No personal information discrepancies found.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Upload and parse a report to pull PII items.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-muted-foreground">
+                          {selectedPersonalItems.length} of {personalInfoItems.length} items selected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedPersonalItems.length === personalInfoItems.length) {
+                              setSelectedPersonalItems([]);
+                            } else {
+                              setSelectedPersonalItems(personalInfoItems.map(p => p.id));
+                            }
+                          }}
+                        >
+                          {selectedPersonalItems.length === personalInfoItems.length ? 'Deselect All' : 'Select All'}
+                        </Button>
+                      </div>
+
+                      {personalInfoItems.map(item => {
+                        const isSelected = selectedPersonalItems.includes(item.id);
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-lg border p-4 cursor-pointer transition ${
+                              isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'
+                            }`}
+                            onClick={() => {
+                              setSelectedPersonalItems(prev => prev.includes(item.id)
+                                ? prev.filter(id => id !== item.id)
+                                : [...prev, item.id]);
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium">{formatPersonalInfoType(item.type)}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
+                                    item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
+                                    'bg-green-500/20 text-green-400'
+                                  }`}>
+                                    {item.bureau === 'transunion' ? 'TransUnion' : item.bureau === 'experian' ? 'Experian' : 'Equifax'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{item.value}</p>
+                              </div>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                isSelected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'
+                              }`}>
+                                {isSelected && <Check className="w-3 h-3 text-primary" />}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'inquiries' && (
+                <>
+                  {loadingItems ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-secondary" />
+                    </div>
+                  ) : inquiryItems.length === 0 ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No inquiries available for dispute.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Upload and parse a report to pull inquiry history.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-muted-foreground">
+                          {selectedInquiryItems.length} of {inquiryItems.length} inquiries selected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedInquiryItems.length === inquiryItems.length) {
+                              setSelectedInquiryItems([]);
+                            } else {
+                              setSelectedInquiryItems(inquiryItems.map(i => i.id));
+                            }
+                          }}
+                        >
+                          {selectedInquiryItems.length === inquiryItems.length ? 'Deselect All' : 'Select All'}
+                        </Button>
+                      </div>
+
+                      {inquiryItems.map(item => {
+                        const isSelected = selectedInquiryItems.includes(item.id);
+                        const bureauLabel = item.bureau ? item.bureau.charAt(0).toUpperCase() + item.bureau.slice(1) : 'All Bureaus';
+                        const inquiryDate = item.inquiry_date ? new Date(item.inquiry_date).toLocaleDateString() : 'Unknown date';
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-lg border p-4 cursor-pointer transition ${
+                              isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'
+                            }`}
+                            onClick={() => {
+                              setSelectedInquiryItems(prev => prev.includes(item.id)
+                                ? prev.filter(id => id !== item.id)
+                                : [...prev, item.id]);
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium">{item.creditor_name}</p>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' :
+                                    item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' :
+                                    item.bureau === 'equifax' ? 'bg-green-500/20 text-green-400' : 'bg-muted/50 text-muted-foreground'
+                                  }`}>
+                                    {item.bureau ? bureauLabel : 'All bureaus'}
+                                  </span>
+                                  {item.is_past_fcra_limit && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">
+                                      FCRA violation
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {inquiryDate} {item.inquiry_type ? `• ${item.inquiry_type}` : ''}
+                                </p>
+                                {item.days_since_inquiry !== undefined && item.days_since_inquiry !== null && (
+                                  <p className="text-xs text-muted-foreground">{item.days_since_inquiry} days old</p>
+                                )}
+                              </div>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                isSelected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'
+                              }`}>
+                                {isSelected && <Check className="w-3 h-3 text-primary" />}
+                              </div>
+                            </div>
                           </div>
                         );
                       })}

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
 import {
   getAllMethodologies,
   getAllReasonCodesFlat,
@@ -11,7 +12,8 @@ import {
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
-    headers: new Headers(),
+    // Use real request headers so Better-Auth can read cookies
+    headers: await headers(),
   });
   
   if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'super_admin')) {
