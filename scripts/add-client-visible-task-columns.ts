@@ -12,7 +12,6 @@ async function run() {
   for (const statement of migrations) {
     try {
       console.log(`Executing: ${statement}`);
-      // eslint-disable-next-line drizzle/enforce-sql-tag-usage
       await db.execute(sql.raw(statement));
       console.log('  ✓ Success');
     } catch (error) {

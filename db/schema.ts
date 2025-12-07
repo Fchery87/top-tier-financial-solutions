@@ -714,6 +714,28 @@ export const disputes = pgTable('disputes', {
   index("disputes_escalationReadyAt_idx").on(table.escalationReadyAt),
 ]);
 
+// Client approvals for dispute letters (client consent before/after mailing)
+export const letterApprovals = pgTable('letter_approvals', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  disputeId: text('dispute_id').references(() => disputes.id, { onDelete: 'cascade' }),
+  batchId: text('batch_id').references(() => disputeBatches.id, { onDelete: 'set null' }),
+  round: integer('round'),
+  status: text('status').default('pending'), // 'pending' | 'approved' | 'rejected'
+  approvalMethod: text('approval_method'), // 'portal_click' | 'verbal' | etc.
+  signatureText: text('signature_text'),
+  signatureIp: text('signature_ip'),
+  signatureUserAgent: text('signature_user_agent'),
+  approvedAt: timestamp('approved_at'),
+  rejectedAt: timestamp('rejected_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('letter_approvals_clientId_idx').on(table.clientId),
+  index('letter_approvals_disputeId_idx').on(table.disputeId),
+  index('letter_approvals_batchId_idx').on(table.batchId),
+]);
+
 // Dispute letter templates
 export const disputeLetterTemplates = pgTable('dispute_letter_templates', {
   id: text('id').primaryKey(),
@@ -880,6 +902,7 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   analyses: many(creditAnalyses),
   disputes: many(disputes),
   disputeBatches: many(disputeBatches),
+  letterApprovals: many(letterApprovals),
   tasks: many(tasks),
   notes: many(clientNotes),
   auditReports: many(auditReports),
@@ -1014,6 +1037,21 @@ export const disputesRelations = relations(disputes, ({ one }) => ({
   negativeItem: one(negativeItems, {
     fields: [disputes.negativeItemId],
     references: [negativeItems.id],
+  }),
+}));
+
+export const letterApprovalsRelations = relations(letterApprovals, ({ one }) => ({
+  client: one(clients, {
+    fields: [letterApprovals.clientId],
+    references: [clients.id],
+  }),
+  dispute: one(disputes, {
+    fields: [letterApprovals.disputeId],
+    references: [disputes.id],
+  }),
+  batch: one(disputeBatches, {
+    fields: [letterApprovals.batchId],
+    references: [disputeBatches.id],
   }),
 }));
 

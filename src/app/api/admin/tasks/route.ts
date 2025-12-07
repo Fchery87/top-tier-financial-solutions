@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { desc, asc, count, eq, or, ilike, and, gte, lte, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { triggerAutomation } from '@/lib/email-service';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -199,6 +200,20 @@ export async function POST(request: NextRequest) {
       createdAt: now,
       updatedAt: now,
     });
+
+    // Fire a progress update email when we create a new client-facing task
+    if (client_id && visible_to_client) {
+      try {
+        await triggerAutomation('progress_report', client_id, {
+          task_title: title,
+          task_description: description || '',
+          task_priority: priority,
+          task_due_date: due_date || '',
+        }, { task_id: id });
+      } catch (emailError) {
+        console.error('Error sending task-created email:', emailError);
+      }
+    }
 
     return NextResponse.json({
       id,

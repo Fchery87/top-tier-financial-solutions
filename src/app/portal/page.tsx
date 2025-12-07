@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { 
   Loader2, FileText, TrendingUp, Clock, CheckCircle, 
   AlertCircle, Upload, ChevronRight, Sparkles, Shield,
@@ -111,6 +112,19 @@ interface PortalTask {
   created_at: string | null;
 }
 
+interface LetterForApproval {
+  approval_id: string | null;
+  dispute_id: string;
+  bureau: string;
+  round: number | null;
+  status: 'pending' | 'approved' | 'rejected';
+  creditor_name: string;
+  letter_content: string;
+  created_at: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+}
+
 const phaseLabels: Record<string, string> = {
   initial_review: 'Initial Review',
   dispute_preparation: 'Dispute Preparation',
@@ -139,6 +153,10 @@ export default function PortalPage() {
   const [scoreSummary, setScoreSummary] = React.useState<ScoreSummary | null>(null);
   const [tasks, setTasks] = React.useState<PortalTask[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [letters, setLetters] = React.useState<LetterForApproval[]>([]);
+  const [signature, setSignature] = React.useState('');
+  const [approvingLetters, setApprovingLetters] = React.useState(false);
+  const [selectedLetter, setSelectedLetter] = React.useState<LetterForApproval | null>(null);
 
   // Document upload state
   const [showUploadModal, setShowUploadModal] = React.useState(false);
@@ -180,6 +198,11 @@ export default function PortalPage() {
     ? sortedTasks.filter((t) => t.id !== nextTask.id)
     : sortedTasks;
 
+  const pendingLetters = React.useMemo(
+    () => letters.filter((l) => l.status === 'pending'),
+    [letters],
+  );
+
   React.useEffect(() => {
     if (user) {
       fetchData();
@@ -189,12 +212,13 @@ export default function PortalPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [casesRes, docsRes, auditRes, disputesRes, scoreRes] = await Promise.all([
+      const [casesRes, docsRes, auditRes, disputesRes, scoreRes, lettersRes] = await Promise.all([
         fetch('/api/portal/cases'),
         fetch('/api/portal/documents'),
         fetch('/api/portal/audit-report'),
         fetch('/api/portal/disputes'),
         fetch('/api/portal/score-history'),
+        fetch('/api/portal/letters'),
       ]);
 
       if (casesRes.ok) {
@@ -223,6 +247,12 @@ export default function PortalPage() {
         setScoreHistory(scoreData.history || []);
         setScoreSummary(scoreData.summary || null);
       }
+
+      if (lettersRes.ok) {
+        const lettersData = await lettersRes.json();
+        setLetters(lettersData.letters || []);
+      }
+
       const tasksRes = await fetch('/api/portal/tasks');
       if (tasksRes.ok) {
         const tasksData = await tasksRes.json();
@@ -289,6 +319,48 @@ export default function PortalPage() {
       alert('Upload failed');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleApproveLetters = async () => {
+    if (pendingLetters.length === 0) return;
+    if (!signature.trim()) {
+      alert('Please type your full name as your electronic signature.');
+      return;
+    }
+
+    setApprovingLetters(true);
+    try {
+      for (const letter of pendingLetters) {
+        if (!letter.approval_id) continue;
+
+        const response = await fetch('/api/portal/letters/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            approval_id: letter.approval_id,
+            signature_text: signature.trim(),
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          console.error('Error approving letter:', data.error || response.statusText);
+          alert('We were unable to record your approval for all letters. Please try again or contact support.');
+          return;
+        }
+      }
+
+      const refreshed = await fetch('/api/portal/letters');
+      if (refreshed.ok) {
+        const refreshedData = await refreshed.json();
+        setLetters(refreshedData.letters || []);
+      }
+    } catch (error) {
+      console.error('Error approving letters:', error);
+      alert('We were unable to record your approval. Please try again or contact support.');
+    } finally {
+      setApprovingLetters(false);
     }
   };
 
@@ -971,6 +1043,94 @@ export default function PortalPage() {
                   </Card>
                 )}
 
+                {/* Letter consent card */}
+                {letters.length > 0 && (
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                    <CardHeader>
+                      <CardTitle className="font-serif text-xl flex items-center gap-2">
+                        <FileSignature className="w-5 h-5 text-secondary" />
+                        Dispute Letters & Consent
+                      </CardTitle>
+                      <CardDescription>
+                        Review the dispute letters prepared for your latest round and approve them electronically.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {pendingLetters.length > 0 ? (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            We&apos;ve prepared {letters.length}{' '}
+                            letter{letters.length === 1 ? '' : 's'} for your most recent dispute round.
+                            You can click any letter to preview the full text before approving.
+                          </p>
+                          <div className="space-y-2 max-h-[180px] overflow-y-auto">
+                            {letters.map((letter) => (
+                              <button
+                                key={letter.dispute_id}
+                                type="button"
+                                onClick={() => setSelectedLetter(letter)}
+                                className="w-full text-left p-3 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted/60 transition-colors"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground truncate">
+                                      {letter.creditor_name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Round {letter.round ?? 1} • {letter.bureau.toUpperCase()}
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={`text-[11px] px-2 py-1 rounded-full border ${
+                                      letter.status === 'approved'
+                                        ? 'bg-green-500/10 border-green-500/40 text-green-500'
+                                        : 'bg-yellow-500/10 border-yellow-500/40 text-yellow-500'
+                                    }`}
+                                  >
+                                    {letter.status === 'approved' ? 'Approved' : 'Needs approval'}
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="space-y-2 pt-3 border-t border-border/60">
+                            <label className="text-xs font-medium text-muted-foreground" htmlFor="letter-signature">
+                              Type your full name as your electronic signature
+                            </label>
+                            <Input
+                              id="letter-signature"
+                              value={signature}
+                              onChange={(e) => setSignature(e.target.value)}
+                              placeholder="Full legal name"
+                              className="h-9 text-sm"
+                            />
+                            <Button
+                              type="button"
+                              className="w-full mt-1"
+                              onClick={handleApproveLetters}
+                              disabled={approvingLetters || pendingLetters.length === 0}
+                            >
+                              {approvingLetters ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Recording Approval...
+                                </>
+                              ) : (
+                                'Approve Letters'
+                              )}
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          All dispute letters for your latest round have been approved. Thank you.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Quick Actions */}
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader>
@@ -1118,6 +1278,50 @@ export default function PortalPage() {
                     Upload
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Letter Preview Modal */}
+      {selectedLetter && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSelectedLetter(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[80vh] overflow-hidden"
+          >
+            <Card className="bg-card border-border shadow-2xl h-full flex flex-col">
+              <CardHeader>
+                <CardTitle className="font-serif text-lg flex items-center gap-2">
+                  <FileSignature className="w-5 h-5 text-secondary" />
+                  Dispute Letter Preview
+                </CardTitle>
+                <CardDescription className="text-xs flex flex-wrap gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground text-[11px]">
+                    Round {selectedLetter.round ?? 1}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground text-[11px] uppercase">
+                    {selectedLetter.bureau}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground truncate">
+                    {selectedLetter.creditor_name}
+                  </span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 min-h-0 overflow-y-auto border-t border-border/60 bg-muted/20">
+                <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed">
+                  {selectedLetter.letter_content}
+                </pre>
               </CardContent>
             </Card>
           </motion.div>
