@@ -44,6 +44,11 @@ interface SystemSetting {
 
 type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
 
+interface DashboardPreferences {
+  defaultDensity: 'comfortable' | 'compact';
+  showWorkQueue: boolean;
+}
+
 export default function SettingsPage() {
   const [llmConfig, setLlmConfig] = React.useState<LLMConfig | null>(null);
   const [allSettings, setAllSettings] = React.useState<SystemSetting[]>([]);
@@ -54,6 +59,11 @@ export default function SettingsPage() {
   const [showApiKey, setShowApiKey] = React.useState(false);
   const [editedConfig, setEditedConfig] = React.useState<Partial<LLMConfig>>({});
   const [hasChanges, setHasChanges] = React.useState(false);
+  const [dashboardPrefs, setDashboardPrefs] = React.useState<DashboardPreferences>({
+    defaultDensity: 'comfortable',
+    showWorkQueue: true,
+  });
+  const [dashboardHasChanges, setDashboardHasChanges] = React.useState(false);
 
   const fetchLLMConfig = React.useCallback(async () => {
     try {
@@ -90,38 +100,98 @@ export default function SettingsPage() {
     loadData();
   }, [fetchLLMConfig, fetchAllSettings]);
 
+  React.useEffect(() => {
+    if (!allSettings || allSettings.length === 0) return;
+
+    const byKey = new Map(allSettings.map((s) => [s.settingKey, s]));
+    const densitySetting = byKey.get('dashboard.default_density');
+    const workQueueSetting = byKey.get('dashboard.show_work_queue');
+
+    const defaultDensity =
+      typeof densitySetting?.parsedValue === 'string' &&
+      (densitySetting.parsedValue === 'comfortable' || densitySetting.parsedValue === 'compact')
+        ? (densitySetting.parsedValue as 'comfortable' | 'compact')
+        : 'comfortable';
+
+    const showWorkQueue =
+      typeof workQueueSetting?.parsedValue === 'boolean'
+        ? (workQueueSetting.parsedValue as boolean)
+        : true;
+
+    setDashboardPrefs({ defaultDensity, showWorkQueue });
+    setDashboardHasChanges(false);
+  }, [allSettings]);
+
   const handleConfigChange = (field: keyof LLMConfig, value: string | number | boolean) => {
     setEditedConfig(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
     setTestResult(null);
   };
 
-  const handleSaveConfig = async () => {
-    if (!hasChanges || !llmConfig) return;
+  const handleSaveAll = async () => {
+    if ((!hasChanges || !llmConfig) && !dashboardHasChanges) return;
 
     setSaving(true);
     try {
-      const updates: Partial<LLMConfig> = {};
-      (Object.keys(editedConfig) as (keyof LLMConfig)[]).forEach(key => {
-        if (editedConfig[key] !== undefined) {
-          (updates as Record<string, unknown>)[key] = editedConfig[key];
+      if (hasChanges && llmConfig) {
+        const updates: Partial<LLMConfig> = {};
+        (Object.keys(editedConfig) as (keyof LLMConfig)[]).forEach((key) => {
+          if (editedConfig[key] !== undefined) {
+            (updates as Record<string, unknown>)[key] = editedConfig[key];
+          }
+        });
+
+        const response = await fetch('/api/admin/settings/llm', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save LLM configuration');
         }
-      });
-
-      const response = await fetch('/api/admin/settings/llm', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-
-      if (response.ok) {
-        await fetchLLMConfig();
-        await fetchAllSettings();
-        setTestResult({ success: true, message: 'Configuration saved successfully!' });
-        setTimeout(() => setTestResult(null), 3000);
-      } else {
-        setTestResult({ success: false, message: 'Failed to save configuration' });
       }
+
+      if (dashboardHasChanges) {
+        const requests = [
+          fetch('/api/admin/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              key: 'dashboard.default_density',
+              value: dashboardPrefs.defaultDensity,
+              type: 'string',
+              category: 'dashboard',
+              description: 'Default density mode for Admin dashboard (comfortable/compact)',
+              isSecret: false,
+            }),
+          }),
+          fetch('/api/admin/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              key: 'dashboard.show_work_queue',
+              value: dashboardPrefs.showWorkQueue,
+              type: 'boolean',
+              category: 'dashboard',
+              description: 'Show Work Queue widget on Admin dashboard',
+              isSecret: false,
+            }),
+          }),
+        ];
+
+        const results = await Promise.all(requests);
+        const anyFailed = results.some((r) => !r.ok);
+        if (anyFailed) {
+          throw new Error('Failed to save dashboard preferences');
+        }
+      }
+
+      await Promise.all([fetchLLMConfig(), fetchAllSettings()]);
+      setHasChanges(false);
+      setDashboardHasChanges(false);
+      setTestResult({ success: true, message: 'Configuration saved successfully!' });
+      setTimeout(() => setTestResult(null), 3000);
     } catch (error) {
       console.error('Error saving config:', error);
       setTestResult({ success: false, message: 'Error saving configuration' });
@@ -218,7 +288,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {hasChanges && (
+          {(hasChanges || dashboardHasChanges) && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -229,8 +299,8 @@ export default function SettingsPage() {
             </motion.div>
           )}
           <Button
-            onClick={handleSaveConfig}
-            disabled={!hasChanges || saving}
+            onClick={handleSaveAll}
+            disabled={(!hasChanges && !dashboardHasChanges) || saving}
             variant="primary"
             size="md"
           >
@@ -601,6 +671,71 @@ export default function SettingsPage() {
                   </>
                 )}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Dashboard Preferences */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SettingsIcon className="w-5 h-5 text-primary" />
+              Dashboard Preferences
+            </CardTitle>
+            <CardDescription>
+              Control default layout and visibility for the Admin dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Default Dashboard Density
+              </label>
+              <select
+                value={dashboardPrefs.defaultDensity}
+                onChange={(e) => {
+                  const value = e.target.value === 'compact' ? 'compact' : 'comfortable';
+                  setDashboardPrefs((prev) => ({ ...prev, defaultDensity: value }));
+                  setDashboardHasChanges(true);
+                  setTestResult(null);
+                }}
+                className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Used when an admin has not chosen their own density preference on the dashboard.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-t">
+              <div>
+                <p className="text-sm font-medium text-foreground">Show Work Queue widget</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Controls whether the Work Queue appears on the Admin dashboard.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <span className="text-xs text-muted-foreground">Off</span>
+                <input
+                  type="checkbox"
+                  checked={dashboardPrefs.showWorkQueue}
+                  onChange={(e) => {
+                    setDashboardPrefs((prev) => ({ ...prev, showWorkQueue: e.target.checked }));
+                    setDashboardHasChanges(true);
+                    setTestResult(null);
+                  }}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <span className="text-xs text-muted-foreground">On</span>
+              </label>
             </div>
           </CardContent>
         </Card>

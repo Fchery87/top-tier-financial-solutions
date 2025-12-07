@@ -83,6 +83,12 @@ export default function AdminDashboard() {
     if (stored === 'comfortable' || stored === 'compact') return stored;
     return role === 'staff' ? 'compact' : 'comfortable';
   });
+  const [hasLocalDensity, setHasLocalDensity] = React.useState(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = window.localStorage.getItem('admin-dashboard-density');
+    return stored === 'comfortable' || stored === 'compact';
+  });
+  const [showWorkQueue, setShowWorkQueue] = React.useState(true);
 
   React.useEffect(() => {
     async function fetchStats() {
@@ -131,7 +137,45 @@ export default function AdminDashboard() {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('admin-dashboard-density', value);
     }
+    setHasLocalDensity(true);
   };
+
+  React.useEffect(() => {
+    if (role !== 'super_admin') {
+      return;
+    }
+
+    async function fetchDashboardPreferences() {
+      try {
+        const response = await fetch('/api/admin/settings?category=dashboard');
+        if (!response.ok) return;
+        const data = await response.json();
+        const settings: Array<{ settingKey: string; parsedValue: unknown }> = data.settings || [];
+        const byKey = new Map(settings.map((s) => [s.settingKey, s]));
+        const densitySetting = byKey.get('dashboard.default_density');
+        const workQueueSetting = byKey.get('dashboard.show_work_queue');
+
+        if (
+          densitySetting &&
+          typeof densitySetting.parsedValue === 'string' &&
+          (densitySetting.parsedValue === 'comfortable' || densitySetting.parsedValue === 'compact') &&
+          !hasLocalDensity
+        ) {
+          setDensity(densitySetting.parsedValue);
+        }
+
+        if (workQueueSetting && typeof workQueueSetting.parsedValue === 'boolean') {
+          setShowWorkQueue(workQueueSetting.parsedValue as boolean);
+        } else {
+          setShowWorkQueue(true);
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard preferences:', error);
+      }
+    }
+
+    fetchDashboardPreferences();
+  }, [role, hasLocalDensity]);
 
   return (
     <div className={verticalSpacing}>
@@ -681,13 +725,15 @@ export default function AdminDashboard() {
           </motion.div>
 
           {/* Work Queue */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.42 }}
-          >
-            <WorkQueue />
-          </motion.div>
+          {showWorkQueue && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.42 }}
+            >
+              <WorkQueue />
+            </motion.div>
+          )}
         </div>
 
         {/* Right Column - CRM Widgets */}
