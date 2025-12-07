@@ -79,6 +79,12 @@ export async function GET(request: NextRequest) {
           lastName: clients.lastName,
           email: clients.email,
           phone: clients.phone,
+          streetAddress: clients.streetAddress,
+          city: clients.city,
+          state: clients.state,
+          zipCode: clients.zipCode,
+          dateOfBirth: clients.dateOfBirth,
+          ssnLast4: clients.ssnLast4,
           status: clients.status,
           notes: clients.notes,
           convertedAt: clients.convertedAt,
@@ -104,6 +110,12 @@ export async function GET(request: NextRequest) {
         last_name: c.lastName,
         email: c.email,
         phone: c.phone,
+        street_address: c.streetAddress,
+        city: c.city,
+        state: c.state,
+        zip_code: c.zipCode,
+        date_of_birth: c.dateOfBirth?.toISOString(),
+        ssn_last_4: c.ssnLast4,
         status: c.status,
         notes: c.notes,
         converted_at: c.convertedAt?.toISOString(),
@@ -129,10 +141,30 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { first_name, last_name, email, phone, notes, lead_id, user_id } = body;
+    const { 
+      first_name, 
+      last_name, 
+      email, 
+      phone, 
+      notes, 
+      lead_id, 
+      user_id,
+      // New fields
+      street_address,
+      city,
+      state,
+      zip_code,
+      date_of_birth,
+      ssn_last_4
+    } = body;
 
     if (!first_name || !last_name || !email) {
       return NextResponse.json({ error: 'First name, last name, and email are required' }, { status: 400 });
+    }
+
+    // Validate SSN last 4 if provided (must be exactly 4 digits)
+    if (ssn_last_4 && !/^\d{4}$/.test(ssn_last_4)) {
+      return NextResponse.json({ error: 'SSN last 4 must be exactly 4 digits' }, { status: 400 });
     }
 
     const id = randomUUID();
@@ -146,6 +178,12 @@ export async function POST(request: NextRequest) {
       lastName: last_name,
       email,
       phone: phone || null,
+      streetAddress: street_address || null,
+      city: city || null,
+      state: state || null,
+      zipCode: zip_code || null,
+      dateOfBirth: date_of_birth ? new Date(date_of_birth) : null,
+      ssnLast4: ssn_last_4 || null,
       status: 'active',
       notes: notes || null,
       convertedAt: now,

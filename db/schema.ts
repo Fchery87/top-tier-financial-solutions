@@ -374,6 +374,15 @@ export const clientStageEnum = pgEnum('client_stage', [
   'completed'
 ]);
 
+// Client identity document type enum
+export const identityDocTypeEnum = pgEnum('identity_doc_type', [
+  'government_id',      // Driver's license, state ID, passport
+  'ssn_card',          // Social Security card
+  'proof_of_address',  // Utility bill, bank statement
+  'credit_report',     // Credit report document
+  'other'              // Other supporting documents
+]);
+
 // Clients table (central client management - converted from leads)
 export const clients = pgTable('clients', {
   id: text('id').primaryKey(),
@@ -383,6 +392,14 @@ export const clients = pgTable('clients', {
   lastName: text('last_name').notNull(),
   email: text('email').notNull(),
   phone: text('phone'),
+  // Address fields
+  streetAddress: text('street_address'),
+  city: text('city'),
+  state: text('state'),
+  zipCode: text('zip_code'),
+  // Personal identification
+  dateOfBirth: timestamp('date_of_birth'),
+  ssnLast4: text('ssn_last_4'), // Last 4 digits only for security
   status: text('status').default('active'), // 'pending' | 'active' | 'paused' | 'completed' | 'cancelled'
   stage: clientStageEnum('stage').default('lead'), // Pipeline stage for CRM tracking
   assignedTo: text('assigned_to').references(() => user.id, { onDelete: 'set null' }), // Staff assignment
@@ -395,6 +412,22 @@ export const clients = pgTable('clients', {
   index("clients_email_idx").on(table.email),
   index("clients_stage_idx").on(table.stage),
   index("clients_assignedTo_idx").on(table.assignedTo),
+]);
+
+// Client identity documents (ID, SSN card, proof of address for disputes)
+export const clientIdentityDocuments = pgTable('client_identity_documents', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  documentType: identityDocTypeEnum('document_type').notNull(),
+  fileName: text('file_name').notNull(),
+  fileUrl: text('file_url').notNull(), // Storage URL
+  fileSize: integer('file_size'),
+  mimeType: text('mime_type'),
+  uploadedById: text('uploaded_by_id').references(() => user.id, { onDelete: 'set null' }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index("client_identity_documents_clientId_idx").on(table.clientId),
 ]);
 
 // Credit reports (uploaded files)
@@ -896,6 +929,7 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
     fields: [clients.leadId],
     references: [consultationRequests.id],
   }),
+  identityDocuments: many(clientIdentityDocuments),
   creditReports: many(creditReports),
   creditAccounts: many(creditAccounts),
   negativeItems: many(negativeItems),
@@ -912,6 +946,18 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   personalInfoDisputes: many(personalInfoDisputes),
   inquiryDisputes: many(inquiryDisputes),
   scoreHistory: many(creditScoreHistory),
+}));
+
+// Client identity documents relations
+export const clientIdentityDocumentsRelations = relations(clientIdentityDocuments, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientIdentityDocuments.clientId],
+    references: [clients.id],
+  }),
+  uploadedBy: one(user, {
+    fields: [clientIdentityDocuments.uploadedById],
+    references: [user.id],
+  }),
 }));
 
 // Consumer profiles relations
