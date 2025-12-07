@@ -24,11 +24,11 @@ interface AgreementTemplate {
   name: string;
   version: string;
   content: string;
-  required_disclosures: string | null;
-  cancellation_period_days: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  requiredDisclosures: string | null;
+  cancellationPeriodDays: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const DISCLOSURE_OPTIONS = [
@@ -100,11 +100,11 @@ export default function AgreementsPage() {
       name: template.name || '',
       version: template.version || '1.0',
       content: template.content || '',
-      requiredDisclosures: template.required_disclosures 
-        ? JSON.parse(template.required_disclosures) 
+      requiredDisclosures: template.requiredDisclosures 
+        ? JSON.parse(template.requiredDisclosures) 
         : REQUIRED_DISCLOSURES_NY,
-      cancellationPeriodDays: template.cancellation_period_days ?? 3,
-      isActive: template.is_active ?? false,
+      cancellationPeriodDays: template.cancellationPeriodDays ?? 3,
+      isActive: template.isActive ?? false,
     });
     setIsModalOpen(true);
   };
@@ -166,7 +166,7 @@ export default function AgreementsPage() {
       const response = await fetch(`/api/admin/agreements/${template.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'template', isActive: !template.is_active }),
+        body: JSON.stringify({ type: 'template', isActive: !template.isActive }),
       });
 
       if (response.ok) {
@@ -199,10 +199,10 @@ export default function AgreementsPage() {
       name: `${template.name || ''} (Copy)`,
       version: '1.0',
       content: template.content || '',
-      requiredDisclosures: template.required_disclosures 
-        ? JSON.parse(template.required_disclosures) 
+      requiredDisclosures: template.requiredDisclosures 
+        ? JSON.parse(template.requiredDisclosures) 
         : REQUIRED_DISCLOSURES_NY,
-      cancellationPeriodDays: template.cancellation_period_days ?? 3,
+      cancellationPeriodDays: template.cancellationPeriodDays ?? 3,
       isActive: true,
     });
     setIsModalOpen(true);
@@ -240,8 +240,8 @@ export default function AgreementsPage() {
       key: 'disclosures',
       header: 'Required Disclosures',
       render: (item: AgreementTemplate) => {
-        const disclosures = item.required_disclosures 
-          ? JSON.parse(item.required_disclosures) 
+        const disclosures = item.requiredDisclosures 
+          ? JSON.parse(item.requiredDisclosures) 
           : [];
         return (
           <span className="text-sm text-muted-foreground">
@@ -254,16 +254,16 @@ export default function AgreementsPage() {
       key: 'cancellation',
       header: 'Cancel Period',
       render: (item: AgreementTemplate) => (
-        <span className="text-sm">{item.cancellation_period_days} days</span>
+        <span className="text-sm">{item.cancellationPeriodDays} days</span>
       ),
     },
     {
-      key: 'is_active',
+      key: 'isActive',
       header: 'Status',
       render: (item: AgreementTemplate) => (
         <StatusBadge 
-          status={item.is_active ? 'Active' : 'Inactive'} 
-          variant={item.is_active ? 'success' : 'danger'}
+          status={item.isActive ? 'Active' : 'Inactive'} 
+          variant={item.isActive ? 'success' : 'danger'}
         />
       ),
     },
@@ -304,9 +304,9 @@ export default function AgreementsPage() {
             size="icon" 
             className="h-8 w-8"
             onClick={(e) => { e.stopPropagation(); handleToggleActive(item); }}
-            title={item.is_active ? 'Deactivate' : 'Activate'}
+            title={item.isActive ? 'Deactivate' : 'Activate'}
           >
-            {item.is_active ? (
+            {item.isActive ? (
               <X className="w-4 h-4 text-destructive" />
             ) : (
               <Check className="w-4 h-4 text-green-500" />
@@ -326,7 +326,7 @@ export default function AgreementsPage() {
     },
   ];
 
-  const activeCount = templates.filter(t => t.is_active).length;
+  const activeCount = templates.filter(t => t.isActive).length;
 
   return (
     <div className="space-y-6">
