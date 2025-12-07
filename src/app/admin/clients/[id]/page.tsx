@@ -189,6 +189,29 @@ interface ClientReadiness {
   is_ready_for_round: boolean;
 }
 
+type ClientDisputeStatus =
+  | 'not_started'
+  | 'waiting_on_client'
+  | 'with_bureaus'
+  | 'analyzing_results'
+  | 'completed';
+
+const DISPUTE_STATUS_LABELS: Record<ClientDisputeStatus, string> = {
+  not_started: 'Not started',
+  waiting_on_client: 'Waiting on client',
+  with_bureaus: 'With bureaus',
+  analyzing_results: 'Analyzing results',
+  completed: 'Completed',
+};
+
+const DISPUTE_STATUS_CLASSES: Record<ClientDisputeStatus, string> = {
+  not_started: 'bg-muted text-muted-foreground border-border',
+  waiting_on_client: 'bg-amber-500/10 text-amber-500 border-amber-500/40',
+  with_bureaus: 'bg-blue-500/10 text-blue-500 border-blue-500/40',
+  analyzing_results: 'bg-purple-500/10 text-purple-500 border-purple-500/40',
+  completed: 'bg-green-500/10 text-green-500 border-green-500/40',
+};
+
 const statusOptions = ['pending', 'active', 'paused', 'completed', 'cancelled'];
 const bureauOptions = ['transunion', 'experian', 'equifax', 'combined'];
 
@@ -233,6 +256,10 @@ export default function ClientDetailPage() {
   const [disputes, setDisputes] = React.useState<Dispute[]>([]);
   const [scoreHistory, setScoreHistory] = React.useState<ScoreHistory[]>([]);
   const [readiness, setReadiness] = React.useState<ClientReadiness | null>(null);
+  const disputeStatus: ClientDisputeStatus = React.useMemo(
+    () => deriveDisputeStatus(disputes, readiness),
+    [disputes, readiness],
+  );
   
   const [editMode, setEditMode] = React.useState(false);
   const [editedClient, setEditedClient] = React.useState<Partial<ClientDetail>>({});
@@ -605,6 +632,38 @@ export default function ClientDetailPage() {
     return new Date(dueDate) < new Date();
   };
 
+function deriveDisputeStatus(
+  disputes: Dispute[],
+  readiness: ClientReadiness | null,
+): ClientDisputeStatus {
+  if (!disputes || disputes.length === 0) {
+    return readiness && !readiness.is_ready_for_round ? 'waiting_on_client' : 'not_started';
+  }
+
+  const sentOrInProgress = disputes.filter((d) =>
+    ['sent', 'in_progress'].includes(d.status),
+  );
+  const unresolvedSent = sentOrInProgress.filter((d) => !d.outcome);
+
+  if (unresolvedSent.length > 0) {
+    return 'with_bureaus';
+  }
+
+  const resolved = disputes.filter((d) =>
+    d.status === 'resolved' || ['deleted', 'verified', 'updated'].includes(d.outcome ?? ''),
+  );
+
+  if (resolved.length > 0 && (!readiness || !readiness.is_ready_for_round)) {
+    return 'analyzing_results';
+  }
+
+  if (resolved.length > 0) {
+    return 'completed';
+  }
+
+  return readiness && !readiness.is_ready_for_round ? 'waiting_on_client' : 'not_started';
+}
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -635,10 +694,17 @@ export default function ClientDetailPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center gap-2 mt-1"
+              className="flex items-center gap-2 mt-1 flex-wrap"
             >
               <StatusBadge status={client.status} variant={getStatusVariant(client.status)} />
               <span className="text-muted-foreground text-sm">Client since {new Date(client.converted_at).toLocaleDateString()}</span>
+              {disputeStatus && (
+                <span
+                  className={`text-xs font-medium px-2 py-1 rounded-full border ${DISPUTE_STATUS_CLASSES[disputeStatus]}`}
+                >
+                  Disputes: {DISPUTE_STATUS_LABELS[disputeStatus]}
+                </span>
+              )}
             </motion.div>
           </div>
         </div>
