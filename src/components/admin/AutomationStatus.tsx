@@ -2,14 +2,24 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Loader2, Mail, Bell, CheckCircle2, Clock } from 'lucide-react';
+import { Zap, Loader2, Mail, Bell, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+
+interface AutomationFailure {
+  id: string;
+  to_email: string;
+  subject: string;
+  trigger_type: string | null;
+  error_message: string | null;
+  created_at: string | null;
+}
 
 interface AutomationStats {
   emailsSentToday: number;
-  remindersQueued: number;
-  followupsPending: number;
+  emailsFailedToday: number;
+  pendingEmails: number;
   automationsActive: number;
+  recentFailures: AutomationFailure[];
 }
 
 export function AutomationStatus() {
@@ -19,18 +29,10 @@ export function AutomationStatus() {
   React.useEffect(() => {
     async function fetchAutomationStats() {
       try {
-        // This would ideally hit a dedicated automation stats endpoint
-        // For now, we'll show placeholder data that can be enhanced later
-        const response = await fetch('/api/admin/stats');
+        const response = await fetch('/api/admin/automation');
         if (response.ok) {
-          const data = await response.json();
-          
-          setStats({
-            emailsSentToday: data.emailsSentToday || 0,
-            remindersQueued: data.attentionNeeded?.responseDueSoon || 0,
-            followupsPending: data.attentionNeeded?.overdueTasks || 0,
-            automationsActive: data.automationsActive || 3, // Default active automations
-          });
+          const data: AutomationStats = await response.json();
+          setStats(data);
         }
       } catch (error) {
         console.error('Error fetching automation stats:', error);
@@ -40,6 +42,21 @@ export function AutomationStatus() {
     }
     fetchAutomationStats();
   }, []);
+
+  const formatTimeAgo = (timestamp: string | null) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   if (loading) {
     return (
@@ -66,23 +83,23 @@ export function AutomationStatus() {
       value: stats?.emailsSentToday || 0,
       color: 'text-green-500',
       bgColor: 'bg-green-500/10',
-      status: 'complete',
+      status: 'info',
     },
     {
       icon: Bell,
-      label: 'Deadline reminders queued',
-      value: stats?.remindersQueued || 0,
+      label: 'Emails queued',
+      value: stats?.pendingEmails || 0,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
-      status: stats?.remindersQueued ? 'pending' : 'complete',
+      status: stats?.pendingEmails ? 'pending' : 'info',
     },
     {
-      icon: Clock,
-      label: 'Follow-ups pending',
-      value: stats?.followupsPending || 0,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-500/10',
-      status: stats?.followupsPending ? 'pending' : 'complete',
+      icon: AlertTriangle,
+      label: 'Failures (24h)',
+      value: stats?.emailsFailedToday || 0,
+      color: stats && stats.emailsFailedToday > 0 ? 'text-red-500' : 'text-muted-foreground',
+      bgColor: stats && stats.emailsFailedToday > 0 ? 'bg-red-500/10' : 'bg-muted/50',
+      status: stats && stats.emailsFailedToday > 0 ? 'issue' : 'info',
     },
   ];
 
@@ -100,8 +117,14 @@ export function AutomationStatus() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-green-500 font-medium">Active</span>
+            <span className={`w-2 h-2 rounded-full ${
+              stats && stats.emailsFailedToday > 0 ? 'bg-orange-500 animate-pulse' : 'bg-green-500 animate-pulse'
+            }`} />
+            <span className={`text-xs font-medium ${
+              stats && stats.emailsFailedToday > 0 ? 'text-orange-500' : 'text-green-500'
+            }`}>
+              {stats && stats.emailsFailedToday > 0 ? 'Attention needed' : 'Active'}
+            </span>
           </div>
         </div>
       </CardHeader>
@@ -119,8 +142,10 @@ export function AutomationStatus() {
                 className="flex items-center gap-3"
               >
                 <div className={`p-2 rounded-lg ${item.bgColor}`}>
-                  {item.status === 'complete' ? (
-                    <CheckCircle2 className={`w-4 h-4 ${item.color}`} />
+                  {item.status === 'issue' ? (
+                    <AlertTriangle className={`w-4 h-4 ${item.color}`} />
+                  ) : item.status === 'pending' ? (
+                    <Clock className={`w-4 h-4 ${item.color}`} />
                   ) : (
                     <Icon className={`w-4 h-4 ${item.color}`} />
                   )}
@@ -136,13 +161,32 @@ export function AutomationStatus() {
           })}
         </div>
 
-        {/* Status indicator */}
-        <div className="mt-4 pt-4 border-t border-border/50">
+        <div className="mt-4 pt-4 border-t border-border/50 space-y-2">
+          {stats && stats.recentFailures.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-red-500 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Recent failures
+              </p>
+              {stats.recentFailures.map((f) => (
+                <div key={f.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="truncate max-w-[180px]">{f.subject || 'Email send failed'}</span>
+                  <span className="whitespace-nowrap ml-2">{formatTimeAgo(f.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Last run: Just now</span>
+            <span>Last check: just now</span>
             <span className="flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-green-500" />
-              All systems operational
+              {stats && stats.emailsFailedToday > 0 ? (
+                <AlertTriangle className="w-3 h-3 text-orange-500" />
+              ) : (
+                <CheckCircle2 className="w-3 h-3 text-green-500" />
+              )}
+              {stats && stats.emailsFailedToday > 0
+                ? 'Some automations are failing'
+                : 'All systems operational'}
             </span>
           </div>
         </div>
