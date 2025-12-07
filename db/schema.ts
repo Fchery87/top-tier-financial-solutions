@@ -1480,6 +1480,58 @@ export const goalsRelations = relations(goals, ({ one }) => ({
   }),
 }));
 
+// ============================================
+// SLA DEFINITIONS & INSTANCES
+// ============================================
+
+export const slaDefinitions = pgTable('sla_definitions', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  // Example values: 'onboarding', 'round_preparation', 'round_in_progress', 'results_review'
+  stage: text('stage').notNull(),
+  maxDays: integer('max_days').notNull(),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('sla_definitions_stage_idx').on(table.stage),
+  index('sla_definitions_isActive_idx').on(table.isActive),
+]);
+
+export const slaInstances = pgTable('sla_instances', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  definitionId: text('definition_id').notNull().references(() => slaDefinitions.id, { onDelete: 'cascade' }),
+  // Optional denormalized stage for quick reporting
+  stage: text('stage'),
+  startedAt: timestamp('started_at').defaultNow(),
+  dueAt: timestamp('due_at'),
+  completedAt: timestamp('completed_at'),
+  status: text('status').default('active'), // 'active' | 'completed' | 'breached'
+  breachNotifiedAt: timestamp('breach_notified_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('sla_instances_clientId_idx').on(table.clientId),
+  index('sla_instances_definitionId_idx').on(table.definitionId),
+  index('sla_instances_status_idx').on(table.status),
+]);
+
+// Client feedback (micro-surveys at key milestones)
+export const clientFeedback = pgTable('client_feedback', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  // e.g. 'onboarding', 'round_results', 'closure', 'portal_overall'
+  context: text('context').notNull(),
+  rating: integer('rating'), // 1–10 scale or similar
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('client_feedback_clientId_idx').on(table.clientId),
+  index('client_feedback_context_idx').on(table.context),
+]);
+
 // Email automation relations
 export const emailTemplatesRelations = relations(emailTemplates, ({ many }) => ({
   automationRules: many(emailAutomationRules),
@@ -1501,6 +1553,28 @@ export const emailSendLogRelations = relations(emailSendLog, ({ one }) => ({
   template: one(emailTemplates, {
     fields: [emailSendLog.templateId],
     references: [emailTemplates.id],
+  }),
+}));
+
+export const slaDefinitionsRelations = relations(slaDefinitions, ({ many }) => ({
+  instances: many(slaInstances),
+}));
+
+export const slaInstancesRelations = relations(slaInstances, ({ one }) => ({
+  client: one(clients, {
+    fields: [slaInstances.clientId],
+    references: [clients.id],
+  }),
+  definition: one(slaDefinitions, {
+    fields: [slaInstances.definitionId],
+    references: [slaDefinitions.id],
+  }),
+}));
+
+export const clientFeedbackRelations = relations(clientFeedback, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientFeedback.clientId],
+    references: [clients.id],
   }),
 }));
 

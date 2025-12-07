@@ -125,6 +125,14 @@ interface LetterForApproval {
   rejected_at: string | null;
 }
 
+interface PortalFeedbackEntry {
+  id: string;
+  context: string;
+  rating: number | null;
+  comment: string | null;
+  created_at: string | null;
+}
+
 const phaseLabels: Record<string, string> = {
   initial_review: 'Initial Review',
   dispute_preparation: 'Dispute Preparation',
@@ -157,6 +165,10 @@ export default function PortalPage() {
   const [signature, setSignature] = React.useState('');
   const [approvingLetters, setApprovingLetters] = React.useState(false);
   const [selectedLetter, setSelectedLetter] = React.useState<LetterForApproval | null>(null);
+  const [feedbackEntry, setFeedbackEntry] = React.useState<PortalFeedbackEntry | null>(null);
+  const [feedbackRating, setFeedbackRating] = React.useState<number | null>(null);
+  const [feedbackComment, setFeedbackComment] = React.useState('');
+  const [submittingFeedback, setSubmittingFeedback] = React.useState(false);
 
   // Document upload state
   const [showUploadModal, setShowUploadModal] = React.useState(false);
@@ -212,13 +224,14 @@ export default function PortalPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [casesRes, docsRes, auditRes, disputesRes, scoreRes, lettersRes] = await Promise.all([
+      const [casesRes, docsRes, auditRes, disputesRes, scoreRes, lettersRes, feedbackRes] = await Promise.all([
         fetch('/api/portal/cases'),
         fetch('/api/portal/documents'),
         fetch('/api/portal/audit-report'),
         fetch('/api/portal/disputes'),
         fetch('/api/portal/score-history'),
         fetch('/api/portal/letters'),
+        fetch('/api/portal/feedback?context=portal_overall'),
       ]);
 
       if (casesRes.ok) {
@@ -251,6 +264,18 @@ export default function PortalPage() {
       if (lettersRes.ok) {
         const lettersData = await lettersRes.json();
         setLetters(lettersData.letters || []);
+      }
+
+      if (feedbackRes.ok) {
+        const fbData = await feedbackRes.json();
+        const entry = (fbData.feedback && fbData.feedback[0]) || null;
+        if (entry) {
+          setFeedbackEntry(entry);
+          setFeedbackRating(entry.rating);
+        } else {
+          setFeedbackEntry(null);
+          setFeedbackRating(null);
+        }
       }
 
       const tasksRes = await fetch('/api/portal/tasks');
@@ -361,6 +386,40 @@ export default function PortalPage() {
       alert('We were unable to record your approval. Please try again or contact support.');
     } finally {
       setApprovingLetters(false);
+    }
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackRating) {
+      alert('Please select a rating from 1 to 5.');
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    try {
+      const response = await fetch('/api/portal/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: 'portal_overall',
+          rating: feedbackRating,
+          comment: feedbackComment.trim() || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || 'Failed to submit feedback');
+        return;
+      }
+
+      const created = await response.json();
+      setFeedbackEntry(created);
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      alert('Failed to submit feedback');
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -1128,6 +1187,74 @@ export default function PortalPage() {
                         </p>
                       )}
                     </CardContent>
+                  </Card>
+                )}
+
+                {/* Micro-feedback card */}
+                {!feedbackEntry && (
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                    <CardHeader>
+                      <CardTitle className="font-serif text-xl flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-secondary" />
+                        How is your experience so far?
+                      </CardTitle>
+                      <CardDescription>
+                        A quick 1–5 rating helps us improve your client portal.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setFeedbackRating(value)}
+                            className={`w-9 h-9 rounded-full text-sm font-medium border transition-colors ${
+                              feedbackRating === value
+                                ? 'bg-secondary text-secondary-foreground border-secondary'
+                                : 'bg-background text-foreground border-border hover:border-secondary/60'
+                            }`}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                      <Input
+                        value={feedbackComment}
+                        onChange={(e) => setFeedbackComment(e.target.value)}
+                        placeholder="Optional: tell us what's working or what's confusing"
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={handleSubmitFeedback}
+                        disabled={submittingFeedback || !feedbackRating}
+                      >
+                        {submittingFeedback ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          'Send feedback'
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {feedbackEntry && (
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                    <CardHeader>
+                      <CardTitle className="font-serif text-xl flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-secondary" />
+                        Thank you for your feedback
+                      </CardTitle>
+                      <CardDescription>
+                        You rated your experience {feedbackEntry.rating ?? '-'} / 5.
+                      </CardDescription>
+                    </CardHeader>
                   </Card>
                 )}
 
