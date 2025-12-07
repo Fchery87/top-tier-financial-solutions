@@ -128,6 +128,8 @@ export async function GET(
         status: tasks.status,
         visibleToClient: tasks.visibleToClient,
         isBlocking: tasks.isBlocking,
+        createdAt: tasks.createdAt,
+        dueDate: tasks.dueDate,
       })
       .from(tasks)
       .where(eq(tasks.clientId, id));
@@ -161,6 +163,24 @@ export async function GET(
     );
     const blockingTasks = unfinishedClientTasks.filter((t) => t.isBlocking);
 
+    // Derive how long we've been waiting on the client based on the oldest blocking task
+    let waitingOnClientSince: Date | null = null;
+    for (const task of blockingTasks) {
+      const candidate = task.dueDate || task.createdAt;
+      if (!candidate) continue;
+      if (!waitingOnClientSince || candidate < waitingOnClientSince) {
+        waitingOnClientSince = candidate;
+      }
+    }
+
+    const now = new Date();
+    const waitingOnClientDays = waitingOnClientSince
+      ? Math.floor((now.getTime() - waitingOnClientSince.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    // Simple SLA-style at-risk flag: client has open blocking tasks for 7+ days
+    const atRisk = blockingTasks.length > 0 && waitingOnClientDays >= 7;
+
     const readiness = {
       has_portal_user: hasPortalUser,
       has_signed_agreement: hasSignedAgreement,
@@ -170,6 +190,9 @@ export async function GET(
       has_disputes: hasDisputes,
       unfinished_client_tasks: unfinishedClientTasks.length,
       blocking_tasks: blockingTasks.length,
+      waiting_on_client_since: waitingOnClientSince?.toISOString() ?? null,
+      waiting_on_client_days: waitingOnClientSince ? waitingOnClientDays : null,
+      at_risk: atRisk,
       is_ready_for_round:
         hasPortalUser && hasSignedAgreement && hasAnalyzedReport && blockingTasks.length === 0,
     };

@@ -294,6 +294,7 @@ export default function ClientDetailPage() {
   // Audit report state
   const [generatingReport, setGeneratingReport] = React.useState(false);
   const [showReportModal, setShowReportModal] = React.useState(false);
+  const [sendingNudge, setSendingNudge] = React.useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -589,6 +590,27 @@ export default function ClientDetailPage() {
     }
   };
 
+  const handleSendNudge = async () => {
+    if (!clientId) return;
+    setSendingNudge(true);
+    try {
+      const response = await fetch(`/api/admin/clients/${clientId}/nudge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'waiting_on_client' }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || 'Failed to send reminder');
+      }
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      alert('Failed to send reminder');
+    } finally {
+      setSendingNudge(false);
+    }
+  };
+
   // Utility functions
   const getScoreColor = (score: number | null) => {
     if (!score) return 'text-muted-foreground';
@@ -863,6 +885,18 @@ function deriveDisputeStatus(
                         )}
                       </div>
 
+                      {readiness.at_risk && readiness.waiting_on_client_days !== null && (
+                        <div className="mt-2 flex items-center justify-between rounded-lg border px-3 py-2 text-xs border-red-500/40 bg-red-500/10 text-red-500">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span className="font-medium">Client at risk</span>
+                          </div>
+                          <span>
+                            Waiting on client for {readiness.waiting_on_client_days} day{readiness.waiting_on_client_days === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                      )}
+
                       <ul className="space-y-1 text-sm">
                         {[
                           { label: 'Portal account linked', value: readiness.has_portal_user },
@@ -889,6 +923,24 @@ function deriveDisputeStatus(
                           </li>
                         ))}
                       </ul>
+
+                      {readiness.at_risk && (
+                        <div className="pt-3 flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSendNudge}
+                            disabled={sendingNudge}
+                          >
+                            {sendingNudge ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            ) : (
+                              <Mail className="w-3 h-3 mr-1" />
+                            )}
+                            Send reminder
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
