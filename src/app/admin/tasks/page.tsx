@@ -33,6 +33,8 @@ interface Task {
   created_at: string;
   client_name: string | null;
   assignee_name: string | null;
+  visible_to_client: boolean;
+  is_blocking: boolean;
 }
 
 interface Client {
@@ -103,6 +105,8 @@ export default function TasksPage() {
     priority: 'medium',
     due_date: '',
     status: 'todo',
+    visible_to_client: false,
+    is_blocking: false,
   });
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -181,6 +185,8 @@ export default function TasksPage() {
           priority: 'medium',
           due_date: '',
           status: 'todo',
+          visible_to_client: false,
+          is_blocking: false,
         });
         fetchTasks();
       }
@@ -206,6 +212,8 @@ export default function TasksPage() {
           status: selectedTask.status,
           priority: selectedTask.priority,
           due_date: selectedTask.due_date,
+          visible_to_client: selectedTask.visible_to_client,
+          is_blocking: selectedTask.is_blocking,
         }),
       });
 
@@ -303,6 +311,27 @@ export default function TasksPage() {
       render: (item: Task) => (
         <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getPriorityColor(item.priority)}`}>
           {item.priority}
+        </span>
+      ),
+    },
+    {
+      key: 'client_view',
+      header: 'Client View',
+      render: (item: Task) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            item.visible_to_client
+              ? item.is_blocking
+                ? 'bg-red-500/10 text-red-500'
+                : 'bg-green-500/10 text-green-500'
+              : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          {item.visible_to_client
+            ? item.is_blocking
+              ? 'Client-facing · Required'
+              : 'Client-facing'
+            : 'Internal only'}
         </span>
       ),
     },
@@ -595,6 +624,29 @@ export default function TasksPage() {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Client Portal</label>
+                  <div className="flex flex-col gap-2 text-sm">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={newTask.visible_to_client}
+                        onChange={(e) => setNewTask({ ...newTask, visible_to_client: e.target.checked })}
+                        className="h-4 w-4 rounded border border-input"
+                      />
+                      <span>Show this task in the client portal</span>
+                    </label>
+                    <label className="flex items-center gap-2 pl-6">
+                      <input
+                        type="checkbox"
+                        checked={newTask.is_blocking}
+                        onChange={(e) => setNewTask({ ...newTask, is_blocking: e.target.checked })}
+                        className="h-4 w-4 rounded border border-input"
+                      />
+                      <span>Required before starting next dispute round</span>
+                    </label>
+                  </div>
+                </div>
                 <div className="flex gap-2 pt-4">
                   <Button variant="outline" className="flex-1" onClick={() => setShowAddModal(false)}>
                     Cancel
@@ -696,6 +748,29 @@ export default function TasksPage() {
                     value={selectedTask.due_date?.split('T')[0] || ''}
                     onChange={(e) => setSelectedTask({ ...selectedTask, due_date: e.target.value || null })}
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Client Portal</label>
+                  <div className="flex flex-col gap-2 text-sm">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedTask.visible_to_client}
+                        onChange={(e) => setSelectedTask({ ...selectedTask, visible_to_client: e.target.checked })}
+                        className="h-4 w-4 rounded border border-input"
+                      />
+                      <span>Show this task in the client portal</span>
+                    </label>
+                    <label className="flex items-center gap-2 pl-6">
+                      <input
+                        type="checkbox"
+                        checked={selectedTask.is_blocking}
+                        onChange={(e) => setSelectedTask({ ...selectedTask, is_blocking: e.target.checked })}
+                        className="h-4 w-4 rounded border border-input"
+                      />
+                      <span>Required before starting next dispute round</span>
+                    </label>
+                  </div>
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button variant="outline" className="flex-1" onClick={() => {

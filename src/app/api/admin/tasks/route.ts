@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     if (status && status !== 'all') {
       conditions.push(eq(tasks.status, status as 'todo' | 'in_progress' | 'review' | 'done'));
     }
-    
+
     if (priority && priority !== 'all') {
       conditions.push(eq(tasks.priority, priority as 'low' | 'medium' | 'high' | 'urgent'));
     }
@@ -110,6 +110,8 @@ export async function GET(request: NextRequest) {
           completedAt: tasks.completedAt,
           createdAt: tasks.createdAt,
           updatedAt: tasks.updatedAt,
+          visibleToClient: tasks.visibleToClient,
+          isBlocking: tasks.isBlocking,
           clientFirstName: clients.firstName,
           clientLastName: clients.lastName,
           assigneeName: user.name,
@@ -138,6 +140,8 @@ export async function GET(request: NextRequest) {
         completed_at: t.completedAt?.toISOString() || null,
         created_at: t.createdAt?.toISOString(),
         updated_at: t.updatedAt?.toISOString(),
+        visible_to_client: t.visibleToClient,
+        is_blocking: t.isBlocking,
         client_name: t.clientFirstName && t.clientLastName 
           ? `${t.clientFirstName} ${t.clientLastName}` 
           : null,
@@ -168,7 +172,9 @@ export async function POST(request: NextRequest) {
       assignee_id, 
       status = 'todo', 
       priority = 'medium', 
-      due_date 
+      due_date,
+      visible_to_client = false,
+      is_blocking = false,
     } = body;
 
     if (!title) {
@@ -188,6 +194,8 @@ export async function POST(request: NextRequest) {
       status: status as 'todo' | 'in_progress' | 'review' | 'done',
       priority: priority as 'low' | 'medium' | 'high' | 'urgent',
       dueDate: due_date ? new Date(due_date) : null,
+      visibleToClient: visible_to_client,
+      isBlocking: is_blocking,
       createdAt: now,
       updatedAt: now,
     });

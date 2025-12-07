@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user, personalInfoDisputes, inquiryDisputes } from '@/db/schema';
+import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user, personalInfoDisputes, inquiryDisputes, clientAgreements, tasks, clientCases } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
@@ -117,6 +117,28 @@ export async function GET(
       .where(eq(creditScoreHistory.clientId, id))
       .orderBy(asc(creditScoreHistory.recordedAt));
 
+    // Readiness signals derived from existing data
+    const agreementsForClient = await db
+      .select({ status: clientAgreements.status })
+      .from(clientAgreements)
+      .where(eq(clientAgreements.clientId, id));
+
+    const tasksForClient = await db
+      .select({
+        status: tasks.status,
+        visibleToClient: tasks.visibleToClient,
+        isBlocking: tasks.isBlocking,
+      })
+      .from(tasks)
+      .where(eq(tasks.clientId, id));
+
+    const casesForClient = clientResult.userId
+      ? await db
+          .select({ id: clientCases.id })
+          .from(clientCases)
+          .where(eq(clientCases.userId, clientResult.userId))
+      : [];
+
     // Parse recommendations from latest analysis
     let recommendations: string[] = [];
     if (latestAnalysis?.recommendations) {
@@ -126,6 +148,31 @@ export async function GET(
         recommendations = [];
       }
     }
+
+    const hasPortalUser = !!clientResult.userId;
+    const hasSignedAgreement = agreementsForClient.some(a => a.status === 'signed');
+    const hasCreditReport = reports.length > 0;
+    const hasAnalyzedReport = !!latestAnalysis;
+    const hasCase = casesForClient.length > 0;
+    const hasDisputes = disputesResult.length > 0;
+
+    const unfinishedClientTasks = tasksForClient.filter(
+      (t) => t.visibleToClient && t.status !== 'done',
+    );
+    const blockingTasks = unfinishedClientTasks.filter((t) => t.isBlocking);
+
+    const readiness = {
+      has_portal_user: hasPortalUser,
+      has_signed_agreement: hasSignedAgreement,
+      has_credit_report: hasCreditReport,
+      has_analyzed_report: hasAnalyzedReport,
+      has_case: hasCase,
+      has_disputes: hasDisputes,
+      unfinished_client_tasks: unfinishedClientTasks.length,
+      blocking_tasks: blockingTasks.length,
+      is_ready_for_round:
+        hasPortalUser && hasSignedAgreement && hasAnalyzedReport && blockingTasks.length === 0,
+    };
 
     return NextResponse.json({
       client: {
@@ -144,6 +191,7 @@ export async function GET(
         user_name: clientResult.userName,
         user_email: clientResult.userEmail,
       },
+      readiness,
       credit_reports: reports.map(r => ({
         id: r.id,
         file_name: r.fileName,

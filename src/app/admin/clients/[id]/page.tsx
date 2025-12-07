@@ -177,6 +177,18 @@ interface ScoreHistory {
   recorded_at: string;
 }
 
+interface ClientReadiness {
+  has_portal_user: boolean;
+  has_signed_agreement: boolean;
+  has_credit_report: boolean;
+  has_analyzed_report: boolean;
+  has_case: boolean;
+  has_disputes: boolean;
+  unfinished_client_tasks: number;
+  blocking_tasks: number;
+  is_ready_for_round: boolean;
+}
+
 const statusOptions = ['pending', 'active', 'paused', 'completed', 'cancelled'];
 const bureauOptions = ['transunion', 'experian', 'equifax', 'combined'];
 
@@ -220,6 +232,7 @@ export default function ClientDetailPage() {
   const [negativeItemsCount, setNegativeItemsCount] = React.useState(0);
   const [disputes, setDisputes] = React.useState<Dispute[]>([]);
   const [scoreHistory, setScoreHistory] = React.useState<ScoreHistory[]>([]);
+  const [readiness, setReadiness] = React.useState<ClientReadiness | null>(null);
   
   const [editMode, setEditMode] = React.useState(false);
   const [editedClient, setEditedClient] = React.useState<Partial<ClientDetail>>({});
@@ -271,6 +284,7 @@ export default function ClientDetailPage() {
         setNegativeItemsCount(data.negative_items_count || 0);
         setDisputes(data.disputes || []);
         setScoreHistory(data.score_history || []);
+        setReadiness(data.readiness || null);
         setEditedClient(data.client);
       } else if (response.status === 404) {
         router.push('/admin/clients');
@@ -673,72 +687,146 @@ export default function ClientDetailPage() {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left - Contact Info */}
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg">Contact Information</CardTitle>
-                  {!editMode ? (
-                    <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>Edit</Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
-                      <Button size="sm" onClick={handleSave} disabled={saving}>
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {editMode ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium">First Name</label>
-                          <Input value={editedClient.first_name || ''} onChange={(e) => setEditedClient({ ...editedClient, first_name: e.target.value })} />
+              {/* Left - Contact Info + Readiness */}
+              <div className="space-y-6">
+                <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg">Contact Information</CardTitle>
+                    {!editMode ? (
+                      <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>Edit</Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
+                        <Button size="sm" onClick={handleSave} disabled={saving}>
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {editMode ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium">First Name</label>
+                            <Input value={editedClient.first_name || ''} onChange={(e) => setEditedClient({ ...editedClient, first_name: e.target.value })} />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">Last Name</label>
+                            <Input value={editedClient.last_name || ''} onChange={(e) => setEditedClient({ ...editedClient, last_name: e.target.value })} />
+                          </div>
                         </div>
                         <div>
-                          <label className="text-sm font-medium">Last Name</label>
-                          <Input value={editedClient.last_name || ''} onChange={(e) => setEditedClient({ ...editedClient, last_name: e.target.value })} />
+                          <label className="text-sm font-medium">Email</label>
+                          <Input value={editedClient.email || ''} onChange={(e) => setEditedClient({ ...editedClient, email: e.target.value })} />
                         </div>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Email</label>
-                        <Input value={editedClient.email || ''} onChange={(e) => setEditedClient({ ...editedClient, email: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Phone</label>
-                        <Input value={editedClient.phone || ''} onChange={(e) => setEditedClient({ ...editedClient, phone: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Status</label>
-                        <select value={editedClient.status || ''} onChange={(e) => setEditedClient({ ...editedClient, status: e.target.value })} className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
-                          {statusOptions.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Notes</label>
-                        <textarea value={editedClient.notes || ''} onChange={(e) => setEditedClient({ ...editedClient, notes: e.target.value })} className="w-full min-h-[80px] px-3 py-2 text-sm rounded-md border border-input bg-background" />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 text-sm">
-                        <Mail className="w-4 h-4 text-muted-foreground" />
-                        <span>{client.email}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        <span>{client.phone || 'No phone number'}</span>
-                      </div>
-                      {client.notes && (
-                        <div className="pt-2 border-t border-border">
-                          <p className="text-sm text-muted-foreground">{client.notes}</p>
+                        <div>
+                          <label className="text-sm font-medium">Phone</label>
+                          <Input value={editedClient.phone || ''} onChange={(e) => setEditedClient({ ...editedClient, phone: e.target.value })} />
                         </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+                        <div>
+                          <label className="text-sm font-medium">Status</label>
+                          <select value={editedClient.status || ''} onChange={(e) => setEditedClient({ ...editedClient, status: e.target.value })} className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
+                            {statusOptions.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Notes</label>
+                          <textarea value={editedClient.notes || ''} onChange={(e) => setEditedClient({ ...editedClient, notes: e.target.value })} className="w-full min-h-[80px] px-3 py-2 text-sm rounded-md border border-input bg-background" />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3 text-sm">
+                          <Mail className="w-4 h-4 text-muted-foreground" />
+                          <span>{client.email}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <Phone className="w-4 h-4 text-muted-foreground" />
+                          <span>{client.phone || 'No phone number'}</span>
+                        </div>
+                        {client.notes && (
+                          <div className="pt-2 border-t border-border">
+                            <p className="text-sm text-muted-foreground">{client.notes}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {readiness && (
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-secondary" />
+                        Onboarding & Readiness
+                      </CardTitle>
+                      <CardDescription>
+                        Snapshot of where this client is in the user-to-client workflow.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                          readiness.is_ready_for_round
+                            ? 'border-green-500/40 bg-green-500/10 text-green-500'
+                            : readiness.blocking_tasks > 0 || readiness.unfinished_client_tasks > 0
+                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-500'
+                              : 'border-muted bg-muted/30 text-muted-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {readiness.is_ready_for_round ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4" />
+                          )}
+                          <span className="font-medium">
+                            {readiness.is_ready_for_round ? 'Ready for next dispute round' : 'Waiting on client'}
+                          </span>
+                        </div>
+                        {!readiness.is_ready_for_round && (
+                          <span className="text-xs">
+                            {readiness.blocking_tasks > 0
+                              ? `${readiness.blocking_tasks} blocking task${readiness.blocking_tasks > 1 ? 's' : ''}`
+                              : readiness.unfinished_client_tasks > 0
+                                ? `${readiness.unfinished_client_tasks} open task${readiness.unfinished_client_tasks > 1 ? 's' : ''}`
+                                : 'Setup incomplete'}
+                          </span>
+                        )}
+                      </div>
+
+                      <ul className="space-y-1 text-sm">
+                        {[
+                          { label: 'Portal account linked', value: readiness.has_portal_user },
+                          { label: 'Service agreement signed', value: readiness.has_signed_agreement },
+                          { label: 'Credit report uploaded', value: readiness.has_credit_report },
+                          { label: 'Credit report analyzed', value: readiness.has_analyzed_report },
+                          { label: 'Client case created', value: readiness.has_case },
+                          { label: 'At least one dispute created', value: readiness.has_disputes },
+                        ].map((item) => (
+                          <li key={item.label} className="flex items-center justify-between">
+                            <span className="text-muted-foreground">{item.label}</span>
+                            <span
+                              className={`flex items-center gap-1 text-xs font-medium ${
+                                item.value ? 'text-green-500' : 'text-muted-foreground'
+                              }`}
+                            >
+                              {item.value ? (
+                                <CheckCircle2 className="w-3 h-3" />
+                              ) : (
+                                <Clock className="w-3 h-3" />
+                              )}
+                              {item.value ? 'Done' : 'Pending'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
 
               {/* Center & Right - Credit Summary */}
               <div className="lg:col-span-2 space-y-6">

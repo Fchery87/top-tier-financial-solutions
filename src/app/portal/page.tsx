@@ -100,6 +100,17 @@ interface ScoreSummary {
   records_count: number;
 }
 
+interface PortalTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: 'todo' | 'in_progress' | 'review' | 'done';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  due_date: string | null;
+  is_blocking: boolean;
+  created_at: string | null;
+}
+
 const phaseLabels: Record<string, string> = {
   initial_review: 'Initial Review',
   dispute_preparation: 'Dispute Preparation',
@@ -126,6 +137,7 @@ export default function PortalPage() {
   const [disputeStats, setDisputeStats] = React.useState<DisputeStats | null>(null);
   const [scoreHistory, setScoreHistory] = React.useState<ScoreHistoryEntry[]>([]);
   const [scoreSummary, setScoreSummary] = React.useState<ScoreSummary | null>(null);
+  const [tasks, setTasks] = React.useState<PortalTask[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   // Document upload state
@@ -135,6 +147,35 @@ export default function PortalPage() {
   const [uploadNotes, setUploadNotes] = React.useState('');
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const nextTask = React.useMemo(() => {
+    const pending = tasks.filter((t) => t.status !== 'done');
+    if (pending.length === 0) return null;
+
+    const priorityWeight: Record<PortalTask['priority'], number> = {
+      urgent: 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+    };
+
+    const sorted = [...pending].sort((a, b) => {
+      if (a.is_blocking !== b.is_blocking) return a.is_blocking ? -1 : 1;
+      const pa = priorityWeight[a.priority];
+      const pb = priorityWeight[b.priority];
+      if (pa !== pb) return pa - pb;
+
+      const da = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
+      const db = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
+      if (da !== db) return da - db;
+
+      const ca = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const cb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return ca - cb;
+    });
+
+    return sorted[0];
+  }, [tasks]);
 
   React.useEffect(() => {
     if (user) {
@@ -178,6 +219,11 @@ export default function PortalPage() {
         const scoreData = await scoreRes.json();
         setScoreHistory(scoreData.history || []);
         setScoreSummary(scoreData.summary || null);
+      }
+      const tasksRes = await fetch('/api/portal/tasks');
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setTasks(tasksData.tasks || []);
       }
     } catch (error) {
       console.error('Error fetching portal data:', error);
@@ -695,6 +741,60 @@ export default function PortalPage() {
 
               {/* Documents Sidebar */}
               <div className="space-y-6">
+                <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                  <CardHeader>
+                    <CardTitle className="font-serif text-xl flex items-center gap-2">
+                      <Target className="w-5 h-5 text-secondary" />
+                      Your Next Step
+                    </CardTitle>
+                    <CardDescription>
+                      {nextTask
+                        ? 'Complete this to keep your case moving smoothly.'
+                        : 'You are all caught up for now.'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {nextTask ? (
+                      <div className="space-y-3">
+                        <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                          <p className="text-sm font-medium text-foreground">{nextTask.title}</p>
+                          {nextTask.description && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {nextTask.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground flex-wrap">
+                            {nextTask.is_blocking && (
+                              <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 font-medium">
+                                Required
+                              </span>
+                            )}
+                            <span className="px-2 py-0.5 rounded-full bg-muted/70 capitalize">
+                              {nextTask.priority} priority
+                            </span>
+                            {nextTask.due_date && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                Due {new Date(nextTask.due_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {tasks.length > 1 && (
+                          <p className="text-xs text-muted-foreground">
+                            {tasks.length - 1} other task{tasks.length - 1 === 1 ? '' : 's'} open.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>No open action items from us right now.</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader className="flex flex-row items-start justify-between gap-2">
                     <div>

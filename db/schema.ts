@@ -778,6 +778,8 @@ export const tasks = pgTable('tasks', {
   priority: taskPriorityEnum('priority').default('medium'),
   dueDate: timestamp('due_date'),
   completedAt: timestamp('completed_at'),
+  visibleToClient: boolean('visible_to_client').default(false),
+  isBlocking: boolean('is_blocking').default(false),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
