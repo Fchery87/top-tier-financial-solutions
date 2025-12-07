@@ -289,7 +289,7 @@ function renderInquiriesSection(data: CreditAnalysisReportData): string {
 
 export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData): string {
   const company = { ...DEFAULT_COMPANY_INFO, ...data.companyInfo };
-  const { client, bureauSummary, creditUtilization, derogatoryAccounts, publicRecords, inquiries } = data;
+  const { client, bureauSummary, creditUtilization, derogatoryAccounts, publicRecords, inquiries: _inquiries } = data;
   
   const fullName = `${client.firstName} ${client.lastName}`;
   const reportDate = formatDate(data.reportDate);

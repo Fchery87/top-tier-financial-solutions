@@ -244,7 +244,7 @@ function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean {
 export default function DisputeWizardPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = React.useState(1);
-  const [loading, setLoading] = React.useState(false);
+  const [_loading, _setLoading] = React.useState(false);
 
   // Step 1 - Client Selection
   const [clients, setClients] = React.useState<Client[]>([]);
@@ -289,7 +289,7 @@ export default function DisputeWizardPage() {
 
   // Triage quick actions
   const [triageQuickActions, setTriageQuickActions] = React.useState<TriageQuickAction[]>([]);
-  const [loadingTriage, setLoadingTriage] = React.useState(false);
+  const [_loadingTriage, setLoadingTriage] = React.useState(false);
 
   // Evidence documents
   const [evidenceDocuments, setEvidenceDocuments] = React.useState<EvidenceDocument[]>([]);
@@ -302,11 +302,11 @@ export default function DisputeWizardPage() {
   const reviewStepId = 4;
 
   // Legacy reason codes state (kept for backward compatibility, but not used in new flow)
-  const [reasonCodes, setReasonCodes] = React.useState<ReasonCode[]>([]);
-  const [disputeTypes, setDisputeTypes] = React.useState<DisputeType[]>([]);
+  const [_reasonCodes, setReasonCodes] = React.useState<ReasonCode[]>([]);
+  const [_disputeTypes, setDisputeTypes] = React.useState<DisputeType[]>([]);
   const [selectedReasonCodes, setSelectedReasonCodes] = React.useState<string[]>([]);
-  const [selectedDisputeType, setSelectedDisputeType] = React.useState('standard');
-  const [customReason, setCustomReason] = React.useState('');
+  const [_selectedDisputeType, _setSelectedDisputeType] = React.useState('standard');
+  const [_customReason, _setCustomReason] = React.useState('');
 
   // Step 5 - Generated Letters
   const [generatedLetters, setGeneratedLetters] = React.useState<Array<{
@@ -807,7 +807,7 @@ export default function DisputeWizardPage() {
     );
   };
 
-  const handleToggleReasonCode = (code: string) => {
+  const _handleToggleReasonCode = (code: string) => {
     setSelectedReasonCodes(prev =>
       prev.includes(code)
         ? prev.filter(c => c !== code)

@@ -7,7 +7,7 @@ import 'dotenv/config';
 import { db } from '../db/client';
 import { emailTemplates, emailAutomationRules } from '../db/schema';
 import { randomUUID } from 'crypto';
-import { eq } from 'drizzle-orm';
+import { eq as _eq } from 'drizzle-orm';
 import { DEFAULT_EMAIL_TEMPLATES } from '../src/lib/email-service';
 
 async function reseedClean() {

@@ -236,7 +236,7 @@ export default function EmailTemplatesPage() {
             { value: 'all', label: 'All Templates', icon: Mail },
             { value: 'transactional', label: 'Transactional', icon: Zap },
             { value: 'marketing', label: 'Marketing', icon: TrendingUp }
-          ].map((tab, index) => (
+          ].map((tab, _index) => (
             <Button
               key={tab.value}
               variant={activeTab === tab.value ? 'secondary' : 'outline'}

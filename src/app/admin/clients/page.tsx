@@ -75,7 +75,7 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showConvertModal, setShowConvertModal] = React.useState(false);
-  const [selectedLead, setSelectedLead] = React.useState<Lead | null>(null);
+  const [_selectedLead, setSelectedLead] = React.useState<Lead | null>(null);
   const [saving, setSaving] = React.useState(false);
 
   const [newClient, setNewClient] = React.useState({
