@@ -21,11 +21,16 @@ export function NewsletterSignup({
   variant = 'default',
   className = '',
 }: NewsletterSignupProps) {
+  const [mounted, setMounted] = React.useState(false);
   const [email, setEmail] = React.useState('');
   const [firstName, setFirstName] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +75,13 @@ export function NewsletterSignup({
             <CheckCircle className="w-5 h-5" />
             <span className="text-sm">Thank you for subscribing!</span>
           </div>
+        ) : !mounted ? (
+          <div className="space-y-3">
+            <div className="h-10 bg-white/10 rounded-md animate-pulse" />
+            <div className="h-10 bg-white/10 rounded-md animate-pulse" />
+          </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3" data-form-type="other" suppressHydrationWarning>
+          <form onSubmit={handleSubmit} className="space-y-3" data-form-type="other">
             <Input
               type="email"
               placeholder="Enter your email"
@@ -88,7 +98,6 @@ export function NewsletterSignup({
               type="submit" 
               disabled={isLoading}
               className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
-              suppressHydrationWarning
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -117,8 +126,13 @@ export function NewsletterSignup({
             <CheckCircle className="w-5 h-5" />
             <span>Thank you for subscribing!</span>
           </div>
+        ) : !mounted ? (
+          <div className="flex gap-2">
+            <div className="flex-1 h-10 bg-background/50 rounded-md animate-pulse" />
+            <div className="w-24 h-10 bg-secondary/50 rounded-md animate-pulse" />
+          </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex gap-2" data-form-type="other" suppressHydrationWarning>
+          <form onSubmit={handleSubmit} className="flex gap-2" data-form-type="other">
             <Input
               type="email"
               placeholder="Enter your email"
@@ -134,7 +148,6 @@ export function NewsletterSignup({
               type="submit" 
               disabled={isLoading}
               className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-              suppressHydrationWarning
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Subscribe'}
             </Button>
@@ -167,8 +180,16 @@ export function NewsletterSignup({
                   <p className="text-sm text-muted-foreground">Check your inbox for updates.</p>
                 </div>
               </div>
+            ) : !mounted ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="h-10 bg-background/50 rounded-md animate-pulse" />
+                  <div className="h-10 bg-background/50 rounded-md animate-pulse" />
+                </div>
+                <div className="h-12 w-40 bg-secondary/50 rounded-full animate-pulse" />
+              </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4" data-form-type="other" suppressHydrationWarning>
+              <form onSubmit={handleSubmit} className="space-y-4" data-form-type="other">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     type="text"
@@ -197,7 +218,6 @@ export function NewsletterSignup({
                   type="submit" 
                   disabled={isLoading}
                   className="w-full sm:w-auto h-12 px-8 bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full"
-                  suppressHydrationWarning
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
