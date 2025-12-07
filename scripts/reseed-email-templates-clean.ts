@@ -1,49 +1,34 @@
 /**
- * Seed comprehensive email templates for client communication automation
- * 
- * Run with: npx tsx scripts/seed-email-templates.ts
- * 
- * Includes transactional and marketing email templates for:
- * - Welcome & onboarding sequences
- * - Dispute lifecycle notifications
- * - Progress reports & results
- * - Agreement & payment communications
- * - Re-engagement & nurture campaigns
+ * CLEAR and RESEED email templates with clean styling
+ * This will delete all existing templates and reseed with the originals
  */
 
 import 'dotenv/config';
 import { db } from '../db/client';
 import { emailTemplates, emailAutomationRules } from '../db/schema';
 import { randomUUID } from 'crypto';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { DEFAULT_EMAIL_TEMPLATES } from '../src/lib/email-service';
 
-async function seedEmailTemplates() {
-  console.log('🚀 Seeding Email Templates for Top Tier Financial Solutions\n');
+async function reseedClean() {
+  console.log('🧹 Clearing all existing email templates...\n');
+  
+  // Delete all automation rules first (foreign key constraint)
+  await db.delete(emailAutomationRules);
+  console.log('   ✅ Deleted automation rules');
+  
+  // Delete all templates
+  await db.delete(emailTemplates);
+  console.log('   ✅ Deleted all templates\n');
+  
+  console.log('🚀 Seeding clean email templates...\n');
   console.log('='.repeat(60));
   
   let transactionalCount = 0;
   let marketingCount = 0;
-  let skippedCount = 0;
 
   for (const template of DEFAULT_EMAIL_TEMPLATES) {
     const id = randomUUID();
-    
-    // Check if template with this name already exists
-    const existing = await db
-      .select()
-      .from(emailTemplates)
-      .where(and(
-        eq(emailTemplates.name, template.name),
-        eq(emailTemplates.triggerType, template.triggerType)
-      ))
-      .limit(1);
-
-    if (existing.length > 0) {
-      console.log(`⏭️  Skipped: "${template.name}" (already exists)`);
-      skippedCount++;
-      continue;
-    }
 
     await db.insert(emailTemplates).values({
       id,
@@ -82,18 +67,17 @@ async function seedEmailTemplates() {
   }
 
   console.log('\n' + '='.repeat(60));
-  console.log('✅ Email Template Seeding Complete!\n');
+  console.log('✅ Clean Email Templates Seeded!\n');
   console.log(`📊 Summary:`);
   console.log(`   Transactional Emails: ${transactionalCount}`);
   console.log(`   Marketing Emails: ${marketingCount}`);
-  console.log(`   Skipped (existing): ${skippedCount}`);
-  console.log(`   Total Processed: ${DEFAULT_EMAIL_TEMPLATES.length}`);
-  console.log('\n💡 Templates are ready for use in your email automation!');
+  console.log(`   Total Templates: ${DEFAULT_EMAIL_TEMPLATES.length}`);
+  console.log('\n💡 All templates now have clean styling (no grey background)!');
   
   process.exit(0);
 }
 
-seedEmailTemplates().catch((error) => {
-  console.error('\n❌ Error seeding templates:', error);
+reseedClean().catch((error) => {
+  console.error('\n❌ Error reseeding templates:', error);
   process.exit(1);
 });

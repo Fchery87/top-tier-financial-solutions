@@ -31,7 +31,8 @@ import {
   FolderKanban,
   Megaphone,
   Trophy,
-  Settings
+  Settings,
+  MailOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -99,6 +100,7 @@ const navSections: NavSection[] = [
       { name: 'Testimonials', href: '/admin/testimonials', icon: MessageSquareQuote },
       { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle },
       { name: 'Disclaimers', href: '/admin/disclaimers', icon: Scale },
+      { name: 'Email Templates', href: '/admin/email-templates', icon: MailOpen },
       { name: 'Subscribers', href: '/admin/subscribers', icon: Mail },
     ],
   },

@@ -94,8 +94,6 @@ export async function POST(request: NextRequest) {
             primary_task_title: clientTasks[0]?.title || '',
             waiting_days: waitingDays,
             trigger_reason: 'auto_waiting_on_client',
-          },
-          {
             waiting_since: waitingSince.toISOString(),
             kind: 'client_stalled_nudge_auto',
           },

@@ -209,7 +209,8 @@ export async function POST(request: NextRequest) {
           task_description: description || '',
           task_priority: priority,
           task_due_date: due_date || '',
-        }, { task_id: id });
+          task_id: id,
+        });
       } catch (emailError) {
         console.error('Error sending task-created email:', emailError);
       }

@@ -71,13 +71,16 @@ export function NewsletterSignup({
             <span className="text-sm">Thank you for subscribing!</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3" suppressHydrationWarning>
+          <form onSubmit={handleSubmit} className="space-y-3" data-form-type="other" suppressHydrationWarning>
             <Input
               type="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="off"
+              data-lpignore="true"
+              data-form-type="other"
               className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
             />
             {error && <p className="text-sm text-red-400">{error}</p>}
@@ -85,6 +88,7 @@ export function NewsletterSignup({
               type="submit" 
               disabled={isLoading}
               className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              suppressHydrationWarning
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -114,19 +118,23 @@ export function NewsletterSignup({
             <span>Thank you for subscribing!</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex gap-2" suppressHydrationWarning>
+          <form onSubmit={handleSubmit} className="flex gap-2" data-form-type="other" suppressHydrationWarning>
             <Input
               type="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="off"
+              data-lpignore="true"
+              data-form-type="other"
               className="flex-1 bg-background/50"
             />
             <Button 
               type="submit" 
               disabled={isLoading}
               className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              suppressHydrationWarning
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Subscribe'}
             </Button>
@@ -160,13 +168,16 @@ export function NewsletterSignup({
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
+              <form onSubmit={handleSubmit} className="space-y-4" data-form-type="other" suppressHydrationWarning>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     type="text"
                     placeholder="First name (optional)"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="bg-background/50"
                   />
                   <Input
@@ -175,6 +186,9 @@ export function NewsletterSignup({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="bg-background/50"
                   />
                 </div>
@@ -183,6 +197,7 @@ export function NewsletterSignup({
                   type="submit" 
                   disabled={isLoading}
                   className="w-full sm:w-auto h-12 px-8 bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full"
+                  suppressHydrationWarning
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

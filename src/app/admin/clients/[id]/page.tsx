@@ -187,6 +187,8 @@ interface ClientReadiness {
   unfinished_client_tasks: number;
   blocking_tasks: number;
   is_ready_for_round: boolean;
+  at_risk?: boolean;
+  waiting_on_client_days?: number | null;
 }
 
 type ClientDisputeStatus =

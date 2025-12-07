@@ -323,7 +323,8 @@ export async function PUT(
           creditor_name: updatedDispute.creditorName || 'the disputed item',
           dispute_round: updatedDispute.round || 1,
           response_deadline: responseDeadlineDate,
-        }, { dispute_id: id });
+          dispute_id: id,
+        });
       }
 
       // Response received
@@ -332,7 +333,9 @@ export async function PUT(
           bureau_name: currentDispute.bureau.charAt(0).toUpperCase() + currentDispute.bureau.slice(1),
           creditor_name: updatedDispute.creditorName || 'the disputed item',
           dispute_round: updatedDispute.round || 1,
-        }, { dispute_id: id, outcome });
+          dispute_id: id,
+          outcome,
+        });
       }
 
       // Item deleted - celebration email
@@ -340,7 +343,8 @@ export async function PUT(
         await triggerAutomation('item_deleted', currentDispute.clientId, {
           creditor_name: updatedDispute.creditorName || 'Negative Item',
           bureau_name: currentDispute.bureau.charAt(0).toUpperCase() + currentDispute.bureau.slice(1),
-        }, { dispute_id: id });
+          dispute_id: id,
+        });
       }
     } catch (emailError) {
       // Log but don't fail the request if email fails

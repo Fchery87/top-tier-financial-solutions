@@ -132,3 +132,33 @@ credentials/
 *.temp
 .cache/
 .parcel-cache/
+
+# =============================================================================
+# Temporary Documentation (keep only README.md and SETUP_GUIDE.md in root)
+# =============================================================================
+/*-FIX*.md
+/*-UPDATE*.md
+/*-STATUS*.md
+/*-SUMMARY*.md
+/*-IMPLEMENTATION*.md
+/*-VERIFICATION*.md
+/TASKS.md
+/FEATURES-SUMMARY.md
+/disputetasklist.md
+/WHERE-TO-*.md
+/EMAIL-*.md
+/HYDRATION-*.md
+/DEV-*.md
+/FINAL-*.md
+/2025-*.md
+
+# Exceptions - Keep these important docs
+!/METRO2-VIOLATION-FIX-SUMMARY.md
+!/PARSER-FIX-ORIGINAL-CREDITOR.md
+
+# Screenshots/Images in root (keep in /public or /docs)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.svg
