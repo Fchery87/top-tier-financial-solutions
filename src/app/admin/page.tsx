@@ -31,6 +31,8 @@ import { CalendarWidget } from '@/components/admin/CalendarWidget';
 import { TeamActivity } from '@/components/admin/TeamActivity';
 import { GoalTracker } from '@/components/admin/GoalTracker';
 import { AutomationStatus } from '@/components/admin/AutomationStatus';
+import { WorkQueue } from '@/components/admin/WorkQueue';
+import { useAdminRole } from '@/contexts/AdminContext';
 
 interface DashboardStats {
   activeClients: number;
@@ -72,9 +74,15 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const { role } = useAdminRole();
   const [stats, setStats] = React.useState<DashboardStats | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [density, setDensity] = React.useState<'comfortable' | 'compact'>('comfortable');
+  const [density, setDensity] = React.useState<'comfortable' | 'compact'>(() => {
+    if (typeof window === 'undefined') return 'comfortable';
+    const stored = window.localStorage.getItem('admin-dashboard-density');
+    if (stored === 'comfortable' || stored === 'compact') return stored;
+    return role === 'staff' ? 'compact' : 'comfortable';
+  });
 
   React.useEffect(() => {
     async function fetchStats() {
@@ -118,6 +126,13 @@ export default function AdminDashboard() {
   const metricGridGap = density === 'compact' ? 'gap-3' : 'gap-4';
   const isCompact = density === 'compact';
 
+  const handleSetDensity = (value: 'comfortable' | 'compact') => {
+    setDensity(value);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('admin-dashboard-density', value);
+    }
+  };
+
   return (
     <div className={verticalSpacing}>
       {/* Header */}
@@ -149,7 +164,7 @@ export default function AdminDashboard() {
             <span className="px-2">Density</span>
             <button
               type="button"
-              onClick={() => setDensity('comfortable')}
+              onClick={() => handleSetDensity('comfortable')}
               className={
                 `px-2 py-0.5 rounded-full transition-colors ` +
                 (isCompact ? 'text-muted-foreground' : 'bg-background text-foreground shadow-sm')
@@ -159,7 +174,7 @@ export default function AdminDashboard() {
             </button>
             <button
               type="button"
-              onClick={() => setDensity('compact')}
+              onClick={() => handleSetDensity('compact')}
               className={
                 `px-2 py-0.5 rounded-full transition-colors ` +
                 (isCompact ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground')
@@ -360,34 +375,54 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-4">
-                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
-                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-500/10 flex items-center justify-center">
-                        <span className="text-sm font-bold text-blue-500">R1</span>
+                    <Link
+                      href="/admin/disputes?round=1&status=sent"
+                      className="block group"
+                    >
+                      <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
+                        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-500/10 flex items-center justify-center">
+                          <span className="text-sm font-bold text-blue-500">R1</span>
+                        </div>
+                        <p className="text-2xl font-bold">{stats?.disputePipeline.round1 ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Round 1</p>
                       </div>
-                      <p className="text-2xl font-bold">{stats?.disputePipeline.round1 ?? 0}</p>
-                      <p className="text-xs text-muted-foreground">Round 1</p>
-                    </div>
-                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
-                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-purple-500/10 flex items-center justify-center">
-                        <span className="text-sm font-bold text-purple-500">R2</span>
+                    </Link>
+                    <Link
+                      href="/admin/disputes?round=2&status=sent"
+                      className="block group"
+                    >
+                      <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
+                        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-purple-500/10 flex items-center justify-center">
+                          <span className="text-sm font-bold text-purple-500">R2</span>
+                        </div>
+                        <p className="text-2xl font-bold">{stats?.disputePipeline.round2 ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Round 2</p>
                       </div>
-                      <p className="text-2xl font-bold">{stats?.disputePipeline.round2 ?? 0}</p>
-                      <p className="text-xs text-muted-foreground">Round 2</p>
-                    </div>
-                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
-                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-orange-500/10 flex items-center justify-center">
-                        <span className="text-sm font-bold text-orange-500">R3</span>
+                    </Link>
+                    <Link
+                      href="/admin/disputes?round=3&status=sent"
+                      className="block group"
+                    >
+                      <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
+                        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-orange-500/10 flex items-center justify-center">
+                          <span className="text-sm font-bold text-orange-500">R3</span>
+                        </div>
+                        <p className="text-2xl font-bold">{stats?.disputePipeline.round3 ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Round 3</p>
                       </div>
-                      <p className="text-2xl font-bold">{stats?.disputePipeline.round3 ?? 0}</p>
-                      <p className="text-xs text-muted-foreground">Round 3</p>
-                    </div>
-                    <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
-                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                        <Clock className="w-4 h-4 text-yellow-500" />
+                    </Link>
+                    <Link
+                      href="/admin/disputes?awaiting_response=true"
+                      className="block group"
+                    >
+                      <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
+                        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                          <Clock className="w-4 h-4 text-yellow-500" />
+                        </div>
+                        <p className="text-2xl font-bold">{stats?.disputePipeline.awaiting ?? 0}</p>
+                        <p className="text-xs text-muted-foreground">Awaiting</p>
                       </div>
-                      <p className="text-2xl font-bold">{stats?.disputePipeline.awaiting ?? 0}</p>
-                      <p className="text-xs text-muted-foreground">Awaiting</p>
-                    </div>
+                    </Link>
                   </div>
                 )}
               </CardContent>
@@ -415,44 +450,51 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-4">
-                    {(['transunion', 'experian', 'equifax'] as const).map((bureau) => {
-                      const data = stats?.successByBureau?.[bureau];
+                    {(['transunion', 'experian', 'equifax'] as const).map((bureauKey) => {
+                      const data = stats?.successByBureau?.[bureauKey];
                       const rate = data?.rate ?? 0;
-                      const color = bureau === 'transunion' ? 'blue' : bureau === 'experian' ? 'purple' : 'red';
+                      const color = bureauKey === 'transunion' ? 'blue' : bureauKey === 'experian' ? 'purple' : 'red';
+                      const label = bureauKey;
                       return (
-                        <div key={bureau} className="text-center p-4 rounded-xl bg-muted/50 border border-border/50">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">{bureau}</p>
-                          <div className="relative w-16 h-16 mx-auto mb-2">
-                            <svg className="w-full h-full transform -rotate-90">
-                              <circle
-                                cx="32"
-                                cy="32"
-                                r="28"
-                                stroke="currentColor"
-                                strokeWidth="6"
-                                fill="none"
-                                className="text-muted/30"
-                              />
-                              <circle
-                                cx="32"
-                                cy="32"
-                                r="28"
-                                stroke="currentColor"
-                                strokeWidth="6"
-                                fill="none"
-                                strokeDasharray={`${rate * 1.76} 176`}
-                                className={`text-${color}-500`}
-                                style={{ stroke: `var(--${color}-500, ${color === 'blue' ? '#3b82f6' : color === 'purple' ? '#a855f7' : '#ef4444'})` }}
-                              />
-                            </svg>
-                            <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
-                              {rate}%
-                            </span>
+                        <Link
+                          key={bureauKey}
+                          href={`/admin/disputes?bureau=${bureauKey}&outcome=deleted`}
+                          className="block group"
+                        >
+                          <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
+                            <div className="relative w-16 h-16 mx-auto mb-2">
+                              <svg className="w-full h-full transform -rotate-90">
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r="28"
+                                  stroke="currentColor"
+                                  strokeWidth="6"
+                                  fill="none"
+                                  className="text-muted/30"
+                                />
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r="28"
+                                  stroke="currentColor"
+                                  strokeWidth="6"
+                                  fill="none"
+                                  strokeDasharray={`${rate * 1.76} 176`}
+                                  className={`text-${color}-500`}
+                                  style={{ stroke: `var(--${color}-500, ${color === 'blue' ? '#3b82f6' : color === 'purple' ? '#a855f7' : '#ef4444'})` }}
+                                />
+                              </svg>
+                              <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
+                                {rate}%
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {data?.deleted ?? 0} of {data?.total ?? 0} deleted
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {data?.deleted ?? 0} of {data?.total ?? 0} deleted
-                          </p>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>
@@ -636,6 +678,15 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </motion.div>
+
+          {/* Work Queue */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.42 }}
+          >
+            <WorkQueue />
           </motion.div>
         </div>
 

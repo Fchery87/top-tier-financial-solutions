@@ -84,6 +84,16 @@ export default function DisputesPage() {
   });
   const [showOverdueOnly, setShowOverdueOnly] = React.useState(() => searchParams.get('overdue') === 'true');
   const [showAwaitingOnly, setShowAwaitingOnly] = React.useState(() => searchParams.get('awaiting_response') === 'true');
+  const [roundFilter, setRoundFilter] = React.useState<number | null>(() => {
+    const fromUrl = searchParams.get('round');
+    if (!fromUrl) return null;
+    const parsed = parseInt(fromUrl, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  });
+  const [outcomeFilter, setOutcomeFilter] = React.useState<string | null>(() => {
+    const fromUrl = searchParams.get('outcome');
+    return fromUrl || null;
+  });
 
   // Response modal state
   const [selectedDispute, setSelectedDispute] = React.useState<Dispute | null>(null);
@@ -102,6 +112,8 @@ export default function DisputesPage() {
       if (selectedBureau !== 'all') params.append('bureau', selectedBureau);
       if (showOverdueOnly) params.append('overdue', 'true');
       if (showAwaitingOnly) params.append('awaiting_response', 'true');
+      if (roundFilter !== null) params.append('round', String(roundFilter));
+      if (outcomeFilter) params.append('outcome', outcomeFilter);
 
       const response = await fetch(`/api/admin/disputes?${params.toString()}`);
       if (response.ok) {
@@ -113,7 +125,7 @@ export default function DisputesPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedStatus, selectedBureau, showOverdueOnly, showAwaitingOnly]);
+  }, [selectedStatus, selectedBureau, showOverdueOnly, showAwaitingOnly, roundFilter, outcomeFilter]);
 
   React.useEffect(() => {
     fetchDisputes();
@@ -278,7 +290,11 @@ export default function DisputesPage() {
         </Card>
         <Card
           className={`bg-card/80 backdrop-blur-sm border-border/50 cursor-pointer transition-all ${showOverdueOnly ? 'ring-2 ring-red-500' : ''}`}
-          onClick={() => setShowOverdueOnly(!showOverdueOnly)}
+          onClick={() => {
+            setShowOverdueOnly(!showOverdueOnly);
+            setRoundFilter(null);
+            setOutcomeFilter(null);
+          }}
         >
           <CardContent className="p-4 text-center">
             <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-red-500" />
@@ -320,7 +336,11 @@ export default function DisputesPage() {
           <Filter className="w-4 h-4 text-muted-foreground" />
           <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setRoundFilter(null);
+              setOutcomeFilter(null);
+            }}
             className="h-9 px-3 rounded-md border border-input bg-background text-sm"
           >
             {STATUS_OPTIONS.map((opt) => (
@@ -330,7 +350,11 @@ export default function DisputesPage() {
         </div>
         <select
           value={selectedBureau}
-          onChange={(e) => setSelectedBureau(e.target.value)}
+          onChange={(e) => {
+            setSelectedBureau(e.target.value);
+            setRoundFilter(null);
+            setOutcomeFilter(null);
+          }}
           className="h-9 px-3 rounded-md border border-input bg-background text-sm"
         >
           {BUREAU_OPTIONS.map((opt) => (
@@ -340,7 +364,11 @@ export default function DisputesPage() {
         <Button
           variant={showAwaitingOnly ? 'secondary' : 'outline'}
           size="sm"
-          onClick={() => setShowAwaitingOnly(!showAwaitingOnly)}
+          onClick={() => {
+            setShowAwaitingOnly(!showAwaitingOnly);
+            setRoundFilter(null);
+            setOutcomeFilter(null);
+          }}
         >
           <Clock className="w-4 h-4 mr-1" />
           Awaiting Response
@@ -348,10 +376,28 @@ export default function DisputesPage() {
         <Button
           variant={showOverdueOnly ? 'destructive' : 'outline'}
           size="sm"
-          onClick={() => setShowOverdueOnly(!showOverdueOnly)}
+          onClick={() => {
+            setShowOverdueOnly(!showOverdueOnly);
+            setRoundFilter(null);
+            setOutcomeFilter(null);
+          }}
         >
           <AlertTriangle className="w-4 h-4 mr-1" />
           Overdue Only
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSelectedStatus('all');
+            setSelectedBureau('all');
+            setShowAwaitingOnly(false);
+            setShowOverdueOnly(false);
+            setRoundFilter(null);
+            setOutcomeFilter(null);
+          }}
+        >
+          Clear Filters
         </Button>
       </motion.div>
 
