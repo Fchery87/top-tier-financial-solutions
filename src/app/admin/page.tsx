@@ -74,7 +74,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const { role } = useAdminRole();
+  const { role, isSuperAdmin, isAdmin } = useAdminRole();
   const [stats, setStats] = React.useState<DashboardStats | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [density, setDensity] = React.useState<'comfortable' | 'compact'>(() => {
@@ -825,20 +825,24 @@ export default function AdminDashboard() {
 
       {/* Bottom Row - Goals, Team & Automation */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.65 }}
-        >
-          <GoalTracker />
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          <TeamActivity />
-        </motion.div>
+        {(isSuperAdmin || isAdmin) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65 }}
+          >
+            <GoalTracker />
+          </motion.div>
+        )}
+        {(isSuperAdmin || isAdmin) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <TeamActivity />
+          </motion.div>
+        )}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -849,7 +853,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Secondary Stats - New Leads */}
-      {(stats?.newLeads ?? 0) > 0 && (
+      {(stats?.newLeads ?? 0) > 0 && (isSuperAdmin || isAdmin) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

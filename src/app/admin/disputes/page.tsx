@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
+import { useAdminRole } from '@/contexts/AdminContext';
 
 interface Dispute {
   id: string;
@@ -70,20 +71,86 @@ const OUTCOME_OPTIONS = [
 
 export default function DisputesPage() {
   const searchParams = useSearchParams();
+  const { userId, role } = useAdminRole();
+  const preferencesKey = userId ? `admin-disputes-default-view:${userId}` : 'admin-disputes-default-view';
   const [disputes, setDisputes] = React.useState<Dispute[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedStatus, setSelectedStatus] = React.useState(() => {
     const fromUrl = searchParams.get('status');
     const valid = STATUS_OPTIONS.map((opt) => opt.value);
-    return fromUrl && valid.includes(fromUrl) ? fromUrl : 'all';
+    if (fromUrl && valid.includes(fromUrl)) return fromUrl;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(preferencesKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { status?: string };
+          if (parsed.status && valid.includes(parsed.status)) {
+            return parsed.status;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return role === 'staff' ? 'sent' : 'all';
   });
   const [selectedBureau, setSelectedBureau] = React.useState(() => {
     const fromUrl = searchParams.get('bureau');
     const valid = BUREAU_OPTIONS.map((opt) => opt.value);
-    return fromUrl && valid.includes(fromUrl) ? fromUrl : 'all';
+    if (fromUrl && valid.includes(fromUrl)) return fromUrl;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(preferencesKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { bureau?: string };
+          if (parsed.bureau && valid.includes(parsed.bureau)) {
+            return parsed.bureau;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return 'all';
   });
-  const [showOverdueOnly, setShowOverdueOnly] = React.useState(() => searchParams.get('overdue') === 'true');
-  const [showAwaitingOnly, setShowAwaitingOnly] = React.useState(() => searchParams.get('awaiting_response') === 'true');
+  const [showOverdueOnly, setShowOverdueOnly] = React.useState(() => {
+    const fromUrl = searchParams.get('overdue');
+    if (fromUrl === 'true') return true;
+    if (fromUrl === 'false') return false;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(preferencesKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { overdue?: boolean };
+          if (typeof parsed.overdue === 'boolean') {
+            return parsed.overdue;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return false;
+  });
+  const [showAwaitingOnly, setShowAwaitingOnly] = React.useState(() => {
+    const fromUrl = searchParams.get('awaiting_response');
+    if (fromUrl === 'true') return true;
+    if (fromUrl === 'false') return false;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(preferencesKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { awaiting?: boolean };
+          if (typeof parsed.awaiting === 'boolean') {
+            return parsed.awaiting;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return false;
+  });
   const [roundFilter, setRoundFilter] = React.useState<number | null>(() => {
     const fromUrl = searchParams.get('round');
     if (!fromUrl) return null;
@@ -384,6 +451,24 @@ export default function DisputesPage() {
         >
           <AlertTriangle className="w-4 h-4 mr-1" />
           Overdue Only
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              const payload = {
+                status: selectedStatus,
+                bureau: selectedBureau,
+                overdue: showOverdueOnly,
+                awaiting: showAwaitingOnly,
+              };
+              window.localStorage.setItem(preferencesKey, JSON.stringify(payload));
+              alert('Current filters saved as your default view.');
+            }
+          }}
+        >
+          Save as Default
         </Button>
         <Button
           variant="ghost"

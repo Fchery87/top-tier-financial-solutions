@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useAdminRole } from '@/contexts/AdminContext';
 
 interface WinRecord {
   id: string;
@@ -55,11 +56,20 @@ interface ResultsStats {
 
 export default function ResultsPage() {
   const searchParams = useSearchParams();
+  const { userId } = useAdminRole();
+  const preferencesKey = userId ? `admin-results-default-range:${userId}` : 'admin-results-default-range';
   const [stats, setStats] = React.useState<ResultsStats | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [timeRange, setTimeRange] = React.useState<'week' | 'month' | 'all'>(() => {
     const fromUrl = searchParams.get('range');
-    return fromUrl === 'week' || fromUrl === 'month' || fromUrl === 'all' ? fromUrl : 'month';
+    if (fromUrl === 'week' || fromUrl === 'month' || fromUrl === 'all') return fromUrl;
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem(preferencesKey);
+      if (saved === 'week' || saved === 'month' || saved === 'all') {
+        return saved;
+      }
+    }
+    return 'month';
   });
 
   const fetchResults = React.useCallback(async () => {
@@ -150,6 +160,18 @@ export default function ResultsPage() {
               </button>
             ))}
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.localStorage.setItem(preferencesKey, timeRange);
+                alert('Current range saved as your default.');
+              }
+            }}
+          >
+            Save as Default
+          </Button>
           <Button variant="outline" onClick={fetchResults} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
