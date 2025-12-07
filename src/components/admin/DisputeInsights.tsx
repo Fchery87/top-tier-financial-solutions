@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Lightbulb, Scale, Clock, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Loader2 } from "lucide-react";
@@ -153,24 +154,32 @@ export function DisputeInsights() {
             ) : (
               <div className="space-y-1">
                 {methodologies.map((m) => (
-                  <motion.div
+                  <Link
                     key={m.methodology}
-                    initial={{ opacity: 0, x: -5 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center justify-between text-xs py-1"
+                    href={`/admin/disputes?methodology=${encodeURIComponent(
+                      m.methodology
+                    )}&outcome=deleted`}
+                    className="block rounded-md hover:bg-muted/60 transition-colors"
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-medium">
-                        {m.methodology === "standard" ? "Standard" : m.methodology}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {m.deleted}/{m.total} deleted • avg R{m.avg_rounds.toFixed(1)}
-                      </p>
-                    </div>
-                    <span className="ml-2 text-xs font-semibold text-green-500">
-                      {m.success_rate}%
-                    </span>
-                  </motion.div>
+                    <motion.div
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center justify-between text-xs py-1 px-2"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">
+                          {m.methodology === "standard" ? "Standard" : m.methodology}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {m.deleted}/{m.total} deleted • avg R
+                          {m.avg_rounds.toFixed(1)}
+                        </p>
+                      </div>
+                      <span className="ml-2 text-xs font-semibold text-green-500">
+                        {m.success_rate}%
+                      </span>
+                    </motion.div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -197,25 +206,30 @@ export function DisputeInsights() {
                         ? "Experian"
                         : "Equifax";
                     return (
-                      <motion.div
+                      <Link
                         key={bureau}
-                        initial={{ opacity: 0, x: 5 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center justify-between text-xs py-1"
+                        href={`/admin/disputes?bureau=${bureau}&outcome=deleted`}
+                        className="block rounded-md hover:bg-muted/60 transition-colors"
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{label}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {stats.avg_response_days !== null
-                              ? `${stats.avg_response_days.toFixed(1)}d avg response`
-                              : "No responses recorded"}
-                          </p>
-                        </div>
-                        <div className="text-right ml-2 text-[11px] text-muted-foreground">
-                          <p>Deleted: {stats.deleted_rate}%</p>
-                          <p>No response: {stats.no_response_rate}%</p>
-                        </div>
-                      </motion.div>
+                        <motion.div
+                          initial={{ opacity: 0, x: 5 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex items-center justify-between text-xs py-1 px-2"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium">{label}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {stats.avg_response_days !== null
+                                ? `${stats.avg_response_days.toFixed(1)}d avg response`
+                                : "No responses recorded"}
+                            </p>
+                          </div>
+                          <div className="text-right ml-2 text-[11px] text-muted-foreground">
+                            <p>Deleted: {stats.deleted_rate}%</p>
+                            <p>No response: {stats.no_response_rate}%</p>
+                          </div>
+                        </motion.div>
+                      </Link>
                     );
                   })}
               </div>

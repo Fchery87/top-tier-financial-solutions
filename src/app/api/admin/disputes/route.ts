@@ -170,6 +170,7 @@ export async function GET(request: NextRequest) {
   const bureau = searchParams.get('bureau');
   const round = searchParams.get('round');
   const outcome = searchParams.get('outcome');
+   const methodology = searchParams.get('methodology');
   const awaitingResponse = searchParams.get('awaiting_response');
   const overdue = searchParams.get('overdue');
 
@@ -203,6 +204,10 @@ export async function GET(request: NextRequest) {
 
     if (outcome) {
       conditions.push(eq(disputes.outcome, outcome));
+    }
+
+    if (methodology) {
+      conditions.push(eq(disputes.methodology, methodology));
     }
 
     // Filter for disputes awaiting response (sent but no response yet)
