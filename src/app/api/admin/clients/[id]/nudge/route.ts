@@ -96,7 +96,7 @@ export async function POST(
         primary_task_title: blockingTasks[0]?.title || '',
         waiting_days: waitingDays,
         trigger_reason: reason,
-        waiting_since: waitingSince?.toISOString() ?? null,
+        waiting_since: waitingSince?.toISOString() ?? undefined,
         triggered_by: adminUser.id,
         kind: 'client_stalled_nudge',
       });

@@ -239,7 +239,7 @@ export default function EmailTemplatesPage() {
           ].map((tab, index) => (
             <Button
               key={tab.value}
-              variant={activeTab === tab.value ? 'default' : 'outline'}
+              variant={activeTab === tab.value ? 'secondary' : 'outline'}
               size="sm"
               onClick={() => setActiveTab(tab.value as typeof activeTab)}
               className={
