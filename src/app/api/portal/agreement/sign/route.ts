@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { clientAgreements, disclosureAcknowledgments, clients } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { clientAgreements, disclosureAcknowledgments, clients, tasks } from '@/db/schema';
+import { and, eq, ilike, or } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 
@@ -211,6 +212,55 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       })
       .where(eq(clientAgreements.id, agreementId));
+
+    // Automatically complete any "sign agreement" client tasks and create an internal follow-up task
+    try {
+      const statusNotDone = or(
+        eq(tasks.status, 'todo'),
+        eq(tasks.status, 'in_progress'),
+        eq(tasks.status, 'review'),
+      );
+
+      const titleCondition = or(
+        ilike(tasks.title, '%agreement%'),
+        ilike(tasks.title, '%service agreement%'),
+        ilike(tasks.title, '%sign%agreement%'),
+      );
+
+      await db
+        .update(tasks)
+        .set({ status: 'done', completedAt: signedAt, updatedAt: new Date() })
+        .where(
+          and(
+            eq(tasks.clientId, client.id),
+            eq(tasks.visibleToClient, true),
+            statusNotDone,
+            titleCondition,
+          ),
+        );
+
+      const followUpTaskId = randomUUID();
+      const now = new Date();
+
+      await db.insert(tasks).values({
+        id: followUpTaskId,
+        clientId: client.id,
+        assigneeId: null,
+        createdById: null,
+        title: 'Onboard client after agreement signed',
+        description: 'Automatically created when the client signed the service agreement.',
+        status: 'todo',
+        priority: 'high',
+        dueDate: null,
+        completedAt: null,
+        visibleToClient: false,
+        isBlocking: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (taskError) {
+      console.error('Error auto-updating tasks for agreement sign:', taskError);
+    }
 
     return NextResponse.json({
       success: true,
