@@ -97,14 +97,14 @@ export default function AgreementsPage() {
   const openEditModal = (template: AgreementTemplate) => {
     setEditingTemplate(template);
     setFormData({
-      name: template.name,
-      version: template.version,
-      content: template.content,
+      name: template.name || '',
+      version: template.version || '1.0',
+      content: template.content || '',
       requiredDisclosures: template.required_disclosures 
         ? JSON.parse(template.required_disclosures) 
         : REQUIRED_DISCLOSURES_NY,
-      cancellationPeriodDays: template.cancellation_period_days,
-      isActive: template.is_active,
+      cancellationPeriodDays: template.cancellation_period_days ?? 3,
+      isActive: template.is_active ?? false,
     });
     setIsModalOpen(true);
   };
@@ -196,13 +196,13 @@ export default function AgreementsPage() {
   const handleDuplicate = (template: AgreementTemplate) => {
     setEditingTemplate(null);
     setFormData({
-      name: `${template.name} (Copy)`,
+      name: `${template.name || ''} (Copy)`,
       version: '1.0',
-      content: template.content,
+      content: template.content || '',
       requiredDisclosures: template.required_disclosures 
         ? JSON.parse(template.required_disclosures) 
         : REQUIRED_DISCLOSURES_NY,
-      cancellationPeriodDays: template.cancellation_period_days,
+      cancellationPeriodDays: template.cancellation_period_days ?? 3,
       isActive: true,
     });
     setIsModalOpen(true);
@@ -514,7 +514,7 @@ export default function AgreementsPage() {
                   <input
                     type="checkbox"
                     id="is_active"
-                    checked={formData.isActive}
+                    checked={formData.isActive ?? false}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                     className="w-4 h-4"
                   />

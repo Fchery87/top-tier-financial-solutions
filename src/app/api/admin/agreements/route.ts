@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     if (type === 'template') {
       // Create agreement template
-      const { name, content, requiredDisclosures, cancellationPeriodDays } = body;
+      const { name, content, requiredDisclosures, cancellationPeriodDays, version, isActive } = body;
 
       if (!name || !content) {
         return NextResponse.json({ error: 'Name and content are required' }, { status: 400 });
@@ -104,10 +104,11 @@ export async function POST(request: NextRequest) {
       await db.insert(agreementTemplates).values({
         id,
         name,
+        version: version || '1.0',
         content,
         requiredDisclosures: requiredDisclosures ? JSON.stringify(requiredDisclosures) : null,
         cancellationPeriodDays: cancellationPeriodDays || 3,
-        isActive: true,
+        isActive: isActive ?? true,
       });
 
       return NextResponse.json({ id, message: 'Template created successfully' });
