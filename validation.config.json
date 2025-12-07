@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "perfectionistProfile": "perfectionist",
+  "profiles": {
+    "quick": {
+      "description": "Fast validation on changed files only",
+      "commands": ["lint"],
+      "changedFilesOnly": true
+    },
+    "full": {
+      "description": "Full project validation",
+      "commands": ["lint", "typecheck", "build"]
+    },
+    "perfectionist": {
+      "description": "Complete validation with tests and coverage",
+      "commands": ["lint", "typecheck", "test", "build", "python-lint"]
+    },
+    "ci": {
+      "description": "CI pipeline validation",
+      "commands": ["lint", "typecheck", "test:coverage", "build"],
+      "failOnWarning": true,
+      "outputReport": true
+    }
+  },
+  "commands": {
+    "lint": "npm run lint",
+    "typecheck": "npx tsc --noEmit",
+    "test": "npm run test",
+    "test:coverage": "npm run test:coverage",
+    "build": "npm run build",
+    "python-lint": "./venv/bin/ruff check api/"
+  },
+  "coverage": {
+    "minimum": 70,
+    "target": 80
+  },
+  "exclude": [
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "venv/**",
+    "__pycache__/**"
+  ],
+  "severityOverrides": {
+    "unused-vars": "low",
+    "missing-types": "medium"
+  },
+  "taskHub": "VALIDATION_TASKS.md",
+  "reportOutput": "validation-report.json"
+}

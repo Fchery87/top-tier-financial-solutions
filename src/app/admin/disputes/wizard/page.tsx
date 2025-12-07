@@ -305,8 +305,8 @@ export default function DisputeWizardPage() {
   const [_reasonCodes, setReasonCodes] = React.useState<ReasonCode[]>([]);
   const [_disputeTypes, setDisputeTypes] = React.useState<DisputeType[]>([]);
   const [selectedReasonCodes, setSelectedReasonCodes] = React.useState<string[]>([]);
-  const [_selectedDisputeType, _setSelectedDisputeType] = React.useState('standard');
-  const [_customReason, _setCustomReason] = React.useState('');
+  const [selectedDisputeType, _setSelectedDisputeType] = React.useState('standard');
+  const [customReason, _setCustomReason] = React.useState('');
 
   // Step 5 - Generated Letters
   const [generatedLetters, setGeneratedLetters] = React.useState<Array<{

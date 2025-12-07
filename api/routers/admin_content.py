@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select
-from pydantic import BaseModel
-from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
 
-from ..database import get_session
-from ..models import Page, Testimonial, Disclaimer, FAQItem, AdminUser
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
 from ..auth import get_current_user
+from ..database import get_session
+from ..models import AdminUser, Disclaimer, FAQItem, Page, Testimonial
 
 router = APIRouter(prefix="/admin", tags=["admin-content"])
 
@@ -16,46 +16,46 @@ router = APIRouter(prefix="/admin", tags=["admin-content"])
 class CreatePageRequest(BaseModel):
     slug: str
     title: str
-    hero_headline: Optional[str] = None
-    hero_subheadline: Optional[str] = None
-    main_content_json: Optional[str] = None
-    cta_text: Optional[str] = None
-    cta_link: Optional[str] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
+    hero_headline: str | None = None
+    hero_subheadline: str | None = None
+    main_content_json: str | None = None
+    cta_text: str | None = None
+    cta_link: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
     is_published: bool = False
 
 
 class UpdatePageRequest(BaseModel):
-    title: Optional[str] = None
-    hero_headline: Optional[str] = None
-    hero_subheadline: Optional[str] = None
-    main_content_json: Optional[str] = None
-    cta_text: Optional[str] = None
-    cta_link: Optional[str] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
-    is_published: Optional[bool] = None
+    title: str | None = None
+    hero_headline: str | None = None
+    hero_subheadline: str | None = None
+    main_content_json: str | None = None
+    cta_text: str | None = None
+    cta_link: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
+    is_published: bool | None = None
 
 
 class PageResponse(BaseModel):
     id: str
     slug: str
     title: str
-    hero_headline: Optional[str] = None
-    hero_subheadline: Optional[str] = None
-    main_content_json: Optional[str] = None
-    cta_text: Optional[str] = None
-    cta_link: Optional[str] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
+    hero_headline: str | None = None
+    hero_subheadline: str | None = None
+    main_content_json: str | None = None
+    cta_text: str | None = None
+    cta_link: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
     is_published: bool
     created_at: datetime
     updated_at: datetime
 
 
 class PageListResponse(BaseModel):
-    items: List[PageResponse]
+    items: list[PageResponse]
     total: int
     page: int
     limit: int
@@ -64,24 +64,24 @@ class PageListResponse(BaseModel):
 # Request/Response models for Testimonials
 class CreateTestimonialRequest(BaseModel):
     author_name: str
-    author_location: Optional[str] = None
+    author_location: str | None = None
     quote: str
     order_index: int = 0
     is_approved: bool = False
 
 
 class UpdateTestimonialRequest(BaseModel):
-    author_name: Optional[str] = None
-    author_location: Optional[str] = None
-    quote: Optional[str] = None
-    order_index: Optional[int] = None
-    is_approved: Optional[bool] = None
+    author_name: str | None = None
+    author_location: str | None = None
+    quote: str | None = None
+    order_index: int | None = None
+    is_approved: bool | None = None
 
 
 class TestimonialResponse(BaseModel):
     id: str
     author_name: str
-    author_location: Optional[str] = None
+    author_location: str | None = None
     quote: str
     order_index: int
     is_approved: bool
@@ -90,7 +90,7 @@ class TestimonialResponse(BaseModel):
 
 
 class TestimonialListResponse(BaseModel):
-    items: List[TestimonialResponse]
+    items: list[TestimonialResponse]
     total: int
     page: int
     limit: int
@@ -105,10 +105,10 @@ class CreateFAQRequest(BaseModel):
 
 
 class UpdateFAQRequest(BaseModel):
-    question: Optional[str] = None
-    answer: Optional[str] = None
-    display_order: Optional[int] = None
-    is_published: Optional[bool] = None
+    question: str | None = None
+    answer: str | None = None
+    display_order: int | None = None
+    is_published: bool | None = None
 
 
 class FAQResponse(BaseModel):
@@ -122,7 +122,7 @@ class FAQResponse(BaseModel):
 
 
 class FAQListResponse(BaseModel):
-    items: List[FAQResponse]
+    items: list[FAQResponse]
     total: int
     page: int
     limit: int
@@ -132,29 +132,29 @@ class FAQListResponse(BaseModel):
 class CreateDisclaimerRequest(BaseModel):
     name: str
     content: str
-    display_hint: Optional[str] = None
+    display_hint: str | None = None
     is_active: bool = True
 
 
 class UpdateDisclaimerRequest(BaseModel):
-    name: Optional[str] = None
-    content: Optional[str] = None
-    display_hint: Optional[str] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    content: str | None = None
+    display_hint: str | None = None
+    is_active: bool | None = None
 
 
 class DisclaimerResponse(BaseModel):
     id: str
     name: str
     content: str
-    display_hint: Optional[str] = None
+    display_hint: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
 
 
 class DisclaimerListResponse(BaseModel):
-    items: List[DisclaimerResponse]
+    items: list[DisclaimerResponse]
     total: int
     page: int
     limit: int
@@ -171,13 +171,13 @@ async def list_pages(
 ):
     """List all website content pages with pagination"""
     offset = (page - 1) * limit
-    
+
     statement = select(Page).offset(offset).limit(limit)
     pages = session.exec(statement).all()
-    
+
     count_statement = select(Page)
     total = len(session.exec(count_statement).all())
-    
+
     return PageListResponse(
         items=[
             PageResponse(
@@ -213,18 +213,18 @@ async def create_page(
     # Check if slug already exists
     statement = select(Page).where(Page.slug == request.slug)
     existing = session.exec(statement).first()
-    
+
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Page with slug '{request.slug}' already exists"
         )
-    
+
     page = Page(**request.model_dump())
     session.add(page)
     session.commit()
     session.refresh(page)
-    
+
     return PageResponse(
         id=str(page.id),
         slug=page.slug,
@@ -250,13 +250,13 @@ async def get_page(
 ):
     """Get a specific page by ID"""
     page = session.get(Page, id)
-    
+
     if not page:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Page not found"
         )
-    
+
     return PageResponse(
         id=str(page.id),
         slug=page.slug,
@@ -283,23 +283,23 @@ async def update_page(
 ):
     """Update an existing page"""
     page = session.get(Page, id)
-    
+
     if not page:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Page not found"
         )
-    
+
     # Update fields
     update_data = request.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(page, key, value)
-    
+
     page.updated_at = datetime.utcnow()
     session.add(page)
     session.commit()
     session.refresh(page)
-    
+
     return PageResponse(
         id=str(page.id),
         slug=page.slug,
@@ -325,13 +325,13 @@ async def delete_page(
 ):
     """Delete a page"""
     page = session.get(Page, id)
-    
+
     if not page:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Page not found"
         )
-    
+
     session.delete(page)
     session.commit()
 
@@ -342,25 +342,25 @@ async def delete_page(
 async def list_testimonials(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
-    is_approved: Optional[bool] = None,
+    is_approved: bool | None = None,
     session: Session = Depends(get_session),
     current_user: AdminUser = Depends(get_current_user)
 ):
     """List all testimonials with optional filtering"""
     offset = (page - 1) * limit
-    
+
     statement = select(Testimonial)
     if is_approved is not None:
         statement = statement.where(Testimonial.is_approved == is_approved)
-    
+
     statement = statement.offset(offset).limit(limit).order_by(Testimonial.order_index)
     testimonials = session.exec(statement).all()
-    
+
     count_statement = select(Testimonial)
     if is_approved is not None:
         count_statement = count_statement.where(Testimonial.is_approved == is_approved)
     total = len(session.exec(count_statement).all())
-    
+
     return TestimonialListResponse(
         items=[
             TestimonialResponse(
@@ -392,7 +392,7 @@ async def create_testimonial(
     session.add(testimonial)
     session.commit()
     session.refresh(testimonial)
-    
+
     return TestimonialResponse(
         id=str(testimonial.id),
         author_name=testimonial.author_name,
@@ -414,22 +414,22 @@ async def update_testimonial(
 ):
     """Update an existing testimonial"""
     testimonial = session.get(Testimonial, id)
-    
+
     if not testimonial:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Testimonial not found"
         )
-    
+
     update_data = request.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(testimonial, key, value)
-    
+
     testimonial.updated_at = datetime.utcnow()
     session.add(testimonial)
     session.commit()
     session.refresh(testimonial)
-    
+
     return TestimonialResponse(
         id=str(testimonial.id),
         author_name=testimonial.author_name,
@@ -450,13 +450,13 @@ async def delete_testimonial(
 ):
     """Delete a testimonial"""
     testimonial = session.get(Testimonial, id)
-    
+
     if not testimonial:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Testimonial not found"
         )
-    
+
     session.delete(testimonial)
     session.commit()
 
@@ -467,25 +467,25 @@ async def delete_testimonial(
 async def list_faqs(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
-    is_published: Optional[bool] = None,
+    is_published: bool | None = None,
     session: Session = Depends(get_session),
     current_user: AdminUser = Depends(get_current_user)
 ):
     """List all FAQ items with optional filtering"""
     offset = (page - 1) * limit
-    
+
     statement = select(FAQItem)
     if is_published is not None:
         statement = statement.where(FAQItem.is_published == is_published)
-    
+
     statement = statement.offset(offset).limit(limit).order_by(FAQItem.display_order)
     faqs = session.exec(statement).all()
-    
+
     count_statement = select(FAQItem)
     if is_published is not None:
         count_statement = count_statement.where(FAQItem.is_published == is_published)
     total = len(session.exec(count_statement).all())
-    
+
     return FAQListResponse(
         items=[
             FAQResponse(
@@ -516,7 +516,7 @@ async def create_faq(
     session.add(faq)
     session.commit()
     session.refresh(faq)
-    
+
     return FAQResponse(
         id=str(faq.id),
         question=faq.question,
@@ -537,22 +537,22 @@ async def update_faq(
 ):
     """Update an existing FAQ item"""
     faq = session.get(FAQItem, id)
-    
+
     if not faq:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="FAQ not found"
         )
-    
+
     update_data = request.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(faq, key, value)
-    
+
     faq.updated_at = datetime.utcnow()
     session.add(faq)
     session.commit()
     session.refresh(faq)
-    
+
     return FAQResponse(
         id=str(faq.id),
         question=faq.question,
@@ -572,13 +572,13 @@ async def delete_faq(
 ):
     """Delete an FAQ item"""
     faq = session.get(FAQItem, id)
-    
+
     if not faq:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="FAQ not found"
         )
-    
+
     session.delete(faq)
     session.commit()
 
@@ -589,25 +589,25 @@ async def delete_faq(
 async def list_disclaimers(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
-    is_active: Optional[bool] = None,
+    is_active: bool | None = None,
     session: Session = Depends(get_session),
     current_user: AdminUser = Depends(get_current_user)
 ):
     """List all legal disclaimers with optional filtering"""
     offset = (page - 1) * limit
-    
+
     statement = select(Disclaimer)
     if is_active is not None:
         statement = statement.where(Disclaimer.is_active == is_active)
-    
+
     statement = statement.offset(offset).limit(limit)
     disclaimers = session.exec(statement).all()
-    
+
     count_statement = select(Disclaimer)
     if is_active is not None:
         count_statement = count_statement.where(Disclaimer.is_active == is_active)
     total = len(session.exec(count_statement).all())
-    
+
     return DisclaimerListResponse(
         items=[
             DisclaimerResponse(
@@ -637,18 +637,18 @@ async def create_disclaimer(
     # Check if name already exists
     statement = select(Disclaimer).where(Disclaimer.name == request.name)
     existing = session.exec(statement).first()
-    
+
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Disclaimer with name '{request.name}' already exists"
         )
-    
+
     disclaimer = Disclaimer(**request.model_dump())
     session.add(disclaimer)
     session.commit()
     session.refresh(disclaimer)
-    
+
     return DisclaimerResponse(
         id=str(disclaimer.id),
         name=disclaimer.name,
@@ -669,22 +669,22 @@ async def update_disclaimer(
 ):
     """Update an existing disclaimer"""
     disclaimer = session.get(Disclaimer, id)
-    
+
     if not disclaimer:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Disclaimer not found"
         )
-    
+
     update_data = request.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(disclaimer, key, value)
-    
+
     disclaimer.updated_at = datetime.utcnow()
     session.add(disclaimer)
     session.commit()
     session.refresh(disclaimer)
-    
+
     return DisclaimerResponse(
         id=str(disclaimer.id),
         name=disclaimer.name,
@@ -704,12 +704,12 @@ async def delete_disclaimer(
 ):
     """Delete a disclaimer"""
     disclaimer = session.get(Disclaimer, id)
-    
+
     if not disclaimer:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Disclaimer not found"
         )
-    
+
     session.delete(disclaimer)
     session.commit()

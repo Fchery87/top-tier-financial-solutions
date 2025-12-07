@@ -1,7 +1,8 @@
-from sqlmodel import create_engine, Session, SQLModel
-from typing import Generator
-from dotenv import load_dotenv
 import os
+from collections.abc import Generator
+
+from dotenv import load_dotenv
+from sqlmodel import Session, SQLModel, create_engine
 
 # Load environment variables from .env file
 load_dotenv()

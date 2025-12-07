@@ -1,18 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
-from pydantic import BaseModel, EmailStr
 from datetime import timedelta
-from typing import Optional
 
-from ..database import get_session
-from ..models import AdminUser
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr
+from sqlmodel import Session, select
+
 from ..auth import (
-    get_password_hash,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
     get_current_user,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    get_password_hash,
 )
+from ..database import get_session
+from ..models import AdminUser
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -53,20 +53,20 @@ async def register_admin_user(
     # Check if user already exists
     statement = select(AdminUser).where(AdminUser.email == request.email)
     existing_user = session.exec(statement).first()
-    
+
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User with this email already exists"
         )
-    
+
     # Validate password strength (basic validation)
     if len(request.password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password must be at least 8 characters long"
         )
-    
+
     # Create new user
     hashed_password = get_password_hash(request.password)
     new_user = AdminUser(
@@ -75,18 +75,18 @@ async def register_admin_user(
         hashed_password=hashed_password,
         role=request.role
     )
-    
+
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
-    
+
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": new_user.email},
         expires_delta=access_token_expires
     )
-    
+
     return AuthResponse(
         access_token=access_token,
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
@@ -100,21 +100,21 @@ async def login_admin_user(
 ):
     """Authenticate admin user and get JWT token"""
     user = authenticate_user(session, request.email, request.password)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email},
         expires_delta=access_token_expires
     )
-    
+
     return AuthResponse(
         access_token=access_token,
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
@@ -131,7 +131,7 @@ async def refresh_auth_token(
         data={"sub": current_user.email},
         expires_delta=access_token_expires
     )
-    
+
     return AuthResponse(
         access_token=access_token,
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60

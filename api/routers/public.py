@@ -1,15 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
-from pydantic import BaseModel, EmailStr
-from typing import List, Optional
-from datetime import datetime
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
+import smtplib
+from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr
+from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Page, Testimonial, Disclaimer, FAQItem, ConsultationRequest, ConsultationStatus
+from ..models import (
+    ConsultationRequest,
+    ConsultationStatus,
+    Disclaimer,
+    FAQItem,
+    Page,
+    Testimonial,
+)
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -19,13 +26,13 @@ class WebsiteContentResponse(BaseModel):
     id: str
     slug: str
     title: str
-    content: Optional[str] = None
-    hero_headline: Optional[str] = None
-    hero_subheadline: Optional[str] = None
-    cta_text: Optional[str] = None
-    cta_link: Optional[str] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
+    content: str | None = None
+    hero_headline: str | None = None
+    hero_subheadline: str | None = None
+    cta_text: str | None = None
+    cta_link: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
     is_published: bool
     created_at: datetime
     updated_at: datetime
@@ -34,7 +41,7 @@ class WebsiteContentResponse(BaseModel):
 class TestimonialResponse(BaseModel):
     id: str
     author_name: str
-    author_location: Optional[str] = None
+    author_location: str | None = None
     quote: str
     created_at: datetime
     updated_at: datetime
@@ -44,7 +51,7 @@ class DisclaimerResponse(BaseModel):
     id: str
     name: str
     content: str
-    display_hint: Optional[str] = None
+    display_hint: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -62,8 +69,8 @@ class FAQResponse(BaseModel):
 class ContactFormRequest(BaseModel):
     full_name: str
     email: EmailStr
-    phone_number: Optional[str] = None
-    message: Optional[str] = None
+    phone_number: str | None = None
+    message: str | None = None
 
 
 class ContactFormResponse(BaseModel):
@@ -79,13 +86,13 @@ async def get_website_content_by_slug(
     """Retrieve specific website content by slug"""
     statement = select(Page).where(Page.slug == slug, Page.is_published == True)
     page = session.exec(statement).first()
-    
+
     if not page:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Content with slug '{slug}' not found"
         )
-    
+
     return WebsiteContentResponse(
         id=str(page.id),
         slug=page.slug,
@@ -103,7 +110,7 @@ async def get_website_content_by_slug(
     )
 
 
-@router.get("/testimonials", response_model=List[TestimonialResponse])
+@router.get("/testimonials", response_model=list[TestimonialResponse])
 async def get_approved_testimonials(
     session: Session = Depends(get_session)
 ):
@@ -111,9 +118,9 @@ async def get_approved_testimonials(
     statement = select(Testimonial).where(
         Testimonial.is_approved == True
     ).order_by(Testimonial.order_index)
-    
+
     testimonials = session.exec(statement).all()
-    
+
     return [
         TestimonialResponse(
             id=str(t.id),
@@ -127,14 +134,14 @@ async def get_approved_testimonials(
     ]
 
 
-@router.get("/disclaimers", response_model=List[DisclaimerResponse])
+@router.get("/disclaimers", response_model=list[DisclaimerResponse])
 async def get_active_disclaimers(
     session: Session = Depends(get_session)
 ):
     """Retrieve all active legal disclaimers"""
     statement = select(Disclaimer).where(Disclaimer.is_active == True)
     disclaimers = session.exec(statement).all()
-    
+
     return [
         DisclaimerResponse(
             id=str(d.id),
@@ -148,7 +155,7 @@ async def get_active_disclaimers(
     ]
 
 
-@router.get("/faqs", response_model=List[FAQResponse])
+@router.get("/faqs", response_model=list[FAQResponse])
 async def get_published_faqs(
     session: Session = Depends(get_session)
 ):
@@ -156,9 +163,9 @@ async def get_published_faqs(
     statement = select(FAQItem).where(
         FAQItem.is_published == True
     ).order_by(FAQItem.display_order)
-    
+
     faqs = session.exec(statement).all()
-    
+
     return [
         FAQResponse(
             id=str(f.id),
@@ -181,30 +188,30 @@ def send_contact_form_email(form_data: ContactFormRequest):
     smtp_user = os.getenv("SMTP_USER")
     smtp_password = os.getenv("SMTP_PASSWORD")
     recipient_email = os.getenv("CONTACT_EMAIL", smtp_user)
-    
+
     if not smtp_user or not smtp_password:
         print("Warning: SMTP credentials not configured. Email notification skipped.")
         return
-    
+
     # Create email message
     msg = MIMEMultipart()
     msg['From'] = smtp_user
     msg['To'] = recipient_email
     msg['Subject'] = f"New Contact Form Submission from {form_data.full_name}"
-    
+
     body = f"""
     New contact form submission received:
-    
+
     Name: {form_data.full_name}
     Email: {form_data.email}
     Phone: {form_data.phone_number or 'Not provided'}
-    
+
     Message:
     {form_data.message or 'No message provided'}
     """
-    
+
     msg.attach(MIMEText(body, 'plain'))
-    
+
     try:
         # Send email
         with smtplib.SMTP(smtp_host, smtp_port) as server:
@@ -228,12 +235,12 @@ async def submit_contact_form(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Full name is required"
         )
-    
+
     # Split full name into first and last name
     name_parts = request.full_name.strip().split(maxsplit=1)
     first_name = name_parts[0]
     last_name = name_parts[1] if len(name_parts) > 1 else ""
-    
+
     # Create consultation request
     consultation_request = ConsultationRequest(
         first_name=first_name,
@@ -243,18 +250,18 @@ async def submit_contact_form(
         message=request.message,
         status=ConsultationStatus.new
     )
-    
+
     session.add(consultation_request)
     session.commit()
     session.refresh(consultation_request)
-    
+
     # Send email notification (non-blocking)
     try:
         send_contact_form_email(request)
     except Exception as e:
         print(f"Email notification failed: {e}")
         # Don't fail the request if email fails
-    
+
     return ContactFormResponse(
         id=str(consultation_request.id)
     )

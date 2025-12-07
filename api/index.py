@@ -1,10 +1,11 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 
 from .database import create_db_and_tables
-from .routers import auth, public, admin_content, admin_leads
+from .routers import admin_content, admin_leads, auth, public
 
 
 @asynccontextmanager
