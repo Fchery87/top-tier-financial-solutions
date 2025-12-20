@@ -134,6 +134,44 @@ credentials/
 .parcel-cache/
 
 # =============================================================================
+# Additional Framework Specific
+# =============================================================================
+# Factory AI
+.factory/secrets/
+.factory/cache/
+
+# Drizzle Kit (except config)
+drizzle-kit.log
+
+# Tailwind CSS
+.tailwindcss/
+
+# Playwright/E2E Testing
+/playwright-report/
+/test-results/
+
+# Storybook
+/storybook-static
+/.storybook-out
+
+# =============================================================================
+# Workspace / Tooling
+# =============================================================================
+# Keep existing workspace file
+!.code-workspace
+.vscode/settings.json
+.vscode/launch.json
+
+# =============================================================================
+# AI/ML Model Files
+# =============================================================================
+*.pkl
+*.pickle
+*.joblib
+*.model
+*.onnx
+
+# =============================================================================
 # Temporary Documentation (keep only README.md and SETUP_GUIDE.md in root)
 # =============================================================================
 /*-FIX*.md
