@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
-import { disputes, negativeItems, clients } from '@/db/schema';
+import { disputes, negativeItems, clients, disputeOutcomes } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
@@ -86,6 +86,11 @@ export async function GET(
         outcome: dispute.outcome,
         response_notes: dispute.responseNotes,
         response_document_url: dispute.responseDocumentUrl,
+        response_channel: dispute.responseChannel,
+        score_impact: dispute.scoreImpact,
+        reason_codes: dispute.reasonCodes,
+        analysis_confidence: dispute.analysisConfidence,
+        auto_selected: dispute.autoSelected,
         escalation_reason: dispute.escalationReason,
         creditor_name: dispute.creditorName || negativeItem?.creditorName,
         account_number: dispute.accountNumber,
@@ -127,11 +132,17 @@ export async function PUT(
       outcome,
       responseNotes,
       responseDocumentUrl,
+      responseChannel,
       trackingNumber,
       sentAt,
       responseReceivedAt,
       escalationReason,
       createNextRound,
+      scoreImpact,
+      reasonCodes,
+      analysisConfidence,
+      autoSelected,
+      responseType,
     } = body;
 
     // Get current dispute
@@ -143,6 +154,16 @@ export async function PUT(
 
     if (!currentDispute) {
       return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+    }
+
+    let negativeItem: typeof negativeItems.$inferSelect | null = null;
+    if (currentDispute.negativeItemId) {
+      const [item] = await db
+        .select()
+        .from(negativeItems)
+        .where(eq(negativeItems.id, currentDispute.negativeItemId))
+        .limit(1);
+      negativeItem = item || null;
     }
 
     // Build update object
@@ -164,6 +185,26 @@ export async function PUT(
 
     if (responseDocumentUrl !== undefined) {
       updateData.responseDocumentUrl = responseDocumentUrl;
+    }
+
+    if (responseChannel !== undefined) {
+      updateData.responseChannel = responseChannel;
+    }
+
+    if (scoreImpact !== undefined) {
+      updateData.scoreImpact = scoreImpact;
+    }
+
+    if (reasonCodes !== undefined) {
+      updateData.reasonCodes = Array.isArray(reasonCodes) ? JSON.stringify(reasonCodes) : reasonCodes;
+    }
+
+    if (analysisConfidence !== undefined) {
+      updateData.analysisConfidence = Math.round(analysisConfidence);
+    }
+
+    if (autoSelected !== undefined) {
+      updateData.autoSelected = !!autoSelected;
     }
 
     if (trackingNumber !== undefined) {
@@ -211,6 +252,8 @@ export async function PUT(
         ...(status !== undefined && { status }),
         ...(outcome !== undefined && { outcome }),
         ...(sentAt !== undefined && { sentAt }),
+        ...(responseChannel !== undefined && { responseChannel }),
+        ...(scoreImpact !== undefined && { scoreImpact }),
       },
     });
     updateData.escalationHistory = JSON.stringify(existingHistory);
@@ -223,6 +266,41 @@ export async function PUT(
     
     console.log(`[AUDIT] Dispute ${id} updated by admin ${adminUser.email}`);
 
+    let outcomeRecordId: string | null = null;
+    if (outcome) {
+      const outcomeId = randomUUID();
+      const responseDateValue = responseReceivedAt ? new Date(responseReceivedAt) : new Date();
+
+      await db.insert(disputeOutcomes).values({
+        id: outcomeId,
+        disputeId: currentDispute.id,
+        clientId: currentDispute.clientId,
+        bureau: currentDispute.bureau,
+        round: currentDispute.round,
+        outcome,
+        responseType: responseType || status || currentDispute.status,
+        responseChannel: responseChannel || currentDispute.responseChannel,
+        responseDate: responseDateValue,
+        scoreImpact: scoreImpact ?? currentDispute.scoreImpact ?? null,
+        reasonCodes: Array.isArray(reasonCodes)
+          ? JSON.stringify(reasonCodes)
+          : reasonCodes ?? currentDispute.reasonCodes ?? null,
+        methodology: currentDispute.methodology,
+        disputeType: currentDispute.disputeType,
+        itemType: negativeItem?.itemType || null,
+        creditorName: currentDispute.creditorName || negativeItem?.creditorName || null,
+        analysisConfidence: analysisConfidence !== undefined
+          ? Math.round(analysisConfidence)
+          : currentDispute.analysisConfidence ?? null,
+        responseDocumentUrl: responseDocumentUrl ?? currentDispute.responseDocumentUrl ?? null,
+        notes: responseNotes ?? null,
+        createdBy: adminUser.id,
+        createdAt: new Date(),
+      });
+
+      outcomeRecordId = outcomeId;
+    }
+
     // Auto-escalation: Create Round 2 dispute if item was verified
     let nextRoundDispute = null;
     if (createNextRound && outcome === 'verified' && currentDispute.negativeItemId) {
@@ -231,12 +309,6 @@ export async function PUT(
         .select()
         .from(clients)
         .where(eq(clients.id, currentDispute.clientId))
-        .limit(1);
-
-      const [negativeItem] = await db
-        .select()
-        .from(negativeItems)
-        .where(eq(negativeItems.id, currentDispute.negativeItemId))
         .limit(1);
 
       if (client && negativeItem) {
@@ -299,6 +371,13 @@ export async function PUT(
           dispute_type: created.disputeType,
           status: created.status,
         };
+
+        if (outcomeRecordId) {
+          await db
+            .update(disputeOutcomes)
+            .set({ nextDisputeId: created.id })
+            .where(eq(disputeOutcomes.id, outcomeRecordId));
+        }
       }
     }
 
@@ -358,6 +437,10 @@ export async function PUT(
         outcome: updatedDispute.outcome,
         response_notes: updatedDispute.responseNotes,
         tracking_number: updatedDispute.trackingNumber,
+        response_channel: updatedDispute.responseChannel,
+        score_impact: updatedDispute.scoreImpact,
+        analysis_confidence: updatedDispute.analysisConfidence,
+        auto_selected: updatedDispute.autoSelected,
         sent_at: updatedDispute.sentAt?.toISOString(),
         response_deadline: updatedDispute.responseDeadline?.toISOString(),
         response_received_at: updatedDispute.responseReceivedAt?.toISOString(),

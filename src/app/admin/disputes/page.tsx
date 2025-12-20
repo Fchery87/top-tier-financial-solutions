@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
 import { useAdminRole } from '@/contexts/AdminContext';
+import { DisputeCalendar } from '@/components/admin/DisputeCalendar';
 
 interface Dispute {
   id: string;
@@ -39,6 +40,11 @@ interface Dispute {
   response_received_at: string | null;
   outcome: string | null;
   response_notes: string | null;
+  response_document_url?: string | null;
+  response_channel: string | null;
+  score_impact: number | null;
+  analysis_confidence?: number | null;
+  auto_selected?: boolean;
   creditor_name: string | null;
   account_number: string | null;
   created_at: string;
@@ -67,6 +73,7 @@ const OUTCOME_OPTIONS = [
   { value: 'verified', label: 'Verified (Escalate)' },
   { value: 'updated', label: 'Updated/Modified' },
   { value: 'no_response', label: 'No Response (30+ days)' },
+  { value: 'frivolous', label: 'Marked Frivolous' },
 ];
 
 export default function DisputesPage() {
@@ -168,8 +175,12 @@ export default function DisputesPage() {
   const [responseOutcome, setResponseOutcome] = React.useState('');
   const [responseNotes, setResponseNotes] = React.useState('');
   const [responseDate, setResponseDate] = React.useState('');
+  const [responseChannel, setResponseChannel] = React.useState('mail');
+  const [responseDocumentUrl, setResponseDocumentUrl] = React.useState('');
+  const [scoreImpact, setScoreImpact] = React.useState('');
   const [createNextRound, setCreateNextRound] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
+  const [quickEscalatingId, setQuickEscalatingId] = React.useState<string | null>(null);
 
   const fetchDisputes = React.useCallback(async () => {
     setLoading(true);
@@ -203,6 +214,9 @@ export default function DisputesPage() {
     setResponseOutcome('');
     setResponseNotes('');
     setResponseDate(new Date().toISOString().split('T')[0]);
+    setResponseChannel(dispute.response_channel || 'mail');
+    setResponseDocumentUrl(dispute.response_document_url || '');
+    setScoreImpact(dispute.score_impact !== null && dispute.score_impact !== undefined ? String(dispute.score_impact) : '');
     setCreateNextRound(true);
     setShowResponseModal(true);
   };
@@ -219,6 +233,9 @@ export default function DisputesPage() {
           status: responseOutcome === 'deleted' ? 'resolved' : 'responded',
           outcome: responseOutcome,
           responseNotes,
+          responseChannel,
+          responseDocumentUrl: responseDocumentUrl || undefined,
+          scoreImpact: scoreImpact ? Number(scoreImpact) : undefined,
           responseReceivedAt: responseDate,
           createNextRound: responseOutcome === 'verified' && createNextRound,
           escalationReason: responseOutcome === 'verified' ? responseNotes : undefined,
@@ -240,6 +257,28 @@ export default function DisputesPage() {
       alert('Failed to log response');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleQuickRedispute = async (dispute: Dispute) => {
+    setQuickEscalatingId(dispute.id);
+    try {
+      const resp = await fetch(`/api/admin/disputes/${dispute.id}/quick-redispute`, { method: 'POST' });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        alert(err.error || 'Failed to create quick re-dispute');
+        return;
+      }
+      const data = await resp.json();
+      if (data?.message) {
+        alert(data.message);
+      }
+      fetchDisputes();
+    } catch (error) {
+      console.error('Error creating quick re-dispute:', error);
+      alert('Failed to create quick re-dispute');
+    } finally {
+      setQuickEscalatingId(null);
     }
   };
 
@@ -273,6 +312,8 @@ export default function DisputesPage() {
         return <FileText className="w-4 h-4 text-blue-500" />;
       case 'no_response':
         return <AlertTriangle className="w-4 h-4 text-orange-500" />;
+      case 'frivolous':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
       default:
         return null;
     }
@@ -391,6 +432,8 @@ export default function DisputesPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      <DisputeCalendar disputes={disputes} />
 
       {/* Filters */}
       <motion.div
@@ -580,6 +623,24 @@ export default function DisputesPage() {
                               Log Response
                             </Button>
                           )}
+                          {dispute.outcome === 'verified' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickRedispute(dispute);
+                              }}
+                              disabled={quickEscalatingId === dispute.id}
+                            >
+                              {quickEscalatingId === dispute.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                              )}
+                              Quick Re-Dispute
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -644,6 +705,46 @@ export default function DisputesPage() {
                       onChange={(e) => setResponseDate(e.target.value)}
                       className="mt-1"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium">Response Channel</label>
+                      <select
+                        value={responseChannel}
+                        onChange={(e) => setResponseChannel(e.target.value)}
+                        className="w-full h-10 px-3 mt-1 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="mail">Mail</option>
+                        <option value="online">Online Portal</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Score Impact (pts)</label>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 15"
+                        value={scoreImpact}
+                        onChange={(e) => setScoreImpact(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Response Document URL (optional)</label>
+                    <Input
+                      type="url"
+                      placeholder="https://..."
+                      value={responseDocumentUrl}
+                      onChange={(e) => setResponseDocumentUrl(e.target.value)}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Upload responses to R2 and paste the secure URL here for audit trail.
+                    </p>
                   </div>
 
                   <div>

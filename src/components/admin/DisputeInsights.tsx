@@ -3,7 +3,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Lightbulb, Scale, Clock, AlertTriangle } from "lucide-react";
+import { Lightbulb, Scale, Clock, AlertTriangle, Target, BadgeCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Loader2 } from "lucide-react";
 import { useAdminRole } from "@/contexts/AdminContext";
@@ -23,11 +23,28 @@ interface BureauPattern {
   no_response_rate: number;
 }
 
+interface ReasonCodeStat {
+  code: string;
+  total: number;
+  deleted: number;
+  success_rate: number;
+}
+
+interface CreditorStat {
+  creditor: string;
+  total: number;
+  deleted: number;
+  success_rate: number;
+}
+
 interface DisputeInsightsResponse {
   range: string;
   avg_time_to_deletion_days: number | null;
   methodology_effectiveness: MethodologyStat[];
   bureau_response_patterns: Record<string, BureauPattern>;
+  reason_code_effectiveness: ReasonCodeStat[];
+  creditor_effectiveness: CreditorStat[];
+  recommendations: string[];
 }
 
 export function DisputeInsights() {
@@ -93,6 +110,8 @@ export function DisputeInsights() {
 
   const methodologies = data.methodology_effectiveness;
   const bureauPatterns = data.bureau_response_patterns;
+  const reasonCodes = data.reason_code_effectiveness || [];
+  const creditors = data.creditor_effectiveness || [];
 
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
@@ -236,6 +255,63 @@ export function DisputeInsights() {
             )}
           </div>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Reason code effectiveness */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+              <Target className="w-3 h-3" /> Top reason codes
+            </p>
+            {reasonCodes.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Not enough data yet.</p>
+            ) : (
+              <div className="space-y-1">
+                {reasonCodes.map((r) => (
+                  <div key={r.code} className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-muted/40">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{r.code}</p>
+                      <p className="text-[11px] text-muted-foreground">{r.deleted}/{r.total} deleted</p>
+                    </div>
+                    <span className="ml-2 text-xs font-semibold text-green-500">{r.success_rate}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Creditor effectiveness */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+              <BadgeCheck className="w-3 h-3" /> Furnisher results
+            </p>
+            {creditors.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Not enough data yet.</p>
+            ) : (
+              <div className="space-y-1">
+                {creditors.map((c) => (
+                  <div key={c.creditor} className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-muted/40">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{c.creditor}</p>
+                      <p className="text-[11px] text-muted-foreground">{c.deleted}/{c.total} deleted</p>
+                    </div>
+                    <span className="ml-2 text-xs font-semibold text-green-500">{c.success_rate}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {data.recommendations && data.recommendations.length > 0 && (
+          <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Recommendations</p>
+            <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+              {data.recommendations.map((rec, idx) => (
+                <li key={idx}>{rec}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

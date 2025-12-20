@@ -43,6 +43,19 @@ export async function POST(request: NextRequest) {
       evidenceDocumentIds,
       fcraSections,
       disputedFields,
+      status,
+      round,
+      letterContent,
+      trackingNumber,
+      sentAt,
+      responseDeadline,
+      responseChannel,
+      scoreImpact,
+      reasonCodes,
+      escalationPath,
+      targetRecipient,
+      analysisConfidence,
+      autoSelected,
     } = body;
 
     if (!clientId || !bureau || !disputeReason) {
@@ -74,11 +87,11 @@ export async function POST(request: NextRequest) {
       negativeItem = item;
     }
 
-    // Generate dispute letter using AI generator with FCRA/CRSA/Metro2 compliance
-    const letterContent = await generateUniqueDisputeLetter({
+    // Generate dispute letter using AI generator with FCRA/CRSA/Metro2 compliance (unless caller provided content)
+    const generatedLetterContent = letterContent || await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
-      round: 1,
-      targetRecipient: 'bureau',
+      round: round || 1,
+      targetRecipient: targetRecipient || 'bureau',
       clientData: {
         name: `${client.firstName} ${client.lastName}`,
       },
@@ -91,11 +104,17 @@ export async function POST(request: NextRequest) {
         dateReported: negativeItem?.dateReported?.toISOString() || undefined,
         bureau,
       },
-      reasonCodes: [disputeReason.includes('not mine') ? 'not_mine' : 
-                    disputeReason.includes('never late') ? 'never_late' : 
-                    disputeReason.includes('wrong') ? 'wrong_balance' : 'not_mine'],
+      reasonCodes: Array.isArray(reasonCodes) && reasonCodes.length > 0
+        ? reasonCodes
+        : [disputeReason.includes('not mine') ? 'not_mine' : 
+           disputeReason.includes('never late') ? 'never_late' : 
+           disputeReason.includes('wrong') ? 'wrong_balance' : 'not_mine'],
       customReason: disputeReason,
     });
+
+    const normalizedConfidence = analysisConfidence !== undefined && analysisConfidence !== null
+      ? Math.round(analysisConfidence)
+      : null;
 
     // Create dispute record with admin audit trail
     const id = randomUUID();
@@ -109,6 +128,17 @@ export async function POST(request: NextRequest) {
       adminEmail: adminUser.email,
     }]);
 
+    const sentDate = sentAt ? new Date(sentAt) : null;
+    const computedResponseDeadline = sentDate
+      ? responseDeadline
+        ? new Date(responseDeadline)
+        : (() => {
+            const d = new Date(sentDate);
+            d.setDate(d.getDate() + 30);
+            return d;
+          })()
+      : null;
+
     await db.insert(disputes).values({
       id,
       clientId,
@@ -116,14 +146,25 @@ export async function POST(request: NextRequest) {
       bureau,
       disputeReason,
       disputeType: disputeType || 'standard',
-      status: 'draft',
-      round: 1,
-      letterContent,
+      status: status || 'draft',
+      round: round || 1,
+      letterContent: generatedLetterContent,
       methodology: methodology || null,
       fcraSections: fcraSections ? JSON.stringify(fcraSections) : null,
       disputedFields: disputedFields ? JSON.stringify(disputedFields) : null,
       evidenceDocumentIds: evidenceDocumentIds ? JSON.stringify(evidenceDocumentIds) : null,
       escalationHistory: initialHistory,
+      trackingNumber: trackingNumber || null,
+      sentAt: sentDate,
+      responseDeadline: computedResponseDeadline,
+      responseChannel: responseChannel || null,
+      scoreImpact: scoreImpact ?? null,
+      reasonCodes: reasonCodes ? JSON.stringify(reasonCodes) : null,
+      escalationPath: escalationPath || targetRecipient || 'bureau',
+      creditorName: negativeItem?.creditorName || null,
+      accountNumber: negativeItem?.id?.slice(-8) || null,
+      analysisConfidence: normalizedConfidence,
+      autoSelected: !!autoSelected,
       createdAt: now,
       updatedAt: now,
     });
@@ -147,6 +188,12 @@ export async function POST(request: NextRequest) {
       status: createdDispute.status,
       round: createdDispute.round,
       letter_content: createdDispute.letterContent,
+      tracking_number: createdDispute.trackingNumber,
+      sent_at: createdDispute.sentAt?.toISOString(),
+      response_deadline: createdDispute.responseDeadline?.toISOString(),
+      reason_codes: createdDispute.reasonCodes,
+      analysis_confidence: createdDispute.analysisConfidence,
+      auto_selected: createdDispute.autoSelected,
       created_at: createdDispute.createdAt?.toISOString(),
     }, { status: 201 });
   } catch (error) {
@@ -265,6 +312,12 @@ export async function GET(request: NextRequest) {
         response_received_at: d.responseReceivedAt?.toISOString(),
         outcome: d.outcome,
         response_notes: d.responseNotes,
+        response_document_url: d.responseDocumentUrl,
+        response_channel: d.responseChannel,
+        score_impact: d.scoreImpact,
+        reason_codes: d.reasonCodes,
+        analysis_confidence: d.analysisConfidence,
+        auto_selected: d.autoSelected,
         creditor_name: d.creditorName,
         account_number: d.accountNumber,
         created_at: d.createdAt?.toISOString(),

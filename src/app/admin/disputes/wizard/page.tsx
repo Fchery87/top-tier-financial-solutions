@@ -179,6 +179,7 @@ interface AIAnalysisSummary {
   itemCount: number;
   recommendedMethodology: string;
   allReasonCodes: string[];
+   recommendedReasonCodes?: string[];
   allMetro2Violations: string[];
   allFcraIssues: string[];
   averageConfidence: number;
@@ -282,6 +283,8 @@ export default function DisputeWizardPage() {
   const [aiAnalysisResults, setAiAnalysisResults] = React.useState<AIAnalysisResult[]>([]);
   const [aiAnalysisSummary, setAiAnalysisSummary] = React.useState<AIAnalysisSummary | null>(null);
   const [analyzingItems, setAnalyzingItems] = React.useState(false);
+  const [autoSelecting, setAutoSelecting] = React.useState(false);
+  const [autoSelectSummary, setAutoSelectSummary] = React.useState<string>('');
 
   // Discrepancy preflight
   const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
@@ -352,10 +355,12 @@ export default function DisputeWizardPage() {
       if (response.ok) {
         const data = await response.json();
         setNegativeItems(data.negative_items || []);
+        setSelectedItems([]);
         setPersonalInfoItems(data.personal_info_disputes || []);
         setInquiryItems(data.inquiry_disputes || []);
         setSelectedPersonalItems([]);
         setSelectedInquiryItems([]);
+        setAutoSelectSummary('');
       }
     } catch (error) {
       console.error('Error fetching negative items:', error);
@@ -500,6 +505,74 @@ export default function DisputeWizardPage() {
       return null;
     } finally {
       setAnalyzingItems(false);
+    }
+  };
+
+  const autoSelectDisputableItems = async () => {
+    if (!selectedClient) return;
+
+    setAutoSelecting(true);
+    setAutoSelectSummary('');
+    try {
+      const response = await fetch('/api/admin/disputes/auto-select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: selectedClient.id, round: disputeRound }),
+      });
+
+      if (!response.ok) {
+        alert('Failed to auto-select disputable items');
+        return;
+      }
+
+      const data = await response.json();
+      const recommendedIds: string[] = data.recommended_item_ids || [];
+      setSelectedItems(recommendedIds);
+
+      if (generationMethod === 'template') {
+        setItemDisputeInstructions(prev => {
+          const newMap = new Map(prev);
+          recommendedIds.forEach(id => {
+            if (!newMap.has(id)) {
+              newMap.set(id, { itemId: id, instructionType: 'preset', presetCode: '' });
+            }
+          });
+          return newMap;
+        });
+      }
+
+      if (data.summary?.recommendedMethodology) {
+        setSelectedMethodology(data.summary.recommendedMethodology);
+        setRecommendedMethodology(data.summary.recommendedMethodology);
+      }
+
+      if (data.summary?.recommendedReasonCodes) {
+        setSelectedReasonCodes(data.summary.recommendedReasonCodes);
+      }
+
+      setAiAnalysisResults(data.analyses || []);
+      setAiAnalysisSummary(
+        data.summary
+          ? {
+              itemCount: data.summary.itemCount ?? recommendedIds.length,
+              recommendedMethodology: data.summary.recommendedMethodology,
+              allReasonCodes: data.summary.allReasonCodes ?? [],
+              recommendedReasonCodes: data.summary.recommendedReasonCodes ?? [],
+              averageConfidence: data.summary.averageConfidence ?? 0,
+              allMetro2Violations: [],
+              allFcraIssues: [],
+              analysisNotes: '',
+            }
+          : null,
+      );
+      setAutoSelectSummary(
+        `Selected ${recommendedIds.length} of ${data.summary?.itemCount ?? negativeItems.length} disputable items (avg confidence ${data.summary?.averageConfidence ?? 0})`
+      );
+    } catch (error) {
+      console.error('Error auto-selecting items:', error);
+      alert('Error auto-selecting disputable items');
+    } finally {
+      setAutoSelecting(false);
     }
   };
 
@@ -865,6 +938,12 @@ export default function DisputeWizardPage() {
             creditorName: payload?.creditorName || item?.creditor_name,
             accountNumber: payload?.accountNumber || item?.account_number || null,
             generatedByAi: generationMethod === 'ai',
+            reasonCodes: selectedReasonCodes,
+            analysisConfidence: aiAnalysisSummary?.averageConfidence
+              ? Math.round(aiAnalysisSummary.averageConfidence * 100)
+              : undefined,
+            autoSelected: !!autoSelectSummary,
+            targetRecipient,
           }),
         });
       }
@@ -1283,6 +1362,19 @@ export default function DisputeWizardPage() {
                             );
                           })}
                           <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={autoSelectDisputableItems}
+                            disabled={!selectedClient || autoSelecting}
+                          >
+                            {autoSelecting ? (
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-3 h-3 mr-1" />
+                            )}
+                            Select All Disputable
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => {
@@ -1312,6 +1404,10 @@ export default function DisputeWizardPage() {
                           </Button>
                         </div>
                       </div>
+
+                      {autoSelectSummary && (
+                        <p className="text-xs text-muted-foreground">{autoSelectSummary}</p>
+                      )}
 
                       {negativeItems.map((item) => {
                         const isSelected = selectedItems.includes(item.id);
@@ -1682,6 +1778,12 @@ export default function DisputeWizardPage() {
                   No blocking discrepancies detected. ({discrepancySummary.total} total open discrepancies)
                 </div>
               ) : null}
+
+              {targetRecipient !== 'bureau' && (
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm text-blue-100">
+                  Enhanced creditor/furnisher letters enabled. This escalation will cite prior verification attempts and request direct investigation from the data furnisher.
+                </div>
+              )}
               {/* Round Selection */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Dispute Round</label>

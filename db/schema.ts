@@ -714,6 +714,8 @@ export const disputes = pgTable('disputes', {
   letterContent: text('letter_content'),
   letterTemplateId: text('letter_template_id'),
   generatedByAi: boolean('generated_by_ai').default(false),
+  analysisConfidence: integer('analysis_confidence'), // 0-100 confidence score from AI analysis
+  autoSelected: boolean('auto_selected').default(false), // Flag if the item was auto-selected as disputable
   trackingNumber: text('tracking_number'),
   sentAt: timestamp('sent_at'),
   responseDeadline: timestamp('response_deadline'),
@@ -722,6 +724,8 @@ export const disputes = pgTable('disputes', {
   responseNotes: text('response_notes'),
   // Enhanced tracking fields
   responseDocumentUrl: text('response_document_url'), // URL to uploaded bureau response document
+  responseChannel: text('response_channel'), // 'mail' | 'online' | 'phone' | 'email'
+  scoreImpact: integer('score_impact'), // Estimated score delta in points
   verificationMethod: text('verification_method'), // 'automated' | 'manual' | 'phone' | 'mail' | 'online'
   escalationReason: text('escalation_reason'), // Reason for escalation to next round
   creditorName: text('creditor_name'), // Denormalized for quick access
@@ -745,6 +749,35 @@ export const disputes = pgTable('disputes', {
   index("disputes_responseDeadline_idx").on(table.responseDeadline),
   index("disputes_methodology_idx").on(table.methodology),
   index("disputes_escalationReadyAt_idx").on(table.escalationReadyAt),
+]);
+
+// Dispute outcomes (normalized response tracking for analytics)
+export const disputeOutcomes = pgTable('dispute_outcomes', {
+  id: text('id').primaryKey(),
+  disputeId: text('dispute_id').notNull().references(() => disputes.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  bureau: text('bureau'),
+  round: integer('round'),
+  outcome: text('outcome').notNull(), // 'deleted' | 'verified' | 'updated' | 'no_response' | 'frivolous'
+  responseType: text('response_type'), // Bureau result type (e.g., updated, verified, deleted, frivolous)
+  responseChannel: text('response_channel'), // mail | online | phone | email
+  responseDate: timestamp('response_date'),
+  scoreImpact: integer('score_impact'),
+  reasonCodes: text('reason_codes'), // JSON array of reason codes used
+  methodology: text('methodology'),
+  disputeType: text('dispute_type'),
+  itemType: text('item_type'),
+  creditorName: text('creditor_name'),
+  analysisConfidence: integer('analysis_confidence'),
+  nextDisputeId: text('next_dispute_id').references(() => disputes.id, { onDelete: 'set null' }),
+  responseDocumentUrl: text('response_document_url'),
+  notes: text('notes'),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('dispute_outcomes_disputeId_idx').on(table.disputeId),
+  index('dispute_outcomes_clientId_idx').on(table.clientId),
+  index('dispute_outcomes_outcome_idx').on(table.outcome),
 ]);
 
 // Client approvals for dispute letters (client consent before/after mailing)
@@ -1083,6 +1116,26 @@ export const disputesRelations = relations(disputes, ({ one }) => ({
   negativeItem: one(negativeItems, {
     fields: [disputes.negativeItemId],
     references: [negativeItems.id],
+  }),
+}));
+
+export const disputeOutcomesRelations = relations(disputeOutcomes, ({ one }) => ({
+  dispute: one(disputes, {
+    fields: [disputeOutcomes.disputeId],
+    references: [disputes.id],
+  }),
+  client: one(clients, {
+    fields: [disputeOutcomes.clientId],
+    references: [clients.id],
+  }),
+  nextDispute: one(disputes, {
+    fields: [disputeOutcomes.nextDisputeId],
+    references: [disputes.id],
+    relationName: 'nextDisputeOutcome',
+  }),
+  createdBy: one(user, {
+    fields: [disputeOutcomes.createdBy],
+    references: [user.id],
   }),
 }));
 

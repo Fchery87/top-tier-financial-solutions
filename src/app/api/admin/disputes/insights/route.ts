@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
-import { disputes } from '@/db/schema';
+import { disputes, disputeOutcomes } from '@/db/schema';
 import { and, gte } from 'drizzle-orm';
 
 async function validateAdmin() {
@@ -52,18 +52,26 @@ export async function GET(request: NextRequest) {
       .from(disputes)
       .where(and(gte(disputes.createdAt, startDate)));
 
-    if (allDisputes.length === 0) {
+    const outcomeRows = await db
+      .select()
+      .from(disputeOutcomes)
+      .where(and(gte(disputeOutcomes.createdAt, startDate)));
+
+    if (allDisputes.length === 0 && outcomeRows.length === 0) {
       return NextResponse.json({
         range,
         avg_time_to_deletion_days: null,
         methodology_effectiveness: [],
         bureau_response_patterns: {},
+        reason_code_effectiveness: [],
+        creditor_effectiveness: [],
+        recommendations: [],
       });
     }
 
     const dayMs = 24 * 60 * 60 * 1000;
 
-    // Average time-to-deletion
+    // Average time-to-deletion (use disputes for precise timing)
     let deletionDaysSum = 0;
     let deletionCount = 0;
 
@@ -83,23 +91,56 @@ export async function GET(request: NextRequest) {
       ? Math.round((deletionDaysSum / deletionCount) * 10) / 10
       : null;
 
+    const analysisSource = (outcomeRows.length > 0 ? outcomeRows : allDisputes).map((entry) => ({
+      methodology: entry.methodology,
+      round: entry.round,
+      outcome: entry.outcome,
+      reasonCodes: 'reasonCodes' in entry ? (entry as { reasonCodes?: string | null }).reasonCodes ?? null : null,
+      creditorName: 'creditorName' in entry ? (entry as { creditorName?: string | null }).creditorName ?? null : null,
+    }));
+
     // Methodology effectiveness
     const methodologyMap = new Map<
       string,
       { total: number; deleted: number; roundsSum: number }
     >();
 
-    for (const d of allDisputes) {
-      const key = d.methodology || 'standard';
-      const entry = methodologyMap.get(key) || {
-        total: 0,
-        deleted: 0,
-        roundsSum: 0,
-      };
-      entry.total++;
-      entry.roundsSum += d.round || 1;
-      if (d.outcome === 'deleted') entry.deleted++;
-      methodologyMap.set(key, entry);
+    const reasonCodeMap = new Map<string, { total: number; deleted: number }>();
+    const creditorMap = new Map<string, { total: number; deleted: number }>();
+
+    const parseReasonCodes = (val: unknown) => {
+      if (!val) return [] as string[];
+      try {
+        const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [] as string[];
+      }
+    };
+
+    for (const entry of analysisSource) {
+      const key = entry.methodology || 'standard';
+      const mapEntry = methodologyMap.get(key) || { total: 0, deleted: 0, roundsSum: 0 };
+      mapEntry.total++;
+      mapEntry.roundsSum += (entry.round || 1);
+      if (entry.outcome === 'deleted') mapEntry.deleted++;
+      methodologyMap.set(key, mapEntry);
+
+      const codes = parseReasonCodes(entry.reasonCodes);
+      for (const code of codes) {
+        const reasonEntry = reasonCodeMap.get(code) || { total: 0, deleted: 0 };
+        reasonEntry.total++;
+        if (entry.outcome === 'deleted') reasonEntry.deleted++;
+        reasonCodeMap.set(code, reasonEntry);
+      }
+
+      if (entry.creditorName) {
+        const creditorName = entry.creditorName;
+        const credEntry = creditorMap.get(creditorName) || { total: 0, deleted: 0 };
+        credEntry.total++;
+        if (entry.outcome === 'deleted') credEntry.deleted++;
+        creditorMap.set(creditorName, credEntry);
+      }
     }
 
     const methodologyEffectiveness = Array.from(methodologyMap.entries())
@@ -107,40 +148,39 @@ export async function GET(request: NextRequest) {
         methodology,
         total: data.total,
         deleted: data.deleted,
-        success_rate:
-          data.total > 0
-            ? Math.round((data.deleted / data.total) * 100)
-            : 0,
-        avg_rounds:
-          data.total > 0
-            ? Math.round((data.roundsSum / data.total) * 10) / 10
-            : 0,
+        success_rate: data.total > 0 ? Math.round((data.deleted / data.total) * 100) : 0,
+        avg_rounds: data.total > 0 ? Math.round((data.roundsSum / data.total) * 10) / 10 : 0,
       }))
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => b.success_rate - a.success_rate)
       .slice(0, 5);
 
-    // Bureau response patterns
-    const bureauStats: Record<
-      string,
-      {
-        total: number;
-        deleted: number;
-        noResponse: number;
-        responseDaysSum: number;
-        responseCount: number;
-      }
-    > = {};
+    const reasonCodeEffectiveness = Array.from(reasonCodeMap.entries())
+      .map(([code, data]) => ({
+        code,
+        total: data.total,
+        deleted: data.deleted,
+        success_rate: data.total > 0 ? Math.round((data.deleted / data.total) * 100) : 0,
+      }))
+      .sort((a, b) => b.success_rate - a.success_rate || b.total - a.total)
+      .slice(0, 5);
+
+    const creditorEffectiveness = Array.from(creditorMap.entries())
+      .map(([creditor, data]) => ({
+        creditor,
+        total: data.total,
+        deleted: data.deleted,
+        success_rate: data.total > 0 ? Math.round((data.deleted / data.total) * 100) : 0,
+      }))
+      .sort((a, b) => b.deleted - a.deleted)
+      .slice(0, 5);
+
+    // Bureau response patterns (keep using disputes for timing context)
+    const bureauStats: Record<string, { total: number; deleted: number; noResponse: number; responseDaysSum: number; responseCount: number; }> = {};
 
     for (const d of allDisputes) {
       const bureau = d.bureau || 'unknown';
       if (!bureauStats[bureau]) {
-        bureauStats[bureau] = {
-          total: 0,
-          deleted: 0,
-          noResponse: 0,
-          responseDaysSum: 0,
-          responseCount: 0,
-        };
+        bureauStats[bureau] = { total: 0, deleted: 0, noResponse: 0, responseDaysSum: 0, responseCount: 0 };
       }
 
       const stats = bureauStats[bureau];
@@ -159,42 +199,39 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const bureauResponsePatterns = Object.entries(bureauStats).reduce(
-      (acc, [bureau, s]) => {
-        const avgResponseDays = s.responseCount
-          ? Math.round((s.responseDaysSum / s.responseCount) * 10) / 10
-          : null;
-        const deletedRate = s.total
-          ? Math.round((s.deleted / s.total) * 100)
-          : 0;
-        const noResponseRate = s.total
-          ? Math.round((s.noResponse / s.total) * 100)
-          : 0;
+    const bureauResponsePatterns = Object.entries(bureauStats).reduce((acc, [bureau, s]) => {
+      const avgResponseDays = s.responseCount ? Math.round((s.responseDaysSum / s.responseCount) * 10) / 10 : null;
+      const deletedRate = s.total ? Math.round((s.deleted / s.total) * 100) : 0;
+      const noResponseRate = s.total ? Math.round((s.noResponse / s.total) * 100) : 0;
 
-        acc[bureau] = {
-          total: s.total,
-          avg_response_days: avgResponseDays,
-          deleted_rate: deletedRate,
-          no_response_rate: noResponseRate,
-        };
-        return acc;
-      },
-      {} as Record<
-        string,
-        {
-          total: number;
-          avg_response_days: number | null;
-          deleted_rate: number;
-          no_response_rate: number;
-        }
-      >
-    );
+      acc[bureau] = {
+        total: s.total,
+        avg_response_days: avgResponseDays,
+        deleted_rate: deletedRate,
+        no_response_rate: noResponseRate,
+      };
+      return acc;
+    }, {} as Record<string, { total: number; avg_response_days: number | null; deleted_rate: number; no_response_rate: number; }>);
+
+    const recommendations: string[] = [];
+    if (methodologyEffectiveness[0]) {
+      recommendations.push(`Lean on ${methodologyEffectiveness[0].methodology} methodology (success ${methodologyEffectiveness[0].success_rate}%) for similar items.`);
+    }
+    if (reasonCodeEffectiveness[0]) {
+      recommendations.push(`Reason code "${reasonCodeEffectiveness[0].code}" is currently the top performer (${reasonCodeEffectiveness[0].success_rate}%).`);
+    }
+    if (creditorEffectiveness[0]) {
+      recommendations.push(`Creditor "${creditorEffectiveness[0].creditor}" shows highest deletion count; mirror that strategy for repeat furnishers.`);
+    }
 
     return NextResponse.json({
       range,
       avg_time_to_deletion_days: avgTimeToDeletionDays,
       methodology_effectiveness: methodologyEffectiveness,
       bureau_response_patterns: bureauResponsePatterns,
+      reason_code_effectiveness: reasonCodeEffectiveness,
+      creditor_effectiveness: creditorEffectiveness,
+      recommendations,
     });
   } catch (error) {
     console.error('Error fetching dispute insights:', error);
