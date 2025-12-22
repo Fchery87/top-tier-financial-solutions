@@ -35,6 +35,7 @@ import {
   type ValidationResult,
   type EvidenceValidationResult,
 } from '@/lib/dispute-wizard-validation';
+import { useWizardDraft, hasDraft, getDraftMetadata, type WizardDraftData } from '@/hooks/useWizardDraft';
 
 interface Client {
   id: string;
@@ -324,6 +325,11 @@ export default function DisputeWizardPage() {
   const [failedLetterIds, setFailedLetterIds] = React.useState<Set<string>>(new Set());
   const [retryCount, setRetryCount] = React.useState<Record<string, number>>({});
 
+  // Draft persistence state
+  const [showDraftRecovery, setShowDraftRecovery] = React.useState(false);
+  const [draftMetadata, setDraftMetadata] = React.useState<any>(null);
+  const wizardDraft = useWizardDraft(selectedClient?.id);
+
   // Both modes use 4 steps now
   const maxSteps = WIZARD_STEPS.length;
   const reviewStepId = 4;
@@ -337,6 +343,7 @@ export default function DisputeWizardPage() {
 
   // Step 5 - Generated Letters
   const [generatedLetters, setGeneratedLetters] = React.useState<Array<{
+    id: string;
     bureau: string;
     itemId: string;
     itemIds?: string[]; // For combined letters
@@ -648,7 +655,66 @@ export default function DisputeWizardPage() {
     fetchClients();
     fetchReasonCodes();
     fetchMethodologies();
+
+    // Check for draft recovery on mount
+    if (hasDraft()) {
+      const metadata = getDraftMetadata();
+      setDraftMetadata(metadata);
+      setShowDraftRecovery(true);
+    }
   }, [fetchClients]);
+
+  // Auto-save draft whenever wizard state changes
+  React.useEffect(() => {
+    if (!selectedClient) return; // Don't save if no client selected
+
+    const draftData: WizardDraftData = {
+      selectedClientId: selectedClient.id,
+      clientSearch,
+      selectedItems,
+      selectedPersonalItems,
+      selectedInquiryItems,
+      activeTab,
+      itemDisputeInstructions,
+      disputeRound,
+      targetRecipient,
+      selectedBureaus,
+      generationMethod,
+      combineItemsPerBureau,
+      selectedMethodology,
+      requestManualReview,
+      selectedEvidenceIds,
+      currentStep,
+      selectedReasonCodes,
+    };
+
+    wizardDraft.setupAutoSave(draftData, {
+      clientName: `${selectedClient.first_name} ${selectedClient.last_name}`,
+    });
+
+    return () => {
+      // Cleanup is handled by hook
+    };
+  }, [
+    selectedClient,
+    clientSearch,
+    selectedItems,
+    selectedPersonalItems,
+    selectedInquiryItems,
+    activeTab,
+    itemDisputeInstructions,
+    disputeRound,
+    targetRecipient,
+    selectedBureaus,
+    generationMethod,
+    combineItemsPerBureau,
+    selectedMethodology,
+    requestManualReview,
+    selectedEvidenceIds,
+    currentStep,
+    selectedReasonCodes,
+    wizardDraft,
+  ]);
 
   // Update recommended methodology when items or round changes
   React.useEffect(() => {
@@ -839,6 +905,7 @@ export default function DisputeWizardPage() {
           if (response.ok) {
             const data = await response.json();
             letters.push({
+              id: `letter-${bureau}-${itemsForThisBureau.map(i => i.id).join('-')}`,
               bureau,
               itemId: itemsForThisBureau[0]?.id || '',
               itemIds: itemsForThisBureau.map(i => i.id),
@@ -902,6 +969,7 @@ export default function DisputeWizardPage() {
           if (response.ok) {
             const data = await response.json();
             letters.push({
+              id: `letter-${bureau}-${entry.payload.id}`,
               bureau,
               itemId: entry.payload.id,
                 itemKind: entry.kind,
@@ -1264,6 +1332,143 @@ export default function DisputeWizardPage() {
     <div className="space-y-6">
       {/* Error Alert Modal */}
       {renderErrorAlert()}
+
+      {/* Draft Recovery Modal */}
+      {showDraftRecovery && draftMetadata && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Paperclip className="w-5 h-5 text-blue-500" />
+                Resume Draft?
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2 text-sm">
+                <p>
+                  <strong>Client:</strong> {draftMetadata.clientName || 'Unknown'}
+                </p>
+                <p>
+                  <strong>Items:</strong> {draftMetadata.itemCount || 0}
+                </p>
+                <p>
+                  <strong>Last Saved:</strong> {new Date(draftMetadata.lastSavedAt).toLocaleString()}
+                </p>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                You have a saved draft from a previous session. Would you like to resume where you left off?
+              </p>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDraftRecovery(false);
+                    wizardDraft.clearDraft();
+                  }}
+                >
+                  Start New
+                </Button>
+                <Button
+                  onClick={async () => {
+                    // Load draft data from localStorage
+                    const draft = wizardDraft.loadDraft();
+                    if (!draft) {
+                      setShowDraftRecovery(false);
+                      return;
+                    }
+
+                    // Restore Step 1: Client Selection
+                    if (draft.selectedClientId) {
+                      // Find the client from the loaded clients list
+                      let clientToRestore = clients.find(c => c.id === draft.selectedClientId);
+
+                      // If client not in current list, fetch all clients and try again
+                      if (!clientToRestore && draft.clientSearch) {
+                        setClientSearch(draft.clientSearch);
+                        // Try to find client in full list after search
+                        const allClientsResponse = await fetch(`/api/admin/clients?limit=1000&status=active`);
+                        if (allClientsResponse.ok) {
+                          const allClientsData = await allClientsResponse.json();
+                          clientToRestore = allClientsData.items.find((c: Client) => c.id === draft.selectedClientId);
+                        }
+                      }
+
+                      if (clientToRestore) {
+                        setSelectedClient(clientToRestore);
+                        // Fetch items for the client
+                        await fetchNegativeItems(clientToRestore.id);
+                      }
+                    }
+
+                    // Restore Step 2: Item Selection
+                    if (draft.selectedItems) {
+                      setSelectedItems(draft.selectedItems);
+                    }
+                    if (draft.selectedPersonalItems) {
+                      setSelectedPersonalItems(draft.selectedPersonalItems);
+                    }
+                    if (draft.selectedInquiryItems) {
+                      setSelectedInquiryItems(draft.selectedInquiryItems);
+                    }
+                    if (draft.activeTab) {
+                      setActiveTab(draft.activeTab);
+                    }
+                    if (draft.itemDisputeInstructions) {
+                      // Restore Map from draft data (it's serialized as array of entries)
+                      if (Array.isArray(draft.itemDisputeInstructions)) {
+                        setItemDisputeInstructions(new Map(draft.itemDisputeInstructions));
+                      } else if (draft.itemDisputeInstructions instanceof Map) {
+                        setItemDisputeInstructions(draft.itemDisputeInstructions);
+                      }
+                    }
+
+                    // Restore Step 3: Configuration
+                    if (draft.disputeRound !== undefined) {
+                      setDisputeRound(draft.disputeRound);
+                    }
+                    if (draft.targetRecipient) {
+                      setTargetRecipient(draft.targetRecipient);
+                    }
+                    if (draft.selectedBureaus) {
+                      setSelectedBureaus(draft.selectedBureaus);
+                    }
+                    if (draft.generationMethod) {
+                      setGenerationMethod(draft.generationMethod);
+                    }
+                    if (draft.combineItemsPerBureau !== undefined) {
+                      setCombineItemsPerBureau(draft.combineItemsPerBureau);
+                    }
+                    if (draft.selectedMethodology) {
+                      setSelectedMethodology(draft.selectedMethodology);
+                    }
+                    if (draft.requestManualReview !== undefined) {
+                      setRequestManualReview(draft.requestManualReview);
+                    }
+                    if (draft.selectedEvidenceIds) {
+                      setSelectedEvidenceIds(draft.selectedEvidenceIds);
+                    }
+                    if (draft.selectedReasonCodes) {
+                      setSelectedReasonCodes(draft.selectedReasonCodes);
+                    }
+
+                    // Restore current step
+                    const stepToRestore = draft.currentStep || 1;
+                    setCurrentStep(stepToRestore);
+
+                    // Close the modal
+                    setShowDraftRecovery(false);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Resume Draft
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Evidence Blocking Modal */}
       {showEvidenceBlockingModal && evidenceBlockingStatus && (
