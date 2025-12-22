@@ -1679,7 +1679,15 @@ export default function DisputeWizardPage() {
         {currentStep === 1 && (
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader>
-              <CardTitle>Select Client</CardTitle>
+              <CardTitle>
+                Select Client
+                <span className="text-red-600 dark:text-red-400 ml-1">*</span>
+                {!selectedClient && (
+                  <span className="text-xs text-red-600 dark:text-red-400 ml-3 font-normal">
+                    (Required)
+                  </span>
+                )}
+              </CardTitle>
               <CardDescription>Choose a client to generate dispute letters for</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1734,7 +1742,15 @@ export default function DisputeWizardPage() {
         {currentStep === 2 && (
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader>
-              <CardTitle>Select Dispute Items</CardTitle>
+              <CardTitle>
+                Select Dispute Items
+                <span className="text-red-600 dark:text-red-400 ml-1">*</span>
+                {selectedItems.length === 0 && selectedPersonalItems.length === 0 && selectedInquiryItems.length === 0 && (
+                  <span className="text-xs text-red-600 dark:text-red-400 ml-3 font-normal">
+                    (Select at least one)
+                  </span>
+                )}
+              </CardTitle>
               <CardDescription>
                 Choose tradelines, personal info, or inquiries to dispute for {selectedClient?.first_name} {selectedClient?.last_name}
               </CardDescription>
@@ -2284,7 +2300,15 @@ export default function DisputeWizardPage() {
         {currentStep === 3 && (
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader>
-              <CardTitle>Select Dispute Round & Target</CardTitle>
+              <CardTitle>
+                Select Dispute Round & Target
+                <span className="text-red-600 dark:text-red-400 ml-1">*</span>
+                {selectedBureaus.length === 0 && (
+                  <span className="text-xs text-red-600 dark:text-red-400 ml-3 font-normal">
+                    (Select at least one bureau)
+                  </span>
+                )}
+              </CardTitle>
               <CardDescription>Configure the dispute round and recipients</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
