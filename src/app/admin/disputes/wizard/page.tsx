@@ -21,6 +21,7 @@ import {
   Paperclip,
   AlertTriangle,
   Upload,
+  X,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -2979,6 +2980,92 @@ export default function DisputeWizardPage() {
                     </div>
                   );
                 })}
+              </CardContent>
+            </Card>
+
+            {/* Evidence Preview Card */}
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Paperclip className="w-5 h-5" />
+                  Evidence Documentation
+                </CardTitle>
+                <CardDescription>
+                  {selectedEvidenceIds.length === 0
+                    ? 'No evidence attached to this dispute'
+                    : `${selectedEvidenceIds.length} document(s) attached`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {selectedEvidenceIds.length === 0 ? (
+                  <div className="p-4 rounded-lg bg-muted/50 text-center text-sm text-muted-foreground">
+                    <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No evidence documents selected for this dispute.</p>
+                    <p className="text-xs mt-2">
+                      Evidence significantly strengthens disputes, especially for high-risk claims.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setShowEvidenceUploadModal(true)}
+                    >
+                      <Upload className="w-3 h-3 mr-1" />
+                      Add Evidence
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {evidenceDocuments
+                      .filter((doc) => selectedEvidenceIds.includes(doc.id))
+                      .map((doc) => (
+                        <motion.div
+                          key={doc.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                {doc.file_name}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Attached on {new Date(doc.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveEvidence(doc.id)}
+                            className="text-muted-foreground hover:text-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </motion.div>
+                      ))}
+
+                    {selectedEvidenceIds.length < evidenceDocuments.length && (
+                      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                        <p className="text-xs text-blue-900 dark:text-blue-200">
+                          <strong>{evidenceDocuments.length - selectedEvidenceIds.length} more document(s)</strong> available for selection.
+                          Go back to Step 3 to add additional evidence.
+                        </p>
+                      </div>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setShowEvidenceUploadModal(true)}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Additional Evidence
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
