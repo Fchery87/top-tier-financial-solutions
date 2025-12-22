@@ -10,8 +10,6 @@ export async function register() {
     await import('./sentry.server.config');
   }
 
-  // Initialize client Sentry during build and runtime
-  if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('./sentry.client.config');
-  }
+  // Note: Client Sentry is initialized in src/app/layout.tsx for browser context
+  // It should not be imported here as edge runtime doesn't support all integrations
 }
