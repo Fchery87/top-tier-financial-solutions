@@ -6,6 +6,7 @@ import { Analytics } from '@/components/Analytics';
 import { SkipLink } from '@/components/SkipLink';
 import { LayoutWrapper } from '@/components/LayoutWrapper';
 import { AuthProvider } from '@/components/AuthProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -53,15 +54,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${playfair.variable} ${jakarta.variable} font-sans antialiased`}>
-        <Analytics />
-        <SkipLink />
-        <TooltipWrapper>
-          <AuthProvider>
-            <LayoutWrapper>
-              {children}
-            </LayoutWrapper>
-          </AuthProvider>
-        </TooltipWrapper>
+        <ErrorBoundary>
+          <Analytics />
+          <SkipLink />
+          <TooltipWrapper>
+            <AuthProvider>
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
+            </AuthProvider>
+          </TooltipWrapper>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -5,6 +5,8 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { eq, desc, asc } from 'drizzle-orm';
+import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData } from '@/lib/db-encryption';
+import { encrypt } from '@/lib/encryption';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -60,6 +62,19 @@ export async function GET(
     if (!clientResult) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
+
+    // Decrypt client data
+    const decryptedClient = decryptClientData({
+      firstName: clientResult.firstName,
+      lastName: clientResult.lastName,
+      phone: clientResult.phone,
+      streetAddress: undefined, // Not fetched in this query
+      city: undefined,
+      state: undefined,
+      zipCode: undefined,
+      dateOfBirth: undefined,
+      ssnLast4: undefined,
+    });
 
     // Get credit reports
     const reports = await db
@@ -202,10 +217,10 @@ export async function GET(
         id: clientResult.id,
         user_id: clientResult.userId,
         lead_id: clientResult.leadId,
-        first_name: clientResult.firstName,
-        last_name: clientResult.lastName,
+        first_name: decryptedClient.firstName,
+        last_name: decryptedClient.lastName,
         email: clientResult.email,
-        phone: clientResult.phone,
+        phone: decryptedClient.phone,
         status: clientResult.status,
         notes: clientResult.notes,
         converted_at: clientResult.convertedAt?.toISOString(),
@@ -250,10 +265,15 @@ export async function GET(
         if (a.onTransunion) bureaus.push('transunion');
         if (a.onExperian) bureaus.push('experian');
         if (a.onEquifax) bureaus.push('equifax');
-        
+
+        // Decrypt credit account data
+        const decrypted = decryptCreditAccountData({
+          creditorName: a.creditorName,
+        });
+
         return {
           id: a.id,
-          creditor_name: a.creditorName,
+          creditor_name: decrypted.creditorName,
           account_number: a.accountNumber,
           account_type: a.accountType,
           account_status: a.accountStatus,
@@ -286,11 +306,16 @@ export async function GET(
         if (n.onTransunion) bureaus.push('transunion');
         if (n.onExperian) bureaus.push('experian');
         if (n.onEquifax) bureaus.push('equifax');
-        
+
+        // Decrypt negative item data
+        const decrypted = decryptNegativeItemData({
+          creditorName: n.creditorName,
+        });
+
         return {
           id: n.id,
           item_type: n.itemType,
-          creditor_name: n.creditorName,
+          creditor_name: decrypted.creditorName,
           original_creditor: n.originalCreditor,
           amount: n.amount,
           date_reported: n.dateReported?.toISOString(),
@@ -330,26 +355,33 @@ export async function GET(
         days_since_inquiry: i.daysSinceInquiry,
         created_at: i.createdAt?.toISOString(),
       })),
-      disputes: disputesResult.map(d => ({
-        id: d.id,
-        bureau: d.bureau,
-        dispute_reason: d.disputeReason,
-        dispute_type: d.disputeType,
-        status: d.status,
-        round: d.round,
-        tracking_number: d.trackingNumber,
-        sent_at: d.sentAt?.toISOString(),
-        response_deadline: d.responseDeadline?.toISOString(),
-        response_received_at: d.responseReceivedAt?.toISOString(),
-        outcome: d.outcome,
-        response_notes: d.responseNotes,
-        response_document_url: d.responseDocumentUrl,
-        verification_method: d.verificationMethod,
-        escalation_reason: d.escalationReason,
-        creditor_name: d.creditorName,
-        account_number: d.accountNumber,
-        created_at: d.createdAt?.toISOString(),
-      })),
+      disputes: disputesResult.map(d => {
+        // Decrypt dispute data
+        const decrypted = decryptDisputeData({
+          creditorName: d.creditorName,
+        });
+
+        return {
+          id: d.id,
+          bureau: d.bureau,
+          dispute_reason: d.disputeReason,
+          dispute_type: d.disputeType,
+          status: d.status,
+          round: d.round,
+          tracking_number: d.trackingNumber,
+          sent_at: d.sentAt?.toISOString(),
+          response_deadline: d.responseDeadline?.toISOString(),
+          response_received_at: d.responseReceivedAt?.toISOString(),
+          outcome: d.outcome,
+          response_notes: d.responseNotes,
+          response_document_url: d.responseDocumentUrl,
+          verification_method: d.verificationMethod,
+          escalation_reason: d.escalationReason,
+          creditor_name: decrypted.creditorName,
+          account_number: d.accountNumber,
+          created_at: d.createdAt?.toISOString(),
+        };
+      }),
       score_history: scoreHistoryResult.map(s => ({
         id: s.id,
         score_transunion: s.scoreTransunion,
@@ -384,10 +416,31 @@ export async function PUT(
 
     const updateData: Record<string, unknown> = { updatedAt: now };
 
-    if (body.first_name !== undefined) updateData.firstName = body.first_name;
-    if (body.last_name !== undefined) updateData.lastName = body.last_name;
+    // Encrypt PII fields if they're being updated
+    const fieldsToEncrypt: Record<string, string | null> = {};
+
+    if (body.first_name !== undefined) {
+      fieldsToEncrypt.firstName = body.first_name;
+    }
+    if (body.last_name !== undefined) {
+      fieldsToEncrypt.lastName = body.last_name;
+    }
+    if (body.phone !== undefined) {
+      fieldsToEncrypt.phone = body.phone;
+    }
+
+    // Encrypt if there are PII fields to update
+    if (Object.keys(fieldsToEncrypt).length > 0) {
+      const encrypted = encryptClientData(fieldsToEncrypt);
+      Object.assign(updateData, encrypted);
+    } else {
+      // Non-encrypted fields
+      if (body.first_name !== undefined) updateData.firstName = body.first_name;
+      if (body.last_name !== undefined) updateData.lastName = body.last_name;
+      if (body.phone !== undefined) updateData.phone = body.phone;
+    }
+
     if (body.email !== undefined) updateData.email = body.email;
-    if (body.phone !== undefined) updateData.phone = body.phone;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.user_id !== undefined) updateData.userId = body.user_id;

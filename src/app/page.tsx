@@ -41,7 +41,7 @@ export default async function Home() {
   return (
     <div className="flex flex-col overflow-hidden">
       {/* Hero Section - Dramatic & Captivating */}
-      <section className="relative min-h-screen flex items-center justify-center py-20 overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
         {/* Animated Background Elements */}
         <GradientOrbs />
         <AnimatedGrid />

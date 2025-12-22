@@ -7,6 +7,9 @@ import { isSuperAdmin } from '@/lib/admin-auth';
 import { desc, asc, count, eq, or, ilike, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { triggerAutomation } from '@/lib/email-service';
+import { rateLimited } from '@/lib/rate-limit-middleware';
+import { sensitiveLimiter } from '@/lib/rate-limit';
+import { encryptClientData, decryptClientData } from '@/lib/db-encryption';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -25,7 +28,7 @@ async function validateAdmin() {
   return session.user;
 }
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -102,27 +105,42 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      items: items.map((c) => ({
-        id: c.id,
-        user_id: c.userId,
-        lead_id: c.leadId,
-        first_name: c.firstName,
-        last_name: c.lastName,
-        email: c.email,
-        phone: c.phone,
-        street_address: c.streetAddress,
-        city: c.city,
-        state: c.state,
-        zip_code: c.zipCode,
-        date_of_birth: c.dateOfBirth?.toISOString(),
-        ssn_last_4: c.ssnLast4,
-        status: c.status,
-        notes: c.notes,
-        converted_at: c.convertedAt?.toISOString(),
-        created_at: c.createdAt?.toISOString(),
-        updated_at: c.updatedAt?.toISOString(),
-        user_name: c.userName,
-      })),
+      items: items.map((c) => {
+        // Decrypt client data
+        const decrypted = decryptClientData({
+          firstName: c.firstName,
+          lastName: c.lastName,
+          phone: c.phone,
+          streetAddress: c.streetAddress,
+          city: c.city,
+          state: c.state,
+          zipCode: c.zipCode,
+          dateOfBirth: c.dateOfBirth,
+          ssnLast4: c.ssnLast4,
+        });
+
+        return {
+          id: c.id,
+          user_id: c.userId,
+          lead_id: c.leadId,
+          first_name: decrypted.firstName,
+          last_name: decrypted.lastName,
+          email: c.email,
+          phone: decrypted.phone,
+          street_address: decrypted.streetAddress,
+          city: decrypted.city,
+          state: decrypted.state,
+          zip_code: decrypted.zipCode,
+          date_of_birth: c.dateOfBirth?.toISOString(),
+          ssn_last_4: decrypted.ssnLast4,
+          status: c.status,
+          notes: c.notes,
+          converted_at: c.convertedAt?.toISOString(),
+          created_at: c.createdAt?.toISOString(),
+          updated_at: c.updatedAt?.toISOString(),
+          user_name: c.userName,
+        };
+      }),
       total: totalResult[0].count,
       page,
       limit,
@@ -133,7 +151,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -170,20 +188,33 @@ export async function POST(request: NextRequest) {
     const id = randomUUID();
     const now = new Date();
 
-    await db.insert(clients).values({
-      id,
-      userId: user_id || null,
-      leadId: lead_id || null,
+    // Encrypt PII fields before inserting
+    const encrypted = encryptClientData({
       firstName: first_name,
       lastName: last_name,
-      email,
       phone: phone || null,
       streetAddress: street_address || null,
       city: city || null,
       state: state || null,
       zipCode: zip_code || null,
-      dateOfBirth: date_of_birth ? new Date(date_of_birth) : null,
+      dateOfBirth: date_of_birth || null,
       ssnLast4: ssn_last_4 || null,
+    });
+
+    await db.insert(clients).values({
+      id,
+      userId: user_id || null,
+      leadId: lead_id || null,
+      firstName: encrypted.firstName,
+      lastName: encrypted.lastName,
+      email,
+      phone: encrypted.phone,
+      streetAddress: encrypted.streetAddress,
+      city: encrypted.city,
+      state: encrypted.state,
+      zipCode: encrypted.zipCode,
+      dateOfBirth: date_of_birth ? new Date(date_of_birth) : null,
+      ssnLast4: encrypted.ssnLast4,
       status: 'active',
       notes: notes || null,
       convertedAt: now,
@@ -213,10 +244,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       id,
-      first_name,
-      last_name,
+      first_name: first_name,
+      last_name: last_name,
       email,
-      phone,
+      phone: phone || null,
       status: 'active',
       notes,
       lead_id,
@@ -229,3 +260,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
   }
 }
+
+// Export rate-limited handlers
+export const GET = rateLimited(sensitiveLimiter)(getHandler);
+export const POST = rateLimited(sensitiveLimiter)(postHandler);

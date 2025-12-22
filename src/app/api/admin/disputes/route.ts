@@ -7,6 +7,9 @@ import { disputes, clients, negativeItems } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
+import { rateLimited } from '@/lib/rate-limit-middleware';
+import { sensitiveLimiter } from '@/lib/rate-limit';
+import { encryptDisputeData, decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -25,7 +28,7 @@ async function validateAdmin() {
   return session.user;
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -139,6 +142,9 @@ export async function POST(request: NextRequest) {
           })()
       : null;
 
+    // Encrypt creditor name (already encrypted if from negativeItem, so use as-is)
+    const creditorNameValue = negativeItem?.creditorName || null;
+
     await db.insert(disputes).values({
       id,
       clientId,
@@ -161,7 +167,7 @@ export async function POST(request: NextRequest) {
       scoreImpact: scoreImpact ?? null,
       reasonCodes: reasonCodes ? JSON.stringify(reasonCodes) : null,
       escalationPath: escalationPath || targetRecipient || 'bureau',
-      creditorName: negativeItem?.creditorName || null,
+      creditorName: creditorNameValue,
       accountNumber: negativeItem?.id?.slice(-8) || null,
       analysisConfidence: normalizedConfidence,
       autoSelected: !!autoSelected,
@@ -205,7 +211,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -295,34 +301,54 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      disputes: filteredResults.map(({ dispute: d, client: c }) => ({
-        id: d.id,
-        client_id: d.clientId,
-        client_name: c ? `${c.firstName} ${c.lastName}` : 'Unknown',
-        negative_item_id: d.negativeItemId,
-        bureau: d.bureau,
-        dispute_reason: d.disputeReason,
-        dispute_type: d.disputeType,
-        status: d.status,
-        round: d.round,
-        letter_content: d.letterContent,
-        tracking_number: d.trackingNumber,
-        sent_at: d.sentAt?.toISOString(),
-        response_deadline: d.responseDeadline?.toISOString(),
-        response_received_at: d.responseReceivedAt?.toISOString(),
-        outcome: d.outcome,
-        response_notes: d.responseNotes,
-        response_document_url: d.responseDocumentUrl,
-        response_channel: d.responseChannel,
-        score_impact: d.scoreImpact,
-        reason_codes: d.reasonCodes,
-        analysis_confidence: d.analysisConfidence,
-        auto_selected: d.autoSelected,
-        creditor_name: d.creditorName,
-        account_number: d.accountNumber,
-        created_at: d.createdAt?.toISOString(),
-        updated_at: d.updatedAt?.toISOString(),
-      })),
+      disputes: filteredResults.map(({ dispute: d, client: c }) => {
+        // Decrypt client name
+        const decryptedClient = c ? decryptClientData({
+          firstName: c.firstName,
+          lastName: c.lastName,
+          phone: undefined,
+          streetAddress: undefined,
+          city: undefined,
+          state: undefined,
+          zipCode: undefined,
+          dateOfBirth: undefined,
+          ssnLast4: undefined,
+        }) : null;
+
+        // Decrypt dispute creditor name
+        const decryptedDispute = decryptDisputeData({
+          creditorName: d.creditorName,
+        });
+
+        return {
+          id: d.id,
+          client_id: d.clientId,
+          client_name: decryptedClient ? `${decryptedClient.firstName} ${decryptedClient.lastName}` : 'Unknown',
+          negative_item_id: d.negativeItemId,
+          bureau: d.bureau,
+          dispute_reason: d.disputeReason,
+          dispute_type: d.disputeType,
+          status: d.status,
+          round: d.round,
+          letter_content: d.letterContent,
+          tracking_number: d.trackingNumber,
+          sent_at: d.sentAt?.toISOString(),
+          response_deadline: d.responseDeadline?.toISOString(),
+          response_received_at: d.responseReceivedAt?.toISOString(),
+          outcome: d.outcome,
+          response_notes: d.responseNotes,
+          response_document_url: d.responseDocumentUrl,
+          response_channel: d.responseChannel,
+          score_impact: d.scoreImpact,
+          reason_codes: d.reasonCodes,
+          analysis_confidence: d.analysisConfidence,
+          auto_selected: d.autoSelected,
+          creditor_name: decryptedDispute.creditorName,
+          account_number: d.accountNumber,
+          created_at: d.createdAt?.toISOString(),
+          updated_at: d.updatedAt?.toISOString(),
+        };
+      }),
       total: filteredResults.length,
     });
   } catch (error) {
@@ -333,3 +359,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Export rate-limited handlers
+export const POST = rateLimited(sensitiveLimiter)(postHandler);
+export const GET = rateLimited(sensitiveLimiter)(getHandler);
