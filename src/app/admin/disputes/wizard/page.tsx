@@ -20,6 +20,7 @@ import {
   Zap,
   Paperclip,
   AlertTriangle,
+  Upload,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -37,6 +38,7 @@ import {
 } from '@/lib/dispute-wizard-validation';
 import { useWizardDraft, hasDraft, getDraftMetadata, type WizardDraftData } from '@/hooks/useWizardDraft';
 import { DisputeWizardProgressBar, type StepStatus } from '@/components/admin/DisputeWizardProgressBar';
+import { EvidenceUploadModal } from '@/components/admin/EvidenceUploadModal';
 
 interface Client {
   id: string;
@@ -313,6 +315,7 @@ export default function DisputeWizardPage() {
   const [selectedEvidenceIds, setSelectedEvidenceIds] = React.useState<string[]>([]);
   const [loadingEvidence, setLoadingEvidence] = React.useState(false);
   const [evidenceOverrideConfirmed, setEvidenceOverrideConfirmed] = React.useState(false);
+  const [showEvidenceUploadModal, setShowEvidenceUploadModal] = React.useState(false);
 
   // Validation state
   const [validationErrors, setValidationErrors] = React.useState<Record<number, string[]>>({});
@@ -779,6 +782,80 @@ export default function DisputeWizardPage() {
       window.removeEventListener('keydown', handleKeyPress);
     };
   }, [currentStep, maxSteps, validationErrors]);
+
+  // Handle evidence file upload
+  const handleUploadEvidence = async (files: File[]) => {
+    if (!selectedClient) return;
+
+    const formData = new FormData();
+    formData.append('clientId', selectedClient.id);
+
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    try {
+      const response = await fetch('/api/admin/disputes/evidence/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newDocuments = data.documents || [];
+
+        // Add new documents to the list and select them
+        setEvidenceDocuments((prev) => [...prev, ...newDocuments]);
+        setSelectedEvidenceIds((prev) => [
+          ...prev,
+          ...newDocuments.map((doc: EvidenceDocument) => doc.id),
+        ]);
+
+        // Close modal after successful upload
+        setShowEvidenceUploadModal(false);
+      } else {
+        const error = await response.text();
+        throw new Error(error || 'Failed to upload evidence');
+      }
+    } catch (error) {
+      console.error('Error uploading evidence:', error);
+      setOperationError(
+        error instanceof Error ? error.message : 'Failed to upload evidence documents'
+      );
+      setShowErrorModal(true);
+    }
+  };
+
+  // Handle evidence document removal
+  const handleRemoveEvidence = async (documentId: string) => {
+    if (!selectedClient) return;
+
+    try {
+      const response = await fetch('/api/admin/disputes/evidence/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: selectedClient.id,
+          documentId,
+        }),
+      });
+
+      if (response.ok) {
+        // Remove from both lists
+        setEvidenceDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+        setSelectedEvidenceIds((prev) => prev.filter((id) => id !== documentId));
+      } else {
+        const error = await response.text();
+        throw new Error(error || 'Failed to remove evidence');
+      }
+    } catch (error) {
+      console.error('Error removing evidence:', error);
+      setOperationError(
+        error instanceof Error ? error.message : 'Failed to remove evidence document'
+      );
+      setShowErrorModal(true);
+    }
+  };
 
   // Generate letters
   // Accepts optional analysis data to avoid React state timing issues
@@ -1599,6 +1676,7 @@ export default function DisputeWizardPage() {
                   onClick={() => {
                     setShowEvidenceBlockingModal(false);
                     setEvidenceBlockingStatus(null);
+                    setShowEvidenceUploadModal(true);
                   }}
                 >
                   Cancel & Upload Evidence
@@ -1622,6 +1700,17 @@ export default function DisputeWizardPage() {
           </Card>
         </div>
       )}
+
+      {/* Evidence Upload Modal */}
+      <EvidenceUploadModal
+        isOpen={showEvidenceUploadModal}
+        onClose={() => setShowEvidenceUploadModal(false)}
+        onUpload={handleUploadEvidence}
+        onRemove={handleRemoveEvidence}
+        reasonCodes={selectedReasonCodes}
+        existingDocuments={evidenceDocuments}
+        clientId={selectedClient?.id}
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -2672,6 +2761,16 @@ export default function DisputeWizardPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Upload Evidence Button */}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowEvidenceUploadModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Evidence Documents
+                </Button>
               </div>
             </CardContent>
           </Card>
