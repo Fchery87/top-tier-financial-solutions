@@ -300,6 +300,10 @@ export default function DisputeWizardPage() {
   const [aiAnalysisResults, setAiAnalysisResults] = React.useState<AIAnalysisResult[]>([]);
   const [aiAnalysisSummary, setAiAnalysisSummary] = React.useState<AIAnalysisSummary | null>(null);
   const [analyzingItems, setAnalyzingItems] = React.useState(false);
+  const [analysisProgress, setAnalysisProgress] = React.useState(0); // Current item index (0-based)
+  const [analysisTotalItems, setAnalysisTotalItems] = React.useState(0); // Total items to analyze
+  const [analysisStartTime, setAnalysisStartTime] = React.useState<number | null>(null); // Start timestamp
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = React.useState<number | null>(null); // Estimated seconds remaining
   const [autoSelecting, setAutoSelecting] = React.useState(false);
   const [autoSelectSummary, setAutoSelectSummary] = React.useState<string>('');
 
@@ -508,7 +512,30 @@ export default function DisputeWizardPage() {
     if (selectedItems.length === 0) return null;
 
     setAnalyzingItems(true);
+    setAnalysisTotalItems(selectedItems.length);
+    setAnalysisProgress(0);
+    setAnalysisStartTime(Date.now());
+    setEstimatedTimeRemaining(null);
     setOperationError(null);
+
+    // Simulate progress updates while analysis is running
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => {
+        // Increment progress but don't exceed 90% until API responds
+        const nextProgress = Math.min(prev + Math.random() * 15, 85);
+
+        // Calculate estimated time remaining
+        if (analysisStartTime) {
+          const elapsedMs = Date.now() - analysisStartTime;
+          const elapsedSeconds = elapsedMs / 1000;
+          const estimatedTotalSeconds = (elapsedSeconds / (nextProgress / 100)) * 1.1; // Add 10% buffer
+          const remainingSeconds = Math.max(0, Math.ceil(estimatedTotalSeconds - elapsedSeconds));
+          setEstimatedTimeRemaining(remainingSeconds);
+        }
+
+        return nextProgress as number;
+      });
+    }, 400); // Update every 400ms
 
     try {
       const response = await fetch('/api/admin/disputes/analyze-items', {
@@ -520,6 +547,8 @@ export default function DisputeWizardPage() {
         }),
       });
 
+      clearInterval(progressInterval);
+
       if (response.ok) {
         const data = await response.json();
         const analyses = data.analyses || [];
@@ -528,6 +557,8 @@ export default function DisputeWizardPage() {
         // Update state for UI display
         setAiAnalysisResults(analyses);
         setAiAnalysisSummary(summary);
+        setAnalysisProgress(100);
+        setEstimatedTimeRemaining(0);
 
         // Auto-select the recommended methodology
         if (summary?.recommendedMethodology) {
@@ -538,6 +569,7 @@ export default function DisputeWizardPage() {
         return { analyses, summary };
       } else {
         // Handle HTTP error responses
+        clearInterval(progressInterval);
         const errorText = await response.text();
         const errorMsg = `Analysis failed (${response.status}): ${errorText || 'Unknown error'}`;
         console.error(errorMsg);
@@ -546,6 +578,7 @@ export default function DisputeWizardPage() {
         return null;
       }
     } catch (error) {
+      clearInterval(progressInterval);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Error analyzing items:', errorMessage);
 
@@ -564,6 +597,10 @@ export default function DisputeWizardPage() {
       return null;
     } finally {
       setAnalyzingItems(false);
+      setAnalysisProgress(0);
+      setAnalysisTotalItems(0);
+      setAnalysisStartTime(null);
+      clearInterval(progressInterval);
     }
   };
 
@@ -1712,6 +1749,64 @@ export default function DisputeWizardPage() {
         existingDocuments={evidenceDocuments}
         clientId={selectedClient?.id}
       />
+
+      {/* Analysis Progress Modal */}
+      {analyzingItems && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="w-full max-w-md bg-card border border-border/50 rounded-lg shadow-lg p-6"
+          >
+            <div className="space-y-4">
+              {/* Title */}
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                <h2 className="text-lg font-semibold text-foreground">Analyzing Items</h2>
+              </div>
+
+              {/* Item Counter */}
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium">
+                  Item <span className="text-foreground">{analysisProgress.toFixed(0)}</span> of{' '}
+                  <span className="text-foreground">{analysisTotalItems}</span>
+                </p>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                  <motion.div
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(analysisProgress, 100)}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>{Math.round(analysisProgress)}% Complete</span>
+                  {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
+                    <span>~{estimatedTimeRemaining}s remaining</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Message */}
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                <p className="text-sm text-blue-900 dark:text-blue-200">
+                  Analyzing accounts for disputes and gathering Metro 2 violation data...
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -3107,7 +3202,10 @@ export default function DisputeWizardPage() {
             {analyzingItems ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing Items...
+                Analyzing Items... ({Math.round(analysisProgress)}%)
+                {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
+                  <span className="ml-2 text-xs opacity-75">~{estimatedTimeRemaining}s</span>
+                )}
               </>
             ) : generating ? (
               <>
