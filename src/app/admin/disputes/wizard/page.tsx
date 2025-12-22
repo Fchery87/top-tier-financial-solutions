@@ -306,6 +306,8 @@ export default function DisputeWizardPage() {
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = React.useState<number | null>(null); // Estimated seconds remaining
   const [autoSelecting, setAutoSelecting] = React.useState(false);
   const [autoSelectSummary, setAutoSelectSummary] = React.useState<string>('');
+  const [confidenceThreshold, setConfidenceThreshold] = React.useState(0.5); // Confidence filter (0-1)
+  const [showLowConfidenceItems, setShowLowConfidenceItems] = React.useState(false); // Toggle to show filtered items
 
   // Discrepancy preflight
   const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
@@ -2867,6 +2869,50 @@ export default function DisputeWizardPage() {
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Evidence Documents
                 </Button>
+
+                {/* AI Analysis Settings - Confidence Filtering (AI mode only) */}
+                {generationMethod === 'ai' && (
+                  <div className="space-y-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                        Analysis Settings
+                      </label>
+                      <button
+                        onClick={() => setShowLowConfidenceItems(!showLowConfidenceItems)}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {showLowConfidenceItems ? 'Hide' : 'Show'} Low Confidence Items
+                      </button>
+                    </div>
+
+                    {/* Confidence Threshold Slider */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Minimum Confidence Threshold</span>
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                          {Math.round(confidenceThreshold * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={confidenceThreshold}
+                        onChange={(e) => setConfidenceThreshold(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-blue-200 dark:bg-blue-900 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Low</span>
+                        <span>High</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground italic">
+                      Adjust the threshold to filter recommendations. Higher threshold = only highest-confidence items.
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -2885,7 +2931,20 @@ export default function DisputeWizardPage() {
                     AI Analysis Summary
                   </CardTitle>
                   <CardDescription>
-                    Metro 2 compliance analysis complete - {Math.round(aiAnalysisSummary.averageConfidence * 100)}% confidence
+                    <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
+                      <span>Metro 2 compliance analysis complete</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          <span className="text-xs">{Math.round(aiAnalysisSummary.averageConfidence * 100)}% avg</span>
+                        </div>
+                        {aiAnalysisResults.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {aiAnalysisResults.filter(r => r.confidence >= confidenceThreshold).length}/{aiAnalysisResults.length} meet threshold
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -2907,6 +2966,37 @@ export default function DisputeWizardPage() {
                       <p className="font-semibold">{aiAnalysisSummary.allMetro2Violations.length}</p>
                     </div>
                   </div>
+
+                  {/* Confidence Breakdown */}
+                  {aiAnalysisResults.length > 0 && (
+                    <div className="p-3 rounded-lg bg-muted/30 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Confidence Breakdown</p>
+                      <div className="space-y-1">
+                        {[
+                          { range: [0.8, 1.0], label: 'Very High', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/20' },
+                          { range: [0.6, 0.8], label: 'High', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/20' },
+                          { range: [0.4, 0.6], label: 'Medium', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-950/20' },
+                          { range: [0, 0.4], label: 'Low', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/20' },
+                        ].map(({ range, label, color, bg }) => {
+                          const count = aiAnalysisResults.filter(r => r.confidence >= range[0] && r.confidence < range[1]).length;
+                          return (
+                            <div key={label} className="flex items-center justify-between text-xs">
+                              <span className={`inline-flex items-center px-2 py-1 rounded ${bg}`}>
+                                <span className={`w-2 h-2 rounded-full ${color} mr-1`}></span>
+                                <span>{label}: {count} item{count !== 1 ? 's' : ''}</span>
+                              </span>
+                              <span className={`${color} font-medium`}>{Math.round((count / aiAnalysisResults.length) * 100)}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {aiAnalysisResults.filter(r => r.confidence < confidenceThreshold).length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          {aiAnalysisResults.filter(r => r.confidence < confidenceThreshold).length} item(s) below current threshold ({Math.round(confidenceThreshold * 100)}%)
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {aiAnalysisSummary.allMetro2Violations.length > 0 && (
                     <div className="text-xs text-muted-foreground">
                       <p className="font-medium mb-1">Metro 2 Violations Identified:</p>
