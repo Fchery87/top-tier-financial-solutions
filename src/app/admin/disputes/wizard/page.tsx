@@ -37,6 +37,7 @@ import {
   type ValidationResult,
   type EvidenceValidationResult,
 } from '@/lib/dispute-wizard-validation';
+import { calculateLetterStrength, type LetterStrengthScore } from '@/lib/letter-strength-calculator';
 import { useWizardDraft, hasDraft, getDraftMetadata, type WizardDraftData } from '@/hooks/useWizardDraft';
 import { DisputeWizardProgressBar, type StepStatus } from '@/components/admin/DisputeWizardProgressBar';
 import { EvidenceUploadModal } from '@/components/admin/EvidenceUploadModal';
@@ -316,6 +317,9 @@ export default function DisputeWizardPage() {
   const [analysisAggressiveness, setAnalysisAggressiveness] = React.useState<'conservative' | 'balanced' | 'aggressive'>('balanced'); // Analysis intensity
   const [analysisSavedToPreferences, setAnalysisSavedToPreferences] = React.useState(false); // Track if preferences saved
   const [analysisPreferencesSaved, setAnalysisPreferencesSaved] = React.useState(false); // Show save confirmation
+
+  // P3.6: Letter strength scoring
+  const [letterStrengthScore, setLetterStrengthScore] = React.useState<LetterStrengthScore | null>(null);
 
   // Discrepancy preflight
   const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
@@ -3270,6 +3274,100 @@ export default function DisputeWizardPage() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* P3.6: Letter Strength Score Card (AI mode only) */}
+            {generationMethod === 'ai' && aiAnalysisResults.length > 0 && (
+              <>
+                {/* P3.6: Calculate and display letter strength score */}
+                {(() => {
+                  const strength = calculateLetterStrength(
+                    aiAnalysisResults,
+                    selectedEvidenceIds.length > 0,
+                    selectedEvidenceIds.length,
+                    disputeRound,
+                    aiAnalysisSummary?.recommendedMethodology || 'factual'
+                  );
+                  return strength && (
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50 border-l-4 border-l-purple-500">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-purple-500" />
+                        Letter Strength Score
+                      </CardTitle>
+                      <CardDescription>
+                        Overall quality assessment of the dispute letters
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Overall Score Display */}
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <div className="text-5xl font-bold text-purple-600 dark:text-purple-400">
+                            {strength.overallScore}
+                          </div>
+                          <p className="text-sm text-muted-foreground">/10</p>
+                        </div>
+                        <div className="flex-1">
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                            <div
+                              className="bg-gradient-to-r from-purple-500 to-purple-600 h-full rounded-full transition-all duration-300"
+                              style={{ width: `${(strength.overallScore / 10) * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            {strength.overallScore >= 8 ? 'Excellent - Strong dispute' : strength.overallScore >= 6 ? 'Good - Solid dispute' : 'Fair - Consider improvements'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Score Breakdown */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-muted-foreground text-xs">Violations</p>
+                          <p className="font-semibold">{strength.violationScore.toFixed(1)}/3</p>
+                        </div>
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-muted-foreground text-xs">Citations</p>
+                          <p className="font-semibold">{strength.citationScore.toFixed(1)}/2</p>
+                        </div>
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-muted-foreground text-xs">Evidence</p>
+                          <p className="font-semibold">{strength.evidenceScore.toFixed(1)}/1.5</p>
+                        </div>
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-muted-foreground text-xs">Confidence</p>
+                          <p className="font-semibold">{strength.confidenceScore.toFixed(1)}/1.5</p>
+                        </div>
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-muted-foreground text-xs">Escalation</p>
+                          <p className="font-semibold">{strength.escalationScore.toFixed(1)}/1</p>
+                        </div>
+                        <div className="p-2 rounded bg-muted/50">
+                          <p className="text-muted-foreground text-xs">Methodology</p>
+                          <p className="font-semibold">{strength.methodologyScore.toFixed(1)}/1</p>
+                        </div>
+                      </div>
+
+                      {/* Suggestions */}
+                      {strength.suggestions.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t border-border/50">
+                          <p className="text-sm font-medium text-muted-foreground">Improvement Suggestions:</p>
+                          <ul className="space-y-1">
+                            {strength.suggestions.map((suggestion, idx) => (
+                              <li key={idx} className="text-sm text-muted-foreground flex gap-2">
+                                <span className="text-blue-600 dark:text-blue-400">•</span>
+                                <span>{suggestion}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  );
+                })()}
+              </>
             )}
 
             {/* Bulk Actions Card */}
