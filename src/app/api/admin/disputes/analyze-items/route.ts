@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { itemIds, round = 1 } = body;
+    const { itemIds, round = 1, aggressiveness = 'balanced' } = body;
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return NextResponse.json(
@@ -44,6 +44,11 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // P3.5: Validate aggressiveness parameter
+    const validAggressiveness = ['conservative', 'balanced', 'aggressive'].includes(aggressiveness)
+      ? aggressiveness
+      : 'balanced';
 
     // Fetch the negative items from database with related credit account data for Metro 2 analysis
     const items = await db
@@ -104,8 +109,8 @@ export async function POST(request: Request) {
       remarks: item.remarks,
     }));
 
-    // Run AI analysis on all items
-    const analyses = analyzeNegativeItems(itemsForAnalysis, round);
+    // P3.5: Run AI analysis on all items with aggressiveness parameter
+    const analyses = analyzeNegativeItems(itemsForAnalysis, round, validAggressiveness as 'conservative' | 'balanced' | 'aggressive');
 
     // Get best methodology for the batch
     const recommendedMethodology = getBestMethodologyForBatch(analyses);

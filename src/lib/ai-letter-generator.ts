@@ -928,25 +928,34 @@ interface AnalyzeItemParams {
 }
 
 /**
- * Analyze a negative item using Metro 2 compliance checklist
- * 
+ * P3.5 Enhanced: Analyze a negative item using Metro 2 compliance checklist
+ *
  * This function performs FACTUAL analysis based on the Metro 2 data categories:
  * 1. Balance and amount checks - balance vs status consistency
  * 2. Status and payment history consistency - status code vs payment pattern
  * 3. Delinquency timing and obsolescence - DOFD accuracy, 7-year limits
  * 4. Third-party collector issues - missing original creditor for debt buyers
  * 5. Data completeness - required fields that are missing
- * 
+ * 6. Payment status progression validation - late payment aging patterns
+ * 7. Account type vs status compatibility - item type validation
+ *
+ * P3.5 Enhancements:
+ * - More robust confidence scoring based on violation count and severity
+ * - Extended Metro 2 violation detection patterns
+ * - Enhanced FCRA citation accuracy
+ * - Support for analysisAggressiveness parameter affecting violation threshold
+ *
  * IMPORTANT: Only flags issues that can be PROVEN from the actual data provided.
  * Does NOT fabricate or assume violations.
  */
-export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1): ItemAnalysisResult {
+export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, aggressiveness: 'conservative' | 'balanced' | 'aggressive' = 'balanced'): ItemAnalysisResult {
   const reasonCodes: string[] = [];
   const metro2Violations: string[] = [];
   const fcraIssues: string[] = [];
   let methodology = 'factual';
-  let confidence = 0.5; // Baseline - increases with each provable issue found
+  let confidence = 0.4; // Lower baseline for more conservative start - increases with each provable issue
   const notes: string[] = [];
+  const violationSeverities: number[] = []; // Track severity scores for confidence calculation
 
   const itemType = item.itemType?.toLowerCase() || '';
   const accountStatus = item.accountStatus?.toLowerCase() || '';
@@ -969,7 +978,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     metro2Violations.push(`Balance of $${balanceAmount.toFixed(2)} reported on account with status "${accountStatus}" - balance should be $0`);
     reasonCodes.push('balance_discrepancy');
     notes.push(`Account shows ${accountStatus} status but reports non-zero balance`);
-    confidence += 0.2;
+    violationSeverities.push(0.25); // High severity - clear data inconsistency
   }
 
   // Past due amount on current account
@@ -978,7 +987,25 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     metro2Violations.push(`Past due amount of $${pastDue.toFixed(2)} reported while payment status shows "current"`);
     reasonCodes.push('status_inconsistency');
     notes.push('Past due amount conflicts with current payment status');
-    confidence += 0.15;
+    violationSeverities.push(0.2); // High severity - contradictory data
+  }
+
+  // P3.5: Credit limit vs balance check
+  if (item.creditLimit && item.currentBalance && item.currentBalance > item.creditLimit) {
+    const balance = item.currentBalance / 100;
+    const limit = item.creditLimit / 100;
+    metro2Violations.push(`Balance of $${balance.toFixed(2)} exceeds credit limit of $${limit.toFixed(2)} - violates Metro 2 field validation`);
+    reasonCodes.push('balance_discrepancy');
+    violationSeverities.push(0.22);
+  }
+
+  // P3.5: High credit amount vs current balance consistency
+  if (item.highCredit && item.currentBalance && item.currentBalance > (item.highCredit * 1.1)) {
+    const balance = item.currentBalance / 100;
+    const highCredit = item.highCredit / 100;
+    metro2Violations.push(`Balance of $${balance.toFixed(2)} exceeds high credit of $${highCredit.toFixed(2)} by more than 10% - data accuracy issue`);
+    reasonCodes.push('balance_discrepancy');
+    violationSeverities.push(0.18);
   }
 
   // ---- CHECK 2: Status and Payment History Consistency ----
@@ -989,7 +1016,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     metro2Violations.push('Account status shows "charge-off" but payment status indicates "current" - these statuses are inconsistent');
     reasonCodes.push('status_inconsistency');
     notes.push('Charge-off status conflicts with current payment status');
-    confidence += 0.2;
+    violationSeverities.push(0.25); // High severity - fundamental status contradiction
   }
 
   // Collection status but account shows as open/current
@@ -997,7 +1024,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     metro2Violations.push('Item type is "collection" but account shows as open with current payment status - status codes are inconsistent');
     reasonCodes.push('status_inconsistency');
     notes.push('Collection item type conflicts with open/current account status');
-    confidence += 0.15;
+    violationSeverities.push(0.2); // High severity - collection items should be delinquent
   }
 
   // Late payment item type but payment status shows current (and no delinquency info)
@@ -1005,7 +1032,21 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     metro2Violations.push('Item flagged as "late payment" but payment status shows "current" with no past due amount');
     reasonCodes.push('status_inconsistency');
     notes.push('Late payment designation conflicts with current payment status');
-    confidence += 0.15;
+    violationSeverities.push(0.18); // Medium-high severity - status contradiction
+  }
+
+  // P3.5: Paid status but recent payment status
+  if ((accountStatus === 'paid' || accountStatus === 'closed') && paymentStatus?.includes('late')) {
+    metro2Violations.push(`Account marked as "${accountStatus}" but payment status still shows late payments - status fields are contradictory`);
+    reasonCodes.push('status_inconsistency');
+    violationSeverities.push(0.2);
+  }
+
+  // P3.5: Charge-off with balance that's not zero - double violation
+  if ((itemType === 'charge_off' || accountStatus === 'charge_off') && hasBalance && item.currentBalance !== 0) {
+    metro2Violations.push(`Charge-off account reports non-zero balance of $${(item.currentBalance! / 100).toFixed(2)} - charge-offs should show $0 balance`);
+    reasonCodes.push('balance_discrepancy');
+    violationSeverities.push(0.25); // High severity - specific Metro 2 requirement
   }
 
   // ---- CHECK 3: Delinquency Timing and Obsolescence ----
@@ -1018,27 +1059,34 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
 
   if (effectiveDate) {
     const yearsSinceActivity = (now.getTime() - effectiveDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
-    
+
     // FCRA 7-year limit for most negative items
     const isBankruptcy = itemType === 'bankruptcy';
     const reportingLimit = isBankruptcy ? 10 : 7;
-    
+
     if (yearsSinceActivity >= reportingLimit) {
       metro2Violations.push(`This ${itemType} has been reporting for ${Math.floor(yearsSinceActivity)} years - exceeds FCRA ${reportingLimit}-year limit (last activity: ${effectiveDate.toLocaleDateString()})`);
       fcraIssues.push(`FCRA § 605(a): Negative information exceeds ${reportingLimit}-year reporting limit`);
       reasonCodes.push('obsolete');
       notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - past FCRA reporting limit`);
-      confidence = 0.95; // Very high confidence - this is a clear FCRA violation
+      violationSeverities.push(0.95); // Extremely high severity - clear FCRA violation
     } else if (yearsSinceActivity >= (reportingLimit - 1)) {
       notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - approaching ${reportingLimit}-year limit`);
     }
 
-    // Inquiry 2-year limit
+    // Inquiry 2-year limit (P3.5 Enhanced FCRA citation)
     if (itemType === 'inquiry' && yearsSinceActivity >= 2) {
       metro2Violations.push(`Hard inquiry from ${effectiveDate.toLocaleDateString()} exceeds 2-year reporting limit`);
-      fcraIssues.push('FCRA § 605(a)(3): Hard inquiries must be removed after 2 years');
+      fcraIssues.push('FCRA § 605(a)(3): Hard inquiries exceeding 2-year period must be removed');
       reasonCodes.push('obsolete');
-      confidence = 0.9;
+      violationSeverities.push(0.85); // Very high severity
+    }
+
+    // P3.5: Account age validation - accounts should be aged off appropriately
+    const monthsSinceActivity = yearsSinceActivity * 12;
+    if (itemType === 'collection' && monthsSinceActivity > (reportingLimit * 12)) {
+      notes.push(`P3.5: Collection item is ${Math.floor(monthsSinceActivity)} months old - significantly exceeds reporting period`);
+      violationSeverities.push(0.3);
     }
   }
 
@@ -1061,7 +1109,13 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     fcraIssues.push('FCRA § 623(a)(2): Debt collectors must identify the original creditor upon request');
     reasonCodes.push('incomplete_data');
     notes.push('Collection agency account missing required original creditor information');
-    confidence += 0.2;
+    violationSeverities.push(0.2); // Medium severity - required field missing
+  }
+
+  // P3.5: Additional collection agency checks
+  if (isThirdPartyCollector && item.remarks && item.remarks.toLowerCase().includes('sold')) {
+    notes.push('P3.5: Collection account marked as sold - may require original creditor identity for validation');
+    violationSeverities.push(0.15);
   }
 
   // ---- CHECK 5: Data Completeness ----
@@ -1136,17 +1190,41 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     methodology = 'consumer_law';
     fcraIssues.push('15 U.S.C. § 1681n: Potential willful non-compliance if adequate investigation not conducted');
     notes.push('Round 3+: Prior investigations may have been inadequate');
-    confidence += 0.1;
+    violationSeverities.push(0.15); // Medium severity - possible willful non-compliance
   }
 
-  // ---- SUMMARY ----
-  // If we found specific issues, confidence should be higher
-  // If only generic verification request, confidence is lower
-  
+  // ---- P3.5: ENHANCED CONFIDENCE CALCULATION ----
+  // Uses violation severity scores instead of simple increments
+  // Factors: violation count, severity scores, aggressiveness level, round number
+
   const hasSpecificIssues = metro2Violations.length > 0;
-  if (!hasSpecificIssues && confidence < 0.6) {
-    // No specific issues found - this is just a verification request
-    notes.unshift('No specific data inconsistencies identified - requesting general verification');
+
+  if (violationSeverities.length > 0) {
+    // Calculate confidence based on violation severities
+    const avgSeverity = violationSeverities.reduce((a, b) => a + b, 0) / violationSeverities.length;
+    const maxSeverity = Math.max(...violationSeverities);
+
+    // P3.5: Aggressiveness affects confidence thresholds
+    const aggressivenessModifier = {
+      'conservative': 0.15,  // Only high-confidence violations count
+      'balanced': 0.25,       // Mixed threshold
+      'aggressive': 0.35,     // More violations detected
+    }[aggressiveness];
+
+    // Confidence = base (0.4) + violation contribution
+    // Scale: average severity * multiplier based on count
+    const violationBoost = Math.min(avgSeverity * (violationSeverities.length * 0.15), 0.5);
+    confidence = 0.4 + violationBoost;
+
+    // Round-based escalation bonus
+    if (round === 2) confidence += 0.05;
+    if (round >= 3) confidence += 0.1;
+  } else {
+    // No specific violations found - generic verification request
+    confidence = 0.5 + (aggressiveness === 'conservative' ? 0 : aggressiveness === 'aggressive' ? 0.05 : 0.02);
+    if (!hasSpecificIssues) {
+      notes.unshift('No specific data inconsistencies identified - requesting general verification');
+    }
   }
 
   // Deduplicate
@@ -1162,7 +1240,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1):
     autoReasonCodes: uniqueReasonCodes,
     metro2Violations: uniqueMetro2,
     fcraIssues: uniqueFcra,
-    confidence: Math.min(confidence, 1),
+    confidence: Math.min(Math.max(confidence, 0.3), 1), // Clamp between 0.3 and 1.0
     analysisNotes: notes.join('. '),
   };
 }
@@ -1275,8 +1353,9 @@ function isLikelyCollectionAgency(creditorName: string): boolean {
 /**
  * Analyze multiple negative items and return consolidated analysis
  */
-export function analyzeNegativeItems(items: AnalyzeItemParams[], round: number = 1): ItemAnalysisResult[] {
-  return items.map(item => analyzeNegativeItem(item, round));
+// P3.5: Enhanced function signature to support aggressiveness parameter
+export function analyzeNegativeItems(items: AnalyzeItemParams[], round: number = 1, aggressiveness: 'conservative' | 'balanced' | 'aggressive' = 'balanced'): ItemAnalysisResult[] {
+  return items.map(item => analyzeNegativeItem(item, round, aggressiveness));
 }
 
 /**

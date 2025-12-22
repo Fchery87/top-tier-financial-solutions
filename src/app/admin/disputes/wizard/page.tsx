@@ -611,6 +611,7 @@ export default function DisputeWizardPage() {
             body: JSON.stringify({
               itemIds: itemsToAnalyze,
               round: disputeRound,
+              aggressiveness: analysisAggressiveness, // P3.5: Pass aggressiveness parameter
             }),
           });
 
