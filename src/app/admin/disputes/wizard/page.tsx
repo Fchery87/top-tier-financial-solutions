@@ -740,6 +740,46 @@ export default function DisputeWizardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient]);
 
+  // Keyboard navigation
+  React.useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      // Enter key: proceed to next step
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        if (currentStep < maxSteps) {
+          // Check if current step is valid before proceeding
+          const stepErrors = validationErrors[currentStep];
+          if (!stepErrors || stepErrors.length === 0) {
+            setCurrentStep(currentStep + 1);
+          }
+        }
+      }
+
+      // Escape key: go back to previous step
+      if (e.key === 'Escape' && currentStep > 1) {
+        e.preventDefault();
+        setCurrentStep(currentStep - 1);
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyPress);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [currentStep, maxSteps, validationErrors]);
+
   // Generate letters
   // Accepts optional analysis data to avoid React state timing issues
   const generateLetters = async (analysisData?: { analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null) => {
@@ -2833,9 +2873,11 @@ export default function DisputeWizardPage() {
           variant="outline"
           onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
           disabled={currentStep === 1}
+          title="Keyboard shortcut: Escape"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
+          <span className="hidden sm:inline ml-2 text-xs text-muted-foreground">(Esc)</span>
         </Button>
 
         {/* Both modes: Step 3 triggers generation, Step 4 is Review */}
@@ -2878,9 +2920,11 @@ export default function DisputeWizardPage() {
           <Button
             onClick={() => setCurrentStep(prev => Math.min(maxSteps, prev + 1))}
             disabled={!canProceed()}
+            title="Keyboard shortcut: Enter"
           >
             Next
             <ArrowRight className="w-4 h-4 ml-2" />
+            <span className="hidden sm:inline ml-2 text-xs">(↵)</span>
           </Button>
         )}
       </motion.div>
