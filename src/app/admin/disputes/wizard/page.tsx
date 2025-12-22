@@ -36,6 +36,7 @@ import {
   type EvidenceValidationResult,
 } from '@/lib/dispute-wizard-validation';
 import { useWizardDraft, hasDraft, getDraftMetadata, type WizardDraftData } from '@/hooks/useWizardDraft';
+import { DisputeWizardProgressBar, type StepStatus } from '@/components/admin/DisputeWizardProgressBar';
 
 interface Client {
   id: string;
@@ -1328,6 +1329,44 @@ export default function DisputeWizardPage() {
     });
   };
 
+  // Build step statuses for progress bar
+  const buildStepStatuses = (): StepStatus[] => {
+    return WIZARD_STEPS.map((step) => {
+      const stepErrors = validationErrors[step.id] || [];
+      const stepWarnings = validationWarnings[step.id] || [];
+      const isComplete =
+        (step.id === 1 && selectedClient !== null) ||
+        (step.id === 2 && selectedItems.length > 0) ||
+        (step.id === 3 && selectedBureaus.length > 0) ||
+        (step.id === 4 && generatedLetters.length > 0);
+
+      return {
+        stepId: step.id,
+        isComplete,
+        hasErrors: stepErrors.length > 0,
+        hasWarnings: stepWarnings.length > 0,
+        isCurrentStep: currentStep === step.id,
+      };
+    });
+  };
+
+  const stepStatuses = React.useMemo(() => buildStepStatuses(), [
+    currentStep,
+    selectedClient,
+    selectedItems,
+    selectedBureaus,
+    generatedLetters,
+    validationErrors,
+    validationWarnings,
+  ]);
+
+  // Handle step navigation from progress bar
+  const handleStepClick = (stepId: number) => {
+    if (stepId < currentStep) {
+      setCurrentStep(stepId);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Error Alert Modal */}
@@ -1577,50 +1616,13 @@ export default function DisputeWizardPage() {
       >
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              {WIZARD_STEPS.map((step, index) => (
-                <React.Fragment key={step.id}>
-                  <div
-                    className={`flex items-center gap-3 cursor-pointer transition-colors ${
-                      currentStep === step.id
-                        ? 'text-secondary'
-                        : currentStep > step.id
-                        ? 'text-green-500'
-                        : 'text-muted-foreground'
-                    }`}
-                    onClick={() => {
-                      if (step.id < currentStep) {
-                        setCurrentStep(step.id);
-                      }
-                    }}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
-                        currentStep === step.id
-                          ? 'border-secondary bg-secondary/10'
-                          : currentStep > step.id
-                          ? 'border-green-500 bg-green-500/10'
-                          : 'border-muted-foreground/30'
-                      }`}
-                    >
-                      {currentStep > step.id ? (
-                        <Check className="w-5 h-5" />
-                      ) : (
-                        <step.icon className="w-5 h-5" />
-                      )}
-                    </div>
-                    <span className="hidden sm:block font-medium">{step.name}</span>
-                  </div>
-                  {index < WIZARD_STEPS.length - 1 && (
-                    <div
-                      className={`flex-1 h-0.5 mx-4 transition-colors ${
-                        currentStep > step.id ? 'bg-green-500' : 'bg-muted-foreground/20'
-                      }`}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
+            <DisputeWizardProgressBar
+              steps={WIZARD_STEPS}
+              currentStep={currentStep}
+              stepStatuses={stepStatuses}
+              onStepClick={handleStepClick}
+              maxSteps={WIZARD_STEPS.length}
+            />
           </CardContent>
         </Card>
       </motion.div>
