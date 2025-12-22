@@ -308,6 +308,9 @@ export default function DisputeWizardPage() {
   const [autoSelectSummary, setAutoSelectSummary] = React.useState<string>('');
   const [confidenceThreshold, setConfidenceThreshold] = React.useState(0.5); // Confidence filter (0-1)
   const [showLowConfidenceItems, setShowLowConfidenceItems] = React.useState(false); // Toggle to show filtered items
+  const [failedAnalysisItems, setFailedAnalysisItems] = React.useState<Set<string>>(new Set()); // Items that failed analysis
+  const [analysisRetryCount, setAnalysisRetryCount] = React.useState<number>(0); // Number of retry attempts
+  const [showRetryButton, setShowRetryButton] = React.useState(false); // Show retry button when analysis fails
 
   // Discrepancy preflight
   const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
@@ -508,17 +511,54 @@ export default function DisputeWizardPage() {
     }
   };
 
+  // Helper function for exponential backoff retry
+  // Retries up to 3 times with exponential delay (1s, 3s, 7s)
+  const retryWithBackoff = async <T,>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    onRetry?: (attempt: number, error: Error) => void
+  ): Promise<T | null> => {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`Attempt ${attempt} failed:`, lastError.message);
+
+        if (onRetry) {
+          onRetry(attempt, lastError);
+        }
+
+        // Calculate exponential backoff delay
+        if (attempt < maxRetries) {
+          const delayMs = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
+          console.log(`Retrying in ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+
+    console.error('All retry attempts failed:', lastError?.message);
+    return null;
+  };
+
   // Analyze items with AI (auto-determine dispute strategy)
   // Returns the analysis data directly to avoid React state timing issues
-  const analyzeItemsWithAI = async (): Promise<{ analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null> => {
-    if (selectedItems.length === 0) return null;
+  // Implements exponential backoff retry with graceful degradation
+  const analyzeItemsWithAI = async (retryFailedOnly: boolean = false): Promise<{ analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null> => {
+    const itemsToAnalyze = retryFailedOnly ? Array.from(failedAnalysisItems) : selectedItems;
+
+    if (itemsToAnalyze.length === 0) return null;
 
     setAnalyzingItems(true);
-    setAnalysisTotalItems(selectedItems.length);
+    setAnalysisTotalItems(itemsToAnalyze.length);
     setAnalysisProgress(0);
     setAnalysisStartTime(Date.now());
     setEstimatedTimeRemaining(null);
     setOperationError(null);
+    setShowRetryButton(false);
 
     // Simulate progress updates while analysis is running
     const progressInterval = setInterval(() => {
@@ -540,25 +580,63 @@ export default function DisputeWizardPage() {
     }, 400); // Update every 400ms
 
     try {
-      const response = await fetch('/api/admin/disputes/analyze-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          itemIds: selectedItems,
-          round: disputeRound,
-        }),
-      });
+      // Use retry wrapper with exponential backoff
+      const data = await retryWithBackoff(
+        async () => {
+          const response = await fetch('/api/admin/disputes/analyze-items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemIds: itemsToAnalyze,
+              round: disputeRound,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+          }
+
+          return response.json();
+        },
+        3, // Max 3 attempts
+        (attempt) => {
+          console.log(`Analysis retry attempt ${attempt}/3...`);
+        }
+      );
 
       clearInterval(progressInterval);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         const analyses = data.analyses || [];
         const summary = data.summary || null;
 
-        // Update state for UI display
-        setAiAnalysisResults(analyses);
-        setAiAnalysisSummary(summary);
+        // Clear failed items if analysis succeeded
+        if (retryFailedOnly) {
+          setFailedAnalysisItems(new Set());
+          setAnalysisRetryCount(0);
+        }
+
+        // Merge with existing results if retrying failed items
+        if (retryFailedOnly && aiAnalysisResults.length > 0) {
+          const mergedAnalyses = aiAnalysisResults.map(existing => {
+            const updated = analyses.find((a: AIAnalysisResult) => a.itemId === existing.itemId);
+            return updated || existing;
+          });
+          setAiAnalysisResults(mergedAnalyses);
+
+          // Recalculate summary with merged data
+          if (summary) {
+            setAiAnalysisSummary({
+              ...summary,
+              itemCount: mergedAnalyses.length,
+            });
+          }
+        } else {
+          // Update state for UI display
+          setAiAnalysisResults(analyses);
+          setAiAnalysisSummary(summary);
+        }
+
         setAnalysisProgress(100);
         setEstimatedTimeRemaining(0);
 
@@ -568,28 +646,35 @@ export default function DisputeWizardPage() {
         }
 
         // Return the data directly to avoid state timing issues
-        return { analyses, summary };
+        return retryFailedOnly && aiAnalysisSummary ? { analyses: aiAnalysisResults, summary: aiAnalysisSummary } : { analyses, summary };
       } else {
-        // Handle HTTP error responses
-        clearInterval(progressInterval);
-        const errorText = await response.text();
-        const errorMsg = `Analysis failed (${response.status}): ${errorText || 'Unknown error'}`;
-        console.error(errorMsg);
-        setOperationError(`Failed to analyze items. ${response.status === 408 || response.status === 504 ? 'Request timed out. Try with fewer items.' : 'Please try again.'}`);
-        setShowErrorModal(true);
-        return null;
+        // All retries failed
+        throw new Error('Analysis failed after 3 retry attempts');
       }
     } catch (error) {
       clearInterval(progressInterval);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Error analyzing items:', errorMessage);
 
+      // Track failed items
+      const failedSet = new Set(failedAnalysisItems);
+      itemsToAnalyze.forEach(id => failedSet.add(id));
+      setFailedAnalysisItems(failedSet);
+      setAnalysisRetryCount(prev => prev + 1);
+      setShowRetryButton(true);
+
       // Provide user-friendly error messages based on error type
-      let userMessage = 'Failed to analyze items. ';
+      let userMessage = 'Failed to analyze ';
+      if (retryFailedOnly) {
+        userMessage += `${failedSet.size} item(s) after ${analysisRetryCount + 1} retry attempt(s). `;
+      } else {
+        userMessage += `items. `;
+      }
+
       if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
         userMessage += 'Please check your internet connection and try again.';
-      } else if (errorMessage.includes('timeout')) {
-        userMessage += 'Request timed out. Try with fewer items.';
+      } else if (errorMessage.includes('408') || errorMessage.includes('504') || errorMessage.includes('timeout')) {
+        userMessage += 'Request timed out. Try with fewer items or retry failed items.';
       } else {
         userMessage += 'Please try again or contact support if the problem persists.';
       }
@@ -1346,39 +1431,109 @@ export default function DisputeWizardPage() {
   const renderErrorAlert = () => {
     if (!operationError || !showErrorModal) return null;
 
+    const hasFailedItems = failedAnalysisItems.size > 0 && generationMethod === 'ai';
+
     return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-        <Card className="w-full max-w-md bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="w-5 h-5" />
-              Operation Error
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{operationError}</p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowErrorModal(false);
-                  setOperationError(null);
-                }}
-              >
-                Dismiss
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowErrorModal(false);
-                  setOperationError(null);
-                }}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                Continue
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          className="w-full max-w-md"
+        >
+          <Card className="bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="w-5 h-5" />
+                Analysis Error
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{operationError}</p>
+
+              {/* Show failed items if any */}
+              {hasFailedItems && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
+                  <p className="text-xs font-semibold text-red-900 dark:text-red-200 mb-2">
+                    Failed Items ({failedAnalysisItems.size}):
+                  </p>
+                  <ul className="text-xs text-red-800 dark:text-red-300 space-y-1">
+                    {Array.from(failedAnalysisItems).slice(0, 3).map((itemId) => {
+                      const item = negativeItems.find(i => i.id === itemId) ||
+                                  personalInfoItems.find(i => i.id === itemId) ||
+                                  inquiryItems.find(i => i.id === itemId);
+                      const displayName: string = item && 'creditor_name' in item ? (item as any).creditor_name :
+                                         item && 'description' in item ? (item as any).description : itemId;
+                      return (
+                        <li key={itemId} className="list-disc list-inside">
+                          {displayName}
+                        </li>
+                      );
+                    })}
+                    {failedAnalysisItems.size > 3 && (
+                      <li className="text-red-700 dark:text-red-400 font-medium">
+                        +{failedAnalysisItems.size - 3} more items
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowErrorModal(false);
+                    setOperationError(null);
+                  }}
+                >
+                  Dismiss
+                </Button>
+
+                {/* Retry Failed Items Button */}
+                {hasFailedItems && analysisRetryCount < 3 && (
+                  <Button
+                    onClick={async () => {
+                      setShowErrorModal(false);
+                      setOperationError(null);
+                      await analyzeItemsWithAI(true);
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                    disabled={analyzingItems}
+                  >
+                    {analyzingItems ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Retrying...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 mr-2" />
+                        Retry {failedAnalysisItems.size} Item{failedAnalysisItems.size !== 1 ? 's' : ''}
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                <Button
+                  onClick={() => {
+                    setShowErrorModal(false);
+                    setOperationError(null);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Continue
+                </Button>
+              </div>
+
+              {analysisRetryCount >= 3 && hasFailedItems && (
+                <p className="text-xs text-red-600 dark:text-red-400 italic">
+                  Maximum retry attempts reached. Please try with fewer items or contact support.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   };
