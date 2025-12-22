@@ -107,6 +107,7 @@ interface GenerateLetterParams {
   priorDisputeDate?: string;
   priorDisputeResult?: string;
   enclosures?: EvidenceEnclosure[];
+  requestManualReview?: boolean; // Flag to request manual review and bypass e-OSCAR
 }
 
 const BUREAU_ADDRESSES: Record<string, string> = {
@@ -203,6 +204,26 @@ function getReasonDescriptions(reasonCodes: string[]): string {
   return reasonCodes
     .map(code => REASON_CODE_DESCRIPTIONS[code] || code)
     .join(' Additionally, ');
+}
+
+function buildEOscarBypassSection(includeBypass: boolean): string {
+  if (!includeBypass) return '';
+
+  return `
+E-OSCAR BYPASS LANGUAGE (CRITICAL):
+====================================
+YOU MUST include the following explicit language in the letter:
+"I specifically request that this dispute NOT be processed solely through your automated e-OSCAR or ACDV systems.
+This dispute requires review and investigation by a trained human investigator who can properly evaluate the evidence
+and documentation I am providing. An automated system cannot adequately address the specific compliance violations
+and inaccuracies identified in this letter."
+
+Additionally, include this FCRA citation:
+"Under FCRA Section 611(a)(6)(B)(iii), I am demanding that you provide a description of the investigation method used
+and verification of the steps taken to verify this account information."
+
+WHY THIS MATTERS: Credit bureaus use automated systems that convert detailed dispute letters into 2-3 digit codes
+and often ignore evidence entirely. This explicit language and FCRA citation forces manual review.`;
 }
 
 function buildComplianceContext(targetRecipient: string, round: number): string {
@@ -334,8 +355,13 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
     const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
     const reasonDescription = getReasonDescriptions(params.reasonCodes);
     const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
-    
-    const prompt = AI_PROMPT_TEMPLATE
+    const eoscarBypassSection = buildEOscarBypassSection(params.requestManualReview || false);
+
+    const promptBase = eoscarBypassSection
+      ? AI_PROMPT_TEMPLATE.replace('CRITICAL COMPLIANCE RULES', eoscarBypassSection + '\n\nCRITICAL COMPLIANCE RULES')
+      : AI_PROMPT_TEMPLATE;
+
+    const prompt = promptBase
       .replace('{compliance_context}', complianceContext)
       .replace('{target_recipient}', params.targetRecipient.toUpperCase())
       .replace('{round}', params.round.toString())

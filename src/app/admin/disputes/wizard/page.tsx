@@ -24,6 +24,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import {
+  validateStep1,
+  validateStep2,
+  validateStep3,
+  validateStep4,
+  validateEvidenceRequirements,
+  getRequiredEvidenceForReasonCodes,
+  isHighRiskCode,
+  type ValidationResult,
+  type EvidenceValidationResult,
+} from '@/lib/dispute-wizard-validation';
 
 interface Client {
   id: string;
@@ -272,6 +283,7 @@ export default function DisputeWizardPage() {
   const [selectedBureaus, setSelectedBureaus] = React.useState<string[]>(['transunion', 'experian', 'equifax']);
   const [generationMethod, setGenerationMethod] = React.useState<'ai' | 'template'>('ai');
   const [combineItemsPerBureau, setCombineItemsPerBureau] = React.useState(true);
+  const [requestManualReview, setRequestManualReview] = React.useState(false); // e-OSCAR bypass option
   
   // NEW: Methodology Selection
   const [methodologies, setMethodologies] = React.useState<Methodology[]>([]);
@@ -299,6 +311,18 @@ export default function DisputeWizardPage() {
   const [selectedEvidenceIds, setSelectedEvidenceIds] = React.useState<string[]>([]);
   const [loadingEvidence, setLoadingEvidence] = React.useState(false);
   const [evidenceOverrideConfirmed, setEvidenceOverrideConfirmed] = React.useState(false);
+
+  // Validation state
+  const [validationErrors, setValidationErrors] = React.useState<Record<number, string[]>>({});
+  const [validationWarnings, setValidationWarnings] = React.useState<Record<number, string[]>>({});
+  const [evidenceBlockingStatus, setEvidenceBlockingStatus] = React.useState<EvidenceValidationResult | null>(null);
+  const [showEvidenceBlockingModal, setShowEvidenceBlockingModal] = React.useState(false);
+
+  // Error recovery state
+  const [operationError, setOperationError] = React.useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = React.useState(false);
+  const [failedLetterIds, setFailedLetterIds] = React.useState<Set<string>>(new Set());
+  const [retryCount, setRetryCount] = React.useState<Record<string, number>>({});
 
   // Both modes use 4 steps now
   const maxSteps = WIZARD_STEPS.length;
@@ -470,8 +494,10 @@ export default function DisputeWizardPage() {
   // Returns the analysis data directly to avoid React state timing issues
   const analyzeItemsWithAI = async (): Promise<{ analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null> => {
     if (selectedItems.length === 0) return null;
-    
+
     setAnalyzingItems(true);
+    setOperationError(null);
+
     try {
       const response = await fetch('/api/admin/disputes/analyze-items', {
         method: 'POST',
@@ -486,22 +512,43 @@ export default function DisputeWizardPage() {
         const data = await response.json();
         const analyses = data.analyses || [];
         const summary = data.summary || null;
-        
+
         // Update state for UI display
         setAiAnalysisResults(analyses);
         setAiAnalysisSummary(summary);
-        
+
         // Auto-select the recommended methodology
         if (summary?.recommendedMethodology) {
           setSelectedMethodology(summary.recommendedMethodology);
         }
-        
+
         // Return the data directly to avoid state timing issues
         return { analyses, summary };
+      } else {
+        // Handle HTTP error responses
+        const errorText = await response.text();
+        const errorMsg = `Analysis failed (${response.status}): ${errorText || 'Unknown error'}`;
+        console.error(errorMsg);
+        setOperationError(`Failed to analyze items. ${response.status === 408 || response.status === 504 ? 'Request timed out. Try with fewer items.' : 'Please try again.'}`);
+        setShowErrorModal(true);
+        return null;
       }
-      return null;
     } catch (error) {
-      console.error('Error analyzing items:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Error analyzing items:', errorMessage);
+
+      // Provide user-friendly error messages based on error type
+      let userMessage = 'Failed to analyze items. ';
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        userMessage += 'Please check your internet connection and try again.';
+      } else if (errorMessage.includes('timeout')) {
+        userMessage += 'Request timed out. Try with fewer items.';
+      } else {
+        userMessage += 'Please try again or contact support if the problem persists.';
+      }
+
+      setOperationError(userMessage);
+      setShowErrorModal(true);
       return null;
     } finally {
       setAnalyzingItems(false);
@@ -630,6 +677,24 @@ export default function DisputeWizardPage() {
   // Accepts optional analysis data to avoid React state timing issues
   const generateLetters = async (analysisData?: { analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null) => {
     if (!selectedClient) {
+      return;
+    }
+
+    // Check evidence requirements for high-risk dispute codes
+    const usedReasonCodes = generationMethod === 'ai'
+      ? (analysisData?.summary?.allReasonCodes || aiAnalysisSummary?.allReasonCodes || [])
+      : selectedReasonCodes;
+
+    const evidenceValidation = validateEvidenceRequirements(
+      usedReasonCodes,
+      selectedEvidenceIds,
+      selectedItems
+    );
+
+    // If evidence is required but not provided, and user hasn't overridden, block generation
+    if (!evidenceValidation.isValid && !evidenceOverrideConfirmed) {
+      setEvidenceBlockingStatus(evidenceValidation);
+      setShowEvidenceBlockingModal(true);
       return;
     }
 
@@ -767,6 +832,7 @@ export default function DisputeWizardPage() {
               perItemInstructions: generationMethod === 'template' ? perItemInstructions : undefined,
               metro2Violations: generationMethod === 'ai' ? effectiveSummary?.allMetro2Violations : undefined,
               evidenceDocumentIds: selectedEvidenceIds.length > 0 ? selectedEvidenceIds : undefined,
+              requestManualReview: requestManualReview,
             }),
           });
 
@@ -829,6 +895,7 @@ export default function DisputeWizardPage() {
                 ? effectiveAnalyses.find(a => a.itemId === entry.payload.id)?.metro2Violations
                 : undefined,
               evidenceDocumentIds: selectedEvidenceIds.length > 0 ? selectedEvidenceIds : undefined,
+              requestManualReview: requestManualReview,
             }),
           });
 
@@ -957,35 +1024,80 @@ export default function DisputeWizardPage() {
     }
   };
 
-  const canProceed = () => {
+  // Validate current step and update validation state
+  const validateCurrentStep = (): boolean => {
+    let validationResult: ValidationResult | null = null;
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
     switch (currentStep) {
       case 1:
-        return selectedClient !== null;
-      case 2:
+        validationResult = validateStep1(selectedClient?.id ?? null);
+        break;
+      case 2: {
+        validationResult = validateStep2(selectedItems, {});
+        // Also validate personal items and inquiries for selection
         const totalSelected = selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length;
-        // For template mode, all selected items must have dispute instructions
-        if (generationMethod === 'template') {
-          const allItemsHaveInstructions = selectedItems.every(itemId => {
-            const instruction = itemDisputeInstructions.get(itemId);
-            if (!instruction) return false;
-            if (instruction.instructionType === 'preset' && instruction.presetCode && instruction.presetCode !== 'custom') return true;
-            if (instruction.instructionType === 'custom' && instruction.customText && instruction.customText.trim().length > 0) return true;
-            return false;
-          });
-          return totalSelected > 0 && allItemsHaveInstructions;
+        if (totalSelected === 0) {
+          errors.push('Please select at least one item to dispute');
         }
-        // AI mode just needs at least one selected item across buckets
-        return totalSelected > 0;
+        // For template mode, check for dispute instructions
+        if (generationMethod === 'template') {
+          const missingInstructions = selectedItems.filter(itemId => {
+            const instruction = itemDisputeInstructions.get(itemId);
+            if (!instruction) return true;
+            if (instruction.instructionType === 'preset' && instruction.presetCode && instruction.presetCode !== 'custom') return false;
+            if (instruction.instructionType === 'custom' && instruction.customText && instruction.customText.trim().length > 0) return false;
+            return true;
+          });
+          if (missingInstructions.length > 0) {
+            errors.push(`${missingInstructions.length} item(s) missing dispute instructions`);
+          }
+        }
+        break;
+      }
       case 3:
-        // Step 3 is the config step before generation
-        if (discrepancySummary?.highSeverity && discrepancySummary.highSeverity > 0) return false;
-        return targetRecipient === 'bureau' ? selectedBureaus.length > 0 : true;
+        validationResult = validateStep3(selectedBureaus, disputeRound);
+        if (discrepancySummary?.highSeverity && discrepancySummary.highSeverity > 0) {
+          errors.push('Unable to proceed with high-severity discrepancies detected');
+        }
+        break;
       case 4:
-        // Step 4 is Review for both modes
-        return generatedLetters.length > 0;
-      default:
-        return false;
+        validationResult = validateStep4(generatedLetters);
+        break;
     }
+
+    // Merge validation results
+    if (validationResult) {
+      errors.push(...validationResult.errors);
+      warnings.push(...validationResult.warnings);
+    }
+
+    // Update state with validation results
+    const newErrors = { ...validationErrors };
+    const newWarnings = { ...validationWarnings };
+
+    if (errors.length > 0) {
+      newErrors[currentStep] = errors;
+    } else {
+      delete newErrors[currentStep];
+    }
+
+    if (warnings.length > 0) {
+      newWarnings[currentStep] = warnings;
+    } else {
+      delete newWarnings[currentStep];
+    }
+
+    setValidationErrors(newErrors);
+    setValidationWarnings(newWarnings);
+
+    return errors.length === 0;
+  };
+
+  const canProceed = (): boolean => {
+    const isValid = validateCurrentStep();
+    return isValid;
   };
 
   const formatItemType = (type: string) => {
@@ -1002,6 +1114,93 @@ export default function DisputeWizardPage() {
       style: 'currency',
       currency: 'USD',
     }).format(cents / 100);
+  };
+
+  // Error modal/alert component
+  const renderErrorAlert = () => {
+    if (!operationError || !showErrorModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <Card className="w-full max-w-md bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              Operation Error
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{operationError}</p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowErrorModal(false);
+                  setOperationError(null);
+                }}
+              >
+                Dismiss
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowErrorModal(false);
+                  setOperationError(null);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Continue
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // Render validation messages (errors and warnings) for current step
+  const renderValidationMessages = () => {
+    const errors = validationErrors[currentStep] || [];
+    const warnings = validationWarnings[currentStep] || [];
+
+    return (
+      <>
+        {errors.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-900 mb-2">Validation Errors</h3>
+                <ul className="space-y-1">
+                  {errors.map((error, idx) => (
+                    <li key={idx} className="text-red-800 text-sm">
+                      • {error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {warnings.length > 0 && errors.length === 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <div className="flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-900 mb-2">Warnings</h3>
+                <ul className="space-y-1">
+                  {warnings.map((warning, idx) => (
+                    <li key={idx} className="text-yellow-800 text-sm">
+                      • {warning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
   };
 
   // Helper: Update dispute instruction for an item
@@ -1063,6 +1262,83 @@ export default function DisputeWizardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Error Alert Modal */}
+      {renderErrorAlert()}
+
+      {/* Evidence Blocking Modal */}
+      {showEvidenceBlockingModal && evidenceBlockingStatus && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+                Evidence Required for High-Risk Disputes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-4">
+                <p className="text-sm text-red-900 dark:text-red-200 font-medium mb-3">
+                  ⚠️ This dispute uses high-risk reason codes that require supporting evidence:
+                </p>
+                <ul className="space-y-2">
+                  {evidenceBlockingStatus.blockingReasons.map((reason, idx) => (
+                    <li key={idx} className="text-sm text-red-800 dark:text-red-300">
+                      • {reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {evidenceBlockingStatus.requiredEvidenceMissing.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+                  <p className="text-sm text-blue-900 dark:text-blue-200 font-medium mb-2">
+                    Required Evidence:
+                  </p>
+                  <ul className="space-y-1">
+                    {evidenceBlockingStatus.requiredEvidenceMissing.map((doc, idx) => (
+                      <li key={idx} className="text-sm text-blue-800 dark:text-blue-300">
+                        • {doc}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-sm text-muted-foreground">
+                Please upload the required evidence documents before proceeding. Evidence significantly strengthens
+                high-risk disputes and ensures proper investigation by credit bureaus.
+              </p>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowEvidenceBlockingModal(false);
+                    setEvidenceBlockingStatus(null);
+                  }}
+                >
+                  Cancel & Upload Evidence
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEvidenceOverrideConfirmed(true);
+                    setShowEvidenceBlockingModal(false);
+                    // Re-trigger generation with override
+                    setTimeout(() => {
+                      const generateBtn = document.querySelector('[data-generate-button]') as HTMLButtonElement;
+                      generateBtn?.click();
+                    }, 0);
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  Proceed Without Evidence (Admin Override)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1160,6 +1436,7 @@ export default function DisputeWizardPage() {
               <CardDescription>Choose a client to generate dispute letters for</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {renderValidationMessages()}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -1216,6 +1493,7 @@ export default function DisputeWizardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {renderValidationMessages()}
               {/* Info box for template mode */}
               {generationMethod === 'template' && (
                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
@@ -1763,6 +2041,7 @@ export default function DisputeWizardPage() {
               <CardDescription>Configure the dispute round and recipients</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {renderValidationMessages()}
               {/* Discrepancy guardrail */}
               {loadingDiscrepancies ? (
                 <div className="p-3 rounded-lg bg-muted/40 border border-border/50 text-sm text-muted-foreground">
@@ -1892,6 +2171,30 @@ export default function DisputeWizardPage() {
                       ))}
                   </div>
                 )}
+              </div>
+
+              {/* e-OSCAR Bypass Option */}
+              <div className="space-y-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="requestManualReview"
+                    checked={requestManualReview}
+                    onChange={(e) => setRequestManualReview(e.target.checked)}
+                    className="mt-1 w-4 h-4 cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="requestManualReview" className="text-sm font-medium cursor-pointer">
+                      Request Manual Review (Bypass e-OSCAR)
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Includes explicit language requesting that this dispute NOT be processed solely through automated e-OSCAR systems and demanding human investigator review. This significantly improves chances of proper investigation in complex cases.
+                    </p>
+                    <p className="text-xs text-blue-400 mt-2">
+                      <strong>Recommended for:</strong> Cases with evidence, identity theft claims, or complex disputed facts
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Bureau Selection (for Round 1) */}
@@ -2106,6 +2409,7 @@ export default function DisputeWizardPage() {
         {/* Step 4: Review (Both AI and Template Mode) */}
         {currentStep === 4 && (
           <div className="space-y-4">
+            {renderValidationMessages()}
             {/* AI Analysis Summary (AI mode only) */}
             {generationMethod === 'ai' && aiAnalysisSummary && (
               <Card className="bg-card/80 backdrop-blur-sm border-border/50 border-l-4 border-l-green-500">
