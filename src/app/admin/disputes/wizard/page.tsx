@@ -312,6 +312,11 @@ export default function DisputeWizardPage() {
   const [analysisRetryCount, setAnalysisRetryCount] = React.useState<number>(0); // Number of retry attempts
   const [showRetryButton, setShowRetryButton] = React.useState(false); // Show retry button when analysis fails
 
+  // P3.4: Analysis customization preferences
+  const [analysisAggressiveness, setAnalysisAggressiveness] = React.useState<'conservative' | 'balanced' | 'aggressive'>('balanced'); // Analysis intensity
+  const [analysisSavedToPreferences, setAnalysisSavedToPreferences] = React.useState(false); // Track if preferences saved
+  const [analysisPreferencesSaved, setAnalysisPreferencesSaved] = React.useState(false); // Show save confirmation
+
   // Discrepancy preflight
   const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
   const [loadingDiscrepancies, setLoadingDiscrepancies] = React.useState(false);
@@ -542,6 +547,23 @@ export default function DisputeWizardPage() {
 
     console.error('All retry attempts failed:', lastError?.message);
     return null;
+  };
+
+  // P3.4: Save analysis preferences to localStorage
+  const saveAnalysisPreferences = async () => {
+    try {
+      const preferences = {
+        aggressiveness: analysisAggressiveness,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('dispute-analysis-preferences', JSON.stringify(preferences));
+      setAnalysisPreferencesSaved(true);
+
+      // Reset confirmation message after 3 seconds
+      setTimeout(() => setAnalysisPreferencesSaved(false), 3000);
+    } catch (error) {
+      console.error('Failed to save analysis preferences:', error);
+    }
   };
 
   // Analyze items with AI (auto-determine dispute strategy)
@@ -792,6 +814,21 @@ export default function DisputeWizardPage() {
       setShowDraftRecovery(true);
     }
   }, [fetchClients]);
+
+  // P3.4: Load analysis preferences on mount
+  React.useEffect(() => {
+    const savedPreferences = localStorage.getItem('dispute-analysis-preferences');
+    if (savedPreferences) {
+      try {
+        const prefs = JSON.parse(savedPreferences);
+        if (prefs.aggressiveness) {
+          setAnalysisAggressiveness(prefs.aggressiveness);
+        }
+      } catch (error) {
+        console.error('Failed to load analysis preferences:', error);
+      }
+    }
+  }, []);
 
   // Auto-save draft whenever wizard state changes
   React.useEffect(() => {
@@ -3025,9 +3062,9 @@ export default function DisputeWizardPage() {
                   Upload Evidence Documents
                 </Button>
 
-                {/* AI Analysis Settings - Confidence Filtering (AI mode only) */}
+                {/* AI Analysis Settings - Confidence Filtering & Aggressiveness (AI mode only) */}
                 {generationMethod === 'ai' && (
-                  <div className="space-y-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                  <div data-analysis-settings className="space-y-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium text-blue-900 dark:text-blue-200">
                         Analysis Settings
@@ -3066,6 +3103,49 @@ export default function DisputeWizardPage() {
                     <p className="text-xs text-muted-foreground italic">
                       Adjust the threshold to filter recommendations. Higher threshold = only highest-confidence items.
                     </p>
+
+                    {/* P3.4: Analysis Aggressiveness Selector */}
+                    <div className="border-t border-blue-200 dark:border-blue-900 pt-3 mt-3">
+                      <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-2">Analysis Aggressiveness</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['conservative', 'balanced', 'aggressive'] as const).map((level) => (
+                          <button
+                            key={level}
+                            onClick={() => setAnalysisAggressiveness(level)}
+                            className={`px-3 py-2 rounded text-xs font-medium transition-all ${
+                              analysisAggressiveness === level
+                                ? level === 'conservative'
+                                  ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                                  : level === 'balanced'
+                                    ? 'bg-blue-500 dark:bg-blue-600 text-white'
+                                    : 'bg-red-600 dark:bg-red-500 text-white'
+                                : 'bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100 hover:bg-blue-300 dark:hover:bg-blue-800'
+                            }`}
+                          >
+                            {level.charAt(0).toUpperCase() + level.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 italic">
+                        {analysisAggressiveness === 'conservative'
+                          ? 'Conservative: Finds only the strongest violations'
+                          : analysisAggressiveness === 'balanced'
+                            ? 'Balanced: Balanced strength and comprehensiveness'
+                            : 'Aggressive: Finds all potential violations (may be less precise)'}
+                      </p>
+                    </div>
+
+                    {/* Save Preferences Button */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={saveAnalysisPreferences}
+                        className="flex-1 text-xs"
+                      >
+                        {analysisPreferencesSaved ? '✓ Saved' : 'Save Preferences'}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -3165,6 +3245,28 @@ export default function DisputeWizardPage() {
                       </ul>
                     </div>
                   )}
+
+                  {/* P3.4: Re-analyze with Different Settings Button */}
+                  <div className="pt-3 border-t border-border/50 flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCurrentStep(3);
+                        // Scroll to Analysis Settings
+                        setTimeout(() => {
+                          const settingsElement = document.querySelector('[data-analysis-settings]');
+                          if (settingsElement) {
+                            settingsElement.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }, 100);
+                      }}
+                      className="flex-1"
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Re-analyze with Different Settings
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}
