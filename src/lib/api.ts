@@ -1,10 +1,12 @@
 const getApiBase = () => {
   if (typeof window === 'undefined') {
-    // Server-side: use absolute URL
-    return process.env.API_URL || 'http://127.0.0.1:8000/api/v1';
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://127.0.0.1:3000');
+    return `${baseUrl}/api`;
   }
-  // Client-side: use relative URL (proxied by Next.js)
-  return '/api/v1';
+  return '/api';
 };
 
 export interface ContactFormData {
@@ -56,8 +58,10 @@ export class ApiError extends Error {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new ApiError(response.status, error.detail || 'Request failed');
+    const error = await response
+      .json()
+      .catch(() => ({ detail: 'Request failed' })) as { detail?: string; error?: string; message?: string };
+    throw new ApiError(response.status, error.detail || error.error || error.message || 'Request failed');
   }
   return response.json();
 }

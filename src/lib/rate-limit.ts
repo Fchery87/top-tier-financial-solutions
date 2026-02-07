@@ -1,8 +1,41 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-// Initialize Redis connection for rate limiting
-const redis = Redis.fromEnv();
+function hasValidUpstashConfig(): boolean {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+const hasUpstashConfig = hasValidUpstashConfig();
+
+type RateLimitResult = {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number;
+  pending?: Promise<unknown>;
+};
+
+function createNoopLimiter(): Ratelimit {
+  return {
+    limit: async (): Promise<RateLimitResult> => ({
+      success: true,
+      limit: Number.MAX_SAFE_INTEGER,
+      remaining: Number.MAX_SAFE_INTEGER,
+      reset: Math.floor(Date.now() / 1000) + 60,
+    }),
+  } as unknown as Ratelimit;
+}
+
+// Initialize Redis connection for rate limiting only when configured
+const redis = hasUpstashConfig ? Redis.fromEnv() : null;
 
 /**
  * Create rate limiters for different endpoints
@@ -10,36 +43,44 @@ const redis = Redis.fromEnv();
  */
 
 // Public endpoints: 30 requests per minute
-export const publicLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(30, '60 s'),
-  ephemeralCache: new Map(),
-  prefix: '@ratelimit/public',
-});
+export const publicLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(30, '60 s'),
+      ephemeralCache: new Map(),
+      prefix: '@ratelimit/public',
+    })
+  : createNoopLimiter();
 
 // Authenticated user endpoints: 100 requests per minute
-export const userLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(100, '60 s'),
-  ephemeralCache: new Map(),
-  prefix: '@ratelimit/user',
-});
+export const userLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(100, '60 s'),
+      ephemeralCache: new Map(),
+      prefix: '@ratelimit/user',
+    })
+  : createNoopLimiter();
 
 // Sensitive/admin endpoints: 10 requests per minute
-export const sensitiveLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(10, '60 s'),
-  ephemeralCache: new Map(),
-  prefix: '@ratelimit/sensitive',
-});
+export const sensitiveLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, '60 s'),
+      ephemeralCache: new Map(),
+      prefix: '@ratelimit/sensitive',
+    })
+  : createNoopLimiter();
 
 // File upload endpoints: 5 requests per 5 minutes (lower rate for large files)
-export const uploadLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, '5 m'),
-  ephemeralCache: new Map(),
-  prefix: '@ratelimit/upload',
-});
+export const uploadLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, '5 m'),
+      ephemeralCache: new Map(),
+      prefix: '@ratelimit/upload',
+    })
+  : createNoopLimiter();
 
 /**
  * Get rate limit identifier from request

@@ -2,20 +2,6 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
-  // API Rewrites - proxy to FastAPI backend except for Next.js API routes
-  rewrites: async () => {
-    return [
-      {
-        // Exclude auth and admin routes - these are handled by Next.js
-        source: '/api/v1/:path*',
-        destination:
-          process.env.NODE_ENV === 'development'
-            ? 'http://127.0.0.1:8000/api/v1/:path*'
-            : '/api/v1/:path*',
-      },
-    ];
-  },
-
   // Image Optimization
   images: {
     formats: ['image/avif', 'image/webp'],

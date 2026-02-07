@@ -1,20 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { NextResponse } from 'next/server';
+import { getAdminSessionUser } from '@/lib/admin-session';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const { email } = await request.json();
-
-    if (!email) {
-      return NextResponse.json(
-        { authorized: false, error: 'Email is required' },
-        { status: 400 }
-      );
+    const user = await getAdminSessionUser('super_admin');
+    if (!user) {
+      return NextResponse.json({ authorized: false, role: null }, { status: 401 });
     }
 
-    const authorized = await isSuperAdmin(email);
-
-    return NextResponse.json({ authorized });
+    return NextResponse.json({
+      authorized: true,
+      role: user.role,
+      user_id: user.id,
+      user_email: user.email,
+    });
   } catch (error) {
     console.error('Error checking admin access:', error);
     return NextResponse.json(

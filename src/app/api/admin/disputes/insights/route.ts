@@ -23,6 +23,18 @@ async function validateAdmin() {
   return session.user;
 }
 
+function isMissingColumnError(error: unknown): boolean {
+  const code = (error as { code?: string })?.code || (error as { cause?: { code?: string } })?.cause?.code;
+  const message = (error as { message?: string })?.message || '';
+  return code === '42703' || message.includes('does not exist');
+}
+
+function isMissingRelationError(error: unknown): boolean {
+  const code = (error as { code?: string })?.code || (error as { cause?: { code?: string } })?.cause?.code;
+  const message = (error as { message?: string })?.message || '';
+  return code === '42P01' || message.includes('does not exist');
+}
+
 export async function GET(request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
@@ -47,15 +59,64 @@ export async function GET(request: NextRequest) {
         startDate = new Date(0);
     }
 
-    const allDisputes = await db
-      .select()
-      .from(disputes)
-      .where(and(gte(disputes.createdAt, startDate)));
+    let allDisputes: Array<{
+      bureau: string;
+      outcome: string | null;
+      round: number | null;
+      sentAt: Date | null;
+      responseReceivedAt: Date | null;
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      methodology?: string | null;
+      reasonCodes?: string | null;
+      creditorName?: string | null;
+    }>;
 
-    const outcomeRows = await db
-      .select()
-      .from(disputeOutcomes)
-      .where(and(gte(disputeOutcomes.createdAt, startDate)));
+    try {
+      allDisputes = await db
+        .select()
+        .from(disputes)
+        .where(and(gte(disputes.createdAt, startDate)));
+    } catch (queryError) {
+      if (!isMissingColumnError(queryError)) {
+        throw queryError;
+      }
+
+      // Backward compatibility for databases missing enhanced disputes columns.
+      allDisputes = await db
+        .select({
+          bureau: disputes.bureau,
+          outcome: disputes.outcome,
+          round: disputes.round,
+          sentAt: disputes.sentAt,
+          responseReceivedAt: disputes.responseReceivedAt,
+          createdAt: disputes.createdAt,
+          updatedAt: disputes.updatedAt,
+        })
+        .from(disputes)
+        .where(and(gte(disputes.createdAt, startDate)));
+    }
+
+    let outcomeRows: Array<{
+      methodology?: string | null;
+      round?: number | null;
+      outcome?: string | null;
+      reasonCodes?: string | null;
+      creditorName?: string | null;
+    }> = [];
+
+    try {
+      outcomeRows = await db
+        .select()
+        .from(disputeOutcomes)
+        .where(and(gte(disputeOutcomes.createdAt, startDate)));
+    } catch (queryError) {
+      if (!isMissingRelationError(queryError)) {
+        throw queryError;
+      }
+      // Database not fully migrated yet; keep insights available from disputes table only.
+      outcomeRows = [];
+    }
 
     if (allDisputes.length === 0 && outcomeRows.length === 0) {
       return NextResponse.json({

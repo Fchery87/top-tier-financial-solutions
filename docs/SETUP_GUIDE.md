@@ -5,7 +5,7 @@ Quick start guide for Top Tier Financial Solutions credit repair platform.
 ## Prerequisites
 
 - **Node.js 18+** 
-- **Python 3.12+** (for FastAPI backend)
+- **Python 3.12+** (optional, only for legacy FastAPI backend)
 - **Neon PostgreSQL** (or any PostgreSQL database)
 - **Cloudflare R2** (S3-compatible storage)
 - **Google Gemini API** (AI dispute letter generation)
@@ -17,7 +17,7 @@ Quick start guide for Top Tier Financial Solutions credit repair platform.
 ```bash
 npm install
 
-# Optional: Python dependencies for FastAPI backend
+# Optional: Python dependencies for legacy FastAPI backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -45,8 +45,10 @@ R2_ACCESS_KEY_ID="your-access-key"
 R2_SECRET_ACCESS_KEY="your-secret-key"
 R2_BUCKET_NAME="credit-reports"
 
-# Google AI
+# Google Gemini (Google Gen AI SDK)
 GOOGLE_AI_API_KEY="your-gemini-api-key"
+# Optional alias
+GEMINI_API_KEY="your-gemini-api-key"
 ```
 
 ### 3. Setup Database
@@ -54,6 +56,16 @@ GOOGLE_AI_API_KEY="your-gemini-api-key"
 ```bash
 npm run db:migrate     # Apply migrations
 npm run db:studio      # View database (optional)
+```
+
+If `npm run db:migrate` fails with `relation "account" already exists`, your DB schema is ahead of Drizzle's migration journal. Repair the journal baseline, then rerun migrations:
+
+```bash
+# Mark already-applied historical migrations as applied
+npm run db:repair-migrations -- --through=0014_wealthy_kree
+
+# Apply pending migrations normally
+npm run db:migrate
 ```
 
 ### 4. Start Development
@@ -98,7 +110,7 @@ Next.js 16 (React 19)
 ├── Drizzle ORM → Neon PostgreSQL
 ├── Cloudflare R2 (file storage)
 ├── Google Gemini (AI letters)
-└── FastAPI (optional Python backend)
+└── Legacy FastAPI (optional Python backend)
 ```
 
 ## Key Features
@@ -155,7 +167,7 @@ Next.js 16 (React 19)
 ## Project Structure
 
 ```
-├── api/              # Python FastAPI backend
+├── api/              # Legacy Python FastAPI backend
 ├── db/               # Drizzle schema and client
 ├── drizzle/          # Database migrations
 ├── public/           # Static assets
@@ -203,9 +215,10 @@ npm run build        # Production build
 npm run lint         # ESLint
 npm run db:generate  # Generate migrations
 npm run db:migrate   # Apply migrations
+npm run db:repair-migrations -- --through=0014_wealthy_kree  # Repair migration journal baseline
 npm run db:push      # Push schema changes
 npm run db:studio    # Database viewer
-npm run fastapi-dev  # Python backend (optional)
+npm run fastapi-dev  # Legacy Python backend (optional)
 ```
 
 ## Support Resources

@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import {
@@ -14,17 +14,16 @@ import { getLLMConfig, type LLMConfig } from './settings-service';
 async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
   switch (config.provider) {
     case 'google': {
-      const genAI = new GoogleGenerativeAI(config.apiKey!);
-      const model = genAI.getGenerativeModel({ 
+      const genAI = new GoogleGenAI({ apiKey: config.apiKey! });
+      const response = await genAI.models.generateContent({
         model: config.model,
-        generationConfig: {
+        contents: prompt,
+        config: {
           temperature: config.temperature || 0.1,
           maxOutputTokens: config.maxTokens || 4096,
         },
       });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
+      return typeof response.text === 'string' ? response.text : '';
     }
     
     case 'openai': {
@@ -97,7 +96,7 @@ interface EvidenceEnclosure {
 interface GenerateLetterParams {
   disputeType: string;
   round: number;
-  targetRecipient: 'bureau' | 'creditor' | 'collector' | 'furnisher';
+  targetRecipient: 'bureau' | 'creditor' | 'collector' | 'furnisher' | 'cfpb';
   clientData: ClientInfo;
   itemData: NegativeItemInfo;
   reasonCodes: string[];
@@ -654,7 +653,7 @@ export const DISPUTE_REASON_CODES = [
 interface GenerateMultiItemLetterParams {
   disputeType: string;
   round: number;
-  targetRecipient: 'bureau' | 'creditor' | 'collector' | 'furnisher';
+  targetRecipient: 'bureau' | 'creditor' | 'collector' | 'furnisher' | 'cfpb';
   clientData: ClientInfo;
   items: NegativeItemInfo[];
   bureau: string;
@@ -1606,14 +1605,14 @@ export async function generateFactualMetro2DisputeLetter(params: {
       };
     }
 
-    const genAI = new GoogleGenerativeAI(llmConfig.apiKey);
-    const model = genAI.getGenerativeModel({ 
+    const genAI = new GoogleGenAI({ apiKey: llmConfig.apiKey });
+    const generationConfig = {
       model: llmConfig.model,
-      generationConfig: {
+      config: {
         temperature: llmConfig.temperature || 0.1,
         maxOutputTokens: llmConfig.maxTokens || 4096,
       },
-    });
+    };
 
     // Build structured data for the AI
     const negativeItemsJson = JSON.stringify(params.negativeItems, null, 2);
@@ -1667,10 +1666,11 @@ Return ONLY the JSON object, no markdown formatting.`;
     // Combine system prompt with user prompt
     const fullPrompt = METRO2_ANALYSIS_SYSTEM_PROMPT + '\n\n---\n\n' + userPrompt;
     
-    const result = await model.generateContent(fullPrompt);
-
-    const response = await result.response;
-    let responseText = response.text();
+    const response = await genAI.models.generateContent({
+      ...generationConfig,
+      contents: fullPrompt,
+    });
+    let responseText = typeof response.text === 'string' ? response.text : '';
     
     // Clean up response - remove markdown code blocks if present
     responseText = responseText

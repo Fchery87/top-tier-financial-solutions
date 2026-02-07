@@ -5,7 +5,7 @@ A comprehensive credit repair management platform built with Next.js 16, featuri
 ## Tech Stack
 
 - **Frontend:** Next.js 16 (React 19), TypeScript, Tailwind CSS v4, Framer Motion
-- **Backend:** Next.js API Routes + Python FastAPI
+- **Backend:** Next.js API Routes (primary) + optional legacy Python FastAPI service
 - **Database:** Neon PostgreSQL with Drizzle ORM
 - **Authentication:** Better Auth with email/password and admin roles
 - **Storage:** Cloudflare R2 (S3-compatible)
@@ -53,7 +53,7 @@ npm run db:migrate
 # Start development server
 npm run dev
 
-# (Optional) Start FastAPI backend
+# (Optional legacy) Start FastAPI backend
 npm run fastapi-dev
 ```
 
@@ -72,11 +72,12 @@ See `env.example` for all required variables:
 
 ```bash
 npm run dev          # Start Next.js development server
-npm run fastapi-dev  # Start FastAPI backend
+npm run fastapi-dev  # Start legacy FastAPI backend
 npm run build        # Production build
 npm run lint         # Run ESLint
 npm run db:generate  # Generate Drizzle migrations
 npm run db:migrate   # Run migrations
+npm run db:repair-migrations -- --through=0014_wealthy_kree  # Repair migration journal baseline
 npm run db:push      # Push schema changes
 npm run db:studio    # Open Drizzle Studio
 ```
@@ -84,7 +85,7 @@ npm run db:studio    # Open Drizzle Studio
 ## Project Structure
 
 ```
-├── api/              # Python FastAPI backend
+├── api/              # Legacy Python FastAPI backend (optional)
 ├── db/               # Database client and schema
 ├── drizzle/          # Database migrations
 ├── public/           # Static assets

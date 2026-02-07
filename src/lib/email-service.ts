@@ -106,11 +106,11 @@ export function renderTemplate(template: string, variables: EmailVariables): str
 /**
  * Get email provider based on environment configuration
  */
-function getEmailProvider(): 'resend' | 'sendgrid' | 'smtp' | 'console' {
+function getEmailProvider(): 'resend' | 'sendgrid' | 'smtp' | 'console' | 'none' {
   if (process.env.RESEND_API_KEY) return 'resend';
   if (process.env.SENDGRID_API_KEY) return 'sendgrid';
   if (process.env.SMTP_HOST) return 'smtp';
-  return 'console';
+  return process.env.NODE_ENV === 'production' ? 'none' : 'console';
 }
 
 /**
@@ -186,6 +186,10 @@ async function sendViaProvider(options: SendEmailOptions): Promise<{ success: bo
       return { success: false, error: 'SMTP not implemented - install nodemailer' };
     }
     
+    case 'none': {
+      return { success: false, error: 'No email provider configured' };
+    }
+
     case 'console':
     default: {
       console.log('='.repeat(60));

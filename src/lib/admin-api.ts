@@ -1,8 +1,12 @@
 const getApiBase = () => {
   if (typeof window === 'undefined') {
-    return process.env.API_URL || 'http://127.0.0.1:8000/api/v1';
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://127.0.0.1:3000');
+    return `${baseUrl}/api`;
   }
-  return '/api/v1';
+  return '/api';
 };
 
 // Types
@@ -93,8 +97,10 @@ export class AdminApiError extends Error {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new AdminApiError(response.status, error.detail || 'Request failed');
+    const error = await response
+      .json()
+      .catch(() => ({ detail: 'Request failed' })) as { detail?: string; error?: string; message?: string };
+    throw new AdminApiError(response.status, error.detail || error.error || error.message || 'Request failed');
   }
   return response.json();
 }
@@ -108,14 +114,14 @@ function getAuthHeaders(token: string): HeadersInit {
 
 // Pages API
 export async function getPages(token: string, page = 1, limit = 10): Promise<PaginatedResponse<Page>> {
-  const response = await fetch(`${getApiBase()}/admin/content?page=${page}&limit=${limit}`, {
+  const response = await fetch(`${getApiBase()}/admin/pages?page=${page}&limit=${limit}`, {
     headers: getAuthHeaders(token),
   });
   return handleResponse<PaginatedResponse<Page>>(response);
 }
 
 export async function createPage(token: string, data: Partial<Page>): Promise<Page> {
-  const response = await fetch(`${getApiBase()}/admin/content`, {
+  const response = await fetch(`${getApiBase()}/admin/pages`, {
     method: 'POST',
     headers: getAuthHeaders(token),
     body: JSON.stringify(data),
@@ -124,7 +130,7 @@ export async function createPage(token: string, data: Partial<Page>): Promise<Pa
 }
 
 export async function updatePage(token: string, id: string, data: Partial<Page>): Promise<Page> {
-  const response = await fetch(`${getApiBase()}/admin/content/${id}`, {
+  const response = await fetch(`${getApiBase()}/admin/pages/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(token),
     body: JSON.stringify(data),
@@ -133,7 +139,7 @@ export async function updatePage(token: string, id: string, data: Partial<Page>)
 }
 
 export async function deletePage(token: string, id: string): Promise<void> {
-  const response = await fetch(`${getApiBase()}/admin/content/${id}`, {
+  const response = await fetch(`${getApiBase()}/admin/pages/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(token),
   });
@@ -261,7 +267,7 @@ export async function getContactForms(
   limit = 10, 
   status?: ConsultationStatus
 ): Promise<PaginatedResponse<ContactFormSubmission>> {
-  let url = `${getApiBase()}/admin/contact-forms?page=${page}&limit=${limit}`;
+  let url = `${getApiBase()}/admin/leads?page=${page}&limit=${limit}`;
   if (status) {
     url += `&status=${status}`;
   }
@@ -272,7 +278,7 @@ export async function getContactForms(
 }
 
 export async function getContactForm(token: string, id: string): Promise<ContactFormSubmission> {
-  const response = await fetch(`${getApiBase()}/admin/contact-forms/${id}`, {
+  const response = await fetch(`${getApiBase()}/admin/leads/${id}`, {
     headers: getAuthHeaders(token),
   });
   return handleResponse<ContactFormSubmission>(response);
@@ -283,7 +289,7 @@ export async function updateContactFormStatus(
   id: string, 
   status: ConsultationStatus
 ): Promise<ContactFormSubmission> {
-  const response = await fetch(`${getApiBase()}/admin/contact-forms/${id}`, {
+  const response = await fetch(`${getApiBase()}/admin/leads/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(token),
     body: JSON.stringify({ status }),
@@ -292,7 +298,7 @@ export async function updateContactFormStatus(
 }
 
 export async function deleteContactForm(token: string, id: string): Promise<void> {
-  const response = await fetch(`${getApiBase()}/admin/contact-forms/${id}`, {
+  const response = await fetch(`${getApiBase()}/admin/leads/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(token),
   });

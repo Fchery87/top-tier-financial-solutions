@@ -1,31 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
-import { disputes, clients, negativeItems } from '@/db/schema';
+import { disputes, clients, negativeItems, slaDefinitions, slaInstances } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
-import { encryptDisputeData, decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
+import { decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
+import { getAdminSessionUser } from '@/lib/admin-session';
+import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
+import {
+  calculateDisputeDeadlines,
+  getDisputeSlaDefinitionId,
+  getDisputeSlaInstanceId,
+} from '@/lib/dispute-automation';
 
 async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
+  return getAdminSessionUser('super_admin');
+}
+
+function isMissingColumnError(error: unknown): boolean {
+  const code = (error as { code?: string })?.code || (error as { cause?: { code?: string } })?.cause?.code;
+  const message = (error as { message?: string })?.message || '';
+  return code === '42703' || message.includes('does not exist');
+}
+
+function safeDecryptClientName(client: { firstName: string; lastName: string } | null): string {
+  if (!client) return 'Unknown';
+  try {
+    const decryptedClient = decryptClientData({
+      firstName: client.firstName,
+      lastName: client.lastName,
+      phone: undefined,
+      streetAddress: undefined,
+      city: undefined,
+      state: undefined,
+      zipCode: undefined,
+      dateOfBirth: undefined,
+      ssnLast4: undefined,
+    });
+    return `${decryptedClient.firstName} ${decryptedClient.lastName}`;
+  } catch (error) {
+    // Keep endpoint functional when ENCRYPTION_KEY is not configured in local/dev.
+    console.error('[Disputes API] Failed to decrypt client name:', error);
+    return 'Unknown';
+  }
+}
+
+function safeDecryptCreditorName(creditorName: string | null): string | null {
+  try {
+    const decryptedDispute = decryptDisputeData({ creditorName });
+    return decryptedDispute.creditorName;
+  } catch (error) {
+    console.error('[Disputes API] Failed to decrypt creditor name:', error);
     return null;
   }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
 }
 
 async function postHandler(request: NextRequest) {
@@ -59,11 +88,29 @@ async function postHandler(request: NextRequest) {
       targetRecipient,
       analysisConfidence,
       autoSelected,
+      clientConfirmedOwnershipClaims,
     } = body;
 
     if (!clientId || !bureau || !disputeReason) {
       return NextResponse.json(
         { error: 'Client ID, bureau, and dispute reason are required' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedReasonCodes = Array.isArray(reasonCodes)
+      ? reasonCodes
+      : [disputeReason.includes('not mine') ? 'not_mine' : disputeReason.includes('never late') ? 'never_late' : disputeReason.includes('wrong') ? 'wrong_balance' : 'verification_required'];
+
+    const compliance = evaluateDisputeCompliance({
+      reasonCodes: normalizedReasonCodes,
+      evidenceDocumentIds,
+      clientConfirmedOwnershipClaims,
+    });
+
+    if (!compliance.isCompliant) {
+      return NextResponse.json(
+        { error: 'Dispute failed compliance checks', violations: compliance.violations },
         { status: 400 }
       );
     }
@@ -109,9 +156,7 @@ async function postHandler(request: NextRequest) {
       },
       reasonCodes: Array.isArray(reasonCodes) && reasonCodes.length > 0
         ? reasonCodes
-        : [disputeReason.includes('not mine') ? 'not_mine' : 
-           disputeReason.includes('never late') ? 'never_late' : 
-           disputeReason.includes('wrong') ? 'wrong_balance' : 'not_mine'],
+        : normalizedReasonCodes,
       customReason: disputeReason,
     });
 
@@ -132,14 +177,11 @@ async function postHandler(request: NextRequest) {
     }]);
 
     const sentDate = sentAt ? new Date(sentAt) : null;
+    const computedDeadlines = sentDate ? calculateDisputeDeadlines(sentDate, escalationPath || targetRecipient) : null;
     const computedResponseDeadline = sentDate
       ? responseDeadline
         ? new Date(responseDeadline)
-        : (() => {
-            const d = new Date(sentDate);
-            d.setDate(d.getDate() + 30);
-            return d;
-          })()
+        : computedDeadlines?.responseDeadline || null
       : null;
 
     // Encrypt creditor name (already encrypted if from negativeItem, so use as-is)
@@ -163,9 +205,10 @@ async function postHandler(request: NextRequest) {
       trackingNumber: trackingNumber || null,
       sentAt: sentDate,
       responseDeadline: computedResponseDeadline,
+      escalationReadyAt: computedDeadlines?.escalationReadyAt || null,
       responseChannel: responseChannel || null,
       scoreImpact: scoreImpact ?? null,
-      reasonCodes: reasonCodes ? JSON.stringify(reasonCodes) : null,
+      reasonCodes: JSON.stringify(normalizedReasonCodes),
       escalationPath: escalationPath || targetRecipient || 'bureau',
       creditorName: creditorNameValue,
       accountNumber: negativeItem?.id?.slice(-8) || null,
@@ -176,6 +219,48 @@ async function postHandler(request: NextRequest) {
     });
     
     console.log(`[AUDIT] Dispute ${id} created by admin ${adminUser.email} for client ${clientId}`);
+
+    if (sentDate && computedResponseDeadline) {
+      const definitionId = getDisputeSlaDefinitionId();
+      const slaInstanceId = getDisputeSlaInstanceId(id);
+      await db
+        .insert(slaDefinitions)
+        .values({
+          id: definitionId,
+          name: 'Dispute Response Window',
+          description: 'Tracks 30-day bureau response SLA for sent disputes.',
+          stage: 'round_in_progress',
+          maxDays: 30,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing();
+
+      await db
+        .insert(slaInstances)
+        .values({
+          id: slaInstanceId,
+          clientId,
+          definitionId,
+          stage: 'round_in_progress',
+          startedAt: sentDate,
+          dueAt: computedResponseDeadline,
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: slaInstances.id,
+          set: {
+            dueAt: computedResponseDeadline,
+            status: 'active',
+            completedAt: null,
+            breachNotifiedAt: null,
+            updatedAt: now,
+          },
+        });
+    }
 
     // Fetch the created dispute
     const [createdDispute] = await db
@@ -273,7 +358,93 @@ async function getHandler(request: NextRequest) {
       query = query.where(and(...conditions)) as typeof query;
     }
 
-    const results = await query;
+    let results: Array<{
+      dispute: {
+        id: string;
+        clientId: string;
+        negativeItemId: string | null;
+        bureau: string;
+        disputeReason: string;
+        disputeType: string | null;
+        status: string | null;
+        round: number | null;
+        letterContent: string | null;
+        trackingNumber: string | null;
+        sentAt: Date | null;
+        responseDeadline: Date | null;
+        responseReceivedAt: Date | null;
+        outcome: string | null;
+        responseNotes: string | null;
+        creditorName: string | null;
+        accountNumber: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+        responseDocumentUrl?: string | null;
+        responseChannel?: string | null;
+        scoreImpact?: number | null;
+        reasonCodes?: string | null;
+        analysisConfidence?: number | null;
+        autoSelected?: boolean | null;
+      };
+      client: {
+        firstName: string;
+        lastName: string;
+      } | null;
+    }>;
+
+    try {
+      results = await query;
+    } catch (queryError) {
+      if (!isMissingColumnError(queryError)) {
+        throw queryError;
+      }
+
+      // Backward compatibility for environments missing recent disputes columns.
+      let fallbackQuery = db
+        .select({
+          dispute: {
+            id: disputes.id,
+            clientId: disputes.clientId,
+            negativeItemId: disputes.negativeItemId,
+            bureau: disputes.bureau,
+            disputeReason: disputes.disputeReason,
+            disputeType: disputes.disputeType,
+            status: disputes.status,
+            round: disputes.round,
+            letterContent: disputes.letterContent,
+            trackingNumber: disputes.trackingNumber,
+            sentAt: disputes.sentAt,
+            responseDeadline: disputes.responseDeadline,
+            responseReceivedAt: disputes.responseReceivedAt,
+            outcome: disputes.outcome,
+            responseNotes: disputes.responseNotes,
+            creditorName: disputes.creditorName,
+            accountNumber: disputes.accountNumber,
+            createdAt: disputes.createdAt,
+            updatedAt: disputes.updatedAt,
+          },
+          client: {
+            firstName: clients.firstName,
+            lastName: clients.lastName,
+          },
+        })
+        .from(disputes)
+        .leftJoin(clients, eq(disputes.clientId, clients.id));
+
+      const fallbackConditions = [];
+      if (clientId) fallbackConditions.push(eq(disputes.clientId, clientId));
+      if (status) fallbackConditions.push(eq(disputes.status, status));
+      if (bureau) fallbackConditions.push(eq(disputes.bureau, bureau));
+      if (round) fallbackConditions.push(eq(disputes.round, parseInt(round)));
+      if (outcome) fallbackConditions.push(eq(disputes.outcome, outcome));
+      if (awaitingResponse === 'true') fallbackConditions.push(eq(disputes.status, 'sent'));
+
+      if (fallbackConditions.length > 0) {
+        fallbackQuery = fallbackQuery.where(and(...fallbackConditions)) as typeof fallbackQuery;
+      }
+
+      results = await fallbackQuery;
+    }
 
     // Filter overdue in JS (deadline passed, no response)
     let filteredResults = results;
@@ -302,28 +473,10 @@ async function getHandler(request: NextRequest) {
 
     return NextResponse.json({
       disputes: filteredResults.map(({ dispute: d, client: c }) => {
-        // Decrypt client name
-        const decryptedClient = c ? decryptClientData({
-          firstName: c.firstName,
-          lastName: c.lastName,
-          phone: undefined,
-          streetAddress: undefined,
-          city: undefined,
-          state: undefined,
-          zipCode: undefined,
-          dateOfBirth: undefined,
-          ssnLast4: undefined,
-        }) : null;
-
-        // Decrypt dispute creditor name
-        const decryptedDispute = decryptDisputeData({
-          creditorName: d.creditorName,
-        });
-
         return {
           id: d.id,
           client_id: d.clientId,
-          client_name: decryptedClient ? `${decryptedClient.firstName} ${decryptedClient.lastName}` : 'Unknown',
+          client_name: safeDecryptClientName(c),
           negative_item_id: d.negativeItemId,
           bureau: d.bureau,
           dispute_reason: d.disputeReason,
@@ -337,13 +490,13 @@ async function getHandler(request: NextRequest) {
           response_received_at: d.responseReceivedAt?.toISOString(),
           outcome: d.outcome,
           response_notes: d.responseNotes,
-          response_document_url: d.responseDocumentUrl,
-          response_channel: d.responseChannel,
-          score_impact: d.scoreImpact,
-          reason_codes: d.reasonCodes,
-          analysis_confidence: d.analysisConfidence,
-          auto_selected: d.autoSelected,
-          creditor_name: decryptedDispute.creditorName,
+          response_document_url: d.responseDocumentUrl || null,
+          response_channel: d.responseChannel || null,
+          score_impact: d.scoreImpact ?? null,
+          reason_codes: d.reasonCodes || null,
+          analysis_confidence: d.analysisConfidence ?? null,
+          auto_selected: d.autoSelected ?? null,
+          creditor_name: safeDecryptCreditorName(d.creditorName),
           account_number: d.accountNumber,
           created_at: d.createdAt?.toISOString(),
           updated_at: d.updatedAt?.toISOString(),

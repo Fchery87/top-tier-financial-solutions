@@ -4,6 +4,11 @@ import { db } from "@/db/client";
 import * as schema from "@/db/schema";
 import { admin } from "better-auth/plugins";
 
+const appBaseUrl =
+  process.env.BETTER_AUTH_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "http://localhost:3000";
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -15,6 +20,7 @@ export const auth = betterAuth({
     },
   }),
   secret: process.env.BETTER_AUTH_SECRET,
+  baseURL: appBaseUrl,
   emailAndPassword: {
     enabled: true,
   },
@@ -38,7 +44,7 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    appBaseUrl,
   ],
 });
 

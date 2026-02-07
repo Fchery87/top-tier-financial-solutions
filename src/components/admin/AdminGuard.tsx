@@ -41,13 +41,12 @@ export function AdminGuard({ children }: AdminGuardProps) {
         const response = await fetch('/api/admin/check-access', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email }),
         });
 
         if (response.ok) {
           const data = await response.json();
           setIsAuthorized(data.authorized);
-          setUserRole(data.role || (data.authorized ? 'super_admin' : null));
+          setUserRole(data.role || null);
         } else {
           setIsAuthorized(false);
           setUserRole(null);

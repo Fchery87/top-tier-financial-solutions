@@ -18,17 +18,12 @@ function getEncryptionKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
 
   if (!key) {
-    // For development, generate a temporary key (WARNING: don't use in production)
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(
-        '[ENCRYPTION] ENCRYPTION_KEY not set. Encryption disabled. DO NOT USE IN PRODUCTION.'
-      );
-      return Buffer.alloc(32); // 32 zero bytes
+    // Tests can run without encryption config to keep unit tests deterministic.
+    if (process.env.NODE_ENV === 'test') {
+      return Buffer.alloc(32);
     }
 
-    throw new Error(
-      'ENCRYPTION_KEY environment variable is required for production'
-    );
+    throw new Error('ENCRYPTION_KEY environment variable is required');
   }
 
   // Convert hex string to buffer (must be 64 hex chars for 256-bit key)
@@ -59,11 +54,7 @@ export function encrypt(plaintext: string | null | undefined): string | null {
     return `${iv.toString(CIPHER_ENCODING)}:${encrypted}`;
   } catch (error) {
     console.error('[Encryption Error]', error);
-    // In development, return plaintext; in production, throw
-    if (process.env.NODE_ENV === 'production') {
-      throw error;
-    }
-    return plaintext;
+    throw error;
   }
 }
 
@@ -94,11 +85,7 @@ export function decrypt(ciphertext: string | null | undefined): string | null {
     return decrypted;
   } catch (error) {
     console.error('[Decryption Error]', error);
-    // In development, return as-is; in production, throw
-    if (process.env.NODE_ENV === 'production') {
-      throw error;
-    }
-    return ciphertext;
+    throw error;
   }
 }
 
@@ -113,7 +100,7 @@ export function generateEncryptionKey(): string {
 /**
  * Batch encrypt multiple fields
  */
-export function encryptObject<T extends Record<string, any>>(
+export function encryptObject<T extends Record<string, unknown>>(
   obj: T,
   fieldsToEncrypt: (keyof T)[]
 ): T {
@@ -122,7 +109,7 @@ export function encryptObject<T extends Record<string, any>>(
   for (const field of fieldsToEncrypt) {
     const value = obj[field];
     if (value !== null && value !== undefined) {
-      encrypted[field] = encrypt(String(value)) as any;
+      encrypted[field] = encrypt(String(value)) as T[keyof T];
     }
   }
 
@@ -132,7 +119,7 @@ export function encryptObject<T extends Record<string, any>>(
 /**
  * Batch decrypt multiple fields
  */
-export function decryptObject<T extends Record<string, any>>(
+export function decryptObject<T extends Record<string, unknown>>(
   obj: T,
   fieldsToDecrypt: (keyof T)[]
 ): T {
@@ -141,7 +128,7 @@ export function decryptObject<T extends Record<string, any>>(
   for (const field of fieldsToDecrypt) {
     const value = obj[field];
     if (value !== null && value !== undefined) {
-      decrypted[field] = decrypt(String(value)) as any;
+      decrypted[field] = decrypt(String(value)) as T[keyof T];
     }
   }
 

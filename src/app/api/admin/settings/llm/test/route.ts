@@ -45,12 +45,13 @@ export async function POST(_request: NextRequest) {
     // Test based on provider
     switch (config.provider) {
       case 'google': {
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
-        const genAI = new GoogleGenerativeAI(config.apiKey);
-        const model = genAI.getGenerativeModel({ model: config.model });
-        const result = await model.generateContent(testPrompt);
-        const response = await result.response;
-        const text = response.text();
+        const { GoogleGenAI } = await import('@google/genai');
+        const genAI = new GoogleGenAI({ apiKey: config.apiKey });
+        const response = await genAI.models.generateContent({
+          model: config.model,
+          contents: testPrompt,
+        });
+        const text = typeof response.text === 'string' ? response.text : '';
         
         return NextResponse.json({ 
           success: true, 

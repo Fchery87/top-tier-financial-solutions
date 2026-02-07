@@ -218,7 +218,7 @@ export async function getLLMConfig(): Promise<LLMConfig> {
   const provider = await getSettingWithDefault<string>('llm.provider', 'google') as LLMConfig['provider'];
   const model = await getSettingWithDefault<string>(
     'llm.model',
-    'gemini-2.0-flash-exp' // Default to Gemini 2.5 Flash preview
+    'gemini-2.5-flash' // Default to latest stable Gemini Flash tier
   );
   const apiKeyFromDb = await getSetting('llm.api_key');
   const apiEndpoint = await getSetting('llm.api_endpoint');
@@ -230,7 +230,7 @@ export async function getLLMConfig(): Promise<LLMConfig> {
   if (!apiKey) {
     switch (provider) {
       case 'google':
-        apiKey = process.env.GOOGLE_AI_API_KEY;
+        apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
         break;
       case 'openai':
         apiKey = process.env.OPENAI_API_KEY;

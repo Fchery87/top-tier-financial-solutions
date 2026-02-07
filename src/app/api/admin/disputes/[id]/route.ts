@@ -3,11 +3,17 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
-import { disputes, negativeItems, clients, disputeOutcomes } from '@/db/schema';
+import { disputes, negativeItems, clients, disputeOutcomes, slaDefinitions, slaInstances } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { triggerAutomation } from '@/lib/email-service';
+import {
+  buildEscalationPlan,
+  calculateDisputeDeadlines,
+  getDisputeSlaDefinitionId,
+  getDisputeSlaInstanceId,
+} from '@/lib/dispute-automation';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -216,18 +222,12 @@ export async function PUT(
       // Set response deadline and escalationReadyAt when marked as sent
       if (sentAt) {
         const sendDate = new Date(sentAt);
-        // Response deadline: 30 days for bureaus (FCRA requirement)
-        const deadline = new Date(sendDate);
-        deadline.setDate(deadline.getDate() + 30);
-        updateData.responseDeadline = deadline;
-        
-        // Escalation ready: 35 days for bureaus, 45 days for creditors/collectors
-        // This accounts for 30-day investigation + 5-day mailing buffer
-        const escalationDays = currentDispute.escalationPath === 'creditor' || 
-                               currentDispute.escalationPath === 'collector' ? 45 : 35;
-        const escalationDate = new Date(sendDate);
-        escalationDate.setDate(escalationDate.getDate() + escalationDays);
-        updateData.escalationReadyAt = escalationDate;
+        const { responseDeadline, escalationReadyAt } = calculateDisputeDeadlines(
+          sendDate,
+          currentDispute.escalationPath
+        );
+        updateData.responseDeadline = responseDeadline;
+        updateData.escalationReadyAt = escalationReadyAt;
       }
     }
 
@@ -265,6 +265,73 @@ export async function PUT(
       .where(eq(disputes.id, id));
     
     console.log(`[AUDIT] Dispute ${id} updated by admin ${adminUser.email}`);
+
+    if (sentAt !== undefined) {
+      const slaDefinitionId = getDisputeSlaDefinitionId();
+      const slaInstanceId = getDisputeSlaInstanceId(currentDispute.id);
+      const now = new Date();
+
+      await db
+        .insert(slaDefinitions)
+        .values({
+          id: slaDefinitionId,
+          name: 'Dispute Response Window',
+          description: 'Tracks 30-day bureau response SLA for sent disputes.',
+          stage: 'round_in_progress',
+          maxDays: 30,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing();
+
+      if (sentAt) {
+        await db
+          .insert(slaInstances)
+          .values({
+            id: slaInstanceId,
+            clientId: currentDispute.clientId,
+            definitionId: slaDefinitionId,
+            stage: 'round_in_progress',
+            startedAt: new Date(sentAt),
+            dueAt: (updateData.responseDeadline as Date) || null,
+            status: 'active',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: slaInstances.id,
+            set: {
+              dueAt: (updateData.responseDeadline as Date) || null,
+              status: 'active',
+              completedAt: null,
+              breachNotifiedAt: null,
+              updatedAt: now,
+            },
+          });
+      } else {
+        await db
+          .update(slaInstances)
+          .set({
+            status: 'completed',
+            completedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(slaInstances.id, slaInstanceId));
+      }
+    }
+
+    if (responseReceivedAt && currentDispute.responseReceivedAt === null) {
+      const now = new Date();
+      await db
+        .update(slaInstances)
+        .set({
+          status: 'completed',
+          completedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(slaInstances.id, getDisputeSlaInstanceId(currentDispute.id)));
+    }
 
     let outcomeRecordId: string | null = null;
     if (outcome) {
@@ -312,15 +379,19 @@ export async function PUT(
         .limit(1);
 
       if (client && negativeItem) {
-        const nextRound = (currentDispute.round || 1) + 1;
-        const nextDisputeType = nextRound === 2 ? 'method_of_verification' : 'direct_creditor';
-        const nextTarget = nextRound === 2 ? 'bureau' : 'creditor';
+        const escalationPlan = buildEscalationPlan({
+          currentRound: currentDispute.round || 1,
+          trigger: 'verified',
+          currentBureau: currentDispute.bureau,
+        });
+        const nextRound = escalationPlan.nextRound;
 
         // Generate escalation letter
         const letterContent = await generateUniqueDisputeLetter({
-          disputeType: nextDisputeType,
+          disputeType: escalationPlan.disputeType,
           round: nextRound,
-          targetRecipient: nextTarget,
+          targetRecipient: escalationPlan.targetRecipient,
+          methodology: escalationPlan.methodology,
           clientData: {
             name: `${client.firstName} ${client.lastName}`,
           },
@@ -333,8 +404,8 @@ export async function PUT(
             dateReported: negativeItem.dateReported?.toISOString(),
             bureau: currentDispute.bureau,
           },
-          reasonCodes: ['previously_disputed', 'request_verification_method'],
-          customReason: escalationReason || `Item was verified in Round ${currentDispute.round}. Requesting method of verification.`,
+          reasonCodes: escalationPlan.reasonCodes,
+          customReason: escalationReason || escalationPlan.customReason,
         });
 
         const nextId = randomUUID();
@@ -345,15 +416,18 @@ export async function PUT(
           clientId: currentDispute.clientId,
           negativeItemId: currentDispute.negativeItemId,
           bureau: currentDispute.bureau,
-          disputeReason: `Escalation from Round ${currentDispute.round} - ${escalationReason || 'Item verified, requesting method of verification'}`,
-          disputeType: nextDisputeType,
+          disputeReason: `Escalation from Round ${currentDispute.round} - ${escalationReason || escalationPlan.customReason}`,
+          disputeType: escalationPlan.disputeType,
           status: 'draft',
           round: nextRound,
-          escalationPath: nextTarget,
+          escalationPath: escalationPlan.targetRecipient,
           letterContent,
           creditorName: negativeItem.creditorName,
           accountNumber: negativeItem.id.slice(-8),
           generatedByAi: true,
+          methodology: escalationPlan.methodology,
+          priorDisputeId: currentDispute.id,
+          reasonCodes: JSON.stringify(escalationPlan.reasonCodes),
           createdAt: now,
           updatedAt: now,
         });

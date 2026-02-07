@@ -455,18 +455,14 @@ export default function SettingsPage() {
                   onChange={(e) => handleConfigChange('model', e.target.value)}
                   className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <optgroup label="Gemini 2.0 (Latest)">
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
-                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Fastest)</option>
+                  <optgroup label="Gemini 2.5 (Latest)">
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</option>
                   </optgroup>
-                  <optgroup label="Gemini 1.5 (Stable)">
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Best Quality)</option>
+                  <optgroup label="Gemini 2.0 / 1.5 (Compatibility)">
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                     <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
-                    <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (Efficient)</option>
-                  </optgroup>
-                  <optgroup label="Legacy">
-                    <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                   </optgroup>
                 </select>
               ) : getCurrentValue('provider') === 'openai' ? (
