@@ -522,7 +522,7 @@ describe('Pagination', () => {
 
   describe('Current Page Styling', () => {
     it('should highlight current page button differently', () => {
-      const { container } = render(
+      render(
         <Pagination
           page={3}
           totalPages={5}

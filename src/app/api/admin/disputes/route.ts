@@ -50,7 +50,9 @@ function safeDecryptClientName(client: { firstName: string; lastName: string } |
 function safeDecryptCreditorName(creditorName: string | null): string | null {
   try {
     const decryptedDispute = decryptDisputeData({ creditorName });
-    return decryptedDispute.creditorName;
+    return typeof decryptedDispute.creditorName === 'string'
+      ? decryptedDispute.creditorName
+      : null;
   } catch (error) {
     console.error('[Disputes API] Failed to decrypt creditor name:', error);
     return null;

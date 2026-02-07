@@ -1201,15 +1201,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   if (violationSeverities.length > 0) {
     // Calculate confidence based on violation severities
     const avgSeverity = violationSeverities.reduce((a, b) => a + b, 0) / violationSeverities.length;
-    const maxSeverity = Math.max(...violationSeverities);
-
     // P3.5: Aggressiveness affects confidence thresholds
-    const aggressivenessModifier = {
-      'conservative': 0.15,  // Only high-confidence violations count
-      'balanced': 0.25,       // Mixed threshold
-      'aggressive': 0.35,     // More violations detected
-    }[aggressiveness];
-
     // Confidence = base (0.4) + violation contribution
     // Scale: average severity * multiplier based on count
     const violationBoost = Math.min(avgSeverity * (violationSeverities.length * 0.15), 0.5);

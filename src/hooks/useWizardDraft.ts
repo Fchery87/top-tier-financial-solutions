@@ -259,7 +259,7 @@ export function hasDraft(clientId?: string): boolean {
     }
 
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

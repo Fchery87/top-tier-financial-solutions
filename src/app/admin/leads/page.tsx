@@ -101,6 +101,18 @@ export default function LeadsPage() {
     return date.toLocaleDateString();
   };
 
+  const getSafeInitials = (first: unknown, last: unknown) => {
+    const firstName = typeof first === 'string' ? first.trim() : '';
+    const lastName = typeof last === 'string' ? last.trim() : '';
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.trim() || '?';
+  };
+
+  const getSafeFullName = (first: unknown, last: unknown) => {
+    const firstName = typeof first === 'string' ? first.trim() : '';
+    const lastName = typeof last === 'string' ? last.trim() : '';
+    return `${firstName} ${lastName}`.trim() || 'Unknown Lead';
+  };
+
   const columns = [
     {
       key: 'name',
@@ -108,13 +120,13 @@ export default function LeadsPage() {
       render: (item: ContactFormSubmission) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
-            {item.first_name.charAt(0)}{item.last_name.charAt(0)}
+            {getSafeInitials(item.first_name, item.last_name)}
           </div>
           <div>
-            <p className="font-medium">{item.first_name} {item.last_name}</p>
+            <p className="font-medium">{getSafeFullName(item.first_name, item.last_name)}</p>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Mail className="w-3 h-3" />
-              {item.email}
+              {item.email || '—'}
             </p>
           </div>
         </div>
@@ -344,15 +356,15 @@ export default function LeadsPage() {
             <Card className="bg-card border-border shadow-2xl">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold text-lg">
-                      {selectedLead.first_name.charAt(0)}{selectedLead.last_name.charAt(0)}
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold text-lg">
+                      {getSafeInitials(selectedLead.first_name, selectedLead.last_name)}
+                      </div>
+                      <div>
+                      <CardTitle>{getSafeFullName(selectedLead.first_name, selectedLead.last_name)}</CardTitle>
+                      <CardDescription>{selectedLead.email || '—'}</CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle>{selectedLead.first_name} {selectedLead.last_name}</CardTitle>
-                      <CardDescription>{selectedLead.email}</CardDescription>
-                    </div>
-                  </div>
                   <StatusBadge 
                     status={selectedLead.status} 
                     variant={getStatusVariant(selectedLead.status)}

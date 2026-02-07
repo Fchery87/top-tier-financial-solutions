@@ -4,9 +4,6 @@ import {
   mapAccountTypeToCategory,
   calculateFcraComplianceDate,
   calculateCompletenessScore,
-  isAccountNegative,
-  calculateRiskLevel,
-  FCRA_REPORTING_LIMITS,
   type StandardizedAccount,
 } from '../metro2-mapping';
 
@@ -573,7 +570,7 @@ describe('metro2-mapping - calculateFcraComplianceDate', () => {
 
     it('should handle missing itemType', () => {
       const item = {
-        itemType: undefined as any,
+        itemType: undefined as unknown as string,
         dateFirstDelinquency: new Date(2020, 0, 1), // Jan 1, 2020
       };
       const result = calculateFcraComplianceDate(item);
@@ -720,7 +717,7 @@ describe('metro2-mapping - calculateCompletenessScore', () => {
 
     it('should treat null as missing', () => {
       const account: Partial<StandardizedAccount> = {
-        creditorName: null as any,
+        creditorName: null as unknown as string,
       };
       const result = calculateCompletenessScore(account);
       expect(result.missingFields).toContain('creditorName');
@@ -749,7 +746,7 @@ describe('metro2-mapping - calculateCompletenessScore', () => {
         creditorName: 'Test',
         accountNumber: undefined,
         accountType: 'credit card',
-        accountStatus: null as any,
+        accountStatus: null as unknown as StandardizedAccount['accountStatus'],
         balance: 0, // Should count as present
         dateOpened: undefined,
         dateReported: new Date(),

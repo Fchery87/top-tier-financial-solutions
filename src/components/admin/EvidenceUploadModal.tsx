@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Upload, X, FileText, CheckCircle, AlertCircle, Loader2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +23,6 @@ interface EvidenceUploadModalProps {
   reasonCodes: string[];
   existingDocuments: EvidenceDocument[];
   isLoading?: boolean;
-  clientId?: string;
 }
 
 /**
@@ -38,12 +37,10 @@ export function EvidenceUploadModal({
   reasonCodes,
   existingDocuments,
   isLoading = false,
-  clientId,
 }: EvidenceUploadModalProps) {
   const [dragActive, setDragActive] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [removingIds, setRemovingIds] = React.useState<Set<string>>(new Set());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DisputeWizardPage from '@/app/admin/disputes/wizard/page';
 
@@ -104,7 +104,7 @@ const mockPersonalInfo = [
   },
 ];
 
-const mockAIAnalysisResults = [
+const _mockAIAnalysisResults = [
   {
     itemId: 'item-1',
     creditorName: 'Capital One',
@@ -502,7 +502,6 @@ describe.skip('DisputeWizard - Validation', () => {
   });
 
   it('should show validation error if trying to proceed without selection', async () => {
-    const user = userEvent.setup();
     render(<DisputeWizardPage />);
 
     await waitFor(() => {

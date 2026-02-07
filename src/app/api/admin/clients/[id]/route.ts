@@ -6,7 +6,13 @@ import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { eq, desc, asc } from 'drizzle-orm';
 import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData } from '@/lib/db-encryption';
-import { encrypt } from '@/lib/encryption';
+
+function toISOStringSafe(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -205,7 +211,7 @@ export async function GET(
       has_disputes: hasDisputes,
       unfinished_client_tasks: unfinishedClientTasks.length,
       blocking_tasks: blockingTasks.length,
-      waiting_on_client_since: waitingOnClientSince?.toISOString() ?? null,
+      waiting_on_client_since: toISOStringSafe(waitingOnClientSince),
       waiting_on_client_days: waitingOnClientSince ? waitingOnClientDays : null,
       at_risk: atRisk,
       is_ready_for_round:
@@ -223,9 +229,9 @@ export async function GET(
         phone: decryptedClient.phone,
         status: clientResult.status,
         notes: clientResult.notes,
-        converted_at: clientResult.convertedAt?.toISOString(),
-        created_at: clientResult.createdAt?.toISOString(),
-        updated_at: clientResult.updatedAt?.toISOString(),
+        converted_at: toISOStringSafe(clientResult.convertedAt),
+        created_at: toISOStringSafe(clientResult.createdAt),
+        updated_at: toISOStringSafe(clientResult.updatedAt),
         user_name: clientResult.userName,
         user_email: clientResult.userEmail,
       },
@@ -237,9 +243,9 @@ export async function GET(
         file_url: r.fileUrl,
         file_size: r.fileSize,
         bureau: r.bureau,
-        report_date: r.reportDate?.toISOString(),
+        report_date: toISOStringSafe(r.reportDate),
         parse_status: r.parseStatus,
-        uploaded_at: r.uploadedAt?.toISOString(),
+        uploaded_at: toISOStringSafe(r.uploadedAt),
       })),
       latest_analysis: latestAnalysis ? {
         id: latestAnalysis.id,
@@ -256,7 +262,7 @@ export async function GET(
         collections_count: latestAnalysis.collectionsCount,
         late_payment_count: latestAnalysis.latePaymentCount,
         inquiry_count: latestAnalysis.inquiryCount,
-        created_at: latestAnalysis.createdAt?.toISOString(),
+        created_at: toISOStringSafe(latestAnalysis.createdAt),
         recommendations,
       } : null,
       credit_accounts: accountsResult.map(a => {
@@ -283,16 +289,16 @@ export async function GET(
           monthly_payment: a.monthlyPayment,
           past_due_amount: a.pastDueAmount,
           payment_status: a.paymentStatus,
-          date_opened: a.dateOpened?.toISOString(),
+          date_opened: toISOStringSafe(a.dateOpened),
           bureau: a.bureau, // Legacy field
           // Per-bureau presence data
           bureaus, // Computed array of bureau names
           on_transunion: a.onTransunion ?? false,
           on_experian: a.onExperian ?? false,
           on_equifax: a.onEquifax ?? false,
-          transunion_date: a.transunionDate?.toISOString(),
-          experian_date: a.experianDate?.toISOString(),
-          equifax_date: a.equifaxDate?.toISOString(),
+          transunion_date: toISOStringSafe(a.transunionDate),
+          experian_date: toISOStringSafe(a.experianDate),
+          equifax_date: toISOStringSafe(a.equifaxDate),
           transunion_balance: a.transunionBalance,
           experian_balance: a.experianBalance,
           equifax_balance: a.equifaxBalance,
@@ -318,16 +324,16 @@ export async function GET(
           creditor_name: decrypted.creditorName,
           original_creditor: n.originalCreditor,
           amount: n.amount,
-          date_reported: n.dateReported?.toISOString(),
+          date_reported: toISOStringSafe(n.dateReported),
           bureau: n.bureau, // Legacy field
           // Per-bureau presence data
           bureaus, // Computed array of bureau names
           on_transunion: n.onTransunion ?? false,
           on_experian: n.onExperian ?? false,
           on_equifax: n.onEquifax ?? false,
-          transunion_date: n.transunionDate?.toISOString(),
-          experian_date: n.experianDate?.toISOString(),
-          equifax_date: n.equifaxDate?.toISOString(),
+          transunion_date: toISOStringSafe(n.transunionDate),
+          experian_date: toISOStringSafe(n.experianDate),
+          equifax_date: toISOStringSafe(n.equifaxDate),
           transunion_status: n.transunionStatus,
           experian_status: n.experianStatus,
           equifax_status: n.equifaxStatus,
@@ -343,17 +349,17 @@ export async function GET(
         bureau: p.bureau,
         type: p.type,
         value: p.value,
-        created_at: p.createdAt?.toISOString(),
+        created_at: toISOStringSafe(p.createdAt),
       })),
       inquiry_disputes: inquiryDisputesResult.map(i => ({
         id: i.id,
         creditor_name: i.creditorName,
         bureau: i.bureau,
-        inquiry_date: i.inquiryDate?.toISOString(),
+        inquiry_date: toISOStringSafe(i.inquiryDate),
         inquiry_type: i.inquiryType,
         is_past_fcra_limit: i.isPastFcraLimit,
         days_since_inquiry: i.daysSinceInquiry,
-        created_at: i.createdAt?.toISOString(),
+        created_at: toISOStringSafe(i.createdAt),
       })),
       disputes: disputesResult.map(d => {
         // Decrypt dispute data
@@ -369,9 +375,9 @@ export async function GET(
           status: d.status,
           round: d.round,
           tracking_number: d.trackingNumber,
-          sent_at: d.sentAt?.toISOString(),
-          response_deadline: d.responseDeadline?.toISOString(),
-          response_received_at: d.responseReceivedAt?.toISOString(),
+          sent_at: toISOStringSafe(d.sentAt),
+          response_deadline: toISOStringSafe(d.responseDeadline),
+          response_received_at: toISOStringSafe(d.responseReceivedAt),
           outcome: d.outcome,
           response_notes: d.responseNotes,
           response_document_url: d.responseDocumentUrl,
@@ -379,7 +385,7 @@ export async function GET(
           escalation_reason: d.escalationReason,
           creditor_name: decrypted.creditorName,
           account_number: d.accountNumber,
-          created_at: d.createdAt?.toISOString(),
+          created_at: toISOStringSafe(d.createdAt),
         };
       }),
       score_history: scoreHistoryResult.map(s => ({
@@ -390,7 +396,7 @@ export async function GET(
         average_score: s.averageScore,
         source: s.source,
         notes: s.notes,
-        recorded_at: s.recordedAt?.toISOString(),
+        recorded_at: toISOStringSafe(s.recordedAt),
       })),
     });
   } catch (error) {

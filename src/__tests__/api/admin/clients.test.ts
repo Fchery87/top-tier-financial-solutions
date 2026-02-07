@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 /**
  * Integration tests for client management API endpoints
@@ -321,7 +321,6 @@ describe('GET /api/admin/clients/[id] - Get Client Profile', () => {
       ssn_last_4: '1234',
     };
 
-    decryptedFields as Record<string, string> | null;
     expect(Object.keys(decryptedFields).length).toBe(9);
   });
 

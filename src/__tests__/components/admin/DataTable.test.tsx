@@ -24,7 +24,7 @@ describe('DataTable Component', () => {
   });
 
   it('should handle empty state when no data', () => {
-    const rows: any[] = [];
+    const rows: unknown[] = [];
     const isEmpty = rows.length === 0;
 
     expect(isEmpty).toBe(true);
@@ -46,7 +46,7 @@ describe('DataTable Component', () => {
   });
 
   it('should support custom cell renderer', () => {
-    const cellRenderer = (value: any) => {
+    const cellRenderer = (value: string) => {
       return `formatted-${value}`;
     };
 

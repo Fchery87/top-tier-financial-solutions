@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import {
   useWizardDraft,
   recoverWizardDraft,
@@ -33,6 +33,7 @@ Object.defineProperty(window, 'localStorage', {
 
 // Mock fetch
 global.fetch = vi.fn();
+const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
 
 describe('useWizardDraft hook', () => {
   beforeEach(() => {
@@ -130,7 +131,7 @@ describe('useWizardDraft hook', () => {
         currentStep: 2,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft);
@@ -150,7 +151,7 @@ describe('useWizardDraft hook', () => {
         currentStep: 2,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft, { clientName: 'John Doe' });
@@ -171,7 +172,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       expect(result.current.lastSavedAt).toBeNull();
 
@@ -187,7 +188,7 @@ describe('useWizardDraft hook', () => {
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
       // Mock fetch to reject
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      fetchMock.mockRejectedValueOnce(new Error('Network error'));
 
       // Should not throw error
       await act(async () => {
@@ -204,7 +205,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValue({ ok: true });
+      fetchMock.mockResolvedValue({ ok: true });
 
       // Trigger two saves simultaneously
       await act(async () => {
@@ -224,7 +225,7 @@ describe('useWizardDraft hook', () => {
         selectedItems: ['item-1'],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft);
@@ -246,7 +247,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValue({ ok: true });
+      fetchMock.mockResolvedValue({ ok: true });
 
       act(() => {
         result.current.setupAutoSave(mockDraft);
@@ -266,7 +267,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValue({ ok: true });
+      fetchMock.mockResolvedValue({ ok: true });
 
       act(() => {
         result.current.setupAutoSave(mockDraft);
@@ -290,7 +291,7 @@ describe('useWizardDraft hook', () => {
       const mockDraft1: WizardDraftData = { selectedClientId: 'client-1', currentStep: 1 };
       const mockDraft2: WizardDraftData = { selectedClientId: 'client-1', currentStep: 2 };
 
-      (global.fetch as any).mockResolvedValue({ ok: true });
+      fetchMock.mockResolvedValue({ ok: true });
 
       act(() => {
         result.current.setupAutoSave(mockDraft1);
@@ -322,7 +323,7 @@ describe('useWizardDraft hook', () => {
 
       const { result } = renderHook(() => useWizardDraft('client-1'));
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       act(() => {
         result.current.clearDraft();
@@ -338,7 +339,7 @@ describe('useWizardDraft hook', () => {
 
       const { result } = renderHook(() => useWizardDraft('client-1'));
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       // Load draft first
       act(() => {
@@ -357,7 +358,7 @@ describe('useWizardDraft hook', () => {
     it('should call DELETE API to remove draft from database', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       act(() => {
         result.current.clearDraft();
@@ -375,7 +376,7 @@ describe('useWizardDraft hook', () => {
     it('should handle database deletion failure gracefully', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
 
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      fetchMock.mockRejectedValueOnce(new Error('Network error'));
 
       // Should not throw error
       expect(() => {
@@ -399,7 +400,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft);
@@ -417,7 +418,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft);
@@ -435,7 +436,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft);
@@ -453,7 +454,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft);
@@ -471,7 +472,7 @@ describe('useWizardDraft hook', () => {
       const { result } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValueOnce({ ok: true });
+      fetchMock.mockResolvedValueOnce({ ok: true });
 
       await act(async () => {
         await result.current.saveDraft(mockDraft);
@@ -494,7 +495,7 @@ describe('useWizardDraft hook', () => {
       const { result, unmount } = renderHook(() => useWizardDraft('client-1'));
       const mockDraft: WizardDraftData = { selectedClientId: 'client-1' };
 
-      (global.fetch as any).mockResolvedValue({ ok: true });
+      fetchMock.mockResolvedValue({ ok: true });
 
       act(() => {
         result.current.setupAutoSave(mockDraft);

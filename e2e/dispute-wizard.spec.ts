@@ -126,7 +126,7 @@ test.describe('Dispute Wizard - Validation', () => {
     await expect(nextButton).toBeDisabled();
   });
 
-  test('should display evidence requirements for high-risk codes', async ({ page }) => {
+  test('should display evidence requirements for high-risk codes', async () => {
     // This requires progressing through the wizard
     // TODO: Implement after authentication is set up
     test.skip();

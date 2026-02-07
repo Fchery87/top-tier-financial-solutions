@@ -77,25 +77,6 @@ describe('WorkQueue', () => {
     ],
   };
 
-  const mockClientsData = {
-    items: [
-      {
-        id: 'c1',
-        first_name: 'Alice',
-        last_name: 'Johnson',
-        email: 'alice@example.com',
-        converted_at: '2024-01-10T00:00:00Z',
-      },
-      {
-        id: 'c2',
-        first_name: 'Bob',
-        last_name: 'Williams',
-        email: 'bob@example.com',
-        converted_at: null,
-      },
-    ],
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn();
@@ -135,7 +116,6 @@ describe('WorkQueue', () => {
     });
 
     it('should switch tabs when clicking tab buttons', async () => {
-      const user = userEvent.setup();
       vi.mocked(useAdminRole).mockReturnValue(mockAdminContext('user-123'));
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,

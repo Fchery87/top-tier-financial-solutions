@@ -32,7 +32,7 @@ interface DisputeWizardProgressBarProps {
  */
 export function DisputeWizardProgressBar({
   steps,
-  currentStep,
+  currentStep: _currentStep,
   stepStatuses,
   onStepClick,
   maxSteps = 4,

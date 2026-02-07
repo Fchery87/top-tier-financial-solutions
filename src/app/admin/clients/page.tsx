@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { 
   Users, 
   Mail, 
@@ -32,9 +33,9 @@ interface Client {
   id: string;
   user_id: string | null;
   lead_id: string | null;
-  first_name: string;
-  last_name: string;
-  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   phone: string | null;
   status: string;
   notes: string | null;
@@ -46,9 +47,9 @@ interface Client {
 
 interface Lead {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   phone_number: string | null;
   message: string | null;
   status: string;
@@ -278,24 +279,41 @@ export default function ClientsPage() {
     return date.toLocaleDateString();
   };
 
+  const getSafeInitials = (first: unknown, last: unknown) => {
+    const firstName = typeof first === 'string' ? first.trim() : '';
+    const lastName = typeof last === 'string' ? last.trim() : '';
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.trim() || '?';
+  };
+
+  const getSafeFullName = (first: unknown, last: unknown) => {
+    const firstName = typeof first === 'string' ? first.trim() : '';
+    const lastName = typeof last === 'string' ? last.trim() : '';
+    return `${firstName} ${lastName}`.trim() || 'Unknown Client';
+  };
+
   const columns = [
     {
       key: 'name',
       header: 'Client',
-      render: (item: Client) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
-            {item.first_name.charAt(0)}{item.last_name.charAt(0)}
+      render: (item: Client) => {
+        const initials = getSafeInitials(item.first_name, item.last_name);
+        const fullName = getSafeFullName(item.first_name, item.last_name);
+
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
+              {initials}
+            </div>
+            <div>
+              <p className="font-medium">{fullName}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Mail className="w-3 h-3" />
+                {item.email || '—'}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium">{item.first_name} {item.last_name}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Mail className="w-3 h-3" />
-              {item.email}
-            </p>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'phone',
@@ -683,7 +701,14 @@ export default function ClientsPage() {
                           className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg"
                         >
                           {doc.preview ? (
-                            <img src={doc.preview} alt="" className="w-10 h-10 object-cover rounded" />
+                            <Image
+                              src={doc.preview}
+                              alt=""
+                              width={40}
+                              height={40}
+                              unoptimized
+                              className="w-10 h-10 object-cover rounded"
+                            />
                           ) : (
                             <FileImage className="w-10 h-10 p-2 text-muted-foreground" />
                           )}
@@ -761,6 +786,7 @@ export default function ClientsPage() {
                   </p>
                 ) : (
                   leads.map((lead) => (
+                    // Lead payloads can contain null names from legacy rows.
                     <div
                       key={lead.id}
                       className="p-4 rounded-lg border border-border hover:border-secondary/50 cursor-pointer transition-colors"
@@ -769,11 +795,11 @@ export default function ClientsPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
-                            {lead.first_name.charAt(0)}{lead.last_name.charAt(0)}
+                            {getSafeInitials(lead.first_name, lead.last_name)}
                           </div>
                           <div>
-                            <p className="font-medium">{lead.first_name} {lead.last_name}</p>
-                            <p className="text-xs text-muted-foreground">{lead.email}</p>
+                            <p className="font-medium">{getSafeFullName(lead.first_name, lead.last_name)}</p>
+                            <p className="text-xs text-muted-foreground">{lead.email || '—'}</p>
                           </div>
                         </div>
                         <Button

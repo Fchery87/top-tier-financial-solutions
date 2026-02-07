@@ -6,6 +6,13 @@ import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { eq, and, gte, desc } from 'drizzle-orm';
 
+function toISOStringSafe(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 async function validateAdmin() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -121,7 +128,13 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Get score history to calculate average improvement
-    const clientsWithDeletions = [...new Set(filteredDisputes.map(d => d.dispute.clientId))];
+    const clientsWithDeletions = [
+      ...new Set(
+        filteredDisputes
+          .map((d) => d.dispute.clientId)
+          .filter((clientId): clientId is string => typeof clientId === 'string' && clientId.length > 0),
+      ),
+    ];
     
     let totalScoreIncrease = 0;
     let clientsWithScoreData = 0;
@@ -157,7 +170,7 @@ export async function GET(request: NextRequest) {
       item_type: d.negativeItem?.itemType || 'unknown',
       bureau: d.dispute.bureau,
       amount: d.negativeItem?.amount || null,
-      deleted_at: d.dispute.responseReceivedAt?.toISOString() || d.dispute.updatedAt?.toISOString() || '',
+      deleted_at: toISOStringSafe(d.dispute.responseReceivedAt) || toISOStringSafe(d.dispute.updatedAt) || '',
       dispute_id: d.dispute.id,
       dispute_round: d.dispute.round,
     }));

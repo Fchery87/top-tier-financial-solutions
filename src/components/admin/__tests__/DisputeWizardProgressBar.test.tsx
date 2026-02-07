@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,12 +8,12 @@ import { FileText, ClipboardList, Settings, CheckSquare } from 'lucide-react';
 // Mock framer-motion to avoid animation-related test issues
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, className, onClick, ...props }: any) => (
+    div: ({ children, className, onClick, ...props }: React.ComponentProps<'div'>) => (
       <div className={className} onClick={onClick} {...props}>
         {children}
       </div>
     ),
-    button: ({ children, className, onClick, disabled, ...props }: any) => (
+    button: ({ children, className, onClick, disabled, ...props }: React.ComponentProps<'button'>) => (
       <button className={className} onClick={onClick} disabled={disabled} {...props}>
         {children}
       </button>

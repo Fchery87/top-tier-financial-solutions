@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { parseTransUnionReport } from '@/lib/parsers/transunion-parser';
-import type { ParsedCreditData } from '@/lib/parsers/pdf-parser';
 
 describe('TransUnion Parser', () => {
   const mockTransUnionHTML = `

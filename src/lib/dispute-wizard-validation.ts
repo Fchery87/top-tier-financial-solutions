@@ -65,7 +65,7 @@ export function validateStep1(selectedClientId: string | null): ValidationResult
 export function validateStep2(
   selectedItemIds: string[],
   itemReasonCodes: Record<string, string[]>,
-  activeTab?: string
+  _activeTab?: string
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -171,7 +171,7 @@ export function validateStep4(
 export function validateEvidenceRequirements(
   reasonCodes: string[],
   selectedEvidenceIds: string[] = [],
-  itemIds: string[] = []
+  _itemIds: string[] = []
 ): EvidenceValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];

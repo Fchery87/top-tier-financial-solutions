@@ -5,11 +5,23 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { desc, asc, count, eq, or, ilike, and } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
 import { triggerAutomation } from '@/lib/email-service';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
 import { encryptClientData, decryptClientData } from '@/lib/db-encryption';
+import { randomUUID } from 'crypto';
+
+type EncryptedClientPayload = {
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  streetAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  dateOfBirth: string | null;
+  ssnLast4: string | null;
+};
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -185,7 +197,6 @@ async function postHandler(request: NextRequest) {
       return NextResponse.json({ error: 'SSN last 4 must be exactly 4 digits' }, { status: 400 });
     }
 
-    const id = randomUUID();
     const now = new Date();
 
     // Encrypt PII fields before inserting
@@ -199,10 +210,10 @@ async function postHandler(request: NextRequest) {
       zipCode: zip_code || null,
       dateOfBirth: date_of_birth || null,
       ssnLast4: ssn_last_4 || null,
-    });
+    }) as EncryptedClientPayload;
 
-    await db.insert(clients).values({
-      id,
+    const [createdClient] = await db.insert(clients).values({
+      id: randomUUID(),
       userId: user_id || null,
       leadId: lead_id || null,
       firstName: encrypted.firstName,
@@ -220,7 +231,7 @@ async function postHandler(request: NextRequest) {
       convertedAt: now,
       createdAt: now,
       updatedAt: now,
-    });
+    }).returning({ id: clients.id });
 
     // If converting from a lead, update the lead status
     if (lead_id) {
@@ -232,7 +243,7 @@ async function postHandler(request: NextRequest) {
 
     // Send welcome email to new client
     try {
-      await triggerAutomation('welcome', id, {
+      await triggerAutomation('welcome', createdClient.id, {
         client_name: `${first_name} ${last_name}`,
         client_first_name: first_name,
         client_email: email,
@@ -243,7 +254,7 @@ async function postHandler(request: NextRequest) {
     }
 
     return NextResponse.json({
-      id,
+      id: createdClient.id,
       first_name: first_name,
       last_name: last_name,
       email,

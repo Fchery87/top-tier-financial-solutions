@@ -32,21 +32,19 @@ import {
   validateStep3,
   validateStep4,
   validateEvidenceRequirements,
-  getRequiredEvidenceForReasonCodes,
-  isHighRiskCode,
   type ValidationResult,
   type EvidenceValidationResult,
 } from '@/lib/dispute-wizard-validation';
 import { calculateLetterStrength, type LetterStrengthScore } from '@/lib/letter-strength-calculator';
-import { useWizardDraft, hasDraft, getDraftMetadata, type WizardDraftData } from '@/hooks/useWizardDraft';
+import { useWizardDraft, hasDraft, getDraftMetadata, type WizardDraftData, type DraftMetadata } from '@/hooks/useWizardDraft';
 import { DisputeWizardProgressBar, type StepStatus } from '@/components/admin/DisputeWizardProgressBar';
 import { EvidenceUploadModal } from '@/components/admin/EvidenceUploadModal';
 
 interface Client {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   phone: string | null;
   status: string;
 }
@@ -311,15 +309,14 @@ export default function DisputeWizardPage() {
   const [showLowConfidenceItems, setShowLowConfidenceItems] = React.useState(false); // Toggle to show filtered items
   const [failedAnalysisItems, setFailedAnalysisItems] = React.useState<Set<string>>(new Set()); // Items that failed analysis
   const [analysisRetryCount, setAnalysisRetryCount] = React.useState<number>(0); // Number of retry attempts
-  const [showRetryButton, setShowRetryButton] = React.useState(false); // Show retry button when analysis fails
+  const [_showRetryButton, setShowRetryButton] = React.useState(false); // Show retry button when analysis fails
 
   // P3.4: Analysis customization preferences
   const [analysisAggressiveness, setAnalysisAggressiveness] = React.useState<'conservative' | 'balanced' | 'aggressive'>('balanced'); // Analysis intensity
-  const [analysisSavedToPreferences, setAnalysisSavedToPreferences] = React.useState(false); // Track if preferences saved
   const [analysisPreferencesSaved, setAnalysisPreferencesSaved] = React.useState(false); // Show save confirmation
 
   // P3.6: Letter strength scoring
-  const [letterStrengthScore, setLetterStrengthScore] = React.useState<LetterStrengthScore | null>(null);
+  const [_letterStrengthScore, _setLetterStrengthScore] = React.useState<LetterStrengthScore | null>(null);
 
   // Discrepancy preflight
   const [discrepancySummary, setDiscrepancySummary] = React.useState<{ total: number; highSeverity: number } | null>(null);
@@ -345,12 +342,12 @@ export default function DisputeWizardPage() {
   // Error recovery state
   const [operationError, setOperationError] = React.useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = React.useState(false);
-  const [failedLetterIds, setFailedLetterIds] = React.useState<Set<string>>(new Set());
-  const [retryCount, setRetryCount] = React.useState<Record<string, number>>({});
+  const [_failedLetterIds, _setFailedLetterIds] = React.useState<Set<string>>(new Set());
+  const [_retryCount, _setRetryCount] = React.useState<Record<string, number>>({});
 
   // Draft persistence state
   const [showDraftRecovery, setShowDraftRecovery] = React.useState(false);
-  const [draftMetadata, setDraftMetadata] = React.useState<any>(null);
+  const [draftMetadata, setDraftMetadata] = React.useState<DraftMetadata | null>(null);
   const wizardDraft = useWizardDraft(selectedClient?.id);
 
   // Both modes use 4 steps now
@@ -1377,13 +1374,12 @@ export default function DisputeWizardPage() {
     }
   };
 
-  // Validate current step and update validation state
-  const validateCurrentStep = (): boolean => {
+  const getStepValidation = (step: number): { errors: string[]; warnings: string[] } => {
     let validationResult: ValidationResult | null = null;
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    switch (currentStep) {
+    switch (step) {
       case 1:
         validationResult = validateStep1(selectedClient?.id ?? null);
         break;
@@ -1426,6 +1422,13 @@ export default function DisputeWizardPage() {
       warnings.push(...validationResult.warnings);
     }
 
+    return { errors, warnings };
+  };
+
+  // Validate current step and update validation state
+  const validateCurrentStep = (): boolean => {
+    const { errors, warnings } = getStepValidation(currentStep);
+
     // Update state with validation results
     const newErrors = { ...validationErrors };
     const newWarnings = { ...validationWarnings };
@@ -1449,8 +1452,7 @@ export default function DisputeWizardPage() {
   };
 
   const canProceed = (): boolean => {
-    const isValid = validateCurrentStep();
-    return isValid;
+    return getStepValidation(currentStep).errors.length === 0;
   };
 
   const formatItemType = (type: string) => {
@@ -1504,8 +1506,10 @@ export default function DisputeWizardPage() {
                       const item = negativeItems.find(i => i.id === itemId) ||
                                   personalInfoItems.find(i => i.id === itemId) ||
                                   inquiryItems.find(i => i.id === itemId);
-                      const displayName: string = item && 'creditor_name' in item ? (item as any).creditor_name :
-                                         item && 'description' in item ? (item as any).description : itemId;
+                      let displayName = itemId;
+                      if (item && 'creditor_name' in item && typeof item.creditor_name === 'string') {
+                        displayName = item.creditor_name;
+                      }
                       return (
                         <li key={itemId} className="list-disc list-inside">
                           {displayName}
@@ -1704,15 +1708,7 @@ export default function DisputeWizardPage() {
     });
   };
 
-  const stepStatuses = React.useMemo(() => buildStepStatuses(), [
-    currentStep,
-    selectedClient,
-    selectedItems,
-    selectedBureaus,
-    generatedLetters,
-    validationErrors,
-    validationWarnings,
-  ]);
+  const stepStatuses = buildStepStatuses();
 
   // Handle step navigation from progress bar
   const handleStepClick = (stepId: number) => {
@@ -1946,7 +1942,6 @@ export default function DisputeWizardPage() {
         onRemove={handleRemoveEvidence}
         reasonCodes={selectedReasonCodes}
         existingDocuments={evidenceDocuments}
-        clientId={selectedClient?.id}
       />
 
       {/* Analysis Progress Modal */}
@@ -2092,7 +2087,13 @@ export default function DisputeWizardPage() {
                 </div>
               ) : (
                 <div className="grid gap-3 max-h-[400px] overflow-y-auto">
-                  {clients.map((client) => (
+                  {clients.map((client) => {
+                    const firstName = typeof client.first_name === 'string' ? client.first_name.trim() : '';
+                    const lastName = typeof client.last_name === 'string' ? client.last_name.trim() : '';
+                    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.trim() || '?';
+                    const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Client';
+
+                    return (
                     <div
                       key={client.id}
                       className={`p-4 rounded-lg border cursor-pointer transition-all ${
@@ -2104,18 +2105,18 @@ export default function DisputeWizardPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
-                          {client.first_name.charAt(0)}{client.last_name.charAt(0)}
+                          {initials}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{client.first_name} {client.last_name}</p>
-                          <p className="text-sm text-muted-foreground">{client.email}</p>
+                          <p className="font-medium">{fullName}</p>
+                          <p className="text-sm text-muted-foreground">{client.email || '—'}</p>
                         </div>
                         {selectedClient?.id === client.id && (
                           <Check className="w-5 h-5 text-secondary" />
                         )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </CardContent>
@@ -3635,6 +3636,7 @@ export default function DisputeWizardPage() {
         {currentStep === 3 ? (
           <Button
             onClick={async () => {
+              if (!validateCurrentStep()) return;
               let analysisData = null;
               if (generationMethod === 'ai') {
                 // AI mode: First analyze items with AI, then pass the data directly to generateLetters
@@ -3672,7 +3674,10 @@ export default function DisputeWizardPage() {
           </Button>
         ) : (
           <Button
-            onClick={() => setCurrentStep(prev => Math.min(maxSteps, prev + 1))}
+            onClick={() => {
+              if (!validateCurrentStep()) return;
+              setCurrentStep(prev => Math.min(maxSteps, prev + 1));
+            }}
             disabled={!canProceed()}
             title="Keyboard shortcut: Enter"
           >
