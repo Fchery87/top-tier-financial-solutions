@@ -33,6 +33,20 @@ npm run validate              # Lint + Typecheck + Test + Build
 - All secrets must have `NEXT_PUBLIC_` prefix for client-side access
 - PII handling: All credit data stored in secure database, never in localStorage
 
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues for `Fchery87/top-tier-financial-solutions`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the canonical five-label vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repo uses a single-context domain documentation layout. See `docs/agents/domain.md`.
+
 ## JIT Index - Directory Map
 
 ### Package Structure

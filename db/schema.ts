@@ -374,6 +374,17 @@ export const clientStageEnum = pgEnum('client_stage', [
   'completed'
 ]);
 
+export const serviceEngagementTypeEnum = pgEnum('service_engagement_type', [
+  'credit_audit',
+  'credit_restoration',
+]);
+
+export const serviceEngagementStatusEnum = pgEnum('service_engagement_status', [
+  'active',
+  'closed',
+  'superseded',
+]);
+
 // Client identity document type enum
 export const identityDocTypeEnum = pgEnum('identity_doc_type', [
   'government_id',      // Driver's license, state ID, passport
@@ -412,6 +423,37 @@ export const clients = pgTable('clients', {
   index("clients_email_idx").on(table.email),
   index("clients_stage_idx").on(table.stage),
   index("clients_assignedTo_idx").on(table.assignedTo),
+]);
+
+export const serviceEngagements = pgTable('service_engagements', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  serviceType: serviceEngagementTypeEnum('service_type').notNull(),
+  status: serviceEngagementStatusEnum('status').default('active').notNull(),
+  lifecycleStage: text('lifecycle_stage').default('lead').notNull(),
+  openedAt: timestamp('opened_at').defaultNow().notNull(),
+  closedAt: timestamp('closed_at'),
+  closureReason: text('closure_reason'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('service_engagements_clientId_idx').on(table.clientId),
+  index('service_engagements_serviceType_idx').on(table.serviceType),
+  index('service_engagements_status_idx').on(table.status),
+]);
+
+export const complianceGateChecks = pgTable('compliance_gate_checks', {
+  id: text('id').primaryKey(),
+  engagementId: text('engagement_id').notNull().references(() => serviceEngagements.id, { onDelete: 'cascade' }),
+  checkKey: text('check_key').notNull(),
+  passed: boolean('passed').default(false).notNull(),
+  checkedAt: timestamp('checked_at'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('compliance_gate_checks_engagementId_idx').on(table.engagementId),
+  index('compliance_gate_checks_checkKey_idx').on(table.checkKey),
 ]);
 
 // Client identity documents (ID, SSN card, proof of address for disputes)
@@ -698,6 +740,20 @@ export const disputeBatches = pgTable('dispute_batches', {
   index("dispute_batches_status_idx").on(table.status),
 ]);
 
+export const disputeCycles = pgTable('dispute_cycles', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  serviceEngagementId: text('service_engagement_id').references(() => serviceEngagements.id, { onDelete: 'set null' }),
+  cycleNumber: integer('cycle_number').notNull(),
+  status: text('status').default('draft').notNull(),
+  itemSelection: text('item_selection').default('[]').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('dispute_cycles_clientId_idx').on(table.clientId),
+  index('dispute_cycles_serviceEngagementId_idx').on(table.serviceEngagementId),
+]);
+
 // Disputes (action plan / tracking)
 export const disputes = pgTable('disputes', {
   id: text('id').primaryKey(),
@@ -710,6 +766,7 @@ export const disputes = pgTable('disputes', {
   status: text('status').default('draft'), // 'draft' | 'ready' | 'sent' | 'in_progress' | 'responded' | 'resolved' | 'escalated'
   round: integer('round').default(1),
   reasonCodes: text('reason_codes'), // JSON array of reason codes
+  policyDecision: text('policy_decision'), // JSON deterministic policy decision used before letter rendering
   escalationPath: text('escalation_path'), // 'bureau' | 'creditor' | 'furnisher' | 'collector' | 'cfpb'
   letterContent: text('letter_content'),
   letterTemplateId: text('letter_template_id'),
@@ -739,6 +796,9 @@ export const disputes = pgTable('disputes', {
   // NEW: Response clock & evidence tracking
   escalationReadyAt: timestamp('escalation_ready_at'), // When escalation becomes available (30/45 days after sent)
   evidenceDocumentIds: text('evidence_document_ids'), // JSON array of clientDocuments IDs attached as evidence
+  submissionMethod: text('submission_method'), // certified_mail | online | fax | manual
+  submissionRecipient: text('submission_recipient'),
+  submissionProofDocumentUrl: text('submission_proof_document_url'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
@@ -800,6 +860,20 @@ export const letterApprovals = pgTable('letter_approvals', {
   index('letter_approvals_clientId_idx').on(table.clientId),
   index('letter_approvals_disputeId_idx').on(table.disputeId),
   index('letter_approvals_batchId_idx').on(table.batchId),
+]);
+
+export const evidencePackets = pgTable('evidence_packets', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  disputeId: text('dispute_id').references(() => disputes.id, { onDelete: 'cascade' }),
+  claimType: text('claim_type').notNull(),
+  documentIds: text('document_ids').default('[]').notNull(),
+  confirmations: text('confirmations').default('[]').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('evidence_packets_clientId_idx').on(table.clientId),
+  index('evidence_packets_disputeId_idx').on(table.disputeId),
 ]);
 
 // Dispute letter templates
@@ -979,6 +1053,21 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   personalInfoDisputes: many(personalInfoDisputes),
   inquiryDisputes: many(inquiryDisputes),
   scoreHistory: many(creditScoreHistory),
+  serviceEngagements: many(serviceEngagements),
+}));
+
+export const serviceEngagementsRelations = relations(serviceEngagements, ({ one }) => ({
+  client: one(clients, {
+    fields: [serviceEngagements.clientId],
+    references: [clients.id],
+  }),
+}));
+
+export const complianceGateChecksRelations = relations(complianceGateChecks, ({ one }) => ({
+  engagement: one(serviceEngagements, {
+    fields: [complianceGateChecks.engagementId],
+    references: [serviceEngagements.id],
+  }),
 }));
 
 // Client identity documents relations
@@ -1151,6 +1240,17 @@ export const letterApprovalsRelations = relations(letterApprovals, ({ one }) => 
   batch: one(disputeBatches, {
     fields: [letterApprovals.batchId],
     references: [disputeBatches.id],
+  }),
+}));
+
+export const evidencePacketsRelations = relations(evidencePackets, ({ one }) => ({
+  client: one(clients, {
+    fields: [evidencePackets.clientId],
+    references: [clients.id],
+  }),
+  dispute: one(disputes, {
+    fields: [evidencePackets.disputeId],
+    references: [disputes.id],
   }),
 }));
 

@@ -181,8 +181,6 @@ async function sendViaProvider(options: SendEmailOptions): Promise<{ success: bo
     
     case 'smtp': {
       // SMTP would require a library like nodemailer
-      // For now, fall through to console logging
-      console.log('[SMTP] Would send email via SMTP (not implemented)');
       return { success: false, error: 'SMTP not implemented - install nodemailer' };
     }
     
@@ -192,13 +190,7 @@ async function sendViaProvider(options: SendEmailOptions): Promise<{ success: bo
 
     case 'console':
     default: {
-      console.log('='.repeat(60));
-      console.log('[EMAIL - DEV MODE] Would send email:');
-      console.log(`To: ${options.to}`);
-      console.log(`Subject: ${options.subject}`);
-      console.log('-'.repeat(60));
-      console.log(options.text || 'HTML email - check logs');
-      console.log('='.repeat(60));
+      // Dev mode: simulate send
       return { success: true, messageId: `dev-${Date.now()}` };
     }
   }
@@ -440,10 +432,7 @@ export async function triggerAutomation(
     
     // Handle delay if specified
     if (rule.delayMinutes && rule.delayMinutes > 0) {
-      // In production, this would queue the email for later
-      // For now, we'll just note it in the log
-      console.log(`[EMAIL] Would delay ${rule.delayMinutes} minutes before sending ${triggerType}`);
-      // Could integrate with a job queue like BullMQ, or use a cron job
+      // In production, this would queue the email for later (e.g., BullMQ, cron job)
     }
     
     // Send the email

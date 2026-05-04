@@ -15,6 +15,14 @@ import {
   getDisputeSlaInstanceId,
 } from '@/lib/dispute-automation';
 
+const STRUCTURED_RESPONSE_OUTCOMES = new Set([
+  'deleted',
+  'updated',
+  'verified',
+  'no_response',
+  'frivolous',
+]);
+
 async function validateAdmin() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -139,6 +147,10 @@ export async function PUT(
       responseNotes,
       responseDocumentUrl,
       responseChannel,
+      submissionMethod,
+      submissionRecipient,
+      submissionProofDocumentUrl,
+      submissionDate,
       trackingNumber,
       sentAt,
       responseReceivedAt,
@@ -160,6 +172,21 @@ export async function PUT(
 
     if (!currentDispute) {
       return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+    }
+
+    const isMarkingSubmitted = status === 'sent' || status === 'submitted' || sentAt !== undefined;
+    const hasSubmissionTracking = Boolean(submissionMethod && submissionRecipient && (submissionDate || sentAt));
+    if (isMarkingSubmitted && !hasSubmissionTracking) {
+      return NextResponse.json({ error: 'Submission tracking is required before marking a dispute submitted' }, { status: 400 });
+    }
+
+    const isRecordingResponse = responseReceivedAt !== undefined;
+    if (isRecordingResponse && (!responseDocumentUrl || !outcome)) {
+      return NextResponse.json({ error: 'Response Review requires a response document and outcome classification' }, { status: 400 });
+    }
+
+    if (outcome !== undefined && !STRUCTURED_RESPONSE_OUTCOMES.has(outcome)) {
+      return NextResponse.json({ error: 'Outcome must use structured response review vocabulary' }, { status: 400 });
     }
 
     let negativeItem: typeof negativeItems.$inferSelect | null = null;
@@ -195,6 +222,21 @@ export async function PUT(
 
     if (responseChannel !== undefined) {
       updateData.responseChannel = responseChannel;
+    }
+
+    if (submissionMethod !== undefined) {
+      updateData.submissionMethod = submissionMethod;
+      if (submissionMethod === 'certified_mail' && responseChannel === undefined) {
+        updateData.responseChannel = 'mail';
+      }
+    }
+
+    if (submissionRecipient !== undefined) {
+      updateData.submissionRecipient = submissionRecipient;
+    }
+
+    if (submissionProofDocumentUrl !== undefined) {
+      updateData.submissionProofDocumentUrl = submissionProofDocumentUrl;
     }
 
     if (scoreImpact !== undefined) {
@@ -512,6 +554,9 @@ export async function PUT(
         response_notes: updatedDispute.responseNotes,
         tracking_number: updatedDispute.trackingNumber,
         response_channel: updatedDispute.responseChannel,
+        submission_method: updatedDispute.submissionMethod,
+        submission_recipient: updatedDispute.submissionRecipient,
+        submission_proof_document_url: updatedDispute.submissionProofDocumentUrl,
         score_impact: updatedDispute.scoreImpact,
         analysis_confidence: updatedDispute.analysisConfidence,
         auto_selected: updatedDispute.autoSelected,

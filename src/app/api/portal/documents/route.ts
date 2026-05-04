@@ -81,10 +81,19 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { case_id, file_name, file_type, file_url, file_size, notes } = body;
+    const { case_id, file_name, file_type, file_url, storage_key, file_size, notes } = body;
 
-    if (!case_id || !file_name || !file_url) {
+    if (file_url && !storage_key) {
+      return NextResponse.json({ error: 'Use a controlled portal upload key, not an arbitrary file URL' }, { status: 400 });
+    }
+
+    if (!case_id || !file_name || !storage_key) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const expectedPrefix = `portal-documents/${user.id}/`;
+    if (typeof storage_key !== 'string' || !storage_key.startsWith(expectedPrefix)) {
+      return NextResponse.json({ error: 'Storage key does not belong to authenticated client' }, { status: 403 });
     }
 
     // Verify user owns this case
@@ -107,7 +116,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       fileName: file_name,
       fileType: file_type,
-      fileUrl: file_url,
+      fileUrl: storage_key,
       fileSize: file_size,
       uploadedBy: 'client',
       notes,
@@ -119,7 +128,7 @@ export async function POST(request: NextRequest) {
       case_id,
       file_name,
       file_type,
-      file_url,
+      file_url: storage_key,
       file_size,
       uploaded_by: 'client',
       notes,

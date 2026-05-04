@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       priorDisputeResult, // NEW: Result of prior dispute
       evidenceDocumentIds, // Optional: evidence attachments (clientDocuments IDs)
       clientConfirmedOwnershipClaims,
+      policyDecision,
     } = body;
 
     if (!clientId || !bureau) {
@@ -66,6 +67,13 @@ export async function POST(request: NextRequest) {
     if (!reasonCodes || reasonCodes.length === 0) {
       return NextResponse.json(
         { error: 'At least one reason code is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!policyDecision?.approved) {
+      return NextResponse.json(
+        { error: 'Approved policy decision is required before letter generation' },
         { status: 400 }
       );
     }

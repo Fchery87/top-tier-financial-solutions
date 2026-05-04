@@ -106,6 +106,7 @@ npm run db:studio    # Open Drizzle Studio
 - [Setup Guide](./SETUP_GUIDE.md) - Detailed setup instructions
 - [Credit Analysis Implementation](./docs/CREDIT-ANALYSIS-IMPLEMENTATION.md)
 - [IdentityIQ Parser Guide](./docs/IDENTITYIQ_PARSER_GUIDE.md)
+- [Credit Repair Platform Roadmap](./docs/plans/credit-repair-platform-roadmap.md)
 
 ## License
 

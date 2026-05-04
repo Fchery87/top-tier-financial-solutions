@@ -91,6 +91,7 @@ async function postHandler(request: NextRequest) {
       analysisConfidence,
       autoSelected,
       clientConfirmedOwnershipClaims,
+      policyDecision,
     } = body;
 
     if (!clientId || !bureau || !disputeReason) {
@@ -211,6 +212,7 @@ async function postHandler(request: NextRequest) {
       responseChannel: responseChannel || null,
       scoreImpact: scoreImpact ?? null,
       reasonCodes: JSON.stringify(normalizedReasonCodes),
+      policyDecision: policyDecision ? JSON.stringify(policyDecision) : null,
       escalationPath: escalationPath || targetRecipient || 'bureau',
       creditorName: creditorNameValue,
       accountNumber: negativeItem?.id?.slice(-8) || null,
@@ -285,6 +287,7 @@ async function postHandler(request: NextRequest) {
       sent_at: createdDispute.sentAt?.toISOString(),
       response_deadline: createdDispute.responseDeadline?.toISOString(),
       reason_codes: createdDispute.reasonCodes,
+      policy_decision: createdDispute.policyDecision ? JSON.parse(createdDispute.policyDecision) : null,
       analysis_confidence: createdDispute.analysisConfidence,
       auto_selected: createdDispute.autoSelected,
       created_at: createdDispute.createdAt?.toISOString(),

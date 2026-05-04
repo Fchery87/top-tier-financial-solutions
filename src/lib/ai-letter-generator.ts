@@ -10,7 +10,6 @@ import {
 } from './dispute-config-loader';
 import { getLLMConfig, type LLMConfig } from './settings-service';
 
-// Multi-provider LLM generation helper
 async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
   switch (config.provider) {
     case 'google': {
@@ -18,14 +17,10 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
       const response = await genAI.models.generateContent({
         model: config.model,
         contents: prompt,
-        config: {
-          temperature: config.temperature || 0.1,
-          maxOutputTokens: config.maxTokens || 4096,
-        },
+        config: { temperature: config.temperature || 0.1, maxOutputTokens: config.maxTokens || 4096 },
       });
       return typeof response.text === 'string' ? response.text : '';
     }
-    
     case 'openai': {
       const openai = new OpenAI({ apiKey: config.apiKey });
       const response = await openai.chat.completions.create({
@@ -36,7 +31,6 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
       });
       return response.choices[0]?.message?.content || '';
     }
-    
     case 'anthropic': {
       const anthropic = new Anthropic({ apiKey: config.apiKey });
       const response = await anthropic.messages.create({
@@ -47,13 +41,8 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
       const textBlock = response.content.find(block => block.type === 'text');
       return textBlock?.type === 'text' ? textBlock.text : '';
     }
-    
     case 'zhipu': {
-      // Zhipu AI (Z.ai / GLM) - OpenAI-compatible API
-      const openai = new OpenAI({ 
-        apiKey: config.apiKey,
-        baseURL: config.apiEndpoint || 'https://api.z.ai/api/paas/v4',
-      });
+      const openai = new OpenAI({ apiKey: config.apiKey, baseURL: config.apiEndpoint || 'https://api.z.ai/api/paas/v4' });
       const response = await openai.chat.completions.create({
         model: config.model || 'glm-4-flash',
         messages: [{ role: 'user', content: prompt }],
@@ -62,7 +51,6 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
       });
       return response.choices[0]?.message?.content || '';
     }
-    
     default:
       throw new Error(`Unsupported LLM provider: ${config.provider}`);
   }
@@ -148,18 +136,11 @@ const REASON_CODE_DESCRIPTIONS: Record<string, string> = {
 };
 
 function formatDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(cents / 100);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
 function formatItemType(type: string): string {
@@ -172,31 +153,20 @@ function buildEnclosuresSection(enclosures?: EvidenceEnclosure[]): string {
 - Copy of government-issued identification
 - Proof of current address`;
   }
-  
   const enclosureLines = enclosures.map(e => `- ${e.documentName || e.documentType}`);
-  // Always include ID and proof of address as standard enclosures
   const hasId = enclosures.some(e => e.documentType === 'id_document');
   const hasProof = enclosures.some(e => e.documentType === 'proof_of_address');
-  
   if (!hasId) enclosureLines.unshift('- Copy of government-issued identification');
   if (!hasProof) enclosureLines.splice(hasId ? 1 : 2, 0, '- Proof of current address');
-  
-  return `Enclosures:\n${enclosureLines.join('\n')}`;
+  return `Enclosures:
+${enclosureLines.join('\n')}`;
 }
 
 function buildMetro2ViolationsSection(violations?: string[]): string {
   if (!violations || violations.length === 0) return '';
   const uniqueViolations = [...new Set(violations.filter(Boolean))];
   if (uniqueViolations.length === 0) return '';
-  return [
-    '=== METRO 2 COMPLIANCE VIOLATIONS (MUST CITE THESE IN LETTER BODY) ===',
-    'The AI analysis identified the following specific Metro 2 violations.',
-    'You MUST integrate these into your dispute explanation section.',
-    '',
-    ...uniqueViolations.map((v, i) => `${i + 1}. ${v}`),
-    '',
-    '=== END OF VIOLATIONS - CITE ALL OF THESE IN YOUR LETTER ===',
-  ].join('\n');
+  return ['=== METRO 2 COMPLIANCE VIOLATIONS (MUST CITE THESE IN LETTER BODY) ===', 'The AI analysis identified the following specific Metro 2 violations.', 'You MUST integrate these into your dispute explanation section.', '', ...uniqueViolations.map((v, i) => `${i + 1}. ${v}`), '', '=== END OF VIOLATIONS - CITE ALL OF THESE IN YOUR LETTER ==='].join('\n');
 }
 
 function getReasonDescriptions(reasonCodes: string[]): string {
@@ -207,7 +177,6 @@ function getReasonDescriptions(reasonCodes: string[]): string {
 
 function buildEOscarBypassSection(includeBypass: boolean): string {
   if (!includeBypass) return '';
-
   return `
 E-OSCAR BYPASS LANGUAGE (CRITICAL):
 ====================================
@@ -232,25 +201,18 @@ FAIR CREDIT REPORTING ACT (FCRA) VIOLATIONS:
 - Section 623 (15 U.S.C. § 1681s-2): Furnishers must report accurate information
 - Section 609 (15 U.S.C. § 1681g): Consumer's right to disclosure of information
 - Section 605 (15 U.S.C. § 1681c): Obsolete information must not be reported after 7 years`;
-
   const metro2Standards = `
 METRO 2 FORMAT COMPLIANCE VIOLATIONS:
 - Data furnishers must report complete and accurate information in Metro 2 format
 - Account status codes, payment ratings, and balance information must be verified
 - Failure to maintain Metro 2 compliance constitutes willful non-compliance`;
-
   const crsaRights = `
 CREDIT REPAIR SERVICES ACT (CRSA) & CONSUMER PROTECTIONS:
 - Consumers have the right to dispute inaccurate information
 - Credit bureaus cannot report unverifiable information
 - Failure to delete unverifiable items constitutes a violation`;
-
   let context = fcraRights;
-  
-  if (targetRecipient === 'bureau') {
-    context += '\n' + metro2Standards;
-  }
-  
+  if (targetRecipient === 'bureau') context += '\n' + metro2Standards;
   if (round >= 2) {
     context += '\n' + crsaRights;
     context += `
@@ -260,7 +222,6 @@ This is Round ${round} of my dispute. Previous investigations have failed to pro
 Continued reporting of unverifiable information may constitute willful non-compliance, exposing you to
 statutory damages of $100-$1,000 per violation, plus punitive damages under 15 U.S.C. § 1681n.`;
   }
-
   return context;
 }
 
@@ -429,22 +390,16 @@ function buildMethodologyPrompt(
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const legalCitations = buildLegalCitationsString(params.methodology || 'factual');
   const metro2ViolationsSection = buildMetro2ViolationsSection(params.metro2Violations);
-  
-  // Get round-specific variation if available
   let roundContext = '';
   if (promptConfig.round_variations && promptConfig.round_variations[`round_${params.round}`]) {
     const variation = promptConfig.round_variations[`round_${params.round}`];
     roundContext = variation.additional_context;
   }
-  
-  // Get target-specific variation if available
   let targetContext = '';
   if (promptConfig.target_variations && promptConfig.target_variations[params.targetRecipient]) {
     const variation = promptConfig.target_variations[params.targetRecipient];
     targetContext = `Opening approach: ${variation.opening}\nLegal focus: ${variation.legal_focus.join(', ')}`;
   }
-  
-  // Build account details string
   const accountDetails = `
 Creditor Name: ${params.itemData.creditorName}
 ${params.itemData.originalCreditor ? `Original Creditor: ${params.itemData.originalCreditor}` : ''}
@@ -454,8 +409,6 @@ ${params.itemData.amount ? `Amount: ${formatCurrency(params.itemData.amount)}` :
   ${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
 Bureau: ${params.itemData.bureau.toUpperCase()}
 `.trim();
-
-  // Build prior dispute section for method of verification
   let priorDisputeSection = '';
   if (params.priorDisputeDate) {
     priorDisputeSection = `
@@ -464,15 +417,11 @@ Bureau: ${params.itemData.bureau.toUpperCase()}
 - Prior Result: ${params.priorDisputeResult || 'Verified without documentation'}
 `;
   }
-
-  // Build client address
   const clientAddress = params.clientData.address 
     ? `${params.clientData.address}\n${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}`
     : 'Address on file';
-
   const templateIncludesViolationSlot = promptConfig.prompt_template.includes('{metro2_violations}') 
     || promptConfig.prompt_template.includes('{violation_descriptions}');
-
   let promptTemplate = promptConfig.prompt_template
     .replace('{legal_citations}', legalCitations)
     .replace('{target_recipient}', params.targetRecipient.toUpperCase())
@@ -491,14 +440,9 @@ Bureau: ${params.itemData.bureau.toUpperCase()}
     .replace('{prior_dispute_details}', priorDisputeSection)
     .replace('{prior_dispute_date}', params.priorDisputeDate || 'Previous dispute')
     .replace('{prior_result}', params.priorDisputeResult || 'Verified');
-
-  // If the template doesn't surface Metro 2 violations, append them so they appear in the final letter
-  // Add them prominently to ensure the AI cites them
   if (metro2ViolationsSection && !templateIncludesViolationSlot) {
     promptTemplate += `\n\n!!! CRITICAL - CITE THESE VIOLATIONS IN YOUR LETTER !!!\n${metro2ViolationsSection}`;
   }
-
-  // Combine system context with prompt template
   const fullPrompt = `
 ${promptConfig.system_context}
 
@@ -521,18 +465,14 @@ Requirements: ${bureauConfig.specific_requirements.join('; ')}
 
 Generate a unique, professional dispute letter now. Output plain text only - no markdown formatting.
 `.trim();
-
   return fullPrompt;
 }
 
 function postProcessLetter(letter: string, params: GenerateLetterParams): string {
-  // Ensure the letter has proper date if missing
   const currentDate = formatDate();
   if (!letter.includes(currentDate) && !letter.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b/)) {
     letter = currentDate + '\n\n' + letter;
   }
-
-  // Ensure bureau address is included for bureau disputes
   if (params.targetRecipient === 'bureau') {
     const bureauAddress = BUREAU_ADDRESSES[params.itemData.bureau.toLowerCase()];
     if (bureauAddress && !letter.includes(bureauAddress.split('\n')[0])) {
@@ -542,7 +482,6 @@ function postProcessLetter(letter: string, params: GenerateLetterParams): string
       }
     }
   }
-
   return letter.trim();
 }
 
@@ -553,20 +492,16 @@ function generateFallbackLetter(params: GenerateLetterParams): string {
   const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
     ? params.metro2Violations.filter(Boolean) 
     : [];
-  
   let recipientAddress = '';
   if (params.targetRecipient === 'bureau') {
     recipientAddress = BUREAU_ADDRESSES[params.itemData.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion;
   } else {
     recipientAddress = `${params.itemData.creditorName}\nCredit Dispute Department`;
   }
-
-  // Build Metro 2 violations section for fallback letter (simpler format)
   let metro2ViolationsText = '';
   if (metro2ViolationsRaw.length > 0) {
     metro2ViolationsText = `\nSPECIFIC METRO 2 COMPLIANCE VIOLATIONS IDENTIFIED:\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}\n\nThese violations demonstrate that the reported information does not meet the "maximum possible accuracy" standard required under FCRA Section 607(b) and Metro 2 format requirements.`;
   }
-
   return `${currentDate}
 
 ${recipientAddress}
@@ -794,7 +729,6 @@ function postProcessMultiItemLetter(letter: string, params: GenerateMultiItemLet
   if (!letter.includes(currentDate) && !letter.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b/)) {
     letter = currentDate + '\n\n' + letter;
   }
-
   if (params.targetRecipient === 'bureau') {
     const bureauAddress = BUREAU_ADDRESSES[params.bureau.toLowerCase()];
     if (bureauAddress && !letter.includes(bureauAddress.split('\n')[0])) {
@@ -804,7 +738,6 @@ function postProcessMultiItemLetter(letter: string, params: GenerateMultiItemLet
       }
     }
   }
-
   return letter.trim();
 }
 
@@ -815,14 +748,12 @@ function generateMultiItemFallbackLetter(params: GenerateMultiItemLetterParams):
   const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
     ? params.metro2Violations.filter(Boolean) 
     : [];
-  
   let recipientAddress = '';
   if (params.targetRecipient === 'bureau') {
     recipientAddress = BUREAU_ADDRESSES[params.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion;
   } else {
     recipientAddress = `Credit Dispute Department`;
   }
-
   const itemsSection = params.items.map((item, index) => `
 ACCOUNT ${index + 1}:
 Creditor Name: ${item.creditorName}
@@ -831,15 +762,11 @@ ${item.accountNumber ? `Account Number: ****${item.accountNumber.slice(-4)}` : '
 Item Type: ${formatItemType(item.itemType)}
 ${item.amount ? `Reported Amount: ${formatCurrency(item.amount)}` : ''}
 ${item.dateReported ? `Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`).join('\n');
-
   const creditorList = params.items.map(item => item.creditorName).join(', ');
-
-  // Build Metro 2 violations section for fallback letter
   let metro2ViolationsText = '';
   if (metro2ViolationsRaw.length > 0) {
     metro2ViolationsText = `\nSPECIFIC METRO 2 COMPLIANCE VIOLATIONS IDENTIFIED:\nThe following Metro 2 format violations apply to one or more of the disputed accounts:\n\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}\n\nThese violations demonstrate that the reported information does not meet the "maximum possible accuracy" standard required under FCRA Section 607(b) and Metro 2 format requirements.`;
   }
-
   return `${currentDate}
 
 ${recipientAddress}
@@ -961,12 +888,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   const paymentStatus = item.paymentStatus?.toLowerCase() || '';
   const now = new Date();
 
-  // ============================================
-  // METRO 2 ANALYSIS CHECKLIST - Evidence-Based
-  // ============================================
-
-  // ---- CHECK 1: Balance and Amount Consistency ----
-  // Look for: balance > 0 on paid/closed account, balance inconsistent with status
+  // METRO 2 ANALYSIS CHECKLIST
   
   const hasBalance = item.currentBalance !== null && item.currentBalance !== undefined && item.currentBalance > 0;
   const amount = item.amount || item.currentBalance || 0;
@@ -1048,8 +970,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     violationSeverities.push(0.25); // High severity - specific Metro 2 requirement
   }
 
-  // ---- CHECK 3: Delinquency Timing and Obsolescence ----
-  // Look for: FCRA time limits exceeded, potential re-aging
+
   
   const reportDate = item.dateReported ? new Date(item.dateReported) : null;
   const lastActivityDate = item.dateOfLastActivity ? new Date(item.dateOfLastActivity) : null;
@@ -1059,7 +980,6 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   if (effectiveDate) {
     const yearsSinceActivity = (now.getTime() - effectiveDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
 
-    // FCRA 7-year limit for most negative items
     const isBankruptcy = itemType === 'bankruptcy';
     const reportingLimit = isBankruptcy ? 10 : 7;
 
@@ -1073,7 +993,6 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
       notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - approaching ${reportingLimit}-year limit`);
     }
 
-    // Inquiry 2-year limit (P3.5 Enhanced FCRA citation)
     if (itemType === 'inquiry' && yearsSinceActivity >= 2) {
       metro2Violations.push(`Hard inquiry from ${effectiveDate.toLocaleDateString()} exceeds 2-year reporting limit`);
       fcraIssues.push('FCRA § 605(a)(3): Hard inquiries exceeding 2-year period must be removed');
@@ -1081,7 +1000,6 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
       violationSeverities.push(0.85); // Very high severity
     }
 
-    // P3.5: Account age validation - accounts should be aged off appropriately
     const monthsSinceActivity = yearsSinceActivity * 12;
     if (itemType === 'collection' && monthsSinceActivity > (reportingLimit * 12)) {
       notes.push(`P3.5: Collection item is ${Math.floor(monthsSinceActivity)} months old - significantly exceeds reporting period`);
@@ -1089,18 +1007,13 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     }
   }
 
-  // Potential re-aging check: if reported date is much newer than date opened for a derogatory account
   if (openedDate && reportDate && (itemType === 'collection' || itemType === 'charge_off')) {
     const yearsBetween = (reportDate.getTime() - openedDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
     if (yearsBetween > 2) {
-      // Account reported much later than opened - could indicate re-aging or sold debt
       notes.push(`Account opened ${openedDate.toLocaleDateString()} but reported ${reportDate.toLocaleDateString()} - ${Math.floor(yearsBetween)} year gap may require DOFD verification`);
     }
   }
 
-  // ---- CHECK 4: Third-Party Collection Agency ----
-  // Only flag missing original creditor for ACTUAL third-party collectors
-  
   const isThirdPartyCollector = itemType === 'collection' && isLikelyCollectionAgency(item.creditorName);
   
   if (isThirdPartyCollector && !item.originalCreditor) {

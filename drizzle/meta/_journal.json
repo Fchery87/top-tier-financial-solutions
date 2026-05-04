@@ -141,6 +141,48 @@
       "when": 1765130400000,
       "tag": "0019_dispute_outcomes",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777812531112,
+      "tag": "0020_hard_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1777837779263,
+      "tag": "0021_many_blob",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1777839493669,
+      "tag": "0022_quick_vector",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1777847572246,
+      "tag": "0023_next_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777847876764,
+      "tag": "0024_late_johnny_blaze",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777849394969,
+      "tag": "0025_thick_franklin_storm",
+      "breakpoints": true
     }
   ]
 }
