@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { NY_SERVICE_AGREEMENT_TEMPLATE, REQUIRED_DISCLOSURES_NY } from '@/lib/service-agreement-template';
+import { sanitizeHtml } from '@/lib/safe-html';
 
 interface AgreementTemplate {
   id: string;
@@ -584,7 +585,7 @@ export default function AgreementsPage() {
               <CardContent>
                 <div 
                   className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: previewContent }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContent) }}
                 />
               </CardContent>
             </Card>

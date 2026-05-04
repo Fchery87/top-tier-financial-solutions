@@ -1,0 +1,1 @@
+ALTER TABLE "client_notification_preferences" ADD COLUMN "messaging_emails" boolean DEFAULT true;

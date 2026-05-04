@@ -434,6 +434,24 @@ export async function PUT(
     if (body.phone !== undefined) {
       fieldsToEncrypt.phone = body.phone;
     }
+    if (body.street_address !== undefined) {
+      fieldsToEncrypt.streetAddress = body.street_address;
+    }
+    if (body.city !== undefined) {
+      fieldsToEncrypt.city = body.city;
+    }
+    if (body.state !== undefined) {
+      fieldsToEncrypt.state = body.state;
+    }
+    if (body.zip_code !== undefined) {
+      fieldsToEncrypt.zipCode = body.zip_code;
+    }
+    if (body.date_of_birth !== undefined) {
+      fieldsToEncrypt.dateOfBirth = body.date_of_birth;
+    }
+    if (body.ssn_last_4 !== undefined) {
+      fieldsToEncrypt.ssnLast4 = body.ssn_last_4;
+    }
 
     // Encrypt if there are PII fields to update
     if (Object.keys(fieldsToEncrypt).length > 0) {

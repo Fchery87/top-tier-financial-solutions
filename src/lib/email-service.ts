@@ -22,6 +22,7 @@ import { randomUUID } from 'crypto';
 
 export type EmailTriggerType = 
   | 'welcome'
+  | 'message_received'
   | 'dispute_created'
   | 'dispute_sent'
   | 'response_received'
@@ -215,6 +216,8 @@ async function checkNotificationPreference(
   
   // Check specific preferences
   switch (triggerType) {
+    case 'message_received':
+      return prefs.messagingEmails ?? true;
     case 'dispute_created':
     case 'dispute_sent':
     case 'response_received':

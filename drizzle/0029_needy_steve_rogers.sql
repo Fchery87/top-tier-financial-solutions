@@ -1,0 +1,1 @@
+ALTER TYPE "public"."email_trigger_type" ADD VALUE 'message_received' BEFORE 'dispute_created';

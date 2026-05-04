@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { feeConfigurations, clientBillingProfiles, invoices, paymentAuditLog, clients } from '@/db/schema';
-import { eq, desc, sql } from 'drizzle-orm';
+import { feeConfigurations, clientBillingProfiles, invoices, paymentAuditLog, clients, serviceEngagements, servicesRenderedEvents } from '@/db/schema';
+import { and, eq, desc, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 
@@ -174,10 +174,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ id, message: 'Billing profile created successfully' });
     } else {
       // Create invoice
-      const { clientId, amount, description, dueDate, servicesRendered } = body;
+      const { clientId, serviceEngagementId, invoiceServiceType, amount, description, dueDate, servicesRendered } = body;
 
       if (!clientId || !amount) {
         return NextResponse.json({ error: 'Client ID and amount are required' }, { status: 400 });
+      }
+
+      if (!serviceEngagementId) {
+        return NextResponse.json({ error: 'Service engagement ID is required' }, { status: 400 });
       }
 
       // CROA Compliance: Services must be rendered before invoicing
@@ -185,6 +189,50 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ 
           error: 'CROA Compliance: Services must be documented before creating an invoice',
           code: 'CROA_SERVICES_REQUIRED'
+        }, { status: 400 });
+      }
+
+      const [engagement] = await db
+        .select({
+          id: serviceEngagements.id,
+          serviceType: serviceEngagements.serviceType,
+        })
+        .from(serviceEngagements)
+        .where(and(
+          eq(serviceEngagements.id, serviceEngagementId),
+          eq(serviceEngagements.clientId, clientId),
+        ))
+        .limit(1);
+
+      if (!engagement) {
+        return NextResponse.json({ error: 'Service engagement not found for client' }, { status: 404 });
+      }
+
+      if (invoiceServiceType === 'credit_audit' && engagement.serviceType !== 'credit_audit') {
+        return NextResponse.json({
+          error: 'Credit Audit invoices require a separate Credit Audit engagement',
+          code: 'CREDIT_AUDIT_ENGAGEMENT_REQUIRED'
+        }, { status: 400 });
+      }
+
+      const [qualifyingEvent] = await db
+        .select({
+          id: servicesRenderedEvents.id,
+          eventType: servicesRenderedEvents.eventType,
+          occurredAt: servicesRenderedEvents.occurredAt,
+        })
+        .from(servicesRenderedEvents)
+        .where(and(
+          eq(servicesRenderedEvents.clientId, clientId),
+          eq(servicesRenderedEvents.serviceEngagementId, serviceEngagementId),
+          eq(servicesRenderedEvents.eventType, 'first_dispute_package_submitted'),
+        ))
+        .limit(1);
+
+      if (!qualifyingEvent) {
+        return NextResponse.json({
+          error: 'A qualifying Services Rendered event is required before an invoice can become payable',
+          code: 'SERVICES_RENDERED_EVENT_REQUIRED'
         }, { status: 400 });
       }
 
@@ -197,8 +245,12 @@ export async function POST(request: NextRequest) {
         invoiceNumber,
         amount,
         status: 'pending',
-        servicesRendered: JSON.stringify(servicesRendered),
-        servicesRenderedAt: new Date(),
+        servicesRendered: JSON.stringify({
+          event_id: qualifyingEvent.id,
+          event_type: qualifyingEvent.eventType,
+          details: servicesRendered,
+        }),
+        servicesRenderedAt: qualifyingEvent.occurredAt,
         description,
         dueDate: dueDate ? new Date(dueDate) : null,
       });
@@ -212,6 +264,11 @@ export async function POST(request: NextRequest) {
         details: JSON.stringify({ 
           invoice_number: invoiceNumber, 
           amount, 
+          readiness_reason: 'qualifying_services_rendered_event',
+          service_engagement_id: serviceEngagementId,
+          services_rendered_event_id: qualifyingEvent.id,
+          services_rendered_event_type: qualifyingEvent.eventType,
+          services_rendered_event_occurred_at: qualifyingEvent.occurredAt?.toISOString(),
           services_rendered: servicesRendered 
         }),
         performedById: session.user.id,

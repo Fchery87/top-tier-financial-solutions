@@ -476,6 +476,7 @@ export const clientIdentityDocuments = pgTable('client_identity_documents', {
 export const creditReports = pgTable('credit_reports', {
   id: text('id').primaryKey(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  serviceEngagementId: text('service_engagement_id').references(() => serviceEngagements.id, { onDelete: 'set null' }),
   fileName: text('file_name').notNull(),
   fileType: text('file_type').notNull(), // 'pdf' | 'html' | 'txt'
   fileUrl: text('file_url').notNull(),
@@ -484,12 +485,15 @@ export const creditReports = pgTable('credit_reports', {
   reportDate: timestamp('report_date'),
   parsedAt: timestamp('parsed_at'),
   parseStatus: text('parse_status').default('pending'), // 'pending' | 'processing' | 'completed' | 'failed'
+  parserConfidence: integer('parser_confidence'),
+  parserReviewStatus: text('parser_review_status').default('needs_review'), // needs_review | approved | rejected
   parseError: text('parse_error'),
   rawData: text('raw_data'), // JSON string of parsed raw data
   uploadedAt: timestamp('uploaded_at').defaultNow(),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => [
   index("credit_reports_clientId_idx").on(table.clientId),
+  index("credit_reports_serviceEngagementId_idx").on(table.serviceEngagementId),
 ]);
 
 // Credit accounts/tradelines (parsed from reports)
@@ -1389,6 +1393,22 @@ export const invoices = pgTable('invoices', {
   index("invoices_invoiceNumber_idx").on(table.invoiceNumber),
 ]);
 
+export const servicesRenderedEvents = pgTable('services_rendered_events', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  serviceEngagementId: text('service_engagement_id').references(() => serviceEngagements.id, { onDelete: 'set null' }),
+  eventType: text('event_type').notNull(),
+  sourceDisputeId: text('source_dispute_id').references(() => disputes.id, { onDelete: 'set null' }),
+  occurredAt: timestamp('occurred_at').defaultNow().notNull(),
+  recordedById: text('recorded_by_id').references(() => user.id, { onDelete: 'set null' }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('services_rendered_events_clientId_idx').on(table.clientId),
+  index('services_rendered_events_serviceEngagementId_idx').on(table.serviceEngagementId),
+  index('services_rendered_events_eventType_idx').on(table.eventType),
+]);
+
 // Payment audit log (compliance trail)
 export const paymentAuditLog = pgTable('payment_audit_log', {
   id: text('id').primaryKey(),
@@ -1568,6 +1588,7 @@ export const messageAttachmentsRelations = relations(messageAttachments, ({ one 
 // Email trigger types enum
 export const emailTriggerTypeEnum = pgEnum('email_trigger_type', [
   'welcome',
+  'message_received',
   'dispute_created',
   'dispute_sent',
   'response_received',
@@ -1634,6 +1655,7 @@ export const clientNotificationPreferences = pgTable('client_notification_prefer
   id: text('id').primaryKey(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
   emailEnabled: boolean('email_enabled').default(true),
+  messagingEmails: boolean('messaging_emails').default(true),
   disputeUpdates: boolean('dispute_updates').default(true),
   progressReports: boolean('progress_reports').default(true),
   marketingEmails: boolean('marketing_emails').default(false),

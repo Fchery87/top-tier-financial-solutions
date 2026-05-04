@@ -5,6 +5,7 @@ import { ArrowLeft, Calendar, User, Tag, ArrowRight, Sparkles } from 'lucide-rea
 import { FadeIn, SlideUp } from '@/components/ui/Motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay, AuroraBackground, ParticleField } from '@/components/ui/AnimatedBackground';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
+import { sanitizeHtml } from '@/lib/safe-html';
 
 interface BlogPost {
   id: string;
@@ -120,7 +121,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <article className="prose prose-lg prose-invert max-w-none">
               <div 
                 className="text-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content).replace(/\n/g, '<br />') }}
               />
             </article>
           </FadeIn>

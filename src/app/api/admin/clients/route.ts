@@ -143,8 +143,6 @@ async function getHandler(request: NextRequest) {
           city: decrypted.city,
           state: decrypted.state,
           zip_code: decrypted.zipCode,
-          date_of_birth: c.dateOfBirth?.toISOString(),
-          ssn_last_4: decrypted.ssnLast4,
           status: c.status,
           notes: c.notes,
           converted_at: c.convertedAt?.toISOString(),

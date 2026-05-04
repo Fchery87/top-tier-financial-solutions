@@ -23,6 +23,31 @@ const STRUCTURED_RESPONSE_OUTCOMES = new Set([
   'frivolous',
 ]);
 
+function getNextCycleRecommendation(outcome?: string | null) {
+  if (outcome === 'verified') {
+    return {
+      action: 'method_of_verification',
+      reason: 'Verified responses should be reviewed for investigation method before another dispute cycle.',
+    };
+  }
+
+  if (outcome === 'deleted') {
+    return {
+      action: 'close',
+      reason: 'Deleted items should be closed after verified response review.',
+    };
+  }
+
+  if (outcome === 'updated') {
+    return {
+      action: 'update_item',
+      reason: 'Updated items should refresh item facts before deciding whether another cycle is needed.',
+    };
+  }
+
+  return null;
+}
+
 async function validateAdmin() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -566,6 +591,7 @@ export async function PUT(
         updated_at: updatedDispute.updatedAt?.toISOString(),
       },
       next_round_dispute: nextRoundDispute,
+      next_cycle_recommendation: getNextCycleRecommendation(outcome),
       message: nextRoundDispute 
         ? `Dispute updated and Round ${nextRoundDispute.round} created`
         : 'Dispute updated successfully',

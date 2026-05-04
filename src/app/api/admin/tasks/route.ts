@@ -3,32 +3,32 @@ import { db } from '@/db/client';
 import { tasks, clients, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { getUserRole, roleHasPermission, type AdminPermission } from '@/lib/admin-auth';
 import { desc, asc, count, eq, or, ilike, and, gte, lte, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { triggerAutomation } from '@/lib/email-service';
 
-async function validateAdmin() {
+async function validateAdmin(permission: AdminPermission) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
   
   if (!session?.user?.email) {
-    return null;
+    return { error: 'Unauthorized' as const };
   }
   
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
+  const role = await getUserRole(session.user.email);
+  if (!role || !roleHasPermission(role, permission)) {
+    return { error: 'Forbidden' as const };
   }
   
-  return session.user;
+  return { user: { ...session.user, role } };
 }
 
 export async function GET(request: NextRequest) {
-  const adminUser = await validateAdmin();
-  if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminUser = await validateAdmin('tasks:read');
+  if ('error' in adminUser) {
+    return NextResponse.json({ error: adminUser.error }, { status: adminUser.error === 'Unauthorized' ? 401 : 403 });
   }
 
   const searchParams = request.nextUrl.searchParams;
@@ -159,9 +159,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const adminUser = await validateAdmin();
-  if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminUser = await validateAdmin('tasks:create');
+  if ('error' in adminUser) {
+    return NextResponse.json({ error: adminUser.error }, { status: adminUser.error === 'Unauthorized' ? 401 : 403 });
   }
 
   try {
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       id,
       clientId: client_id || null,
       assigneeId: assignee_id || null,
-      createdById: adminUser.id,
+      createdById: adminUser.user.id,
       title,
       description: description || null,
       status: status as 'todo' | 'in_progress' | 'review' | 'done',

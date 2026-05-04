@@ -3,6 +3,7 @@ import { user } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export type UserRole = 'user' | 'admin' | 'super_admin';
+export type AdminPermission = 'tasks:read' | 'tasks:create';
 
 export async function getUserRole(email: string): Promise<UserRole | null> {
   try {
@@ -31,4 +32,14 @@ export async function isSuperAdmin(email: string): Promise<boolean> {
 export async function isAdmin(email: string): Promise<boolean> {
   const role = await getUserRole(email);
   return role === 'admin' || role === 'super_admin';
+}
+
+const rolePermissions: Record<UserRole, AdminPermission[]> = {
+  user: [],
+  admin: ['tasks:read', 'tasks:create'],
+  super_admin: ['tasks:read', 'tasks:create'],
+};
+
+export function roleHasPermission(role: UserRole, permission: AdminPermission): boolean {
+  return rolePermissions[role]?.includes(permission) ?? false;
 }

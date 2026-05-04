@@ -183,6 +183,41 @@
       "when": 1777849394969,
       "tag": "0025_thick_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1777864553543,
+      "tag": "0026_dear_crusher_hogan",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1777865265363,
+      "tag": "0027_mighty_saracen",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1777867707024,
+      "tag": "0028_eager_johnny_blaze",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1777867934172,
+      "tag": "0029_needy_steve_rogers",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1777869195477,
+      "tag": "0030_amazing_red_shift",
+      "breakpoints": true
     }
   ]
 }

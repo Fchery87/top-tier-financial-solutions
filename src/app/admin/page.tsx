@@ -34,6 +34,7 @@ import { AutomationStatus } from '@/components/admin/AutomationStatus';
 import { WorkQueue } from '@/components/admin/WorkQueue';
 import { useAdminRole } from '@/contexts/AdminContext';
 import { DisputeInsights } from '@/components/admin/DisputeInsights';
+import { AdminAnalyticsPanel } from '@/components/admin/AdminAnalyticsPanel';
 
 interface DashboardStats {
   activeClients: number;
@@ -375,6 +376,14 @@ export default function AdminDashboard() {
             </Card>
           </Link>
         </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.24 }}
+      >
+        <AdminAnalyticsPanel />
       </motion.div>
 
       {/* Client Pipeline - Kanban Board */}

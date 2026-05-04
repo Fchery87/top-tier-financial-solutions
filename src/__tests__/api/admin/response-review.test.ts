@@ -88,4 +88,53 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     expect(dbMock.update).not.toHaveBeenCalled();
     expect(dbMock.insert).not.toHaveBeenCalled();
   }, 30000);
+
+  it('recommends method-of-verification after a verified response review', async () => {
+    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const updatedDispute = {
+      id: 'dispute-1',
+      clientId: 'client-1',
+      negativeItemId: null,
+      status: 'responded',
+      outcome: 'verified',
+      responseNotes: 'Verified by bureau.',
+      trackingNumber: null,
+      responseChannel: 'mail',
+      scoreImpact: null,
+      analysisConfidence: null,
+      autoSelected: false,
+      sentAt: new Date('2026-01-02T00:00:00.000Z'),
+      responseDeadline: new Date('2026-02-01T00:00:00.000Z'),
+      responseReceivedAt: new Date('2026-02-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-02-01T00:00:00.000Z'),
+    };
+
+    dbMock.select
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1, responseReceivedAt: null, responseChannel: 'mail', escalationHistory: null }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([updatedDispute]) }) }) });
+    dbMock.update.mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });
+    dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: 'responded',
+          responseReceivedAt: '2026-02-01T00:00:00.000Z',
+          responseDocumentUrl: 'portal-documents/user-1/response.pdf',
+          responseChannel: 'mail',
+          outcome: 'verified',
+          responseNotes: 'Verified by bureau.',
+        }),
+      }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.next_cycle_recommendation).toEqual({
+      action: 'method_of_verification',
+      reason: 'Verified responses should be reviewed for investigation method before another dispute cycle.',
+    });
+  }, 30000);
 });

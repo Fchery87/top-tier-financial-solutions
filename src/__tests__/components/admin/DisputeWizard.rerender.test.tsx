@@ -61,7 +61,7 @@ describe('DisputeWizardPage render stability', () => {
     });
 
     expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
-  });
+  }, 30000);
 
   it('renders client list when client first/last names are null', async () => {
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {

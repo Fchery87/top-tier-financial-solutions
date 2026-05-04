@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GradientOrbs, AnimatedGrid, NoiseOverlay } from '@/components/ui/AnimatedBackground';
+import { sanitizeHtml } from '@/lib/safe-html';
 
 interface DisclosureItem {
   id: string;
@@ -402,7 +403,7 @@ export default function AgreementPage() {
                 <CardContent className="p-6">
                   <div 
                     className="prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: agreement.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(agreement.content) }}
                   />
                 </CardContent>
               </Card>
@@ -436,7 +437,7 @@ export default function AgreementPage() {
                     <div 
                       className="prose prose-sm max-w-none"
                       style={{ color: '#000' }}
-                      dangerouslySetInnerHTML={{ __html: renderAgreementContent() || '' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderAgreementContent() || '') }}
                     />
                   </CardContent>
                 </Card>
