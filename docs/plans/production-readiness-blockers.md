@@ -25,7 +25,9 @@ No high or critical dependency advisories remain after the dependency security p
 
 `npm audit` still reports 2 moderate findings for `next@16.2.4` because Next pins a nested `postcss@8.4.31` below the advisory floor. Npm's suggested forced fix would install `next@9.3.3`, which is not a valid remediation path for this Next.js 16 application.
 
-An attempted nested `postcss` override made `npm ls` report an invalid install tree, so it was not kept. This should be revisited when Next publishes a version that updates its internal PostCSS dependency or npm's advisory metadata recognizes a supported Next.js remediation path.
+Exa research found Vercel issue `vercel/next.js#93234` and PR `vercel/next.js#93288`, where maintainers state this advisory does not affect ordinary Next.js users because the bundled PostCSS path runs at build time and would require building from untrusted source. The PR bumps Next's vendored PostCSS to reduce scanner noise, but that fix is not available in the currently installed stable package.
+
+An attempted nested `postcss` override, including the npm RFC-supported `"."` override form, made `npm ls` report an invalid install tree because Next's package still pins `postcss` exactly. The override was not kept. This should be revisited when Next publishes a stable version that includes Vercel PR `#93288` or npm's advisory metadata recognizes a supported Next.js remediation path.
 
 ## Non-Blocking Warnings
 
