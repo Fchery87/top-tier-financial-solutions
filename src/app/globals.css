@@ -111,8 +111,8 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-playfair), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -156,12 +156,10 @@ body {
   -webkit-mask-image: linear-gradient(to top, black 60%, transparent 100%);
 }
 
-/* Premium Text Gradient */
+/* Premium Gold Accent Text */
 .text-gradient-gold {
-  background: linear-gradient(135deg, hsl(43 60% 70%) 0%, hsl(43 46% 58%) 50%, hsl(35 40% 45%) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: hsl(var(--secondary));
+  font-weight: 600;
 }
 
 /* Glow Effects */
@@ -419,19 +417,8 @@ body {
 }
 
 .text-shimmer {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--foreground)) 0%,
-    hsl(var(--secondary)) 25%,
-    hsl(var(--foreground)) 50%,
-    hsl(var(--secondary)) 75%,
-    hsl(var(--foreground)) 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: text-shimmer 4s linear infinite;
+  color: hsl(var(--secondary));
+  font-weight: 600;
 }
 
 /* Breathing Glow */
@@ -591,17 +578,9 @@ body {
   box-shadow: 0 10px 40px -10px rgba(198, 168, 124, 0.5);
 }
 
-/* Hero Text Gradient */
+/* Hero Text Accent */
 .hero-text-gradient {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--foreground)) 0%,
-    hsl(var(--foreground)) 40%,
-    hsl(var(--secondary)) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: hsl(var(--foreground));
 }
 
 /* Decorative Elements */

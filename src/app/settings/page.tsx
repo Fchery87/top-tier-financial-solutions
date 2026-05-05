@@ -27,7 +27,7 @@ export default function SettingsPage() {
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
-        <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="max-w-md w-full bg-card border border-border">
           <CardHeader className="text-center">
             <CardTitle className="font-serif text-2xl">Account Settings</CardTitle>
             <CardDescription>Please sign in to access your settings.</CardDescription>
@@ -96,7 +96,7 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <Card className="bg-card border border-border">
                 <CardHeader>
                   <CardTitle className="font-serif text-xl flex items-center gap-2">
                     <User className="w-5 h-5 text-secondary" />
@@ -138,7 +138,7 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <Card className="bg-card border border-border">
                 <CardHeader>
                   <CardTitle className="font-serif text-xl flex items-center gap-2">
                     <Lock className="w-5 h-5 text-secondary" />
@@ -173,7 +173,7 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <Card className="bg-card border border-border">
                 <CardHeader>
                   <CardTitle className="font-serif text-xl flex items-center gap-2">
                     <Bell className="w-5 h-5 text-secondary" />
@@ -212,7 +212,7 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+              <Card className="bg-card border border-border">
                 <CardContent className="p-6">
                   <Button 
                     onClick={handleSignOut}

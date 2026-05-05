@@ -271,7 +271,7 @@ export default function MessagesPage() {
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100%-5rem)]">
         {/* Thread List */}
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
+        <Card className="bg-card border border-border overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Conversations</CardTitle>
             <CardDescription>{threads.length} thread(s)</CardDescription>
@@ -325,7 +325,7 @@ export default function MessagesPage() {
         </Card>
 
         {/* Message View */}
-        <Card className="lg:col-span-2 bg-card/80 backdrop-blur-sm border-border/50 flex flex-col overflow-hidden">
+        <Card className="lg:col-span-2 bg-card border border-border flex flex-col overflow-hidden">
           {selectedThread ? (
             <>
               {/* Thread Header */}

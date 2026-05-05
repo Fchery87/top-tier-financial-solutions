@@ -6,6 +6,7 @@ import { Upload, X, FileText, CheckCircle, AlertCircle, Loader2, Trash2 } from '
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { getRequiredEvidenceForReasonCodes } from '@/lib/dispute-wizard-validation';
+import { toast } from 'sonner';
 
 export interface EvidenceDocument {
   id: string;
@@ -87,7 +88,7 @@ export function EvidenceUploadModal({
     });
 
     if (validFiles.length !== files.length) {
-      alert(
+      toast.error(
         `Some files were skipped. Only PDF, Word, Excel, images, and text files are supported.`
       );
     }

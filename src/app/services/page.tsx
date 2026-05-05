@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Check, FileSearch, FileText, TrendingUp, GraduationCap, ArrowRight, Sparkles, Briefcase } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { FadeIn, SlideUp, StaggerContainer, StaggerItem, TiltCard, ScaleIn } from '@/components/ui/Motion';
-import { GradientOrbs, AnimatedGrid, NoiseOverlay, AuroraBackground, ParticleField } from '@/components/ui/AnimatedBackground';
+import { GradientOrbs, NoiseOverlay, AuroraBackground } from '@/components/ui/AnimatedBackground';
 import { db } from '@/db/client';
 import { services as servicesTable } from '@/db/schema';
 import { asc } from 'drizzle-orm';
@@ -89,7 +89,6 @@ export default async function ServicesPage() {
       {/* Services Grid - Premium Design */}
       <section className="py-24 md:py-32 bg-background relative overflow-hidden">
         <GradientOrbs className="opacity-40" />
-        <AnimatedGrid className="opacity-20" />
         <NoiseOverlay opacity={0.02} />
         
         <div className="container relative z-10 mx-auto px-4 md:px-6">
@@ -197,7 +196,6 @@ export default async function ServicesPage() {
       <section className="py-32 md:py-40 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary" />
         <AuroraBackground className="opacity-60" />
-        <ParticleField count={15} className="opacity-40" />
         <NoiseOverlay opacity={0.03} />
         
         {/* Animated orbs */}

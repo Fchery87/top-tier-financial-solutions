@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
+import { Source_Serif_4, Manrope } from "next/font/google";
 import "./globals.css";
 import { TooltipWrapper } from "./providers";
 import { Analytics } from '@/components/Analytics';
@@ -8,14 +8,14 @@ import { LayoutWrapper } from '@/components/LayoutWrapper';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const sourceSerif = Source_Serif_4({
+  variable: "--font-source-serif",
   subsets: ["latin"],
   display: "swap",
 });
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
   display: "swap",
 });
@@ -53,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${playfair.variable} ${jakarta.variable} font-sans antialiased`}>
+      <body className={`${sourceSerif.variable} ${manrope.variable} font-sans antialiased`}>
         <ErrorBoundary>
           <Analytics />
           <SkipLink />

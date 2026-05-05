@@ -88,7 +88,7 @@ export function DisputeInsights() {
 
   if (loading) {
     return (
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-serif flex items-center gap-2">
             <Lightbulb className="w-5 h-5 text-secondary" />
@@ -114,7 +114,7 @@ export function DisputeInsights() {
   const creditors = data.creditor_effectiveness || [];
 
   return (
-    <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+    <Card className="bg-card border border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>

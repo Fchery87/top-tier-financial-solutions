@@ -80,7 +80,7 @@ export function DisputeCalendar({ disputes }: Props) {
   };
 
   return (
-    <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+    <Card className="bg-card border border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>

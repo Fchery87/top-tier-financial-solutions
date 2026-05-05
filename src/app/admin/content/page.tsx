@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import type { Page } from '@/lib/admin-api';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function ContentPage() {
   const [pages, setPages] = React.useState<Page[]>([]);
@@ -15,6 +16,7 @@ export default function ContentPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingPage, setEditingPage] = React.useState<Page | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     slug: '',
@@ -119,11 +121,14 @@ export default function ContentPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this page?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/pages/${id}`, {
+      const response = await fetch(`/api/admin/pages/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -132,6 +137,8 @@ export default function ContentPage() {
       }
     } catch (error) {
       console.error('Error deleting page:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -439,6 +446,15 @@ export default function ContentPage() {
           </motion.div>
         </motion.div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete Page"
+        description="Are you sure you want to delete this page?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

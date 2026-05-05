@@ -6,6 +6,7 @@ import { Plus, Briefcase, Pencil, Trash2, Loader2, GripVertical } from 'lucide-r
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Service {
   id: string;
@@ -22,6 +23,7 @@ export default function ServicesPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingService, setEditingService] = React.useState<Service | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     name: '',
@@ -92,11 +94,14 @@ export default function ServicesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this service?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/services/${id}`, {
+      const response = await fetch(`/api/admin/services/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -105,6 +110,8 @@ export default function ServicesPage() {
       }
     } catch (error) {
       console.error('Error deleting service:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -217,7 +224,7 @@ export default function ServicesPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-secondary/10">
               <Briefcase className="w-6 h-6 text-secondary" />
@@ -319,6 +326,15 @@ export default function ServicesPage() {
           </motion.div>
         </motion.div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete Service"
+        description="Are you sure you want to delete this service?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

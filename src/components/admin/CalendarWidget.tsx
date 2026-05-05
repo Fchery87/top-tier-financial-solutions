@@ -104,7 +104,7 @@ export function CalendarWidget() {
 
   if (loading) {
     return (
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-serif flex items-center gap-2">
             <Calendar className="w-5 h-5 text-secondary" />
@@ -123,7 +123,7 @@ export function CalendarWidget() {
   const hasOverdue = (data?.counts.overdue || 0) > 0;
 
   return (
-    <Card className={`bg-card/80 backdrop-blur-sm border-border/50 ${hasOverdue ? 'border-l-4 border-l-red-500' : ''}`}>
+    <Card className={`bg-card shadow-sm ${hasOverdue ? 'border-t-4 border-t-red-500' : ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>

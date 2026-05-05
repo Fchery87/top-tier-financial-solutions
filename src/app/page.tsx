@@ -333,7 +333,6 @@ export default async function Home() {
         {/* Multi-layered background */}
         <div className="absolute inset-0 bg-primary" />
         <AuroraBackground className="opacity-60" />
-        <ParticleField count={20} className="opacity-40" />
         <NoiseOverlay opacity={0.03} />
         
         {/* Animated gradient orbs */}

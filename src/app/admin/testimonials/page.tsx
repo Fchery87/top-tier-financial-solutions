@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import type { Testimonial } from '@/lib/admin-api';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function TestimonialsPage() {
   const [testimonials, setTestimonials] = React.useState<Testimonial[]>([]);
@@ -15,6 +16,7 @@ export default function TestimonialsPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingTestimonial, setEditingTestimonial] = React.useState<Testimonial | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     author_name: '',
@@ -107,11 +109,14 @@ export default function TestimonialsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this testimonial?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/testimonials/${id}`, {
+      const response = await fetch(`/api/admin/testimonials/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -120,6 +125,8 @@ export default function TestimonialsPage() {
       }
     } catch (error) {
       console.error('Error deleting testimonial:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -253,7 +260,7 @@ export default function TestimonialsPage() {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-3 gap-4"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-secondary/10">
               <MessageSquareQuote className="w-6 h-6 text-secondary" />
@@ -264,7 +271,7 @@ export default function TestimonialsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-green-500/10">
               <Check className="w-6 h-6 text-green-500" />
@@ -275,7 +282,7 @@ export default function TestimonialsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-yellow-500/10">
               <X className="w-6 h-6 text-yellow-500" />
@@ -402,6 +409,15 @@ export default function TestimonialsPage() {
           </motion.div>
         </motion.div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete Testimonial"
+        description="Are you sure you want to delete this testimonial?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

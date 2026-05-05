@@ -11,6 +11,7 @@ import {
   Users
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface PipelineClient {
   id: string;
@@ -150,9 +151,11 @@ function StageColumn({ stage, clients, onDragStart, onDragOver, onDrop, isDragOv
           </div>
         )}
         {clients.length === 0 && (
-          <div className="flex items-center justify-center h-[100px] text-muted-foreground/50">
-            <span className="text-xs">No clients</span>
-          </div>
+          <EmptyState
+            title="No clients"
+            description="Drag clients here as they move through the pipeline"
+            className="py-6"
+          />
         )}
       </div>
     </div>
@@ -250,7 +253,7 @@ export function ClientPipeline() {
 
   if (loading) {
     return (
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-serif flex items-center gap-2">
             <Users className="w-5 h-5 text-secondary" />
@@ -273,7 +276,7 @@ export function ClientPipeline() {
   const stages: StageKey[] = ['lead', 'consultation', 'agreement', 'onboarding', 'active', 'completed'];
 
   return (
-    <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+    <Card className="bg-card border border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>

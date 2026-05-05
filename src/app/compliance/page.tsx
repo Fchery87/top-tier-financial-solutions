@@ -55,7 +55,7 @@ export default function CompliancePage() {
             </p>
           </div>
 
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6">
+          <div className="bg-yellow-50 border-t-4 border-yellow-400 p-6">
             <h3 className="text-lg font-bold text-yellow-800 mb-2">Important Disclaimer</h3>
             <p className="text-yellow-700 text-sm">
               Top Tier Financial Solutions is a credit repair organization. We are not a law firm and do not provide legal advice. If you need legal assistance, please consult with a qualified attorney. Results may vary and are not guaranteed.

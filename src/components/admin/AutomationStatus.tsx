@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Zap, Loader2, Mail, Bell, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { formatTimeAgo } from '@/lib/format';
 
 interface AutomationFailure {
   id: string;
@@ -87,24 +88,9 @@ export function AutomationStatus() {
     }
   }, [fetchAutomationStats]);
 
-  const formatTimeAgo = (timestamp: string | null) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
-
   if (loading) {
     return (
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-serif flex items-center gap-2">
             <Zap className="w-5 h-5 text-secondary" />
@@ -179,7 +165,7 @@ export function AutomationStatus() {
           : 'text-orange-500';
 
   return (
-    <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+    <Card className="bg-card border border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>

@@ -18,6 +18,9 @@ import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
 import type { ContactFormSubmission, ConsultationStatus } from '@/lib/admin-api';
+import { formatTimeAgo } from '@/lib/format';
+import { getSafeFullName, getSafeInitials } from '@/lib/client-utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const statusOptions: { value: ConsultationStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All Leads' },
@@ -33,6 +36,7 @@ export default function LeadsPage() {
   const [selectedStatus, setSelectedStatus] = React.useState<ConsultationStatus | 'all'>('all');
   const [selectedLead, setSelectedLead] = React.useState<ContactFormSubmission | null>(null);
   const [updating, setUpdating] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const fetchLeads = React.useCallback(async () => {
     setLoading(true);
@@ -73,11 +77,14 @@ export default function LeadsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this lead?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/leads/${id}`, {
+      const response = await fetch(`/api/admin/leads/${pendingDeleteId}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -85,32 +92,9 @@ export default function LeadsPage() {
       }
     } catch (error) {
       console.error('Error deleting lead:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-    
-    if (hours < 1) return 'Just now';
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
-  };
-
-  const getSafeInitials = (first: unknown, last: unknown) => {
-    const firstName = typeof first === 'string' ? first.trim() : '';
-    const lastName = typeof last === 'string' ? last.trim() : '';
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.trim() || '?';
-  };
-
-  const getSafeFullName = (first: unknown, last: unknown) => {
-    const firstName = typeof first === 'string' ? first.trim() : '';
-    const lastName = typeof last === 'string' ? last.trim() : '';
-    return `${firstName} ${lastName}`.trim() || 'Unknown Lead';
   };
 
   const columns = [
@@ -167,7 +151,7 @@ export default function LeadsPage() {
       header: 'Received',
       render: (item: ContactFormSubmission) => (
         <span className="text-sm text-muted-foreground">
-          {formatDate(item.requested_at)}
+          {formatTimeAgo(item.requested_at)}
         </span>
       ),
     },
@@ -248,7 +232,7 @@ export default function LeadsPage() {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-4 gap-4"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-pink-500/10">
               <Users className="w-6 h-6 text-pink-500" />
@@ -259,7 +243,7 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 border-blue-500/30">
+        <Card className="bg-card border border-border border-blue-500/30">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-blue-500/10">
               <MessageSquare className="w-6 h-6 text-blue-500" />
@@ -270,7 +254,7 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-yellow-500/10">
               <Phone className="w-6 h-6 text-yellow-500" />
@@ -281,7 +265,7 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-green-500/10">
               <Users className="w-6 h-6 text-green-500" />
@@ -422,6 +406,15 @@ export default function LeadsPage() {
           </motion.div>
         </motion.div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete Lead"
+        description="Are you sure you want to delete this lead?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

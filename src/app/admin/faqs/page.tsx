@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import type { FAQ } from '@/lib/admin-api';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function FAQsPage() {
   const [faqs, setFaqs] = React.useState<FAQ[]>([]);
@@ -15,6 +16,7 @@ export default function FAQsPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingFaq, setEditingFaq] = React.useState<FAQ | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     question: '',
@@ -104,11 +106,14 @@ export default function FAQsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this FAQ?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/faqs/${id}`, {
+      const response = await fetch(`/api/admin/faqs/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -117,6 +122,8 @@ export default function FAQsPage() {
       }
     } catch (error) {
       console.error('Error deleting FAQ:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -249,7 +256,7 @@ export default function FAQsPage() {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-purple-500/10">
               <HelpCircle className="w-6 h-6 text-purple-500" />
@@ -260,7 +267,7 @@ export default function FAQsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-green-500/10">
               <Eye className="w-6 h-6 text-green-500" />
@@ -392,6 +399,15 @@ export default function FAQsPage() {
           </motion.div>
         </motion.div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete FAQ"
+        description="Are you sure you want to delete this FAQ?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

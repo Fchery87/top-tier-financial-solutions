@@ -19,6 +19,8 @@ import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { NY_SERVICE_AGREEMENT_TEMPLATE, REQUIRED_DISCLOSURES_NY } from '@/lib/service-agreement-template';
 import { sanitizeHtml } from '@/lib/safe-html';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface AgreementTemplate {
   id: string;
@@ -53,6 +55,7 @@ export default function AgreementsPage() {
   const [editingTemplate, setEditingTemplate] = React.useState<AgreementTemplate | null>(null);
   const [previewContent, setPreviewContent] = React.useState('');
   const [saving, setSaving] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     name: '',
@@ -123,7 +126,7 @@ export default function AgreementsPage() {
 
   const handleSave = async () => {
     if (!formData.name || !formData.content) {
-      alert('Name and content are required');
+      toast.error('Name and content are required');
       return;
     }
 
@@ -152,11 +155,11 @@ export default function AgreementsPage() {
         fetchTemplates();
       } else {
         const error = await response.json();
-        alert(error.error || 'Failed to save template');
+        toast.error(error.error || 'Failed to save template');
       }
     } catch (error) {
       console.error('Error saving template:', error);
-      alert('Failed to save template');
+      toast.error('Failed to save template');
     } finally {
       setSaving(false);
     }
@@ -178,19 +181,21 @@ export default function AgreementsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this template? This cannot be undone.')) return;
-    
-    try {
-      const response = await fetch(`/api/admin/agreements/${id}?type=template`, {
-        method: 'DELETE',
-      });
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
 
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    try {
+      const response = await fetch(`/api/admin/agreements/${pendingDeleteId}`, { method: 'DELETE' });
       if (response.ok) {
         fetchTemplates();
       }
     } catch (error) {
       console.error('Error deleting template:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -369,7 +374,7 @@ export default function AgreementsPage() {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-blue-500/10">
               <FileSignature className="w-6 h-6 text-blue-500" />
@@ -380,7 +385,7 @@ export default function AgreementsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-green-500/10">
               <Check className="w-6 h-6 text-green-500" />
@@ -592,6 +597,15 @@ export default function AgreementsPage() {
           </motion.div>
         </motion.div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete Template"
+        description="Are you sure you want to delete this template? This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

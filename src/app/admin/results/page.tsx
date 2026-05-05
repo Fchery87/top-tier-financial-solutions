@@ -17,7 +17,10 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useAdminRole } from '@/contexts/AdminContext';
+import { toast } from 'sonner';
+import { formatCurrency, formatItemType } from '@/lib/format';
 
 interface WinRecord {
   id: string;
@@ -91,19 +94,6 @@ export default function ResultsPage() {
     fetchResults();
   }, [fetchResults]);
 
-  const formatCurrency = (cents: number | null) => {
-    if (!cents) return '$0';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  };
-
-  const formatItemType = (type: string) => {
-    return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  };
-
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -166,7 +156,7 @@ export default function ResultsPage() {
             onClick={() => {
               if (typeof window !== 'undefined') {
                 window.localStorage.setItem(preferencesKey, timeRange);
-                alert('Current range saved as your default.');
+                toast.success('Current range saved as your default.');
               }
             }}
           >
@@ -184,13 +174,13 @@ export default function ResultsPage() {
           <Loader2 className="w-8 h-8 animate-spin text-secondary" />
         </div>
       ) : !stats ? (
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardContent className="py-20 text-center">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-            <p className="text-muted-foreground">No results data available yet.</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Log dispute responses as “Deleted” to track wins here.
-            </p>
+        <Card className="bg-card border border-border">
+          <CardContent>
+            <EmptyState
+              icon={Trophy}
+              title="No results data available yet."
+              description='Log dispute responses as "Deleted" to track wins here.'
+            />
           </CardContent>
         </Card>
       ) : (
@@ -274,7 +264,7 @@ export default function ResultsPage() {
               transition={{ delay: 0.3 }}
               className="lg:col-span-2"
             >
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 h-full">
+              <Card className="bg-card border border-border h-full">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Award className="w-5 h-5 text-yellow-500" />
@@ -337,7 +327,7 @@ export default function ResultsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
               >
-                <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                <Card className="bg-card border border-border">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm">Deletions by Bureau</CardTitle>
                   </CardHeader>
@@ -373,7 +363,7 @@ export default function ResultsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                <Card className="bg-card border border-border">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Trophy className="w-4 h-4 text-yellow-500" />
@@ -429,7 +419,7 @@ export default function ResultsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.45 }}
                 >
-                  <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+                  <Card className="bg-card border border-border">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm">By Item Type</CardTitle>
                     </CardHeader>

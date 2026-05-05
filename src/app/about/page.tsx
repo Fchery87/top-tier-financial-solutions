@@ -1,7 +1,7 @@
 import { Users, Target, ShieldCheck, Award, Heart, Zap, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { FadeIn, SlideUp, SlideIn, StaggerContainer, StaggerItem, TiltCard, ScaleIn } from '@/components/ui/Motion';
-import { GradientOrbs, AnimatedGrid, NoiseOverlay } from '@/components/ui/AnimatedBackground';
+import { GradientOrbs, NoiseOverlay } from '@/components/ui/AnimatedBackground';
 import { Card } from '@/components/ui/Card';
 
 const values = [
@@ -51,7 +51,6 @@ export default function AboutPage() {
       {/* Values Grid - Premium Design */}
       <section className="py-24 md:py-32 bg-background relative overflow-hidden">
         <GradientOrbs className="opacity-40" />
-        <AnimatedGrid className="opacity-20" />
         <NoiseOverlay opacity={0.02} />
         
         <div className="container relative z-10 mx-auto px-4 md:px-6">
@@ -156,7 +155,6 @@ export default function AboutPage() {
 
       {/* Why Choose Us - Timeline Section */}
       <section className="py-24 md:py-32 bg-background relative overflow-hidden">
-        <AnimatedGrid className="opacity-20" />
         <NoiseOverlay opacity={0.02} />
         
         <div className="container relative z-10 mx-auto px-4 md:px-6">

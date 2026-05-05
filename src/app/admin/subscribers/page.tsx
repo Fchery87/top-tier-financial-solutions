@@ -129,7 +129,7 @@ export default function SubscribersAdminPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
           >
-            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+            <Card className="bg-card border border-border">
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-xl ${stat.bgColor}`}>
@@ -161,7 +161,7 @@ export default function SubscribersAdminPage() {
       </div>
 
       {/* Table */}
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border border-border">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-20">

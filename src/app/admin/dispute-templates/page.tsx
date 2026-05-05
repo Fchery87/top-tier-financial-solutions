@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/Input';
 
 interface Template {
@@ -96,7 +97,7 @@ export default function DisputeTemplatesPage() {
 
   const handleAddTemplate = async () => {
     if (!newTemplate.name || !newTemplate.content) {
-      alert('Name and content are required');
+      toast.error('Name and content are required');
       return;
     }
 
@@ -202,7 +203,7 @@ export default function DisputeTemplatesPage() {
         transition={{ delay: 0.15 }}
         className="grid grid-cols-1 sm:grid-cols-4 gap-4"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-blue-500/10">
               <FileText className="w-6 h-6 text-blue-500" />
@@ -213,7 +214,7 @@ export default function DisputeTemplatesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-green-500/10">
               <Building2 className="w-6 h-6 text-green-500" />
@@ -226,7 +227,7 @@ export default function DisputeTemplatesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-orange-500/10">
               <Briefcase className="w-6 h-6 text-orange-500" />
@@ -239,7 +240,7 @@ export default function DisputeTemplatesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-purple-500/10">
               <Users className="w-6 h-6 text-purple-500" />
@@ -322,7 +323,7 @@ export default function DisputeTemplatesPage() {
             <Loader2 className="w-8 h-8 animate-spin text-secondary" />
           </div>
         ) : filteredTemplates.length === 0 ? (
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+          <Card className="bg-card border border-border">
             <CardContent className="py-12 text-center">
               <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
@@ -339,7 +340,7 @@ export default function DisputeTemplatesPage() {
               return (
                 <Card
                   key={template.id}
-                  className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/50 transition-colors cursor-pointer"
+                  className="bg-card border border-border hover:border-secondary/50 transition-colors cursor-pointer"
                   onClick={() => setPreviewTemplate(template)}
                 >
                   <CardContent className="p-4">

@@ -110,7 +110,7 @@ export default function BookingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardHeader>
             <CardTitle className="font-serif flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />

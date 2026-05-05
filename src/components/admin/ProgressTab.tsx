@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { formatCurrency, formatItemType } from '@/lib/format';
 
 interface CreditReport {
   id: string;
@@ -120,19 +121,6 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
     }
   }, [fetchComparison, creditReports.length]);
 
-  const formatCurrency = (cents: number | null) => {
-    if (!cents) return '$0';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  };
-
-  const formatItemType = (type: string) => {
-    return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  };
-
   // Calculate wins from disputes
   const wins = disputes.filter(d => d.outcome === 'deleted');
   const totalWins = wins.length;
@@ -174,7 +162,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
           </CardContent>
         </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card shadow-sm">
           <CardContent className="p-4 text-center">
             <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-purple-500" />
             <p className="text-3xl font-bold">{disputes.filter(d => d.status === 'sent').length}</p>
@@ -182,7 +170,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
           </CardContent>
         </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card shadow-sm">
           <CardContent className="p-4 text-center">
             <GitCompare className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
             <p className="text-3xl font-bold">{creditReports.length}</p>
@@ -240,7 +228,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+          <Card className="bg-card border border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -427,7 +415,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
           </Card>
         </motion.div>
       ) : (
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="py-12 text-center">
             <GitCompare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
             <p className="text-muted-foreground">Upload at least 2 credit reports to compare progress.</p>
@@ -445,7 +433,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+          <Card className="bg-card border border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-secondary" />

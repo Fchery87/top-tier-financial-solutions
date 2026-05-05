@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import type { Disclaimer } from '@/lib/admin-api';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function DisclaimersPage() {
   const [disclaimers, setDisclaimers] = React.useState<Disclaimer[]>([]);
@@ -15,6 +16,7 @@ export default function DisclaimersPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingDisclaimer, setEditingDisclaimer] = React.useState<Disclaimer | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     name: '',
@@ -104,11 +106,14 @@ export default function DisclaimersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this disclaimer?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/disclaimers/${id}`, {
+      const response = await fetch(`/api/admin/disclaimers/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 
@@ -117,6 +122,8 @@ export default function DisclaimersPage() {
       }
     } catch (error) {
       console.error('Error deleting disclaimer:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -248,7 +255,7 @@ export default function DisclaimersPage() {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-2 gap-4"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-orange-500/10">
               <Scale className="w-6 h-6 text-orange-500" />
@@ -259,7 +266,7 @@ export default function DisclaimersPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-green-500/10">
               <Check className="w-6 h-6 text-green-500" />
@@ -387,6 +394,15 @@ export default function DisclaimersPage() {
           </motion.div>
         </motion.div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete Disclaimer"
+        description="Are you sure you want to delete this disclaimer?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

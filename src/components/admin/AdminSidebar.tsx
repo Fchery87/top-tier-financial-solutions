@@ -109,12 +109,13 @@ const navSections: NavSection[] = [
 interface AdminSidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps) {
+export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const [expandedSections, setExpandedSections] = React.useState<Set<string>>(() => {
-    // Default: expand sections containing active route
     const active = new Set<string>();
     navSections.forEach(section => {
       if (section.items.some(item => 
@@ -124,13 +125,21 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
         active.add(section.id);
       }
     });
-    // If no section is active, expand first two
     if (active.size === 0) {
       active.add('case-management');
       active.add('disputes');
     }
     return active;
   });
+
+  React.useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
@@ -152,15 +161,16 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
     return section.items.some(item => isItemActive(item.href));
   };
 
-  return (
-    <motion.aside
-      initial={false}
-      animate={{ width: collapsed ? 80 : 280 }}
-      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="fixed left-0 top-0 z-40 h-screen bg-primary border-r border-border/10 flex flex-col"
-    >
-      {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
+  const handleNavClick = () => {
+    if (mobileOpen && onMobileClose) {
+      onMobileClose();
+    }
+  };
+
+  const sidebarContent = (
+    <>
+      {/* Logo - hidden on mobile (shown in top bar instead) */}
+      <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-white/10">
         <Link href="/admin" className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-primary" />
@@ -184,11 +194,22 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
         </button>
       </div>
 
+      {/* Mobile logo */}
+      <div className="md:hidden h-14 flex items-center px-4 border-b border-white/10">
+        <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
+          <span className="text-base font-serif font-bold text-white">Admin Panel</span>
+        </Link>
+      </div>
+
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {/* Dashboard Link */}
         <Link
           href={dashboardLink.href}
+          onClick={handleNavClick}
           className={cn(
             "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
             pathname === dashboardLink.href 
@@ -200,7 +221,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
             "w-5 h-5 flex-shrink-0",
             pathname === dashboardLink.href ? "text-primary" : "text-current"
           )} />
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -210,7 +231,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
               {dashboardLink.name}
             </motion.span>
           )}
-          {collapsed && (
+          {collapsed && !mobileOpen && (
             <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               {dashboardLink.name}
             </div>
@@ -226,7 +247,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
             return (
               <div key={section.id}>
                 {/* Section Header */}
-                {!collapsed ? (
+                {(!collapsed || mobileOpen) ? (
                   <button
                     onClick={() => toggleSection(section.id)}
                     className={cn(
@@ -255,11 +276,11 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
 
                 {/* Section Items */}
                 <AnimatePresence initial={false}>
-                  {(isExpanded || collapsed) && (
+                  {(isExpanded || collapsed) && (!collapsed || mobileOpen || collapsed) && (
                     <motion.div
-                      initial={collapsed ? false : { height: 0, opacity: 0 }}
+                      initial={collapsed && !mobileOpen ? false : { height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
-                      exit={collapsed ? undefined : { height: 0, opacity: 0 }}
+                      exit={collapsed && !mobileOpen ? undefined : { height: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                       className={cn("overflow-hidden", !collapsed && "pl-2")}
                     >
@@ -270,6 +291,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
                           <Link
                             key={item.name}
                             href={item.href}
+                            onClick={handleNavClick}
                             className={cn(
                               "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
                               isActive 
@@ -281,7 +303,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
                               "w-4 h-4 flex-shrink-0",
                               isActive ? "text-primary" : "text-current"
                             )} />
-                            {!collapsed && (
+                            {(!collapsed || mobileOpen) && (
                               <motion.span
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -291,7 +313,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
                                 {item.name}
                               </motion.span>
                             )}
-                            {collapsed && (
+                            {collapsed && !mobileOpen && (
                               <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                                 {item.name}
                               </div>
@@ -312,6 +334,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
       <div className="p-3 border-t border-white/10 space-y-1">
         <Link
           href="/admin/settings"
+          onClick={handleNavClick}
           className={cn(
             "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
             pathname === '/admin/settings'
@@ -323,10 +346,10 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
             "w-5 h-5 flex-shrink-0",
             pathname === '/admin/settings' ? "text-primary" : "text-current"
           )} />
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Settings</span>
           )}
-          {collapsed && (
+          {collapsed && !mobileOpen && (
             <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Settings
             </div>
@@ -334,19 +357,59 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
         </Link>
         <Link
           href="/"
+          onClick={handleNavClick}
           className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group relative"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Back to Site</span>
           )}
-          {collapsed && (
+          {collapsed && !mobileOpen && (
             <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Back to Site
             </div>
           )}
         </Link>
       </div>
-    </motion.aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 80 : 280 }}
+        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-primary border-r border-border/10 flex-col"
+      >
+        {sidebarContent}
+      </motion.aside>
+
+      {/* Mobile sidebar overlay */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              onClick={onMobileClose}
+            />
+            <motion.aside
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[280px] bg-primary border-r border-border/10 flex flex-col"
+            >
+              {sidebarContent}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

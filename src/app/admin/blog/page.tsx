@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface BlogPost {
   id: string;
@@ -38,6 +39,7 @@ export default function BlogAdminPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingPost, setEditingPost] = React.useState<BlogPost | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     title: '',
@@ -134,14 +136,19 @@ export default function BlogAdminPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this post?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
-      await fetch(`/api/admin/blog-posts/${id}`, { method: 'DELETE' });
+      await fetch(`/api/admin/blog-posts/${pendingDeleteId}`, { method: 'DELETE' });
       fetchPosts();
     } catch (error) {
       console.error('Error deleting post:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -188,7 +195,7 @@ export default function BlogAdminPage() {
         </Button>
       </div>
 
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border border-border">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -302,6 +309,15 @@ export default function BlogAdminPage() {
           </motion.div>
         </div>
       )}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title="Delete Post"
+        description="Are you sure you want to delete this post?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </div>
   );
 }

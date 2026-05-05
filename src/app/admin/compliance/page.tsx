@@ -2,21 +2,17 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ShieldCheck, 
-  AlertTriangle,
+import {
+  ShieldCheck,
   CheckCircle,
-  FileSignature,
-  Clock,
-  DollarSign,
-  MessageCircle,
+  AlertTriangle,
+  XCircle,
   Loader2,
-  ExternalLink,
-  XCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import Link from 'next/link';
+import { ComplianceAlerts } from '@/components/admin/compliance/ComplianceAlerts';
+import { ComplianceStatsGrid } from '@/components/admin/compliance/ComplianceStatsGrid';
 
 interface ComplianceStats {
   total_clients: number;
@@ -47,7 +43,6 @@ export default function CompliancePage() {
   const fetchComplianceData = async () => {
     setLoading(true);
     try {
-      // Fetch data from multiple endpoints
       const [clientsRes, agreementsRes, invoicesRes, messagesRes] = await Promise.all([
         fetch('/api/admin/clients?limit=1'),
         fetch('/api/admin/agreements?type=agreements&limit=100'),
@@ -60,7 +55,6 @@ export default function CompliancePage() {
       const invoicesData = await invoicesRes.json();
       const messagesData = await messagesRes.json();
 
-      // Calculate stats
       const agreements = agreementsData.items || [];
       const invoices = invoicesData.items || [];
       const threads = messagesData.items || [];
@@ -83,12 +77,11 @@ export default function CompliancePage() {
         total_invoices: invoices.length,
         invoices_without_services: invoicesWithoutServices.length,
         open_message_threads: openThreads.length,
-        avg_response_time_hours: 24, // Placeholder - would calculate from message timestamps
+        avg_response_time_hours: 24,
       };
 
       setStats(calculatedStats);
 
-      // Generate alerts
       const generatedAlerts: ComplianceAlert[] = [];
 
       if (calculatedStats.pending_agreements > 0) {
@@ -151,33 +144,12 @@ export default function CompliancePage() {
     fetchComplianceData();
   }, []);
 
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'error': return <XCircle className="w-5 h-5 text-red-500" />;
-      case 'warning': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-      case 'info': return <Clock className="w-5 h-5 text-blue-500" />;
-      default: return <CheckCircle className="w-5 h-5 text-green-500" />;
-    }
-  };
-
-  const getAlertBg = (type: string) => {
-    switch (type) {
-      case 'error': return 'bg-red-500/5 border-red-500/20';
-      case 'warning': return 'bg-amber-500/5 border-amber-500/20';
-      case 'info': return 'bg-blue-500/5 border-blue-500/20';
-      default: return 'bg-green-500/5 border-green-500/20';
-    }
-  };
-
   const complianceScore = React.useMemo(() => {
     if (!stats) return 0;
     let score = 100;
-    
-    // Deduct for violations
     if (stats.invoices_without_services > 0) score -= 30;
     if (stats.total_clients > 0 && stats.clients_with_agreements === 0) score -= 20;
     if (stats.pending_agreements > 3) score -= 10;
-    
     return Math.max(0, score);
   }, [stats]);
 
@@ -197,17 +169,16 @@ export default function CompliancePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-3xl font-serif font-bold text-foreground"
           >
             Compliance Dashboard
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -221,13 +192,12 @@ export default function CompliancePage() {
         </Button>
       </div>
 
-      {/* Compliance Score */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -265,135 +235,17 @@ export default function CompliancePage() {
         </Card>
       </motion.div>
 
-      {/* Alerts */}
-      {alerts.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="space-y-3"
-        >
-          <h2 className="text-lg font-semibold">Alerts & Actions</h2>
-          {alerts.map((alert, index) => (
-            <Card key={index} className={getAlertBg(alert.type)}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    {getAlertIcon(alert.type)}
-                    <div>
-                      <p className="font-medium">{alert.title}</p>
-                      <p className="text-sm text-muted-foreground">{alert.description}</p>
-                    </div>
-                  </div>
-                  {alert.action && (
-                    <Link href={alert.action.href}>
-                      <Button variant="outline" size="sm">
-                        {alert.action.label}
-                        <ExternalLink className="w-3 h-3 ml-2" />
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </motion.div>
-      )}
+      <ComplianceAlerts alerts={alerts} />
 
-      {alerts.length === 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          <Card className="bg-green-500/5 border-green-500/20">
-            <CardContent className="p-4 flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <p className="text-sm">No compliance issues detected. Keep up the good work!</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+      <ComplianceStatsGrid stats={stats} />
 
-      {/* Stats Grid */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <FileSignature className="w-5 h-5 text-blue-500" />
-              </div>
-              <p className="text-sm text-muted-foreground">Agreements</p>
-            </div>
-            <p className="text-2xl font-bold">{stats?.clients_with_agreements || 0}</p>
-            <p className="text-xs text-muted-foreground">
-              Signed | {stats?.pending_agreements || 0} pending
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <Clock className="w-5 h-5 text-amber-500" />
-              </div>
-              <p className="text-sm text-muted-foreground">Cancellation Window</p>
-            </div>
-            <p className="text-2xl font-bold">{stats?.agreements_in_cancellation || 0}</p>
-            <p className="text-xs text-muted-foreground">
-              Within 3-day CROA period
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <DollarSign className="w-5 h-5 text-green-500" />
-              </div>
-              <p className="text-sm text-muted-foreground">Invoice Compliance</p>
-            </div>
-            <p className="text-2xl font-bold">
-              {stats ? stats.total_invoices - stats.invoices_without_services : 0}
-              <span className="text-sm text-muted-foreground font-normal">/{stats?.total_invoices || 0}</span>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              With documented services
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <MessageCircle className="w-5 h-5 text-purple-500" />
-              </div>
-              <p className="text-sm text-muted-foreground">Open Threads</p>
-            </div>
-            <p className="text-2xl font-bold">{stats?.open_message_threads || 0}</p>
-            <p className="text-xs text-muted-foreground">
-              Client messages
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* CROA/TSR Summary */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35 }}
         className="grid grid-cols-1 lg:grid-cols-2 gap-6"
       >
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardHeader>
             <CardTitle className="text-lg">CROA Requirements</CardTitle>
             <CardDescription>Credit Repair Organizations Act compliance checklist</CardDescription>
@@ -430,7 +282,7 @@ export default function CompliancePage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card className="bg-card border border-border">
           <CardHeader>
             <CardTitle className="text-lg">TSR Requirements</CardTitle>
             <CardDescription>Telemarketing Sales Rule compliance checklist</CardDescription>
