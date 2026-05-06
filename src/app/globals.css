@@ -132,6 +132,28 @@ body {
   font-family: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+.brand-footer {
+  background: #080a0f;
+  color: #f8f3e8;
+}
+
+.brand-footer-copy {
+  color: rgb(248 243 232 / 0.84);
+}
+
+.brand-footer-muted {
+  color: rgb(248 243 232 / 0.76);
+}
+
+.brand-footer-heading {
+  color: #f1dca3;
+}
+
+.brand-logo-plate {
+  background: #f8f3e8;
+  box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.4);
+}
+
 .surface-panel {
   background: hsl(var(--card) / 0.92);
   border: 1px solid hsl(var(--border) / 0.78);

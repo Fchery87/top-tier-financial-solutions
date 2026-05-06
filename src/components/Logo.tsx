@@ -26,7 +26,14 @@ export function Logo({ variant = 'default', size = 'md', showText = true, classN
   return (
     <div className={cn('flex items-center gap-3', className)}>
       <Link href="/" className="flex items-center gap-3">
-        <span className={cn('relative block shrink-0 overflow-hidden rounded-md', currentSize.mark)}>
+        <span
+          className={cn(
+            'relative block shrink-0 overflow-hidden rounded-md',
+            variant === 'light' && 'brand-logo-plate',
+            currentSize.mark
+          )}
+          style={variant === 'light' ? { backgroundColor: '#F8F3E8', boxShadow: '0 0 0 1px rgb(198 169 108 / 0.4)' } : undefined}
+        >
           <Image
             src={logoPath}
             alt="Top Tier Financial Solutions logo"
@@ -56,7 +63,13 @@ export function LogoHorizontal({ variant = 'default', className }: Omit<LogoProp
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <Link href="/" className="flex items-center gap-2">
-        <span className="relative block size-9 overflow-hidden rounded-md">
+        <span
+          className={cn(
+            'relative block size-9 overflow-hidden rounded-md',
+            variant === 'light' && 'brand-logo-plate'
+          )}
+          style={variant === 'light' ? { backgroundColor: '#F8F3E8', boxShadow: '0 0 0 1px rgb(198 169 108 / 0.4)' } : undefined}
+        >
           <Image
             src={logoPath}
             alt="Top Tier Financial Solutions logo"

@@ -9,7 +9,8 @@
 - Source file: `top-tier-financial-solutions-variation-3-transparent-logo-only.svg`
 - Public app asset: `public/brand/top-tier-logo.svg`
 - Usage: global header, footer, admin shell, favicon-adjacent marks, client portal identity
-- Rule: use as an image asset. Do not redraw, recolor, stretch, or replace with a CSS/SVG approximation.
+- Current production version: resketched as a clean vector shield monogram because the supplied SVG wrapped an embedded raster image and looked muddy at app navigation sizes.
+- Rule: use as an image asset. Do not stretch, blur, or replace with a CSS approximation.
 
 ## Visual System
 

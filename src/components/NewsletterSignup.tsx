@@ -67,21 +67,21 @@ export function NewsletterSignup({
   if (variant === 'footer') {
     return (
       <div className={className}>
-        <h4 className="text-secondary font-bold mb-4 font-sans tracking-wide text-lg">{title}</h4>
-        <p className="text-sm text-primary-foreground/70 mb-4">{description}</p>
+        <h4 className="brand-footer-heading mb-4 text-lg font-bold tracking-wide" style={{ color: '#F1DCA3' }}>{title}</h4>
+        <p className="brand-footer-copy mb-4 text-sm leading-relaxed" style={{ color: 'rgb(248 243 232 / 0.84)' }}>{description}</p>
         
         {isSuccess ? (
-          <div className="flex items-center gap-2 text-green-400">
-            <CheckCircle className="w-5 h-5" />
+          <div className="flex items-center gap-2 text-success">
+            <CheckCircle className="size-5" />
             <span className="text-sm">Thank you for subscribing!</span>
           </div>
         ) : !mounted ? (
-          <div className="space-y-3">
-            <div className="h-10 bg-white/10 rounded-md animate-pulse" />
-            <div className="h-10 bg-white/10 rounded-md animate-pulse" />
+          <div className="flex flex-col gap-3">
+            <div className="h-10 animate-pulse rounded-md bg-white/10" />
+            <div className="h-10 animate-pulse rounded-md bg-white/10" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3" data-form-type="other">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3" data-form-type="other">
             <Input
               type="email"
               placeholder="Enter your email"
@@ -91,7 +91,7 @@ export function NewsletterSignup({
               autoComplete="off"
               data-lpignore="true"
               data-form-type="other"
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              className="border-white/25 bg-white/10 text-white placeholder:text-white/60"
             />
             {error && <p className="text-sm text-red-400">{error}</p>}
             <Button 

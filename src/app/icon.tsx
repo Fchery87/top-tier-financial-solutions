@@ -23,31 +23,17 @@ export default function Icon() {
           justifyContent: 'center',
         }}
       >
-        <svg
-          width="32"
-          height="32"
-          viewBox="0 0 48 48"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg width="32" height="32" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
-            d="M24 4L42 14V34L24 44L6 34V14L24 4Z"
-            fill="#C6A96C"
-            fillOpacity="0.2"
+            d="M64 7 105 24.25v30.1c0 27.6-16.15 50.45-41 66.65-24.85-16.2-41-39.05-41-66.65v-30.1L64 7Z"
+            fill="#080A0F"
             stroke="#C6A96C"
-            strokeWidth="2"
+            strokeWidth="6"
             strokeLinejoin="round"
           />
-          <path
-            d="M24 11V37M13 17L24 11L35 17M13 25L24 31L35 25"
-            stroke="#C6A96C"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="24" cy="11" r="2" fill="#C6A96C" />
-          <circle cx="13" cy="17" r="2" fill="#C6A96C" />
-          <circle cx="35" cy="17" r="2" fill="#C6A96C" />
+          <path d="M37 35h54v10H69v50H59V45H37V35Z" fill="#F8F3E8" />
+          <path d="M42 61h44v9H69v25H59V70H42V61Z" fill="#C6A96C" />
+          <path d="M38 92h52v8H38v-8Z" fill="#C6A96C" />
         </svg>
       </div>
     ),
