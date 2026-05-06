@@ -1,0 +1,3 @@
+ALTER TABLE "disputes" ADD COLUMN "service_engagement_id" text;--> statement-breakpoint
+ALTER TABLE "disputes" ADD CONSTRAINT "disputes_service_engagement_id_service_engagements_id_fk" FOREIGN KEY ("service_engagement_id") REFERENCES "public"."service_engagements"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "disputes_serviceEngagementId_idx" ON "disputes" USING btree ("service_engagement_id");

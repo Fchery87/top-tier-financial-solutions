@@ -6,18 +6,14 @@ const dbMock = vi.hoisted(() => ({
   insert: vi.fn(),
 }));
 
-const authMock = vi.hoisted(() => ({
-  api: {
-    getSession: vi.fn(),
-  },
-}));
+const adminSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
-vi.mock('@/lib/auth', () => ({
-  auth: authMock,
+vi.mock('@/lib/admin-session', () => ({
+  getAdminSessionUser: adminSessionMock,
 }));
 
 vi.mock('next/headers', () => ({
@@ -27,7 +23,7 @@ vi.mock('next/headers', () => ({
 describe('POST /api/admin/billing credit audit engagement billing', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', role: 'super_admin' } });
+    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
   });
 
   it('requires credit audit invoices to use a separate credit audit engagement', async () => {

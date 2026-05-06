@@ -2,8 +2,9 @@ import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { disputes, servicesRenderedEvents } from '@/db/schema';
+import { complianceGateChecks, disputes, servicesRenderedEvents } from '@/db/schema';
 import { getAdminSessionUser } from '@/lib/admin-session';
+import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
 
 function formatEvent(event: typeof servicesRenderedEvents.$inferSelect) {
   return {
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
       .select({
         id: disputes.id,
         clientId: disputes.clientId,
+        serviceEngagementId: disputes.serviceEngagementId,
         status: disputes.status,
         sentAt: disputes.sentAt,
         submissionMethod: disputes.submissionMethod,
@@ -65,8 +67,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Source dispute not found for client' }, { status: 404 });
     }
 
+    if (sourceDispute.serviceEngagementId && sourceDispute.serviceEngagementId !== serviceEngagementId) {
+      return NextResponse.json({ error: 'Source dispute does not belong to the Service Engagement' }, { status: 400 });
+    }
+
     if (!sourceDispute.sentAt || !sourceDispute.submissionMethod || !['sent', 'in_progress', 'responded', 'resolved'].includes(sourceDispute.status || '')) {
       return NextResponse.json({ error: 'First dispute package submitted requires a submitted dispute package' }, { status: 400 });
+    }
+
+    const gateRecords = await db
+      .select({
+        checkKey: complianceGateChecks.checkKey,
+        passed: complianceGateChecks.passed,
+        checkedAt: complianceGateChecks.checkedAt,
+        notes: complianceGateChecks.notes,
+      })
+      .from(complianceGateChecks)
+      .where(eq(complianceGateChecks.engagementId, serviceEngagementId));
+
+    const complianceDecision = evaluateComplianceGateAction({
+      records: gateRecords,
+      action: 'mark_services_rendered',
+    });
+
+    if (!complianceDecision.allowed) {
+      return NextResponse.json({
+        error: 'Compliance Gate must pass before recording Services Rendered',
+        code: complianceDecision.code,
+        blocking_checks: complianceDecision.blockingChecks,
+      }, { status: 409 });
     }
 
     const now = new Date();

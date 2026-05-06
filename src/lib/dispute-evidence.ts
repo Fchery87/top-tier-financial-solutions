@@ -8,6 +8,55 @@ export interface EvidenceRequirement {
   warningIfMissing?: string;
 }
 
+export const HIGH_RISK_CLAIM_TYPES = new Set([
+  'identity_theft',
+  'fraud',
+  'not_mine',
+  'never_late',
+  'unauthorized_inquiry',
+]);
+
+export type EvidencePacketConfirmation = {
+  key?: unknown;
+  confirmed?: unknown;
+};
+
+export function hasExplicitClientFactualConfirmation(confirmations: unknown[]) {
+  return confirmations.some((confirmation) => {
+    if (!confirmation || typeof confirmation !== 'object') return false;
+
+    const item = confirmation as EvidencePacketConfirmation;
+    return item.key === 'client_factual_claim_confirmed' && item.confirmed === true;
+  });
+}
+
+export function verifyEvidencePacket(params: {
+  claimType: string;
+  documentIds: string[];
+  confirmations: unknown[];
+}) {
+  const highRisk = HIGH_RISK_CLAIM_TYPES.has(params.claimType);
+  const hasClaimSpecificEvidence = params.documentIds.length > 0;
+  const hasClientFactualConfirmation = hasExplicitClientFactualConfirmation(params.confirmations);
+  const violations: string[] = [];
+
+  if (highRisk && !hasClaimSpecificEvidence) {
+    violations.push('High-risk claims require claim-specific evidence.');
+  }
+
+  if (highRisk && !hasClientFactualConfirmation) {
+    violations.push('High-risk claims require explicit client factual confirmation.');
+  }
+
+  return {
+    sufficient: violations.length === 0,
+    highRisk,
+    hasClaimSpecificEvidence,
+    hasClientFactualConfirmation,
+    violations,
+  };
+}
+
 export type DocumentType = 
   | 'id_document'
   | 'proof_of_address'

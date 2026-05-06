@@ -9,6 +9,7 @@ import { sensitiveLimiter } from '@/lib/rate-limit';
 import { decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
 import { getAdminSessionUser } from '@/lib/admin-session';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
+import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
 import {
   calculateDisputeDeadlines,
   getDisputeSlaDefinitionId,
@@ -69,6 +70,7 @@ async function postHandler(request: NextRequest) {
     const body = await request.json();
     const { 
       clientId, 
+      serviceEngagementId,
       negativeItemId, 
       bureau, 
       disputeReason, 
@@ -104,6 +106,25 @@ async function postHandler(request: NextRequest) {
     const normalizedReasonCodes = Array.isArray(reasonCodes)
       ? reasonCodes
       : [disputeReason.includes('not mine') ? 'not_mine' : disputeReason.includes('never late') ? 'never_late' : disputeReason.includes('wrong') ? 'wrong_balance' : 'verification_required'];
+
+    if (!policyDecision?.approved) {
+      return NextResponse.json(
+        { error: 'Approved policy decision is required before dispute letter generation' },
+        { status: 400 }
+      );
+    }
+
+    if (!approvedPolicyMatchesDisputeInputs({
+      policyDecision,
+      reasonCodes: normalizedReasonCodes,
+      evidenceDocumentIds,
+      clientConfirmedOwnershipClaims,
+    })) {
+      return NextResponse.json(
+        { error: 'Approved policy decision does not match requested dispute inputs' },
+        { status: 400 }
+      );
+    }
 
     const compliance = evaluateDisputeCompliance({
       reasonCodes: normalizedReasonCodes,
@@ -193,6 +214,7 @@ async function postHandler(request: NextRequest) {
     await db.insert(disputes).values({
       id,
       clientId,
+      serviceEngagementId: serviceEngagementId || null,
       negativeItemId: negativeItemId || null,
       bureau,
       disputeReason,

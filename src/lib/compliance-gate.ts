@@ -22,6 +22,12 @@ export type ComplianceGateCheckRecord = {
   notes: string | null;
 };
 
+export type ComplianceGateAction =
+  | 'mark_services_rendered'
+  | 'create_payable_invoice'
+  | 'charge_client'
+  | 'submit_dispute';
+
 export function buildComplianceGateStatus(records: ComplianceGateCheckRecord[]) {
   const byKey = new Map(records.map((record) => [record.checkKey, record]));
 
@@ -47,4 +53,29 @@ export function getBlockingComplianceGateChecks(records: ComplianceGateCheckReco
     .checks
     .filter((check) => !check.passed)
     .map((check) => check.key);
+}
+
+export function evaluateComplianceGateAction(params: {
+  records: ComplianceGateCheckRecord[];
+  action: ComplianceGateAction;
+}) {
+  const blockingChecks = getBlockingComplianceGateChecks(params.records);
+
+  if (blockingChecks.length > 0) {
+    return {
+      allowed: false,
+      code: 'COMPLIANCE_GATE_BLOCKED',
+      reason: 'Compliance Gate must pass before external execution, billing, or charging',
+      blockingChecks,
+      action: params.action,
+    };
+  }
+
+  return {
+    allowed: true,
+    code: null,
+    reason: null,
+    blockingChecks,
+    action: params.action,
+  };
 }

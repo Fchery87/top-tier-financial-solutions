@@ -1,23 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { COMPLIANCE_GATE_CHECKS } from '@/lib/compliance-gate';
 
 const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
   insert: vi.fn(),
 }));
 
-const authMock = vi.hoisted(() => ({
-  api: {
-    getSession: vi.fn(),
-  },
-}));
+const adminSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
-vi.mock('@/lib/auth', () => ({
-  auth: authMock,
+vi.mock('@/lib/admin-session', () => ({
+  getAdminSessionUser: adminSessionMock,
 }));
 
 vi.mock('next/headers', () => ({
@@ -27,7 +24,7 @@ vi.mock('next/headers', () => ({
 describe('POST /api/admin/billing payment audit trail', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', role: 'super_admin' } });
+    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
   });
 
   it('logs why an invoice became payable from the qualifying services rendered event', async () => {
@@ -52,6 +49,16 @@ describe('POST /api/admin/billing payment audit trail', () => {
               occurredAt: new Date('2026-01-02T00:00:00.000Z'),
             }]),
           }),
+        }),
+      })
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(COMPLIANCE_GATE_CHECKS.map((check) => ({
+            checkKey: check.key,
+            passed: true,
+            checkedAt: new Date('2026-01-01T00:00:00.000Z'),
+            notes: null,
+          }))),
         }),
       });
     dbMock.insert

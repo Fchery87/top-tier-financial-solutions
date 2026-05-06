@@ -48,4 +48,34 @@ describe('POST /api/admin/disputes/generate-letter', () => {
     expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
     expect(generateMultiItemDisputeLetterMock).not.toHaveBeenCalled();
   }, 30000);
+
+  it('rejects approved policy decisions that do not match the requested reason codes', async () => {
+    const { POST } = await import('@/app/api/admin/disputes/generate-letter/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/generate-letter', {
+      method: 'POST',
+      body: JSON.stringify({
+        clientId: 'client-1',
+        bureau: 'experian',
+        reasonCodes: ['never_late'],
+        evidenceDocumentIds: ['doc-1'],
+        clientConfirmedOwnershipClaims: true,
+        policyDecision: {
+          approved: true,
+          reasonCodes: ['verification_required'],
+          requiredEvidence: ['identity_document', 'proof_of_address'],
+          claimRisk: 'ordinary',
+          targetRecipient: 'bureau',
+          violations: [],
+        },
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'Approved policy decision does not match requested dispute inputs' });
+    expect(dbMock.select).not.toHaveBeenCalled();
+    expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
+    expect(generateMultiItemDisputeLetterMock).not.toHaveBeenCalled();
+  }, 30000);
 });

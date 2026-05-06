@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { feeConfigurations, clientBillingProfiles, invoices, paymentAuditLog, clients, serviceEngagements, servicesRenderedEvents } from '@/db/schema';
+import { feeConfigurations, clientBillingProfiles, invoices, paymentAuditLog, clients, serviceEngagements, servicesRenderedEvents, complianceGateChecks } from '@/db/schema';
 import { and, eq, desc, sql } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
+import { evaluateBillingReadiness } from '@/lib/billing-readiness';
+import { getAdminSessionUser } from '@/lib/admin-session';
+import { formatClientDisplayIdentity } from '@/lib/client-display-identity';
 
 // Helper to generate invoice number
 function generateInvoiceNumber(): string {
@@ -18,8 +21,8 @@ function generateInvoiceNumber(): string {
 // GET - List fee configs, billing profiles, or invoices
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'super_admin')) {
+    const adminUser = await getAdminSessionUser('admin');
+    if (!adminUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -52,7 +55,8 @@ export async function GET(request: NextRequest) {
           billing_status: clientBillingProfiles.billingStatus,
           next_billing_date: clientBillingProfiles.nextBillingDate,
           created_at: clientBillingProfiles.createdAt,
-          client_name: sql<string>`${clients.firstName} || ' ' || ${clients.lastName}`,
+          client_first_name: clients.firstName,
+          client_last_name: clients.lastName,
           client_email: clients.email,
           fee_config_name: feeConfigurations.name,
           fee_amount: feeConfigurations.amount,
@@ -69,7 +73,16 @@ export async function GET(request: NextRequest) {
       }
 
       const items = await query;
-      return NextResponse.json({ items });
+      return NextResponse.json({
+        items: items.map(({ client_first_name, client_last_name, client_email, ...item }) => ({
+          ...item,
+          ...formatClientDisplayIdentity({
+            firstName: client_first_name,
+            lastName: client_last_name,
+            email: client_email,
+          }),
+        })),
+      });
     } else {
       // Invoices
       let query = db
@@ -86,7 +99,8 @@ export async function GET(request: NextRequest) {
           paid_at: invoices.paidAt,
           payment_method: invoices.paymentMethod,
           created_at: invoices.createdAt,
-          client_name: sql<string>`${clients.firstName} || ' ' || ${clients.lastName}`,
+          client_first_name: clients.firstName,
+          client_last_name: clients.lastName,
           client_email: clients.email,
         })
         .from(invoices)
@@ -100,6 +114,14 @@ export async function GET(request: NextRequest) {
       }
 
       const items = await query;
+      const formattedItems = items.map(({ client_first_name, client_last_name, client_email, ...item }) => ({
+        ...item,
+        ...formatClientDisplayIdentity({
+          firstName: client_first_name,
+          lastName: client_last_name,
+          email: client_email,
+        }),
+      }));
 
       // Get summary stats
       const stats = await db
@@ -111,7 +133,7 @@ export async function GET(request: NextRequest) {
         .from(invoices);
 
       return NextResponse.json({ 
-        items,
+        items: formattedItems,
         stats: stats[0],
         page,
         limit,
@@ -126,8 +148,8 @@ export async function GET(request: NextRequest) {
 // POST - Create fee config, billing profile, or invoice
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'super_admin')) {
+    const adminUser = await getAdminSessionUser('admin');
+    if (!adminUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -174,7 +196,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ id, message: 'Billing profile created successfully' });
     } else {
       // Create invoice
-      const { clientId, serviceEngagementId, invoiceServiceType, amount, description, dueDate, servicesRendered } = body;
+      const { clientId, serviceEngagementId, invoiceServiceType, amount, description, dueDate, servicesRendered, feeModel, resultVerified } = body;
 
       if (!clientId || !amount) {
         return NextResponse.json({ error: 'Client ID and amount are required' }, { status: 400 });
@@ -236,6 +258,42 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
+      const gateRecords = await db
+        .select({
+          checkKey: complianceGateChecks.checkKey,
+          passed: complianceGateChecks.passed,
+          checkedAt: complianceGateChecks.checkedAt,
+          notes: complianceGateChecks.notes,
+        })
+        .from(complianceGateChecks)
+        .where(eq(complianceGateChecks.engagementId, serviceEngagementId));
+
+      const complianceDecision = evaluateComplianceGateAction({
+        records: gateRecords,
+        action: 'create_payable_invoice',
+      });
+
+      if (!complianceDecision.allowed) {
+        return NextResponse.json({
+          error: 'Compliance Gate must pass before creating a payable invoice',
+          code: complianceDecision.code,
+          blocking_checks: complianceDecision.blockingChecks,
+        }, { status: 409 });
+      }
+
+      const billingReadiness = evaluateBillingReadiness({
+        hasQualifyingServicesRenderedEvent: true,
+        feeModel,
+        hasVerifiedResult: resultVerified === true,
+      });
+
+      if (!billingReadiness.payable) {
+        return NextResponse.json({
+          error: billingReadiness.reason,
+          code: billingReadiness.code,
+        }, { status: 409 });
+      }
+
       const id = crypto.randomUUID();
       const invoiceNumber = generateInvoiceNumber();
 
@@ -271,7 +329,7 @@ export async function POST(request: NextRequest) {
           services_rendered_event_occurred_at: qualifyingEvent.occurredAt?.toISOString(),
           services_rendered: servicesRendered 
         }),
-        performedById: session.user.id,
+        performedById: adminUser.id,
         ipAddress,
       });
 

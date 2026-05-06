@@ -6,6 +6,7 @@ import { generateUniqueDisputeLetter, generateMultiItemDisputeLetter, DISPUTE_RE
 import { DOCUMENT_TYPE_LABELS } from '@/lib/dispute-evidence';
 import { getAdminSessionUser } from '@/lib/admin-session';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
+import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
 
 type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
 
@@ -74,6 +75,18 @@ export async function POST(request: NextRequest) {
     if (!policyDecision?.approved) {
       return NextResponse.json(
         { error: 'Approved policy decision is required before letter generation' },
+        { status: 400 }
+      );
+    }
+
+    if (!approvedPolicyMatchesDisputeInputs({
+      policyDecision,
+      reasonCodes,
+      evidenceDocumentIds,
+      clientConfirmedOwnershipClaims,
+    })) {
+      return NextResponse.json(
+        { error: 'Approved policy decision does not match requested dispute inputs' },
         { status: 400 }
       );
     }

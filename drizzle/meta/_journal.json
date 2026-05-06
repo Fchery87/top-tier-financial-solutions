@@ -218,6 +218,13 @@
       "when": 1777869195477,
       "tag": "0030_amazing_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1778041699670,
+      "tag": "0031_hesitant_master_chief",
+      "breakpoints": true
     }
   ]
 }

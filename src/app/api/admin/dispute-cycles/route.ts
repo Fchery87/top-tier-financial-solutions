@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { disputeCycles, serviceEngagements } from '@/db/schema';
 import { getAdminSessionUser } from '@/lib/admin-session';
+import { evaluateDisputeCycleDraft } from '@/lib/dispute-cycle-workflow';
 
 function parseJsonArray(value: string | null) {
   if (!value) return [];
@@ -47,6 +48,14 @@ export async function POST(request: NextRequest) {
 
     if (!clientId || !serviceEngagementId || !cycleNumber) {
       return NextResponse.json({ error: 'Client ID, service engagement ID, and cycle number are required' }, { status: 400 });
+    }
+
+    const cycleDecision = evaluateDisputeCycleDraft({ itemSelection });
+    if (!cycleDecision.allowed) {
+      return NextResponse.json({
+        error: cycleDecision.reason,
+        code: cycleDecision.code,
+      }, { status: 400 });
     }
 
     const [engagement] = await db

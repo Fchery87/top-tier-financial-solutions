@@ -4,14 +4,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clientDocuments, clients, evidencePackets } from '@/db/schema';
 import { getAdminSessionUser } from '@/lib/admin-session';
-
-const HIGH_RISK_CLAIM_TYPES = new Set([
-  'identity_theft',
-  'fraud',
-  'not_mine',
-  'never_late',
-  'unauthorized_inquiry',
-]);
+import { verifyEvidencePacket } from '@/lib/dispute-evidence';
 
 function parseJsonArray(value: string | null) {
   if (!value) return [];
@@ -36,15 +29,6 @@ function formatPacket(packet: typeof evidencePackets.$inferSelect) {
   };
 }
 
-function hasExplicitClientFactualConfirmation(confirmations: unknown[]) {
-  return confirmations.some((confirmation) => {
-    if (!confirmation || typeof confirmation !== 'object') return false;
-
-    const item = confirmation as { key?: unknown; confirmed?: unknown };
-    return item.key === 'client_factual_claim_confirmed' && item.confirmed === true;
-  });
-}
-
 async function validateAdmin() {
   return getAdminSessionUser('super_admin');
 }
@@ -67,8 +51,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client ID and claim type are required' }, { status: 400 });
     }
 
-    if (HIGH_RISK_CLAIM_TYPES.has(claimType) && !hasExplicitClientFactualConfirmation(confirmations)) {
-      return NextResponse.json({ error: 'High-risk claims require explicit client factual confirmation' }, { status: 400 });
+    const evidenceDecision = verifyEvidencePacket({ claimType, documentIds, confirmations });
+    if (!evidenceDecision.sufficient) {
+      return NextResponse.json({ error: evidenceDecision.violations[0].replace(/\.$/, '') }, { status: 400 });
     }
 
     const [client] = await db

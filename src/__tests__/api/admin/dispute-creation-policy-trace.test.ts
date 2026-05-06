@@ -109,4 +109,25 @@ describe('POST /api/admin/disputes policy traceability', () => {
       letter_content: 'Generated approved dispute letter',
     });
   }, 30000);
+
+  it('fails closed before generating a letter when approved policy is missing', async () => {
+    const { POST } = await import('@/app/api/admin/disputes/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/admin/disputes', {
+      method: 'POST',
+      body: JSON.stringify({
+        clientId: 'client-1',
+        bureau: 'experian',
+        disputeReason: 'verification_required',
+        reasonCodes: ['verification_required'],
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'Approved policy decision is required before dispute letter generation' });
+    expect(dbMock.select).not.toHaveBeenCalled();
+    expect(dbMock.insert).not.toHaveBeenCalled();
+    expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
+  }, 30000);
 });

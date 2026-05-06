@@ -13,6 +13,7 @@ import {
 } from '@/db/schema';
 import { headers } from 'next/headers';
 import { buildDocumentChecklist } from '@/lib/document-checklist';
+import { buildClientProgressSnapshot } from '@/lib/client-progress-snapshot';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -85,42 +86,17 @@ export async function GET(_request: NextRequest) {
           : eq(creditReports.clientId, client.id),
       );
 
-    const clientVisibleTasks = visibleTasks.filter((task) => task.visibleToClient);
-    const openTasks = clientVisibleTasks.filter((task) => task.status !== 'done');
     const documentChecklist = buildDocumentChecklist(documents);
-    const activeCycleStatuses = new Set(['ready', 'sent', 'in_progress']);
-    const outcomes = reviewedDisputes.reduce(
-      (acc, dispute) => {
-        if (dispute.outcome === 'deleted') acc.deleted += 1;
-        if (dispute.outcome === 'updated') acc.updated += 1;
-        if (dispute.outcome === 'verified') acc.verified += 1;
-        return acc;
-      },
-      { deleted: 0, updated: 0, verified: 0 },
-    );
 
     return NextResponse.json({
-      snapshot: {
-        engagement_id: engagement?.id ?? null,
-        lifecycle_stage: engagement?.lifecycleStage ?? null,
-        tasks: {
-          total_visible: clientVisibleTasks.length,
-          open: openTasks.length,
-          blocking_open: openTasks.filter((task) => task.isBlocking).length,
-        },
-        documents: {
-          completed: documentChecklist.filter((item) => item.completed).length,
-          total_required: documentChecklist.length,
-        },
-        dispute_cycles: {
-          total: cycles.length,
-          active: cycles.filter((cycle) => activeCycleStatuses.has(cycle.status || '')).length,
-        },
-        outcomes,
-        report_history: {
-          pulls: reportPulls.length,
-        },
-      },
+      snapshot: buildClientProgressSnapshot({
+        engagement,
+        tasks: visibleTasks,
+        documentChecklist,
+        cycles,
+        disputes: reviewedDisputes,
+        reportPulls,
+      }),
     });
   } catch (error) {
     console.error('Error fetching portal progress snapshot:', error);

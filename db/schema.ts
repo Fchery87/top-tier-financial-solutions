@@ -762,6 +762,7 @@ export const disputeCycles = pgTable('dispute_cycles', {
 export const disputes = pgTable('disputes', {
   id: text('id').primaryKey(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  serviceEngagementId: text('service_engagement_id').references(() => serviceEngagements.id, { onDelete: 'set null' }),
   batchId: text('batch_id').references(() => disputeBatches.id, { onDelete: 'set null' }),
   negativeItemId: text('negative_item_id').references(() => negativeItems.id, { onDelete: 'set null' }),
   bureau: text('bureau').notNull(), // 'transunion' | 'experian' | 'equifax'
@@ -807,6 +808,7 @@ export const disputes = pgTable('disputes', {
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
   index("disputes_clientId_idx").on(table.clientId),
+  index("disputes_serviceEngagementId_idx").on(table.serviceEngagementId),
   index("disputes_batchId_idx").on(table.batchId),
   index("disputes_negativeItemId_idx").on(table.negativeItemId),
   index("disputes_status_idx").on(table.status),

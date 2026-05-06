@@ -12,6 +12,11 @@ export interface PullComparisonInput {
   newerNegativeItems: PullComparisonNegativeItem[];
 }
 
+export interface ReviewedPullComparisonInput extends PullComparisonInput {
+  olderPull: { parserReviewStatus?: string | null };
+  newerPull: { parserReviewStatus?: string | null };
+}
+
 function itemKey(item: PullComparisonNegativeItem) {
   return [
     item.creditorName.trim().toLowerCase(),
@@ -60,4 +65,20 @@ export function compareCreditReportPulls(input: PullComparisonInput) {
   }
 
   return { deleted, updated, unchanged, added };
+}
+
+export function compareApprovedCreditReportPulls(input: ReviewedPullComparisonInput) {
+  if (input.olderPull.parserReviewStatus !== 'approved' || input.newerPull.parserReviewStatus !== 'approved') {
+    return {
+      approved: false,
+      code: 'CREDIT_REPORT_PULL_REVIEW_REQUIRED',
+      comparison: null,
+    };
+  }
+
+  return {
+    approved: true,
+    code: null,
+    comparison: compareCreditReportPulls(input),
+  };
 }

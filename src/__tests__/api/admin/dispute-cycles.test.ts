@@ -59,4 +59,27 @@ describe('POST /api/admin/dispute-cycles', () => {
       item_selection: ['item-1'],
     });
   }, 30000);
+
+  it('blocks creating a Dispute Cycle draft without item selection', async () => {
+    const { POST } = await import('@/app/api/admin/dispute-cycles/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/admin/dispute-cycles', {
+      method: 'POST',
+      body: JSON.stringify({
+        client_id: 'client-1',
+        service_engagement_id: 'engagement-1',
+        cycle_number: 1,
+        item_selection: [],
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      code: 'DISPUTE_CYCLE_ITEM_SELECTION_REQUIRED',
+      error: 'Dispute Cycle drafts require at least one selected item',
+    });
+    expect(dbMock.select).not.toHaveBeenCalled();
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  }, 30000);
 });
