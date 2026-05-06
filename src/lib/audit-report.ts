@@ -332,7 +332,7 @@ export function generateAuditReportHTML(data: AuditReportData): string {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
       --primary: #0F172A; /* Deep Navy */
-      --secondary: #C6A87C; /* Gold */
+      --secondary: #C6A96C; /* Champagne */
       --secondary-light: #E5D5BC;
       --text-dark: #0F131A;
       --text-light: #64748B;
@@ -375,7 +375,7 @@ export function generateAuditReportHTML(data: AuditReportData): string {
       right: 0;
       width: 300px;
       height: 300px;
-      background: radial-gradient(circle, rgba(198, 168, 124, 0.15) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(231, 69, 58, 0.15) 0%, transparent 70%);
       transform: translate(30%, -30%);
     }
     .header-content {
@@ -415,7 +415,7 @@ export function generateAuditReportHTML(data: AuditReportData): string {
       display: inline-block;
       padding: 6px 16px;
       background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(198, 168, 124, 0.3);
+      border: 1px solid rgba(231, 69, 58, 0.3);
       border-radius: 100px;
       font-size: 12px;
       font-weight: 600;
@@ -620,7 +620,7 @@ export function generateAuditReportHTML(data: AuditReportData): string {
       right: 0;
       width: 400px;
       height: 400px;
-      background: radial-gradient(circle, rgba(198, 168, 124, 0.2) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(231, 69, 58, 0.2) 0%, transparent 70%);
       transform: translate(30%, -30%);
     }
     .projection-content {
@@ -751,11 +751,11 @@ export function generateAuditReportHTML(data: AuditReportData): string {
           <div class="brand-logo">
             <!-- Inline SVG Logo -->
             <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M24 4L42 14V34L24 44L6 34V14L24 4Z" style="fill: rgba(198, 168, 124, 0.1); stroke: #C6A87C;" stroke-width="2" stroke-linejoin="round"/>
-              <path d="M24 11V37M13 17L24 11L35 17M13 25L24 31L35 25" style="stroke: #C6A87C;" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="24" cy="11" r="2" style="fill: #C6A87C;" />
-              <circle cx="13" cy="17" r="2" style="fill: #C6A87C;" />
-              <circle cx="35" cy="17" r="2" style="fill: #C6A87C;" />
+              <path d="M24 4L42 14V34L24 44L6 34V14L24 4Z" style="fill: rgba(198, 169, 108, 0.14); stroke: #C6A96C;" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M24 11V37M13 17L24 11L35 17M13 25L24 31L35 25" style="stroke: #C6A96C;" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="24" cy="11" r="2" style="fill: #C6A96C;" />
+              <circle cx="13" cy="17" r="2" style="fill: #C6A96C;" />
+              <circle cx="35" cy="17" r="2" style="fill: #C6A96C;" />
             </svg>
           </div>
           <div class="brand-text">

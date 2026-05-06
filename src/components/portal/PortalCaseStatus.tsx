@@ -1,10 +1,9 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import {
   Target, TrendingUp, Zap, Calendar, Clock, AlertCircle,
-  CheckCircle, ChevronRight,
+  CheckCircle,
 } from 'lucide-react';
 import type { ClientCase } from '@/components/portal/types';
 import { phaseLabels, statusColors } from '@/components/portal/types';
@@ -21,55 +20,46 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
     : 0;
 
   const statCards = [
-    { label: 'Current Score', value: activeCase.credit_score_current ?? '---', icon: Target, color: 'bg-secondary/20', textColor: '', delay: 0.1 },
-    { label: 'Score Improvement', value: `+${scoreImprovement} pts`, icon: TrendingUp, color: 'bg-green-500/20', textColor: 'text-green-500', delay: 0.2 },
-    { label: 'Items Removed', value: activeCase.negative_items_removed || 0, icon: Zap, color: 'bg-blue-500/20', textColor: '', delay: 0.3 },
-    { label: 'Case Status', value: activeCase.status || 'N/A', icon: Calendar, color: 'bg-purple-500/20', textColor: 'capitalize', delay: 0.4 },
+    { label: 'Current Score', value: activeCase.credit_score_current ?? '---', icon: Target, tone: 'text-secondary' },
+    { label: 'Score Improvement', value: `+${scoreImprovement} pts`, icon: TrendingUp, tone: 'text-emerald-600' },
+    { label: 'Items Removed', value: activeCase.negative_items_removed || 0, icon: Zap, tone: 'text-secondary' },
+    { label: 'Case Status', value: activeCase.status || 'N/A', icon: Calendar, tone: 'text-foreground capitalize' },
   ];
 
   return (
     <>
-      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: stat.delay }}
-            >
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/50 transition-all">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl ${stat.color}`}>
-                      <Icon className={`w-6 h-6 ${stat.textColor || 'text-secondary'}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                      <p className={`text-2xl font-bold text-foreground ${stat.label === 'Case Status' ? stat.textColor : ''}`}>
-                        {stat.value}
-                      </p>
-                    </div>
+            <Card key={stat.label}>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className={`mt-2 text-2xl font-semibold tracking-tight ${stat.tone}`}>
+                      {stat.value}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  <Icon className={`h-5 w-5 ${stat.tone}`} />
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      <div className="lg:col-span-2 space-y-6">
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card>
           <CardHeader>
-            <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <CardTitle className="text-xl flex items-center gap-2">
               <Clock className="w-5 h-5 text-secondary" />
-              Current Phase
+              Current Phase and Readiness
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-6">
-              <span className={`px-4 py-2 rounded-full text-sm font-medium border ${statusColors[activeCase.status || 'pending']}`}>
+              <span className={`px-3 py-2 rounded-md text-sm font-medium border ${statusColors[activeCase.status || 'pending']}`}>
                 {activeCase.status?.replace('_', ' ').toUpperCase()}
               </span>
               <span className="text-foreground font-medium">
@@ -77,7 +67,7 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
               </span>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-4">
+            <div className="grid gap-2 sm:grid-cols-2">
               {Object.entries(phaseLabels).map(([key, label], idx) => {
                 const phases = Object.keys(phaseLabels);
                 const currentIdx = phases.indexOf(activeCase.current_phase || 'initial_review');
@@ -85,8 +75,7 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
                 const isCurrent = idx === currentIdx;
 
                 return (
-                  <div key={key} className="flex items-center">
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap ${
+                  <div key={key} className={`flex items-center gap-2 rounded-md border px-3 py-2 ${
                       isComplete ? 'bg-green-500/20 text-green-400' :
                       isCurrent ? 'bg-secondary/20 text-secondary' :
                       'bg-muted/30 text-muted-foreground'
@@ -99,10 +88,6 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
                         <div className="w-4 h-4 rounded-full border-2 border-current" />
                       )}
                       <span className="text-xs font-medium">{label}</span>
-                    </div>
-                    {idx < Object.keys(phaseLabels).length - 1 && (
-                      <ChevronRight className="w-4 h-4 text-muted-foreground mx-1" />
-                    )}
                   </div>
                 );
               })}
@@ -110,9 +95,9 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
           </CardContent>
         </Card>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <Card>
           <CardHeader>
-            <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <CardTitle className="text-xl flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-secondary" />
               Recent Updates
             </CardTitle>
@@ -121,8 +106,8 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
             {activeCase.updates && activeCase.updates.length > 0 ? (
               <div className="space-y-4">
                 {activeCase.updates.map((update) => (
-                  <div key={update.id} className="flex gap-4 p-4 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-secondary mt-2" />
+                  <div key={update.id} className="flex gap-4 rounded-md border border-border/70 bg-muted/25 p-4">
+                    <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-secondary" />
                     <div className="flex-1">
                       <p className="font-medium text-foreground">{update.title}</p>
                       {update.description && (

@@ -29,7 +29,7 @@ export default function SettingsPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         <Card className="max-w-md w-full bg-card border border-border">
           <CardHeader className="text-center">
-            <CardTitle className="font-serif text-2xl">Account Settings</CardTitle>
+            <CardTitle className="font-sans text-2xl">Account Settings</CardTitle>
             <CardDescription>Please sign in to access your settings.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -76,8 +76,8 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-4 text-foreground">
-              Account <span className="text-gradient-gold">Settings</span>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-sans font-bold mb-4 text-foreground">
+              Account <span className="text-secondary">Settings</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl">
               Manage your account information, security settings, and preferences.
@@ -98,7 +98,7 @@ export default function SettingsPage() {
             >
               <Card className="bg-card border border-border">
                 <CardHeader>
-                  <CardTitle className="font-serif text-xl flex items-center gap-2">
+                  <CardTitle className="font-sans text-xl flex items-center gap-2">
                     <User className="w-5 h-5 text-secondary" />
                     Profile Information
                   </CardTitle>
@@ -140,7 +140,7 @@ export default function SettingsPage() {
             >
               <Card className="bg-card border border-border">
                 <CardHeader>
-                  <CardTitle className="font-serif text-xl flex items-center gap-2">
+                  <CardTitle className="font-sans text-xl flex items-center gap-2">
                     <Lock className="w-5 h-5 text-secondary" />
                     Security
                   </CardTitle>
@@ -175,7 +175,7 @@ export default function SettingsPage() {
             >
               <Card className="bg-card border border-border">
                 <CardHeader>
-                  <CardTitle className="font-serif text-xl flex items-center gap-2">
+                  <CardTitle className="font-sans text-xl flex items-center gap-2">
                     <Bell className="w-5 h-5 text-secondary" />
                     Quick Links
                   </CardTitle>

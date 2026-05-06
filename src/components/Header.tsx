@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Sparkles, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, LayoutDashboard, ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -30,7 +30,6 @@ export function Header() {
   const router = useRouter();
   const { user, isLoading: _isLoading } = useAuth();
 
-  // Prevent hydration mismatch by only showing auth-dependent UI after mount
   React.useEffect(() => {
     setMounted(true);
   }, []);
@@ -55,18 +54,18 @@ export function Header() {
   }, []);
 
   return (
-    <motion.header 
+    <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
       className={cn(
-        "fixed top-0 z-50 w-full transition-all duration-500",
-        scrolled 
-          ? "bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg shadow-black/5" 
-          : "bg-transparent"
+        'fixed top-0 z-50 w-full transition-colors duration-300',
+        scrolled
+          ? 'bg-background/92 border-b border-border/70 shadow-sm backdrop-blur-md'
+          : 'bg-background/35 backdrop-blur-[2px]'
       )}
     >
-      <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
+      <div className="container mx-auto flex h-18 items-center justify-between px-4 md:px-6">
         <Logo size="md" />
 
         {/* Desktop Navigation */}
@@ -76,40 +75,40 @@ export function Header() {
               key={item.name}
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
+              transition={{ delay: index * 0.08, duration: 0.4 }}
             >
               <Link
                 href={item.href}
                 className={cn(
-                  "relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg",
-                  pathname === item.href 
-                    ? "text-secondary" 
-                    : "text-muted-foreground hover:text-foreground"
+                  'relative px-3 py-2 text-sm font-medium transition-colors duration-150 rounded-md',
+                  pathname === item.href
+                    ? 'text-secondary'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 {item.name}
                 {pathname === item.href && (
                   <motion.div
                     layoutId="nav-indicator"
-                    className="absolute inset-0 bg-secondary/10 rounded-lg -z-10"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    className="absolute inset-0 bg-accent rounded-md -z-10"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
                   />
                 )}
               </Link>
             </motion.div>
           ))}
-          <div className="flex items-center gap-3 ml-6 pl-6 border-l border-border/50">
+          <div className="flex items-center gap-3 ml-6 pl-6 border-l border-border">
             <ThemeToggle />
             {mounted && user ? (
               <div className="relative">
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-secondary/10 hover:bg-secondary/20 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted hover:bg-accent transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                    <User className="w-4 h-4 text-secondary-foreground" />
+                   <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
                   </div>
                   <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
                     {user.name || 'User'}
@@ -118,18 +117,18 @@ export function Header() {
                 <AnimatePresence>
                   {userMenuOpen && (
                     <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50"
+                      className="absolute right-0 mt-2 w-52 surface-panel rounded-lg overflow-hidden z-50"
                     >
                       {(user.role === 'super_admin' || user.role === 'admin') && (
                         <>
                           <Link
                             href="/admin"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2 px-4 py-3 text-sm text-secondary font-medium hover:bg-secondary/10 transition-colors"
+                            className="flex items-center gap-2 px-4 py-3 text-sm text-secondary font-medium hover:bg-accent transition-colors"
                           >
                             <LayoutDashboard className="w-4 h-4" />
                             Admin Dashboard
@@ -156,7 +155,7 @@ export function Header() {
                       <div className="border-t border-border" />
                       <button
                         onClick={handleSignOut}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 transition-colors w-full text-left"
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
                       >
                         <LogOut className="w-4 h-4" />
                         Sign Out
@@ -166,17 +165,14 @@ export function Header() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Button asChild variant="outline" className="rounded-full px-4">
+              <Button asChild variant="outline">
                 <Link href="/sign-in">Sign In</Link>
               </Button>
             )}
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button asChild className="bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full px-6 shadow-lg shadow-secondary/20 hover:shadow-secondary/40 transition-shadow">
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              <Button asChild>
                 <Link href="/contact" className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
+                  <ArrowUpRight className="w-4 h-4" />
                   Book Consultation
                 </Link>
               </Button>
@@ -189,7 +185,7 @@ export function Header() {
           <ThemeToggle />
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary/10 transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -201,12 +197,12 @@ export function Header() {
       {/* Mobile Navigation */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-            className="md:hidden fixed inset-x-0 top-20 z-40 bg-background/98 backdrop-blur-xl border-b border-border overflow-hidden"
+            className="md:hidden fixed inset-x-0 top-18 z-40 bg-background/98 backdrop-blur-xl border-b border-border overflow-hidden"
           >
             <nav className="container mx-auto px-4 py-6 flex flex-col gap-2">
               {navigation.map((item, index) => (
@@ -219,10 +215,10 @@ export function Header() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "block text-lg font-medium py-3 px-4 rounded-lg transition-all",
-                      pathname === item.href 
-                        ? "text-secondary bg-secondary/10" 
-                        : "text-foreground hover:bg-muted"
+                      'block text-lg font-medium py-3 px-4 rounded-lg transition-all',
+                      pathname === item.href
+                        ? 'text-secondary bg-accent'
+                        : 'text-foreground hover:bg-muted'
                     )}
                   >
                     {item.name}
@@ -239,7 +235,7 @@ export function Header() {
                   <>
                     <div className="flex items-center gap-3 px-4 py-2">
                       <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="w-5 h-5 text-secondary-foreground" />
+                        <User className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <p className="font-medium text-foreground">{user.name || 'User'}</p>
@@ -249,7 +245,7 @@ export function Header() {
                     {(user.role === 'super_admin' || user.role === 'admin') && (
                       <Link
                         href="/admin"
-                        className="flex items-center gap-2 px-4 py-3 text-secondary font-medium hover:bg-secondary/10 rounded-lg transition-colors"
+                        className="flex items-center gap-2 px-4 py-3 text-secondary font-medium hover:bg-accent rounded-lg transition-colors"
                       >
                         <LayoutDashboard className="w-5 h-5" />
                         Admin Dashboard
@@ -271,23 +267,23 @@ export function Header() {
                     </Link>
                     <button
                       onClick={handleSignOut}
-                      className="flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors w-full text-left"
+                      className="flex items-center gap-2 px-4 py-3 text-destructive hover:bg-destructive/10 rounded-lg transition-colors w-full text-left"
                     >
                       <LogOut className="w-5 h-5" />
                       Sign Out
                     </button>
                   </>
                 ) : (
-                  <Button className="w-full h-12 text-lg rounded-full" variant="outline" asChild>
+                  <Button className="w-full h-12 text-lg rounded-lg" variant="outline" asChild>
                     <Link href="/sign-in" className="flex items-center justify-center gap-2">
                       <User className="w-5 h-5" />
                       Sign In
                     </Link>
                   </Button>
                 )}
-                <Button className="w-full bg-secondary text-secondary-foreground h-12 text-lg rounded-full shadow-lg shadow-secondary/20" asChild>
+                <Button className="w-full bg-secondary text-secondary-foreground h-12 text-lg rounded-lg shadow-sm" asChild>
                   <Link href="/contact" className="flex items-center justify-center gap-2">
-                    <Sparkles className="w-5 h-5" />
+                    <ArrowUpRight className="w-5 h-5" />
                     Book Consultation
                   </Link>
                 </Button>

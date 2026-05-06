@@ -86,8 +86,8 @@ export default async function FAQPage() {
             </div>
           </SlideUp>
           <SlideUp delay={0.2}>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold mb-8 text-white leading-[1.1]">
-              Still Have <span className="text-gradient-gold">Questions</span>?
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold mb-8 text-white leading-[1.1]">
+              Still Have <span className="text-secondary">Questions</span>?
             </h2>
           </SlideUp>
           <SlideUp delay={0.4}>
@@ -96,7 +96,7 @@ export default async function FAQPage() {
             </p>
           </SlideUp>
           <SlideUp delay={0.6}>
-            <Button asChild size="lg" className="h-16 md:h-20 px-12 md:px-16 text-lg md:text-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full shadow-[0_0_60px_rgba(198,168,124,0.4)] hover:shadow-[0_0_80px_rgba(198,168,124,0.6)] transition-all duration-500 hover:scale-105 btn-premium">
+            <Button asChild size="lg" className="h-16 md:h-20 px-12 md:px-16 text-lg md:text-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full shadow-[0_0_60px_rgba(231,69,58,0.4)] hover:shadow-[0_0_80px_rgba(231,69,58,0.6)] transition-all duration-500 hover:scale-105 btn-premium">
               <Link href="/contact" className="flex items-center gap-4">
                 <Sparkles className="w-6 h-6" />
                 Contact Us

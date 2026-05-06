@@ -20,7 +20,7 @@ interface DashboardTabsProps {
 
 export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
   return (
-    <div className="border-b border-border/50">
+    <div className="surface-panel rounded-lg px-2">
       <div className="flex gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -29,14 +29,14 @@ export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
             className={cn(
               'relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap',
               activeTab === tab.id
-                ? 'text-secondary'
+                ? 'text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <tab.icon className="w-4 h-4" />
             <span>{tab.name}</span>
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary" />
+              <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-secondary" />
             )}
           </button>
         ))}

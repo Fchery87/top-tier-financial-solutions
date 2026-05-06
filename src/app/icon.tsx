@@ -32,22 +32,22 @@ export default function Icon() {
         >
           <path
             d="M24 4L42 14V34L24 44L6 34V14L24 4Z"
-            fill="#C6A87C"
+            fill="#C6A96C"
             fillOpacity="0.2"
-            stroke="#C6A87C"
+            stroke="#C6A96C"
             strokeWidth="2"
             strokeLinejoin="round"
           />
           <path
             d="M24 11V37M13 17L24 11L35 17M13 25L24 31L35 25"
-            stroke="#C6A87C"
+            stroke="#C6A96C"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <circle cx="24" cy="11" r="2" fill="#C6A87C" />
-          <circle cx="13" cy="17" r="2" fill="#C6A87C" />
-          <circle cx="35" cy="17" r="2" fill="#C6A87C" />
+          <circle cx="24" cy="11" r="2" fill="#C6A96C" />
+          <circle cx="13" cy="17" r="2" fill="#C6A96C" />
+          <circle cx="35" cy="17" r="2" fill="#C6A96C" />
         </svg>
       </div>
     ),

@@ -115,7 +115,7 @@ export default function ResultsPage() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-serif font-bold text-foreground flex items-center gap-3"
+            className="text-3xl font-sans font-bold text-foreground flex items-center gap-3"
           >
             <Trophy className="w-8 h-8 text-yellow-500" />
             Results & Wins

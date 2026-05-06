@@ -342,7 +342,7 @@ export default function AgreementsPage() {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-serif font-bold text-foreground"
+            className="text-3xl font-sans font-bold text-foreground"
           >
             Agreement Templates
           </motion.h1>

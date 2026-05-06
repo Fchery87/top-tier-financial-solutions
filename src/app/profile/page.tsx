@@ -25,7 +25,7 @@ export default function ProfilePage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="text-center">
-            <CardTitle className="font-serif text-2xl">Profile</CardTitle>
+            <CardTitle className="font-sans text-2xl">Profile</CardTitle>
             <CardDescription>Please sign in to view your profile.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -65,8 +65,8 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-4 text-foreground">
-              Welcome, <span className="text-gradient-gold">{user.name?.split(' ')[0] || 'Client'}</span>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-sans font-bold mb-4 text-foreground">
+              Welcome, <span className="text-secondary">{user.name?.split(' ')[0] || 'Client'}</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl">
               View your account information and access your portal.
@@ -87,7 +87,7 @@ export default function ProfilePage() {
             >
               <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                 <CardHeader>
-                  <CardTitle className="font-serif text-xl flex items-center gap-2">
+                  <CardTitle className="font-sans text-xl flex items-center gap-2">
                     <User className="w-5 h-5 text-secondary" />
                     User Information
                   </CardTitle>
@@ -138,7 +138,7 @@ export default function ProfilePage() {
             >
               <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                 <CardHeader>
-                  <CardTitle className="font-serif text-xl flex items-center gap-2">
+                  <CardTitle className="font-sans text-xl flex items-center gap-2">
                     <LayoutDashboard className="w-5 h-5 text-secondary" />
                     Quick Links
                   </CardTitle>

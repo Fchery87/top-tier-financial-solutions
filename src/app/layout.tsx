@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Source_Serif_4, Manrope } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipWrapper } from "./providers";
 import { Analytics } from '@/components/Analytics';
@@ -8,14 +8,20 @@ import { LayoutWrapper } from '@/components/LayoutWrapper';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const jetbrainsMono = Geist_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -25,15 +31,15 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F9F8F6' },
-    { media: '(prefers-color-scheme: dark)', color: '#07090D' },
+    themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFBFC' },
+    { media: '(prefers-color-scheme: dark)', color: '#080A0F' },
   ],
 };
 
 export const metadata: Metadata = {
   title: "Top Tier Financial Solutions",
-  description: "Expert credit repair and financial planning services.",
+  description: "A premium credit repair operations platform for compliant client onboarding, dispute workflows, and financial restoration.",
   formatDetection: {
     telephone: true,
     email: true,
@@ -52,8 +58,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${sourceSerif.variable} ${manrope.variable} font-sans antialiased`}>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${bricolage.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <ErrorBoundary>
           <Analytics />
           <SkipLink />

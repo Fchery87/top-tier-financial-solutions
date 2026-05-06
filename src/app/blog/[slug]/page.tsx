@@ -86,7 +86,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </SlideUp>
 
           <SlideUp delay={0.2}>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-6 text-foreground leading-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-sans font-bold mb-6 text-foreground leading-tight">
               {post.title}
             </h1>
           </SlideUp>
@@ -146,8 +146,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         
         <div className="container relative z-10 mx-auto px-4 text-center">
           <SlideUp>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-6 text-white">
-              Need <span className="text-gradient-gold">Expert Help</span>?
+            <h2 className="text-3xl md:text-4xl font-sans font-bold mb-6 text-white">
+              Need <span className="text-secondary">Expert Help</span>?
             </h2>
           </SlideUp>
           <SlideUp delay={0.2}>

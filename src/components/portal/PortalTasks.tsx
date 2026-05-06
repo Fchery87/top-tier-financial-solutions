@@ -46,7 +46,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
     <>
       <Card className="bg-card/80 backdrop-blur-sm border-border/50">
         <CardHeader>
-          <CardTitle className="font-serif text-xl flex items-center gap-2">
+          <CardTitle className="font-sans text-xl flex items-center gap-2">
             <Target className="w-5 h-5 text-secondary" />
             Your Next Step
           </CardTitle>
@@ -101,7 +101,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
       {sortedTasks.length > 0 && (
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader>
-            <CardTitle className="font-serif text-xl flex items-center gap-2">
+            <CardTitle className="font-sans text-xl flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-secondary" />
               Your Tasks
             </CardTitle>

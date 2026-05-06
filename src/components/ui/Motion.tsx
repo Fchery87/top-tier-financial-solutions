@@ -195,7 +195,6 @@ export function GlowCard({ children, className }: { children: ReactNode, classNa
       transition={{ duration: 0.6, ease: smoothEase }}
       whileHover={{ 
         scale: 1.02,
-        boxShadow: "0 0 40px rgba(198, 168, 124, 0.4)",
       }}
       className={cn("relative overflow-hidden rounded-xl", className)}
     >
@@ -390,7 +389,7 @@ export function HoverGlow({ children, className }: { children: ReactNode, classN
         transition: { duration: 0.3 }
       }}
       whileTap={{ scale: 0.98 }}
-      className={cn("transition-shadow duration-300 hover:shadow-[0_0_30px_rgba(198,168,124,0.3)]", className)}
+      className={cn("transition-shadow duration-300 hover:shadow-lg hover:shadow-secondary/10", className)}
     >
       {children}
     </motion.div>

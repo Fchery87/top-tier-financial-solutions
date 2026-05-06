@@ -259,7 +259,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-foreground flex items-center gap-3"><SettingsIcon className="w-8 h-8 text-primary" />System Settings</h1>
+          <h1 className="text-3xl font-sans font-bold text-foreground flex items-center gap-3"><SettingsIcon className="w-8 h-8 text-primary" />System Settings</h1>
           <p className="text-muted-foreground mt-1">Configure LLM providers, API keys, and system-wide settings</p>
         </div>
 

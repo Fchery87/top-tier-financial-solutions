@@ -15,7 +15,7 @@ export default function PortalScoreHistory({ scoreHistory, scoreSummary }: Porta
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
       <CardHeader>
-        <CardTitle className="font-serif text-xl flex items-center gap-2">
+        <CardTitle className="font-sans text-xl flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-secondary" />
           Score Progress
         </CardTitle>

@@ -277,7 +277,7 @@ export default function AgreementPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="text-center">
-            <CardTitle className="font-serif text-2xl">Sign In Required</CardTitle>
+            <CardTitle className="font-sans text-2xl">Sign In Required</CardTitle>
             <CardDescription>Please sign in to view your service agreement.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -301,7 +301,7 @@ export default function AgreementPage() {
           <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
-          <h1 className="text-3xl font-serif font-bold mb-4">Agreement Signed Successfully!</h1>
+          <h1 className="text-3xl font-sans font-bold mb-4">Agreement Signed Successfully!</h1>
           <p className="text-muted-foreground mb-2">Thank you for signing your service agreement.</p>
           <p className="text-sm text-muted-foreground mb-6">
             You have 3 business days to cancel if you change your mind.
@@ -341,7 +341,7 @@ export default function AgreementPage() {
                 </div>
               </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">
+            <h1 className="text-3xl md:text-4xl font-sans font-bold mb-2">
               Credit Services Agreement
             </h1>
             <p className="text-muted-foreground">

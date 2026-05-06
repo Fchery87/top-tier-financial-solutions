@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
                 <ScaleIn delay={index * 0.2}>
                   <TiltCard>
                     <Card className="h-full p-8 md:p-10 bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/50 transition-all duration-500 group relative overflow-hidden text-center">
-                      <div className="absolute top-4 right-4 text-6xl md:text-7xl font-serif font-bold text-secondary/10 group-hover:text-secondary/20 transition-colors">
+                      <div className="absolute top-4 right-4 text-6xl md:text-7xl font-sans font-bold text-secondary/10 group-hover:text-secondary/20 transition-colors">
                         {step.step}
                       </div>
                       <div className="absolute top-0 right-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl group-hover:bg-secondary/10 transition-colors duration-500" />
@@ -62,7 +62,7 @@ export default function HowItWorksPage() {
                         <div className="mx-auto mb-8 w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary to-secondary/70 text-primary flex items-center justify-center shadow-lg shadow-secondary/30 group-hover:shadow-secondary/50 transition-shadow">
                           <step.icon className="h-10 w-10" />
                         </div>
-                        <h3 className="text-2xl font-serif font-bold mb-4 text-foreground">{step.title}</h3>
+                        <h3 className="text-2xl font-sans font-bold mb-4 text-foreground">{step.title}</h3>
                         <p className="text-muted-foreground leading-relaxed text-lg">
                           {step.description}
                         </p>
@@ -93,8 +93,8 @@ export default function HowItWorksPage() {
                   </span>
                   Why Top Tier
                 </div>
-                <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground leading-[1.1]">
-                  Why Choose <span className="text-gradient-gold">Top Tier</span>?
+                <h2 className="text-4xl md:text-5xl font-sans font-bold text-foreground leading-[1.1]">
+                  Why Choose <span className="text-secondary">Top Tier</span>?
                 </h2>
                 <ul className="space-y-5">
                   {[
@@ -150,8 +150,8 @@ export default function HowItWorksPage() {
         
         <div className="container relative z-10 mx-auto px-4 text-center">
           <SlideUp>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold mb-8 text-white leading-[1.1]">
-              Ready to <span className="text-gradient-gold">Transform</span> Your Credit?
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold mb-8 text-white leading-[1.1]">
+              Ready to <span className="text-secondary">Transform</span> Your Credit?
             </h2>
           </SlideUp>
           <SlideUp delay={0.2}>
@@ -160,7 +160,7 @@ export default function HowItWorksPage() {
             </p>
           </SlideUp>
           <SlideUp delay={0.4}>
-            <Button asChild size="lg" className="h-16 md:h-20 px-12 md:px-16 text-lg md:text-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full shadow-[0_0_60px_rgba(198,168,124,0.4)] hover:shadow-[0_0_80px_rgba(198,168,124,0.6)] transition-all duration-500 hover:scale-105 btn-premium">
+            <Button asChild size="lg" className="h-16 md:h-20 px-12 md:px-16 text-lg md:text-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full shadow-lg hover:shadow-secondary/25 transition-all duration-300 btn-premium">
               <Link href="/contact" className="flex items-center gap-4">
                 <Sparkles className="w-6 h-6" />
                 Book Free Consultation

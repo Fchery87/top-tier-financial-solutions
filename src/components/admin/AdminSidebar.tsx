@@ -4,11 +4,11 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  MessageSquareQuote, 
-  HelpCircle, 
+import {
+  LayoutDashboard,
+  FileText,
+  MessageSquareQuote,
+  HelpCircle,
   Scale,
   Users,
   Calendar,
@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Sparkles,
   BookOpen,
   Mail,
   Briefcase,
@@ -32,7 +31,8 @@ import {
   Megaphone,
   Trophy,
   Settings,
-  MailOpen
+  MailOpen,
+  Hexagon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -170,17 +170,17 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
   const sidebarContent = (
     <>
       {/* Logo - hidden on mobile (shown in top bar instead) */}
-      <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-white/10">
+      <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-white/[0.08]">
         <Link href="/admin" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary" />
+          <div className="w-9 h-9 rounded-md bg-secondary flex items-center justify-center">
+            <Hexagon className="w-5 h-5 text-white" />
           </div>
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-lg font-serif font-bold text-white"
+              className="text-base font-semibold text-white"
             >
               Admin
             </motion.span>
@@ -188,7 +188,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         </Link>
         <button
           onClick={onToggle}
-          className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+          className="p-2 rounded-md hover:bg-white/10 text-white/70 hover:text-white transition-colors"
         >
           {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
@@ -197,10 +197,10 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
       {/* Mobile logo */}
       <div className="md:hidden h-14 flex items-center px-4 border-b border-white/10">
         <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+          <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
+            <Hexagon className="w-4 h-4 text-white" />
           </div>
-          <span className="text-base font-serif font-bold text-white">Admin Panel</span>
+          <span className="text-base font-sans font-bold text-white">Admin Panel</span>
         </Link>
       </div>
 
@@ -211,15 +211,15 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           href={dashboardLink.href}
           onClick={handleNavClick}
           className={cn(
-            "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
+            "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === dashboardLink.href 
-              ? "bg-secondary text-primary" 
+              ? "bg-secondary text-white" 
               : "text-white/70 hover:bg-white/10 hover:text-white"
           )}
         >
           <dashboardLink.icon className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === dashboardLink.href ? "text-primary" : "text-current"
+            pathname === dashboardLink.href ? "text-white" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <motion.span
@@ -232,7 +232,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
             </motion.span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               {dashboardLink.name}
             </div>
           )}
@@ -251,7 +251,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                   <button
                     onClick={() => toggleSection(section.id)}
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200",
+                       "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors duration-150",
                       sectionActive 
                         ? "text-secondary" 
                         : "text-white/50 hover:text-white/70"
@@ -293,15 +293,15 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                             href={item.href}
                             onClick={handleNavClick}
                             className={cn(
-                              "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
+                              "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
                               isActive 
-                                ? "bg-secondary text-primary" 
+                                ? "bg-secondary text-white" 
                                 : "text-white/70 hover:bg-white/10 hover:text-white"
                             )}
                           >
                             <item.icon className={cn(
                               "w-4 h-4 flex-shrink-0",
-                              isActive ? "text-primary" : "text-current"
+                              isActive ? "text-white" : "text-current"
                             )} />
                             {(!collapsed || mobileOpen) && (
                               <motion.span
@@ -314,7 +314,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                               </motion.span>
                             )}
                             {collapsed && !mobileOpen && (
-                              <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                                 {item.name}
                               </div>
                             )}
@@ -336,21 +336,21 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           href="/admin/settings"
           onClick={handleNavClick}
           className={cn(
-            "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
+            "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === '/admin/settings'
-              ? "bg-secondary text-primary" 
+              ? "bg-secondary text-white" 
               : "text-white/70 hover:bg-white/10 hover:text-white"
           )}
         >
           <Settings className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === '/admin/settings' ? "text-primary" : "text-current"
+            pathname === '/admin/settings' ? "text-white" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Settings</span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Settings
             </div>
           )}
@@ -358,14 +358,14 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         <Link
           href="/"
           onClick={handleNavClick}
-          className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group relative"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-150 group relative"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Back to Site</span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-primary rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Back to Site
             </div>
           )}
@@ -379,9 +379,9 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
       {/* Desktop sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: collapsed ? 80 : 280 }}
+        animate={{ width: collapsed ? 80 : 264 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-primary border-r border-border/10 flex-col"
+        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-[hsl(220_24%_7%)] border-r border-white/10 flex-col"
       >
         {sidebarContent}
       </motion.aside>
@@ -399,11 +399,11 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
               onClick={onMobileClose}
             />
             <motion.aside
-              initial={{ x: -280 }}
+              initial={{ x: -264 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              exit={{ x: -264 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[280px] bg-primary border-r border-border/10 flex flex-col"
+              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[264px] bg-[hsl(220_24%_7%)] border-r border-white/10 flex flex-col"
             >
               {sidebarContent}
             </motion.aside>

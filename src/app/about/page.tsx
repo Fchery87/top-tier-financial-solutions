@@ -59,8 +59,8 @@ export default function AboutPage() {
               <Sparkles className="w-4 h-4 text-secondary" />
               What We Stand For
             </div>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6 text-foreground">
-              Our Core <span className="text-gradient-gold">Values</span>
+            <h2 className="text-4xl md:text-5xl font-sans font-bold mb-6 text-foreground">
+              Our Core <span className="text-secondary">Values</span>
             </h2>
             <p className="text-muted-foreground text-lg md:text-xl">
               These principles guide everything we do and define who we are as a company.
@@ -78,7 +78,7 @@ export default function AboutPage() {
                         <div className="mb-6 p-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 text-secondary flex items-center justify-center group-hover:from-secondary group-hover:to-secondary/80 group-hover:text-white transition-all duration-500 shadow-lg">
                           <value.icon className="w-8 h-8" />
                         </div>
-                        <h3 className="text-xl font-serif font-bold mb-3 text-foreground">{value.title}</h3>
+                        <h3 className="text-xl font-sans font-bold mb-3 text-foreground">{value.title}</h3>
                         <p className="text-muted-foreground leading-relaxed">
                           {value.description}
                         </p>
@@ -109,8 +109,8 @@ export default function AboutPage() {
                   </span>
                   Our Mission
                 </div>
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-foreground leading-[1.1]">
-                  Empowering Your <span className="text-gradient-gold">Financial Future</span>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold text-foreground leading-[1.1]">
+                  Empowering Your <span className="text-secondary">Financial Future</span>
                 </h2>
                 <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
                   Our mission is to empower individuals and families to take control of their financial future. We understand that a low credit score can be a significant barrier to achieving your dreams, whether it&apos;s buying a home, starting a business, or simply having peace of mind.
@@ -126,7 +126,7 @@ export default function AboutPage() {
                     <div key={i} className="relative group">
                       <div className="absolute inset-0 bg-secondary/5 rounded-xl blur-lg group-hover:bg-secondary/10 transition-colors" />
                       <div className="relative p-6 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm">
-                        <div className="text-4xl md:text-5xl font-serif font-bold text-gradient-gold mb-2">{stat.value}</div>
+                        <div className="text-4xl md:text-5xl font-sans font-bold text-secondary mb-2">{stat.value}</div>
                         <div className="text-sm uppercase tracking-wider text-muted-foreground">{stat.label}</div>
                       </div>
                     </div>
@@ -142,7 +142,7 @@ export default function AboutPage() {
                   <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1632&q=80')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-8">
-                    <p className="text-xl text-white/90 font-serif italic">
+                    <p className="text-xl text-white/90 font-sans italic">
                       &quot;Building financial freedom, one credit score at a time.&quot;
                     </p>
                   </div>
@@ -164,8 +164,8 @@ export default function AboutPage() {
                 <Award className="w-4 h-4 text-secondary" />
                 Our Journey
               </div>
-              <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6 text-foreground">
-                Why Families <span className="text-gradient-gold">Trust Us</span>
+              <h2 className="text-4xl md:text-5xl font-sans font-bold mb-6 text-foreground">
+                Why Families <span className="text-secondary">Trust Us</span>
               </h2>
               <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
                 We&apos;ve helped thousands of families achieve their financial dreams through dedication and expertise.
@@ -195,7 +195,7 @@ export default function AboutPage() {
                             {item.year}
                           </div>
                         </div>
-                        <h3 className="text-2xl font-serif font-bold text-foreground mb-3">{item.title}</h3>
+                        <h3 className="text-2xl font-sans font-bold text-foreground mb-3">{item.title}</h3>
                         <p className="text-muted-foreground text-lg">{item.description}</p>
                       </Card>
                     </div>

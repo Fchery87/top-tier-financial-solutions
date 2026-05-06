@@ -67,7 +67,7 @@ export function NewsletterSignup({
   if (variant === 'footer') {
     return (
       <div className={className}>
-        <h4 className="text-secondary font-bold mb-4 font-serif tracking-wide text-lg">{title}</h4>
+        <h4 className="text-secondary font-bold mb-4 font-sans tracking-wide text-lg">{title}</h4>
         <p className="text-sm text-primary-foreground/70 mb-4">{description}</p>
         
         {isSuccess ? (
@@ -118,7 +118,7 @@ export function NewsletterSignup({
           <div className="p-2 rounded-lg bg-secondary/20">
             <Mail className="w-5 h-5 text-secondary" />
           </div>
-          <h3 className="font-serif font-bold text-foreground">{title}</h3>
+          <h3 className="font-sans font-bold text-foreground">{title}</h3>
         </div>
         
         {isSuccess ? (
@@ -167,7 +167,7 @@ export function NewsletterSignup({
               <Sparkles className="w-4 h-4" />
               Newsletter
             </div>
-            <h3 className="text-2xl font-serif font-bold text-foreground mb-2">{title}</h3>
+            <h3 className="text-2xl font-sans font-bold text-foreground mb-2">{title}</h3>
             <p className="text-muted-foreground">{description}</p>
           </div>
           

@@ -209,7 +209,7 @@ export function OverviewTab({
         <div className="lg:col-span-2 space-y-6">
           <Card className={`bg-card shadow-sm ${totalAttention > 0 ? 'border-t-4 border-t-orange-500' : ''}`}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-serif flex items-center gap-2">
+              <CardTitle className="text-lg font-sans flex items-center gap-2">
                 <AlertCircle className={`w-5 h-5 ${totalAttention > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
                 Today&apos;s Work
                 {totalAttention > 0 && (
@@ -329,7 +329,7 @@ export function OverviewTab({
 
           <Card className="bg-card border border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-serif flex items-center gap-2">
+              <CardTitle className="text-lg font-sans flex items-center gap-2">
                 <Activity className="w-5 h-5 text-secondary" />
                 Recent Activity
               </CardTitle>

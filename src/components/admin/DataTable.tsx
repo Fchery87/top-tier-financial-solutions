@@ -1,10 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface Column<T> {
   key: string;
@@ -67,15 +74,15 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border/50 bg-muted/30">
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
               {columns.map((column) => (
-                <th
+                <TableHead
                   key={column.key}
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                    "px-4 py-3 text-xs font-semibold text-muted-foreground",
                     column.sortable && "cursor-pointer hover:text-foreground transition-colors select-none",
                     column.className
                   )}
@@ -85,52 +92,49 @@ export function DataTable<T extends { id: string }>({
                     {column.header}
                     {getSortIcon(column)}
                   </div>
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/30">
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
+              <TableRow>
+                <TableCell colSpan={columns.length} className="px-4 py-12 text-center">
                   <Loader2 className="w-8 h-8 animate-spin mx-auto text-secondary" />
                   <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : data.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-muted-foreground">
+              <TableRow>
+                <TableCell colSpan={columns.length} className="px-4 py-12 text-center text-muted-foreground">
                   {emptyMessage}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
-              data.map((item, index) => (
-                <motion.tr
+              data.map((item) => (
+                <TableRow
                   key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
                   onClick={() => onRowClick?.(item)}
                   className={cn(
-                    "hover:bg-muted/30 transition-colors",
+                    "hover:bg-muted/40",
                     onRowClick && "cursor-pointer"
                   )}
                 >
                   {columns.map((column) => (
-                    <td
+                    <TableCell
                       key={column.key}
                       className={cn("px-4 py-4 text-sm text-foreground", column.className)}
                     >
                       {column.render 
                         ? column.render(item) 
                         : (item as Record<string, unknown>)[column.key] as React.ReactNode}
-                    </td>
+                    </TableCell>
                   ))}
-                </motion.tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Pagination */}

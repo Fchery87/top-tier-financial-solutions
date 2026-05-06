@@ -18,7 +18,7 @@ export default function BookingsPage() {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-serif font-bold text-foreground"
+            className="text-3xl font-sans font-bold text-foreground"
           >
             Consultation Bookings
           </motion.h1>
@@ -112,7 +112,7 @@ export default function BookingsPage() {
       >
         <Card className="bg-card border border-border">
           <CardHeader>
-            <CardTitle className="font-serif flex items-center gap-2">
+            <CardTitle className="font-sans flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
               Integration Status
             </CardTitle>

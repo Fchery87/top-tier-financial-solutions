@@ -186,7 +186,7 @@ export default function BlogAdminPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-foreground">Blog Posts</h1>
+          <h1 className="text-2xl font-sans font-bold text-foreground">Blog Posts</h1>
           <p className="text-muted-foreground">Manage your blog content and articles.</p>
         </div>
         <Button onClick={openCreateModal} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
@@ -216,7 +216,7 @@ export default function BlogAdminPage() {
             className="bg-card border border-border rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="p-6 border-b border-border">
-              <h2 className="text-xl font-serif font-bold">
+              <h2 className="text-xl font-sans font-bold">
                 {editingPost ? 'Edit Post' : 'Create New Post'}
               </h2>
             </div>

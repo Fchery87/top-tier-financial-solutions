@@ -71,7 +71,7 @@ export function AdminAnalyticsPanel() {
     <section className="grid grid-cols-1 xl:grid-cols-2 gap-6" aria-label="Admin analytics">
       <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-serif flex items-center gap-2">
+          <CardTitle className="text-lg font-sans flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-secondary" />
             Operator Analytics
           </CardTitle>
@@ -97,7 +97,7 @@ export function AdminAnalyticsPanel() {
 
       <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-serif flex items-center gap-2">
+          <CardTitle className="text-lg font-sans flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-secondary" />
             Client Outcome Analytics
           </CardTitle>

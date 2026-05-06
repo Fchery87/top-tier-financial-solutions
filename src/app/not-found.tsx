@@ -7,7 +7,7 @@ export default function NotFound() {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="text-center max-w-lg">
         <div className="relative mb-8">
-          <span className="text-[150px] md:text-[200px] font-serif font-bold text-secondary/10 leading-none select-none">
+          <span className="text-[150px] md:text-[200px] font-sans font-bold text-secondary/10 leading-none select-none">
             404
           </span>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -15,7 +15,7 @@ export default function NotFound() {
           </div>
         </div>
         
-        <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
+        <h1 className="text-3xl md:text-4xl font-sans font-bold text-foreground mb-4">
           Page Not Found
         </h1>
         

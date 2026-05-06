@@ -74,10 +74,10 @@ export default function ContactPage() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold tracking-tight leading-[1.1] mb-8"
+            className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-sans font-bold tracking-tight leading-[1.1] mb-8"
           >
             <span className="text-foreground">Book Your Free</span>
-            <span className="text-gradient-gold block"> Credit Consultation</span>
+            <span className="text-secondary block"> Credit Consultation</span>
           </motion.h1>
           
           <motion.div
@@ -139,8 +139,8 @@ export default function ContactPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4 text-foreground">
-              Or Send Us a <span className="text-gradient-gold">Message</span>
+            <h2 className="text-3xl md:text-4xl font-sans font-bold mb-4 text-foreground">
+              Or Send Us a <span className="text-secondary">Message</span>
             </h2>
             <p className="text-lg text-muted-foreground">
               Prefer to reach out directly? Use the form below or contact us through any of our channels.
@@ -157,7 +157,7 @@ export default function ContactPage() {
               className="space-y-8"
             >
               <div>
-                <h3 className="text-2xl font-serif font-bold text-foreground mb-4">Contact Information</h3>
+                <h3 className="text-2xl font-sans font-bold text-foreground mb-4">Contact Information</h3>
                 <p className="text-lg text-muted-foreground">
                   Have questions about your credit? Ready to start your journey to financial freedom? 
                   Fill out the form or reach out to us directly.
@@ -193,7 +193,7 @@ export default function ContactPage() {
             >
               <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                 <CardHeader>
-                  <CardTitle className="font-serif text-2xl">Send us a Message</CardTitle>
+                  <CardTitle className="font-sans text-2xl">Send us a Message</CardTitle>
                   <CardDescription>
                     Fill out the form below and we&apos;ll get back to you as soon as possible.
                   </CardDescription>
@@ -204,7 +204,7 @@ export default function ContactPage() {
                       <div className="p-4 bg-secondary/20 rounded-full text-secondary">
                         <CheckCircle className="h-12 w-12" />
                       </div>
-                      <h3 className="text-2xl font-serif font-bold text-foreground">Message Sent!</h3>
+                      <h3 className="text-2xl font-sans font-bold text-foreground">Message Sent!</h3>
                       <p className="text-muted-foreground">
                         Thank you for contacting us. We have received your message and will be in touch shortly.
                       </p>

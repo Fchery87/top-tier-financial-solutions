@@ -58,8 +58,8 @@ export default async function BlogPage() {
           <GradientOrbs className="opacity-30" />
           <div className="container relative z-10 mx-auto px-4 md:px-6">
             <FadeIn className="mb-10">
-              <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
-                Featured <span className="text-gradient-gold">Articles</span>
+              <h2 className="text-2xl md:text-3xl font-sans font-bold text-foreground">
+                Featured <span className="text-secondary">Articles</span>
               </h2>
             </FadeIn>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -78,7 +78,7 @@ export default async function BlogPage() {
                             {post.category.name}
                           </span>
                         )}
-                        <h3 className="text-xl md:text-2xl font-serif font-bold text-foreground mb-3 group-hover:text-secondary transition-colors">
+                        <h3 className="text-xl md:text-2xl font-sans font-bold text-foreground mb-3 group-hover:text-secondary transition-colors">
                           {post.title}
                         </h3>
                         {post.excerpt && (
@@ -123,7 +123,7 @@ export default async function BlogPage() {
               <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-6">
                 <BookOpen className="w-8 h-8 text-secondary" />
               </div>
-              <h2 className="text-2xl font-serif font-bold mb-4 text-foreground">Coming Soon</h2>
+              <h2 className="text-2xl font-sans font-bold mb-4 text-foreground">Coming Soon</h2>
               <p className="text-muted-foreground max-w-md mx-auto mb-8">
                 We&apos;re working on creating valuable content to help you on your credit repair journey. Check back soon!
               </p>
@@ -137,8 +137,8 @@ export default async function BlogPage() {
           ) : (
             <>
               <FadeIn className="mb-10">
-                <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
-                  Latest <span className="text-gradient-gold">Articles</span>
+                <h2 className="text-2xl md:text-3xl font-sans font-bold text-foreground">
+                  Latest <span className="text-secondary">Articles</span>
                 </h2>
               </FadeIn>
 
@@ -153,7 +153,7 @@ export default async function BlogPage() {
                               {post.category.name}
                             </span>
                           )}
-                          <h3 className="text-lg font-serif font-bold text-foreground mb-3 group-hover:text-secondary transition-colors line-clamp-2">
+                          <h3 className="text-lg font-sans font-bold text-foreground mb-3 group-hover:text-secondary transition-colors line-clamp-2">
                             {post.title}
                           </h3>
                           {post.excerpt && (
@@ -193,8 +193,8 @@ export default async function BlogPage() {
         
         <div className="container relative z-10 mx-auto px-4 text-center">
           <SlideUp>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-6 text-white">
-              Ready to Start Your <span className="text-gradient-gold">Journey</span>?
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-sans font-bold mb-6 text-white">
+              Ready to Start Your <span className="text-secondary">Journey</span>?
             </h2>
           </SlideUp>
           <SlideUp delay={0.2}>

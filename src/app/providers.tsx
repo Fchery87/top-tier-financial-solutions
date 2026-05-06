@@ -1,15 +1,15 @@
 'use client';
 
 import { TooltipProvider } from '@radix-ui/react-tooltip';
-import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { ReactNode } from 'react';
 import { QueryProvider } from '@/components/providers/QueryProvider';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export function TooltipWrapper({ children }: { children: ReactNode }) {
   return (
     <QueryProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider>
         <TooltipProvider>
           {children}
           <Toaster

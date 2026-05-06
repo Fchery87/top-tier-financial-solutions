@@ -102,7 +102,7 @@ export default function PortalUploadModal({ open, onClose, onUploadComplete }: P
       >
         <Card className="bg-card border-border shadow-2xl">
           <CardHeader>
-            <CardTitle className="font-serif">Upload Document</CardTitle>
+            <CardTitle className="font-sans">Upload Document</CardTitle>
             <CardDescription>
               Upload credit reports, ID documents, or correspondence for your case.
             </CardDescription>

@@ -134,7 +134,7 @@ export default function EmailTemplatesPage() {
                   <MailOpen className="w-8 h-8 text-secondary" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-serif font-bold text-gradient-gold">
+                  <h1 className="text-4xl font-sans font-bold text-secondary">
                     Email Templates
                   </h1>
                   <p className="text-muted-foreground mt-1">
@@ -378,7 +378,7 @@ export default function EmailTemplatesPage() {
                       )}
                     </div>
                     <div>
-                      <h2 className="text-xl font-serif font-bold text-gradient-gold">
+                      <h2 className="text-xl font-sans font-bold text-secondary">
                         {selectedTemplate.name}
                       </h2>
                       <p className="text-sm text-muted-foreground">

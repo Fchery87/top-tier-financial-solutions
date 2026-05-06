@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Badge as ShadcnBadge } from '@/components/ui/shadcn-badge';
 import { cn } from '@/lib/utils';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'secondary';
@@ -9,18 +10,18 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 const variantStyles: Record<BadgeVariant, string> = {
   default: 'bg-muted text-muted-foreground',
-  success: 'bg-green-500/10 text-green-600 dark:text-green-400',
-  warning: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
-  danger: 'bg-red-500/10 text-red-600 dark:text-red-400',
-  info: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  secondary: 'bg-secondary/10 text-secondary',
+  success: 'border-success/30 bg-success/10 text-success',
+  warning: 'border-warning/30 bg-warning/10 text-warning',
+  danger: 'border-destructive/30 bg-destructive/10 text-destructive',
+  info: 'border-secondary/30 bg-secondary/10 text-secondary',
+  secondary: 'bg-secondary text-secondary-foreground',
 };
 
 function Badge({ className, variant = 'default', ...props }: BadgeProps) {
   return (
-    <span
+    <ShadcnBadge
+      variant={variant === 'secondary' ? 'secondary' : 'outline'}
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
         variantStyles[variant],
         className
       )}

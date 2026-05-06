@@ -97,7 +97,7 @@ export default function PortalAuditReportPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
         <div className="max-w-md w-full text-center">
           <Shield className="w-16 h-16 text-secondary mx-auto mb-6" />
-          <h1 className="text-2xl font-serif font-bold mb-4 text-foreground">Sign In Required</h1>
+          <h1 className="text-2xl font-sans font-bold mb-4 text-foreground">Sign In Required</h1>
           <p className="text-muted-foreground mb-6">Please sign in to view your credit analysis report.</p>
           <Button asChild className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
             <Link href="/sign-in">Sign In</Link>
@@ -122,7 +122,7 @@ export default function PortalAuditReportPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-foreground font-serif">
+                <h1 className="text-xl font-semibold text-foreground font-sans">
                   Credit Analysis Report
                 </h1>
                 {clientName && (
@@ -191,7 +191,7 @@ export default function PortalAuditReportPage() {
           <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
             <div className="flex flex-col items-center justify-center py-20">
               <FileText className="w-16 h-16 text-muted-foreground mb-6" />
-              <h2 className="text-2xl font-serif font-bold text-foreground mb-4">Report Not Yet Available</h2>
+              <h2 className="text-2xl font-sans font-bold text-foreground mb-4">Report Not Yet Available</h2>
               <p className="text-muted-foreground text-center max-w-md mb-6">
                 {error || 'Your credit analysis report is being prepared. We will notify you once it is ready for review.'}
               </p>

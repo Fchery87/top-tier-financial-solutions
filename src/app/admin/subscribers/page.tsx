@@ -111,7 +111,7 @@ export default function SubscribersAdminPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-foreground">Email Subscribers</h1>
+          <h1 className="text-2xl font-sans font-bold text-foreground">Email Subscribers</h1>
           <p className="text-muted-foreground">Manage your newsletter subscribers.</p>
         </div>
         <Button onClick={handleExport} variant="outline">

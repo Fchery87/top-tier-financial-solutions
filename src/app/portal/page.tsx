@@ -125,7 +125,7 @@ export default function PortalPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="text-center">
-            <CardTitle className="font-serif text-2xl">Client Portal</CardTitle>
+            <CardTitle className="font-sans text-2xl">Client Portal</CardTitle>
             <CardDescription>Please sign in to access your client portal.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -144,17 +144,17 @@ export default function PortalPage() {
       <PortalHeader userName={user.name?.split(' ')[0] || 'Client'} />
       <PortalNav />
 
-      <section className="py-8 md:py-12 bg-background relative">
+      <section className="bg-background/80 py-8 md:py-12">
         <div className="container mx-auto px-4 md:px-6">
           {loading ? (
             <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>
           ) : cases.length === 0 ? (
-            <Card className="bg-card/80 backdrop-blur-sm border-border/50 p-12 text-center">
+            <Card className="p-12 text-center">
               <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 rounded-lg bg-accent flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-8 h-8 text-secondary" />
                 </div>
-                <h2 className="text-2xl font-serif font-bold mb-4 text-foreground">No Active Cases</h2>
+                <h2 className="text-2xl font-sans font-bold mb-4 text-foreground">No Active Cases</h2>
                 <p className="text-muted-foreground mb-8">
                   You don&apos;t have any active credit repair cases yet. Book a free consultation to get started on your credit repair journey.
                 </p>
@@ -164,12 +164,10 @@ export default function PortalPage() {
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
               <PortalCaseStatus activeCase={activeCase} />
-              <PortalDisputes disputes={disputes} disputeStats={disputeStats} />
-              <PortalScoreHistory scoreHistory={scoreHistory} scoreSummary={scoreSummary} />
 
-              <div className="space-y-6">
+              <div className="space-y-6 lg:sticky lg:top-24">
                 <PortalTasks tasks={tasks} />
                 <PortalDocuments documents={documents} onUpload={() => setShowUploadModal(true)} />
                 {auditReport && <PortalAuditReportCard auditReport={auditReport} />}
@@ -185,8 +183,8 @@ export default function PortalPage() {
                   onRatingChange={setFeedbackRating} onCommentChange={setFeedbackComment}
                   onSubmit={handleSubmitFeedback}
                 />
-                <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-                  <CardHeader><CardTitle className="font-serif text-xl">Quick Actions</CardTitle></CardHeader>
+                <Card>
+                  <CardHeader><CardTitle className="text-xl">Quick Actions</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <Button asChild variant="outline" className="w-full justify-start">
                       <Link href="/portal/agreement"><FileSignature className="w-4 h-4 mr-2" />Service Agreement</Link>
@@ -204,6 +202,10 @@ export default function PortalPage() {
                     </Button>
                   </CardContent>
                 </Card>
+              </div>
+              <div className="grid gap-6 lg:col-start-1 lg:row-start-2">
+                <PortalDisputes disputes={disputes} disputeStats={disputeStats} />
+                <PortalScoreHistory scoreHistory={scoreHistory} scoreSummary={scoreSummary} />
               </div>
             </div>
           )}

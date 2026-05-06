@@ -41,6 +41,7 @@
     "@anthropic-ai/sdk": "^0.72.1",
     "@aws-sdk/client-s3": "^3.940.0",
     "@aws-sdk/s3-request-presigner": "^3.940.0",
+    "@base-ui/react": "^1.4.1",
     "@calcom/embed-react": "^1.5.3",
     "@google/genai": "^1.40.0",
     "@neondatabase/serverless": "^1.0.2",
@@ -52,6 +53,7 @@
     "@upstash/redis": "^1.36.2",
     "better-auth": "^1.4.3",
     "cheerio": "^1.1.2",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.2",
@@ -64,6 +66,7 @@
     "pdf-parse": "^1.1.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "recharts": "^3.8.0",
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"

@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Users, Zap } from 'lucide-react';
+import { AlertTriangle, Clock, ShieldCheck, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAdminRole } from '@/contexts/AdminContext';
 import { DashboardTabs, type DashboardTab } from '@/components/admin/dashboard/DashboardTabs';
@@ -101,37 +100,45 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-serif font-bold text-foreground"
-          >
-            Credit Repair Command Center
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Monitor cases, track disputes, and manage your credit repair workflow in one command center.
-          </motion.p>
+      <div className="surface-panel rounded-xl p-5 md:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <p className="mb-2 text-sm font-medium text-secondary">Operations console</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              Credit Repair Command Center
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
+              Monitor onboarding blockers, dispute deadlines, compliance exposure, and billing readiness from a single operational surface.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 xl:w-[34rem]">
+            <div className="rounded-lg border border-border bg-muted/35 p-3">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              <p className="mt-2 text-2xl font-semibold">{loading ? '...' : totalAttention}</p>
+              <p className="text-xs text-muted-foreground">Needs attention</p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/35 p-3">
+              <Clock className="h-4 w-4 text-secondary" />
+              <p className="mt-2 text-2xl font-semibold">{loading ? '...' : stats?.attentionNeeded?.responseDueSoon ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Responses due</p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/35 p-3">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              <p className="mt-2 text-2xl font-semibold">{loading ? '...' : stats?.attentionNeeded?.pendingAgreements ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Agreement gates</p>
+            </div>
+          </div>
         </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-3"
-        >
-          <div className="hidden md:flex items-center gap-1 rounded-full bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">
+
+        <div className="mt-5 flex flex-col gap-3 border-t border-border/70 pt-5 md:flex-row md:items-center md:justify-between">
+          <div className="hidden md:flex items-center gap-1 rounded-md bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">
             <span className="px-2">Density</span>
             <button
               type="button"
               onClick={() => handleSetDensity('comfortable')}
               className={
-                `px-2 py-0.5 rounded-full transition-colors ` +
+                `px-2 py-1 rounded transition-colors ` +
                 (isCompact ? 'text-muted-foreground' : 'bg-background text-foreground shadow-sm')
               }
             >
@@ -141,7 +148,7 @@ export default function AdminDashboard() {
               type="button"
               onClick={() => handleSetDensity('compact')}
               className={
-                `px-2 py-0.5 rounded-full transition-colors ` +
+                `px-2 py-1 rounded transition-colors ` +
                 (isCompact ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground')
               }
             >
@@ -162,7 +169,7 @@ export default function AdminDashboard() {
               </Link>
             </Button>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />

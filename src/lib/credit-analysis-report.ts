@@ -323,7 +323,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
     
     :root {
       --primary: #0F172A;
-      --secondary: #C6A87C;
+      --secondary: #C6A96C;
       --secondary-light: #E5D5BC;
       --text-dark: #0F131A;
       --text-light: #64748B;
@@ -418,7 +418,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
       right: 0;
       width: 300px;
       height: 300px;
-      background: radial-gradient(circle, rgba(198, 168, 124, 0.15) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(231, 69, 58, 0.15) 0%, transparent 70%);
       transform: translate(30%, -30%);
     }
     .header-content {
@@ -461,7 +461,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
       display: inline-block;
       padding: 6px 16px;
       background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(198, 168, 124, 0.3);
+      border: 1px solid rgba(231, 69, 58, 0.3);
       border-radius: 100px;
       font-size: 12px;
       font-weight: 600;
@@ -809,7 +809,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
       right: 0;
       width: 200px;
       height: 200px;
-      background: radial-gradient(circle, rgba(198, 168, 124, 0.2) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(231, 69, 58, 0.2) 0%, transparent 70%);
       transform: translate(30%, -30%);
     }
     
@@ -879,7 +879,7 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
       right: 0;
       width: 300px;
       height: 300px;
-      background: radial-gradient(circle, rgba(198, 168, 124, 0.15) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(231, 69, 58, 0.15) 0%, transparent 70%);
       transform: translate(30%, -30%);
     }
     
@@ -970,8 +970,8 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
       <div class="logo-container">
         <svg class="logo-svg" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect width="48" height="48" rx="8" fill="#0F172A"/>
-          <path d="M14 16H34V19H26V34H22V19H14V16Z" fill="#C6A87C"/>
-          <path d="M14 34V31H34V34H14Z" fill="#C6A87C" opacity="0.6"/>
+          <path d="M14 16H34V19H26V34H22V19H14V16Z" fill="#C6A96C"/>
+          <path d="M14 34V31H34V34H14Z" fill="#C6A96C" opacity="0.6"/>
         </svg>
         <div class="company-name">Top Tier</div>
         <div class="company-tagline">Financial Solutions</div>

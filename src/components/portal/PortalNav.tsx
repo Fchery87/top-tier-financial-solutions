@@ -14,7 +14,8 @@ export default function PortalNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1 border-b border-border/60 px-4 md:px-6 overflow-x-auto">
+    <nav className="border-y border-border/70 bg-background/80 px-4 md:px-6">
+      <div className="container mx-auto flex items-center gap-1 overflow-x-auto">
       {tabs.map((tab) => {
         const isActive = pathname === tab.href;
         const Icon = tab.icon;
@@ -33,6 +34,7 @@ export default function PortalNav() {
           </Link>
         );
       })}
+      </div>
     </nav>
   );
 }
