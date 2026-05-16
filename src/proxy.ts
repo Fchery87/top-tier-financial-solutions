@@ -3,9 +3,27 @@ import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
   const response = NextResponse.next();
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Check if this is the audit-report API route (needs to be embedded in iframe)
   const isAuditReportRoute = request.nextUrl.pathname.includes('/audit-report');
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    ...(isDevelopment ? ["'unsafe-eval'"] : []),
+    'https://www.googletagmanager.com',
+    'https://www.google-analytics.com',
+    'https://plausible.io',
+    'https://app.cal.com',
+  ].join(' ');
+  const connectSrc = [
+    "'self'",
+    ...(isDevelopment ? ['ws:', 'http://localhost:*', 'http://127.0.0.1:*'] : []),
+    'https://www.google-analytics.com',
+    'https://plausible.io',
+    'https://api.cal.com',
+    'https://*.cal.com',
+  ].join(' ');
 
   // Security Headers
   const securityHeaders = {
@@ -24,11 +42,11 @@ export function proxy(request: NextRequest) {
     // Content Security Policy
     'Content-Security-Policy': [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://plausible.io https://app.cal.com",
+      `script-src ${scriptSrc}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://www.google-analytics.com https://plausible.io https://api.cal.com https://*.cal.com",
+      `connect-src ${connectSrc}`,
       "frame-src 'self' https://app.cal.com https://*.cal.com",
       // Allow same-origin framing for audit report, deny for everything else
       isAuditReportRoute ? "frame-ancestors 'self'" : "frame-ancestors 'none'",

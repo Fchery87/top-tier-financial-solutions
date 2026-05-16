@@ -9,6 +9,12 @@ describe('Button component', () => {
     expect(button).toBeInTheDocument();
   });
 
+  it('defaults to a non-submit button type', () => {
+    render(<Button>Click me</Button>);
+    const button = screen.getByRole('button', { name: /click me/i });
+    expect(button).toHaveAttribute('type', 'button');
+  });
+
   it('applies primary variant by default', () => {
     render(<Button>Primary</Button>);
     const button = screen.getByRole('button');

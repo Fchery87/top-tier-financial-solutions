@@ -48,6 +48,8 @@ interface Client {
   email: string;
 }
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
 export default function MessagesPage() {
   const [threads, setThreads] = React.useState<MessageThread[]>([]);
   const [selectedThread, setSelectedThread] = React.useState<MessageThread | null>(null);
@@ -75,8 +77,8 @@ export default function MessagesPage() {
       const response = await fetch('/api/admin/messages?limit=100');
       if (response.ok) {
         const data = await response.json();
-        setThreads(data.items);
-        setTotalUnread(data.total_unread);
+        setThreads(asArray<MessageThread>(data.items));
+        setTotalUnread(Number(data.total_unread ?? 0));
       }
     } catch (error) {
       console.error('Error fetching threads:', error);
@@ -91,7 +93,7 @@ export default function MessagesPage() {
       const response = await fetch(`/api/admin/messages?thread_id=${threadId}`);
       if (response.ok) {
         const data = await response.json();
-        setThreadMessages(data.messages);
+        setThreadMessages(asArray<Message>(data.messages));
         // Refresh threads to update unread counts
         fetchThreads();
       }
@@ -108,7 +110,7 @@ export default function MessagesPage() {
       const response = await fetch(`/api/admin/clients?search=${encodeURIComponent(search)}&limit=10`);
       if (response.ok) {
         const data = await response.json();
-        setClients(data.items);
+        setClients(asArray<Client>(data.items));
       }
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -129,7 +131,7 @@ export default function MessagesPage() {
   }, [selectedThread]);
 
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
   }, [threadMessages]);
 
   React.useEffect(() => {
@@ -219,6 +221,10 @@ export default function MessagesPage() {
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));

@@ -34,6 +34,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <Comp
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         ref={ref}
+        type={asChild ? undefined : (props.type ?? 'button')}
         {...props}
       />
     );
