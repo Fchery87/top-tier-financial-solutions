@@ -125,7 +125,7 @@ export default function PortalPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="text-center">
-            <CardTitle className="font-sans text-2xl">Client Portal</CardTitle>
+            <CardTitle className="font-display text-2xl">Client Portal</CardTitle>
             <CardDescription>Please sign in to access your client portal.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -154,7 +154,7 @@ export default function PortalPage() {
                 <div className="w-16 h-16 rounded-lg bg-accent flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-8 h-8 text-secondary" />
                 </div>
-                <h2 className="text-2xl font-sans font-bold mb-4 text-foreground">No Active Cases</h2>
+                <h2 className="text-3xl font-display font-light mb-4 text-foreground">No Active Cases</h2>
                 <p className="text-muted-foreground mb-8">
                   You don&apos;t have any active credit repair cases yet. Book a free consultation to get started on your credit repair journey.
                 </p>

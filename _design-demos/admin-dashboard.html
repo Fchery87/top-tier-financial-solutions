@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin Dashboard — Quiet Wealth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#F4F1EC; --canvas:#F1EDE6; --card:#FBFAF7; --ink:#14110F; --ink-2:#3A352F;
+    --muted:#6B645C; --faint:#938B80; --border:#E4DED4; --border-2:#EBE6DC;
+    --champ:#8F7440; --champ-lt:#C6A96C; --champ-dk:#6E5A30; --champ-wash:#ECE3D2;
+    --graphite:#100E0C; --graphite-2:#17130F; --off:#EDE8DF; --off-d:#B8B0A4;
+    --green:#2F6B4F; --green-wash:#E2EBE4; --amber:#B5832B; --brick:#A23A33;
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  body{font-family:var(--sans);background:var(--canvas);color:var(--ink);display:flex;min-height:100vh}
+  svg{display:block}
+  .icn{width:18px;height:18px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .icn-sm{width:15px;height:15px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ===== SIDEBAR ===== */
+  aside{width:266px;flex:none;background:var(--graphite);color:var(--off);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid rgba(255,255,255,.06)}
+  .brand{height:74px;display:flex;align-items:center;gap:12px;padding:0 22px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .brand .name{font-family:var(--serif);font-weight:500;font-size:18px;letter-spacing:.01em;color:var(--off)}
+  .brand .tag{font-family:var(--mono);font-size:7.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--champ-lt);margin-top:3px}
+  nav{flex:1;overflow:auto;padding:18px 14px}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:9px;color:var(--off-d);font-size:13.5px;font-weight:450;cursor:pointer;position:relative;margin-bottom:2px}
+  .nav-item:hover{background:rgba(255,255,255,.05);color:var(--off)}
+  .nav-item.active{color:var(--ink);background:linear-gradient(90deg,var(--champ-lt),#d8bd84)}
+  .nav-item.active .icn{stroke-width:1.9}
+  .sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);padding:18px 12px 8px;display:flex;align-items:center;gap:8px}
+  .sec .icn-sm{width:13px;height:13px;opacity:.7}
+  .nav-sub{display:flex;align-items:center;gap:12px;padding:8px 12px 8px 14px;border-radius:9px;color:var(--off-d);font-size:13px;cursor:pointer;margin-bottom:1px}
+  .nav-sub:hover{background:rgba(255,255,255,.05);color:var(--off)}
+  .nav-sub .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45;flex:none}
+  .side-foot{padding:14px;border-top:1px solid rgba(255,255,255,.07)}
+  .user{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04)}
+  .user .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--champ-lt),var(--champ-dk));display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:14px;color:#1a1714;font-weight:600;flex:none}
+  .user .nm{font-size:12.5px;font-weight:500;color:var(--off)} .user .rl{font-size:10.5px;color:var(--faint);font-family:var(--mono);letter-spacing:.05em}
+
+  /* ===== MAIN ===== */
+  main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{height:74px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 36px;border-bottom:1px solid var(--border);background:var(--ivory)}
+  .crumb{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--muted)}
+  .crumb .cur{color:var(--ink);font-weight:500}
+  .crumb .sl{color:var(--faint)}
+  .top-actions{display:flex;align-items:center;gap:14px}
+  .search{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 14px;width:280px;color:var(--faint);font-size:13px}
+  .search .icn-sm{color:var(--faint)}
+  .kbd{margin-left:auto;font-family:var(--mono);font-size:10px;border:1px solid var(--border);border-radius:5px;padding:2px 6px;color:var(--faint)}
+  .ic-btn{width:38px;height:38px;border:1px solid var(--border);border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;color:var(--ink-2);position:relative}
+  .ic-btn .badge{position:absolute;top:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--champ);border:2px solid var(--ivory)}
+
+  .scroll{flex:1;overflow:auto;padding:32px 36px 56px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--champ-dk);font-weight:500}
+
+  /* HERO */
+  .hero{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:30px 34px;display:flex;gap:38px;justify-content:space-between;flex-wrap:wrap}
+  .hero h1{font-family:var(--serif);font-weight:300;font-size:38px;letter-spacing:-.02em;margin:12px 0 12px;line-height:1.05;font-optical-sizing:auto}
+  .hero h1 em{font-style:italic;color:var(--champ-dk);font-weight:400}
+  .hero p{color:var(--muted);font-size:14.5px;line-height:1.6;max-width:520px}
+  .attn{display:flex;gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;align-self:flex-start;background:var(--ivory)}
+  .attn .t{padding:18px 26px;text-align:left;border-right:1px solid var(--border)}
+  .attn .t:last-child{border-right:0}
+  .attn .lab{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:8px;white-space:nowrap}
+  .attn .num{font-family:var(--serif);font-weight:400;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+  .attn .num.warn{color:var(--amber)} .attn .num.ok{color:var(--green)}
+  .hero-foot{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:26px;padding-top:22px;border-top:1px solid var(--border);flex-wrap:wrap;gap:16px}
+  .tabs{display:flex;gap:4px}
+  .tab{padding:9px 16px;font-size:13.5px;color:var(--muted);border-radius:9px;cursor:pointer;position:relative}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink);font-weight:500}
+  .tab.active::after{content:"";position:absolute;left:16px;right:16px;bottom:-23px;height:2px;background:var(--champ)}
+  .btns{display:flex;gap:10px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;font-size:13.5px;font-weight:500;cursor:pointer;border:1px solid transparent}
+  .btn-pri{background:var(--ink);color:var(--off)}
+  .btn-pri .icn-sm{color:var(--champ-lt)}
+  .btn-out{background:transparent;border-color:var(--border);color:var(--ink)}
+
+  /* METRICS */
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:22px}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:18px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 24px}
+  .metric .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .metric . chip{}
+  .m-ic{width:34px;height:34px;border-radius:9px;background:var(--ivory);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+  .delta{font-family:var(--mono);font-size:11px;display:flex;align-items:center;gap:3px;font-weight:500}
+  .delta.up{color:var(--green)} .delta.flat{color:var(--faint)}
+  .metric .val{font-family:var(--serif);font-weight:300;font-size:42px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .metric .lab{font-size:12.5px;color:var(--muted);margin-top:9px;letter-spacing:.01em}
+
+  .wide{display:flex;align-items:center;justify-content:space-between;gap:24px}
+  .wide .lab{font-size:12.5px;color:var(--muted)}
+  .wide .val{font-family:var(--serif);font-weight:300;font-size:46px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:6px}
+  .wide .val small{font-size:20px;color:var(--muted)}
+  .spark{display:flex;align-items:flex-end;gap:5px;height:54px}
+  .spark span{width:8px;background:var(--champ-wash);border-radius:3px}
+  .spark span.hi{background:var(--champ)}
+  .bar{width:170px;height:8px;border-radius:6px;background:var(--ivory);border:1px solid var(--border);overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--champ))}
+  .scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:7px;width:170px}
+
+  /* BOTTOM GRID */
+  .grid-b{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:18px}
+  .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .card-h h3{font-family:var(--serif);font-weight:500;font-size:18px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+  .pill{font-family:var(--mono);font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;background:var(--champ-wash);color:var(--champ-dk)}
+  .card-h .more{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:5px;cursor:pointer}
+  .work{margin-top:14px}
+  .wrow{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-radius:11px;cursor:pointer;border:1px solid transparent}
+  .wrow:hover{background:var(--ivory)}
+  .wrow+.wrow{margin-top:4px}
+  .wrow.crit{border-color:rgba(162,58,51,.25);background:rgba(162,58,51,.04)}
+  .wl{display:flex;align-items:center;gap:14px}
+  .w-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--ivory);border:1px solid var(--border);color:var(--ink-2)}
+  .w-ic.amber{color:var(--amber)} .w-ic.green{color:var(--green)} .w-ic.brick{color:var(--brick);background:rgba(162,58,51,.07);border-color:rgba(162,58,51,.2)}
+  .wt{font-size:13.5px;font-weight:500} .wd{font-size:12px;color:var(--muted);margin-top:2px}
+  .wr{display:flex;align-items:center;gap:14px}
+  .wn{font-family:var(--serif);font-size:24px;font-weight:400;font-variant-numeric:tabular-nums}
+  .wn.brick{color:var(--brick)}
+  .wr .icn-sm{color:var(--faint)}
+
+  /* CALENDAR + ACTIVITY */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px}
+  .cal .dh{font-family:var(--mono);font-size:9.5px;text-align:center;color:var(--faint);padding-bottom:4px}
+  .cal .d{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-2);border-radius:8px;position:relative}
+  .cal .d.mut{color:var(--faint)}
+  .cal .d.today{background:var(--ink);color:var(--off);font-weight:600}
+  .cal .d.due::after{content:"";position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:var(--champ)}
+  .cal .d.crit::after{background:var(--brick)}
+  .act{margin-top:8px}
+  .arow{display:flex;align-items:flex-start;gap:12px;padding:11px 8px;border-radius:9px}
+  .arow:hover{background:var(--ivory)}
+  .a-ic{width:30px;height:30px;border-radius:8px;background:var(--ivory);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--ink-2);flex:none;margin-top:1px}
+  .an{font-size:13px;font-weight:500} .ad{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .ad em{font-style:normal;color:var(--champ-dk)}
+  .at{font-family:var(--mono);font-size:10.5px;color:var(--faint);white-space:nowrap;margin-left:auto}
+  .mt28{margin-top:18px}
+  .watermark{position:fixed;bottom:14px;right:18px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:rgba(20,17,15,.32);pointer-events:none}
+</style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="brand">
+      <svg width="38" height="38" viewBox="0 0 96 96">
+        <defs>
+          <linearGradient id="lg" x1="20" y1="80" x2="76" y2="16" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#C6A96C"/><stop offset="1" stop-color="#8F7440"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="92" height="92" rx="24" fill="#1B1714" stroke="rgba(198,169,108,.28)"/>
+        <rect x="26" y="52" width="13" height="22" rx="3" fill="#EDE8DF" opacity=".82"/>
+        <rect x="42" y="40" width="13" height="34" rx="3" fill="#EDE8DF" opacity=".82"/>
+        <rect x="58" y="22" width="13" height="52" rx="3" fill="url(#lg)"/>
+        <circle cx="64.5" cy="17" r="4.5" fill="url(#lg)"/>
+      </svg>
+      <div><div class="name">Top&nbsp;Tier</div><div class="tag">Admin Console</div></div>
+    </div>
+
+    <nav>
+      <div class="nav-item active">
+        <svg class="icn" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Dashboard
+      </div>
+
+      <div class="sec"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M4 4h6l2 3h8v12H4z"/></svg> Case Management</div>
+      <div class="nav-sub"><span class="dot"></span> Clients</div>
+      <div class="nav-sub"><span class="dot"></span> Agreements</div>
+      <div class="nav-sub"><span class="dot"></span> Messages</div>
+      <div class="nav-sub"><span class="dot"></span> Billing</div>
+
+      <div class="sec"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M12 3v18M5 7l14 0M7 7l-3 7h6zM17 7l3 7h-6z"/></svg> Disputes</div>
+      <div class="nav-sub"><span class="dot"></span> All Disputes</div>
+      <div class="nav-sub"><span class="dot"></span> Results &amp; Wins</div>
+      <div class="nav-sub"><span class="dot"></span> Dispute Wizard</div>
+      <div class="nav-sub"><span class="dot"></span> Letter Templates</div>
+      <div class="nav-sub"><span class="dot"></span> Compliance</div>
+
+      <div class="sec"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Operations</div>
+      <div class="nav-sub"><span class="dot"></span> Tasks</div>
+      <div class="nav-sub"><span class="dot"></span> Contact Leads</div>
+      <div class="nav-sub"><span class="dot"></span> Bookings</div>
+    </nav>
+
+    <div class="side-foot">
+      <div class="user">
+        <div class="av">M</div>
+        <div><div class="nm">Marcus Hale</div><div class="rl">SUPER ADMIN</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <div class="topbar">
+      <div class="crumb"><span>Admin</span><span class="sl">/</span><span class="cur">Dashboard</span></div>
+      <div class="top-actions">
+        <div class="search">
+          <svg class="icn-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          Search clients, disputes, tasks…
+          <span class="kbd">⌘K</span>
+        </div>
+        <div class="ic-btn"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span class="badge"></span></div>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <!-- HERO -->
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Operations Console</div>
+          <h1>Credit Repair <em>Command Center</em></h1>
+          <p>Monitor onboarding blockers, dispute deadlines, compliance exposure, and billing readiness from a single operational surface.</p>
+        </div>
+        <div class="attn">
+          <div class="t"><div class="lab"><svg class="icn-sm" style="color:var(--amber)" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Needs attention</div><div class="num warn">7</div></div>
+          <div class="t"><div class="lab"><svg class="icn-sm" style="color:var(--champ-dk)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Responses due</div><div class="num">3</div></div>
+          <div class="t"><div class="lab"><svg class="icn-sm" style="color:var(--green)" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.6 8.9a1 1 0 01-.8 0C6.5 19.5 3 17 3 12V6l9-3 9 3z"/></svg>Agreement gates</div><div class="num ok">2</div></div>
+        </div>
+
+        <div class="hero-foot">
+          <div class="tabs">
+            <div class="tab active">Overview</div>
+            <div class="tab">Pipeline</div>
+            <div class="tab">Analytics</div>
+            <div class="tab">Operations</div>
+          </div>
+          <div class="btns">
+            <div class="btn btn-pri"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>New Dispute</div>
+            <div class="btn btn-out"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.9"/></svg>View Clients</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- METRICS -->
+      <section class="grid4">
+        <div class="card metric">
+          <div class="top">
+            <div class="m-ic"><svg class="icn" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+            <span class="delta up">▲ 6</span>
+          </div>
+          <div class="val">48</div><div class="lab">Active Clients</div>
+        </div>
+        <div class="card metric">
+          <div class="top">
+            <div class="m-ic"><svg class="icn" viewBox="0 0 24 24"><path d="M12 3v18M7 7l-3 7h6zM17 7l3 7h-6z"/></svg></div>
+            <span class="delta flat">— 0</span>
+          </div>
+          <div class="val">23</div><div class="lab">Open Disputes</div>
+        </div>
+        <div class="card metric">
+          <div class="top">
+            <div class="m-ic"><svg class="icn" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg></div>
+            <span class="delta up">▲ 14</span>
+          </div>
+          <div class="val">312</div><div class="lab">Negative Tradelines</div>
+        </div>
+        <div class="card metric">
+          <div class="top">
+            <div class="m-ic" style="color:var(--green)"><svg class="icn" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg></div>
+            <span class="delta up">▲ 18</span>
+          </div>
+          <div class="val">67</div><div class="lab">Items Removed · 30d</div>
+        </div>
+      </section>
+
+      <section class="grid2">
+        <div class="card wide">
+          <div>
+            <div class="lab">Average Credit Score</div>
+            <div class="val">648 <small>· +22 pts</small></div>
+            <div class="scale" style="margin-top:14px"><span>300</span><span>Fair</span><span>850</span></div>
+          </div>
+          <div class="spark">
+            <span style="height:38%"></span><span style="height:44%"></span><span style="height:40%"></span>
+            <span style="height:52%"></span><span style="height:58%"></span><span style="height:54%"></span>
+            <span style="height:66%"></span><span style="height:74%"></span><span class="hi" style="height:88%"></span>
+          </div>
+        </div>
+        <div class="card wide">
+          <div>
+            <div class="lab">Dispute Success Rate</div>
+            <div class="val">71<small>%</small></div>
+            <div class="bar"><i style="width:71%"></i></div>
+            <div class="scale"><span>TU 74%</span><span>EX 69%</span><span>EQ 70%</span></div>
+          </div>
+          <div class="spark">
+            <span style="height:50%"></span><span style="height:46%"></span><span style="height:60%"></span>
+            <span style="height:56%"></span><span style="height:64%"></span><span style="height:70%"></span>
+            <span class="hi" style="height:82%"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- BOTTOM -->
+      <section class="grid-b">
+        <div class="card">
+          <div class="card-h">
+            <h3><svg class="icn" style="color:var(--amber)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>Today's Work <span class="pill">7 open</span></h3>
+            <div class="more">All tasks <svg class="icn-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+          <div class="work">
+            <div class="wrow">
+              <div class="wl"><div class="w-ic amber"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+                <div><div class="wt">Reports to Analyze</div><div class="wd">Credit reports pending analysis</div></div></div>
+              <div class="wr"><span class="wn">3</span><svg class="icn-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+            </div>
+            <div class="wrow">
+              <div class="wl"><div class="w-ic"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></div>
+                <div><div class="wt">Pending Agreements</div><div class="wd">Awaiting client signature</div></div></div>
+              <div class="wr"><span class="wn">2</span><svg class="icn-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+            </div>
+            <div class="wrow">
+              <div class="wl"><div class="w-ic"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+                <div><div class="wt">Overdue Tasks</div><div class="wd">Tasks past due date</div></div></div>
+              <div class="wr"><span class="wn">1</span><svg class="icn-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+            </div>
+            <div class="wrow">
+              <div class="wl"><div class="w-ic"><svg class="icn-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                <div><div class="wt">Response Due Soon</div><div class="wd">Bureau responses due within 7 days</div></div></div>
+              <div class="wr"><span class="wn">3</span><svg class="icn-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+            </div>
+            <div class="wrow crit">
+              <div class="wl"><div class="w-ic brick"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg></div>
+                <div><div class="wt" style="color:var(--brick)">Overdue Responses</div><div class="wd">Bureaus past 30-day deadline</div></div></div>
+              <div class="wr"><span class="wn brick">1</span><svg class="icn-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-h"><h3 style="font-size:16px">May 2026</h3><div class="more"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><svg class="icn-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div></div>
+            <div class="cal">
+              <div class="dh">S</div><div class="dh">M</div><div class="dh">T</div><div class="dh">W</div><div class="dh">T</div><div class="dh">F</div><div class="dh">S</div>
+              <div class="d mut">27</div><div class="d mut">28</div><div class="d mut">29</div><div class="d mut">30</div><div class="d">1</div><div class="d">2</div><div class="d">3</div>
+              <div class="d">4</div><div class="d">5</div><div class="d due">6</div><div class="d">7</div><div class="d">8</div><div class="d due">9</div><div class="d">10</div>
+              <div class="d">11</div><div class="d">12</div><div class="d crit">13</div><div class="d">14</div><div class="d">15</div><div class="d">16</div><div class="d">17</div>
+              <div class="d">18</div><div class="d">19</div><div class="d">20</div><div class="d">21</div><div class="d">22</div><div class="d">23</div><div class="d">24</div>
+              <div class="d">25</div><div class="d today">26</div><div class="d due">27</div><div class="d">28</div><div class="d">29</div><div class="d">30</div><div class="d">31</div>
+            </div>
+          </div>
+
+          <div class="card mt28">
+            <div class="card-h"><h3 style="font-size:16px"><svg class="icn" style="color:var(--champ)" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Recent Activity</h3></div>
+            <div class="act">
+              <div class="arow">
+                <div class="a-ic"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M12 3v18M7 7l-3 7h6zM17 7l3 7h-6z"/></svg></div>
+                <div><div class="an">Daniela Cruz</div><div class="ad">Round 2 dispute filed · <em>Experian</em></div></div><span class="at">12m</span>
+              </div>
+              <div class="arow">
+                <div class="a-ic"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+                <div><div class="an">Wesley Okonkwo</div><div class="ad">Credit report analyzed · <em>9 items</em></div></div><span class="at">48m</span>
+              </div>
+              <div class="arow">
+                <div class="a-ic" style="color:var(--green)"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+                <div><div class="an">Priya Raman</div><div class="ad">Item deleted · <em>TransUnion</em></div></div><span class="at">2h</span>
+              </div>
+              <div class="arow">
+                <div class="a-ic"><svg class="icn-sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></div>
+                <div><div class="an">Theo Marsh</div><div class="ad">Agreement signed · onboarding complete</div></div><span class="at">5h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div class="watermark">QUIET WEALTH · DEMO</div>
+</body>
+</html>

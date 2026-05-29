@@ -35,28 +35,28 @@ interface CalendarData {
 }
 
 const TYPE_CONFIG = {
-  deadline: { 
-    icon: Clock, 
-    color: 'text-red-500', 
-    bgColor: 'bg-red-500/10',
+  deadline: {
+    icon: Clock,
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
     label: 'Response Deadline'
   },
-  task: { 
-    icon: ListTodo, 
-    color: 'text-orange-500', 
-    bgColor: 'bg-orange-500/10',
+  task: {
+    icon: ListTodo,
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
     label: 'Task'
   },
-  agreement: { 
-    icon: FileSignature, 
-    color: 'text-blue-500', 
-    bgColor: 'bg-blue-500/10',
+  agreement: {
+    icon: FileSignature,
+    color: 'text-secondary',
+    bgColor: 'bg-secondary/10',
     label: 'Agreement'
   },
-  followup: { 
-    icon: Calendar, 
-    color: 'text-purple-500', 
-    bgColor: 'bg-purple-500/10',
+  followup: {
+    icon: Calendar,
+    color: 'text-secondary',
+    bgColor: 'bg-secondary/10',
     label: 'Follow-up'
   },
 };
@@ -136,7 +136,7 @@ export function CalendarWidget() {
             </CardDescription>
           </div>
           {hasOverdue && (
-            <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-500/10 text-red-500 flex items-center gap-1">
+            <span className="px-2 py-1 text-xs font-medium rounded-full bg-destructive/10 text-destructive flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
               {data?.counts.overdue} overdue
             </span>
@@ -146,16 +146,16 @@ export function CalendarWidget() {
       <CardContent>
         {/* Quick stats */}
         <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="text-center p-2 rounded-lg bg-red-500/10">
-            <p className="text-lg font-bold text-red-500">{data?.counts.deadlines || 0}</p>
+          <div className="text-center p-2 rounded-lg bg-destructive/10">
+            <p className="text-lg font-bold text-destructive">{data?.counts.deadlines || 0}</p>
             <p className="text-[10px] text-muted-foreground">Deadlines</p>
           </div>
-          <div className="text-center p-2 rounded-lg bg-orange-500/10">
-            <p className="text-lg font-bold text-orange-500">{data?.counts.tasks || 0}</p>
+          <div className="text-center p-2 rounded-lg bg-warning/10">
+            <p className="text-lg font-bold text-warning">{data?.counts.tasks || 0}</p>
             <p className="text-[10px] text-muted-foreground">Tasks</p>
           </div>
-          <div className="text-center p-2 rounded-lg bg-blue-500/10">
-            <p className="text-lg font-bold text-blue-500">{data?.counts.agreements || 0}</p>
+          <div className="text-center p-2 rounded-lg bg-secondary/10">
+            <p className="text-lg font-bold text-secondary">{data?.counts.agreements || 0}</p>
             <p className="text-[10px] text-muted-foreground">Agreements</p>
           </div>
         </div>
@@ -177,7 +177,7 @@ export function CalendarWidget() {
                 {event.clientId ? (
                   <Link
                     href={`/admin/clients/${event.clientId}`}
-                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group ${isPast ? 'bg-red-500/5' : ''}`}
+                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group ${isPast ? 'bg-destructive/5' : ''}`}
                   >
                     <div className={`p-1.5 rounded-md ${config.bgColor}`}>
                       <Icon className={`w-3.5 h-3.5 ${config.color}`} />
@@ -189,21 +189,21 @@ export function CalendarWidget() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className={`text-xs ${isPast ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                      <span className={`text-xs ${isPast ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                         {formatDate(event.date)}
                       </span>
                       <ChevronRight className="w-3 h-3 text-muted-foreground/50 group-hover:text-secondary" />
                     </div>
                   </Link>
                 ) : (
-                  <div className={`flex items-center gap-3 p-2 rounded-lg ${isPast ? 'bg-red-500/5' : ''}`}>
+                  <div className={`flex items-center gap-3 p-2 rounded-lg ${isPast ? 'bg-destructive/5' : ''}`}>
                     <div className={`p-1.5 rounded-md ${config.bgColor}`}>
                       <Icon className={`w-3.5 h-3.5 ${config.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{event.title}</p>
                     </div>
-                    <span className={`text-xs ${isPast ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs ${isPast ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                       {formatDate(event.date)}
                     </span>
                   </div>

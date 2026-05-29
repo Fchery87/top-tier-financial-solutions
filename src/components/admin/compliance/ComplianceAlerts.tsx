@@ -22,19 +22,19 @@ interface ComplianceAlertsProps {
 
 function getAlertIcon(type: string) {
   switch (type) {
-    case 'error': return <XCircle className="w-5 h-5 text-red-500" />;
-    case 'warning': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-    case 'info': return <Clock className="w-5 h-5 text-blue-500" />;
-    default: return <CheckCircle className="w-5 h-5 text-green-500" />;
+    case 'error': return <XCircle className="w-5 h-5 text-destructive" />;
+    case 'warning': return <AlertTriangle className="w-5 h-5 text-warning" />;
+    case 'info': return <Clock className="w-5 h-5 text-secondary" />;
+    default: return <CheckCircle className="w-5 h-5 text-success" />;
   }
 }
 
 function getAlertBg(type: string) {
   switch (type) {
-    case 'error': return 'bg-red-500/5 border-red-500/20';
-    case 'warning': return 'bg-amber-500/5 border-amber-500/20';
-    case 'info': return 'bg-blue-500/5 border-blue-500/20';
-    default: return 'bg-green-500/5 border-green-500/20';
+    case 'error': return 'bg-destructive/5 border-destructive/20';
+    case 'warning': return 'bg-warning/5 border-warning/20';
+    case 'info': return 'bg-secondary/5 border-secondary/20';
+    default: return 'bg-success/5 border-success/20';
   }
 }
 
@@ -46,9 +46,9 @@ export function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
       >
-        <Card className="bg-green-500/5 border-green-500/20">
+        <Card className="bg-success/5 border-success/20">
           <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-green-500" />
+            <CheckCircle className="w-5 h-5 text-success" />
             <p className="text-sm">No compliance issues detected. Keep up the good work!</p>
           </CardContent>
         </Card>

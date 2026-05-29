@@ -84,7 +84,7 @@ export function DisputesTab({
           <Card className="bg-card border border-border">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
+                <AlertTriangle className="w-5 h-5 text-destructive" />
                 Negative Items
               </CardTitle>
               <CardDescription>{negativeItems.length} item(s) affecting credit</CardDescription>

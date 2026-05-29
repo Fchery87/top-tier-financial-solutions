@@ -131,7 +131,7 @@ export default function ServicesPage() {
       header: 'Service Name',
       render: (item: Service) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-accent text-secondary">
             <Briefcase className="w-5 h-5 text-secondary" />
           </div>
           <div>
@@ -185,12 +185,12 @@ export default function ServicesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="surface-panel flex flex-col gap-4 rounded-lg p-5 md:flex-row md:items-center md:justify-between">
         <div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
+            className="font-display text-3xl font-medium tracking-[-0.04em] text-foreground"
           >
             Services
           </motion.h1>
@@ -198,9 +198,9 @@ export default function ServicesPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
+            className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground"
           >
-            Manage services displayed on the website
+            Keep public service offerings aligned with the quieter premium brand language.
           </motion.p>
         </div>
         <motion.div
@@ -224,9 +224,9 @@ export default function ServicesPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="bg-card border border-border">
+        <Card className="surface-panel rounded-lg">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-secondary/10">
+            <div className="rounded-md bg-accent p-3">
               <Briefcase className="w-6 h-6 text-secondary" />
             </div>
             <div>
@@ -267,7 +267,7 @@ export default function ServicesPage() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-lg"
           >
-            <Card className="bg-card border-border shadow-2xl">
+            <Card className="surface-panel rounded-lg shadow-xl">
               <CardHeader>
                 <CardTitle>{editingService ? 'Edit Service' : 'Add Service'}</CardTitle>
                 <CardDescription>

@@ -220,8 +220,8 @@ export default function TasksPage() {
           className={`px-2 py-1 rounded-full text-xs font-medium ${
             item.visible_to_client
               ? item.is_blocking
-                ? 'bg-red-500/10 text-red-500'
-                : 'bg-green-500/10 text-green-500'
+                ? 'bg-destructive/10 text-destructive'
+                : 'bg-success/10 text-success'
               : 'bg-muted text-muted-foreground'
           }`}
         >
@@ -240,9 +240,9 @@ export default function TasksPage() {
       render: (item: Task) => (
         <div className="flex items-center gap-1">
           {isOverdue(item.due_date, item.status) && (
-            <AlertCircle className="w-4 h-4 text-red-500" />
+            <AlertCircle className="w-4 h-4 text-destructive" />
           )}
-          <span className={`text-sm ${isOverdue(item.due_date, item.status) ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+          <span className={`text-sm ${isOverdue(item.due_date, item.status) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
             {formatDate(item.due_date)}
           </span>
         </div>

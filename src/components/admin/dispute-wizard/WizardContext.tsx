@@ -926,18 +926,18 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     return (
       <>
         {errors.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <div className="bg-destructive/10 border border-destructive/25 rounded-lg p-4 mb-4">
             <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1"><h3 className="font-semibold text-red-900 mb-2">Validation Errors</h3><ul className="space-y-1">{errors.map((error, idx) => <li key={idx} className="text-red-800 text-sm">• {error}</li>)}</ul></div>
+              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+              <div className="flex-1"><h3 className="font-semibold text-destructive mb-2">Validation Errors</h3><ul className="space-y-1">{errors.map((error, idx) => <li key={idx} className="text-destructive text-sm">• {error}</li>)}</ul></div>
             </div>
           </div>
         )}
         {warnings.length > 0 && errors.length === 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+          <div className="bg-warning/10 border border-warning/25 rounded-lg p-4 mb-4">
             <div className="flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1"><h3 className="font-semibold text-yellow-900 mb-2">Warnings</h3><ul className="space-y-1">{warnings.map((warning, idx) => <li key={idx} className="text-yellow-800 text-sm">• {warning}</li>)}</ul></div>
+              <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+              <div className="flex-1"><h3 className="font-semibold text-warning mb-2">Warnings</h3><ul className="space-y-1">{warnings.map((warning, idx) => <li key={idx} className="text-warning text-sm">• {warning}</li>)}</ul></div>
             </div>
           </div>
         )}

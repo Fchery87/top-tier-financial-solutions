@@ -86,7 +86,7 @@ export default async function FAQPage() {
             </div>
           </SlideUp>
           <SlideUp delay={0.2}>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold mb-8 text-white leading-[1.1]">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-8 text-white leading-[1.1]">
               Still Have <span className="text-secondary">Questions</span>?
             </h2>
           </SlideUp>

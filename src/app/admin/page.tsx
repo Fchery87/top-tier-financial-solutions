@@ -103,11 +103,11 @@ export default function AdminDashboard() {
       <div className="surface-panel rounded-xl p-5 md:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <p className="mb-2 text-sm font-medium text-secondary">Operations console</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.28em] text-secondary">Operations Console</p>
+            <h1 className="font-display text-4xl font-light tracking-tight text-foreground md:text-[2.75rem]">
               Credit Repair Command Center
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
               Monitor onboarding blockers, dispute deadlines, compliance exposure, and billing readiness from a single operational surface.
             </p>
           </div>
@@ -115,17 +115,17 @@ export default function AdminDashboard() {
           <div className="grid gap-3 sm:grid-cols-3 xl:w-[34rem]">
             <div className="rounded-lg border border-border bg-muted/35 p-3">
               <AlertTriangle className="h-4 w-4 text-warning" />
-              <p className="mt-2 text-2xl font-semibold">{loading ? '...' : totalAttention}</p>
+              <p className="mt-2 font-display text-3xl font-light tabular-nums">{loading ? '...' :totalAttention}</p>
               <p className="text-xs text-muted-foreground">Needs attention</p>
             </div>
             <div className="rounded-lg border border-border bg-muted/35 p-3">
               <Clock className="h-4 w-4 text-secondary" />
-              <p className="mt-2 text-2xl font-semibold">{loading ? '...' : stats?.attentionNeeded?.responseDueSoon ?? 0}</p>
+              <p className="mt-2 font-display text-3xl font-light tabular-nums">{loading ? '...' :stats?.attentionNeeded?.responseDueSoon ?? 0}</p>
               <p className="text-xs text-muted-foreground">Responses due</p>
             </div>
             <div className="rounded-lg border border-border bg-muted/35 p-3">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              <p className="mt-2 text-2xl font-semibold">{loading ? '...' : stats?.attentionNeeded?.pendingAgreements ?? 0}</p>
+              <ShieldCheck className="h-4 w-4 text-success" />
+              <p className="mt-2 font-display text-3xl font-light tabular-nums">{loading ? '...' :stats?.attentionNeeded?.pendingAgreements ?? 0}</p>
               <p className="text-xs text-muted-foreground">Agreement gates</p>
             </div>
           </div>

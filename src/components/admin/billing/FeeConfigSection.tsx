@@ -116,8 +116,8 @@ export function FeeConfigSection({ feeConfigs, loading, onConfigChanged }: FeeCo
       header: 'Plan Name',
       render: (item: FeeConfig) => (
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-green-500/10">
-            <CreditCard className="w-4 h-4 text-green-500" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-muted/60">
+            <CreditCard className="w-4 h-4 text-muted-foreground" />
           </div>
           <div>
             <p className="font-medium">{item.name}</p>

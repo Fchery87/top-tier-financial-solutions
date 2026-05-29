@@ -141,8 +141,8 @@ export default function FAQsPage() {
       header: 'Question',
       render: (item: FAQ) => (
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-purple-500/10 mt-0.5">
-            <HelpCircle className="w-4 h-4 text-purple-500" />
+          <div className="p-2 rounded-lg bg-secondary/10 mt-0.5">
+            <HelpCircle className="w-4 h-4 text-secondary" />
           </div>
           <div>
             <p className="font-medium">{item.question}</p>
@@ -258,8 +258,8 @@ export default function FAQsPage() {
       >
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-purple-500/10">
-              <HelpCircle className="w-6 h-6 text-purple-500" />
+            <div className="p-3 rounded-xl bg-secondary/10">
+              <HelpCircle className="w-6 h-6 text-secondary" />
             </div>
             <div>
               <p className="text-2xl font-bold">{faqs.length}</p>
@@ -269,8 +269,8 @@ export default function FAQsPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10">
-              <Eye className="w-6 h-6 text-green-500" />
+            <div className="p-3 rounded-xl bg-success/10">
+              <Eye className="w-6 h-6 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{publishedCount}</p>

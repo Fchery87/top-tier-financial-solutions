@@ -232,8 +232,8 @@ export default function AgreementsPage() {
       header: 'Template Name',
       render: (item: AgreementTemplate) => (
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-500/10">
-            <FileSignature className="w-4 h-4 text-blue-500" />
+          <div className="p-2 rounded-lg bg-secondary/10">
+            <FileSignature className="w-4 h-4 text-secondary" />
           </div>
           <div>
             <p className="font-medium">{item.name}</p>
@@ -315,7 +315,7 @@ export default function AgreementsPage() {
             {item.isActive ? (
               <X className="w-4 h-4 text-destructive" />
             ) : (
-              <Check className="w-4 h-4 text-green-500" />
+              <Check className="w-4 h-4 text-success" />
             )}
           </Button>
           <Button 
@@ -376,8 +376,8 @@ export default function AgreementsPage() {
       >
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-500/10">
-              <FileSignature className="w-6 h-6 text-blue-500" />
+            <div className="p-3 rounded-xl bg-secondary/10">
+              <FileSignature className="w-6 h-6 text-secondary" />
             </div>
             <div>
               <p className="text-2xl font-bold">{templates.length}</p>
@@ -387,8 +387,8 @@ export default function AgreementsPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10">
-              <Check className="w-6 h-6 text-green-500" />
+            <div className="p-3 rounded-xl bg-success/10">
+              <Check className="w-6 h-6 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{activeCount}</p>
@@ -404,11 +404,11 @@ export default function AgreementsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
       >
-        <Card className="bg-blue-500/5 border-blue-500/20">
+        <Card className="bg-secondary/5 border-secondary/20">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">
-              <strong className="text-blue-500">CROA Compliance:</strong> All agreements include mandatory 
-              3-day right to cancel, required disclosures, and prohibition on advance fees. 
+              <strong className="text-secondary">CROA Compliance:</strong> All agreements include mandatory
+              3-day right to cancel, required disclosures, and prohibition on advance fees.
               Templates should be reviewed by legal counsel.
             </p>
           </CardContent>

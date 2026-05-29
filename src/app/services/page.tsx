@@ -107,7 +107,7 @@ export default async function ServicesPage() {
                             <service.icon className="w-8 h-8" />
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-2xl md:text-3xl font-sans font-bold mb-4 text-foreground">{service.title}</h3>
+                            <h3 className="text-2xl md:text-3xl font-display font-normal mb-4 text-foreground">{service.title}</h3>
                             <p className="text-muted-foreground leading-relaxed text-lg">{service.description}</p>
                           </div>
                         </div>
@@ -149,7 +149,7 @@ export default async function ServicesPage() {
                 </span>
                 Simple Process
               </div>
-              <h2 className="text-4xl md:text-5xl font-sans font-bold mb-6 text-foreground">
+              <h2 className="text-4xl md:text-5xl font-display font-normal mb-6 text-foreground">
                 How It <span className="text-secondary">Works</span>
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground mb-16 max-w-2xl mx-auto">
@@ -167,11 +167,11 @@ export default async function ServicesPage() {
                   <div className="relative group">
                     <div className="absolute inset-0 bg-secondary/5 rounded-2xl blur-xl group-hover:bg-secondary/10 transition-colors duration-500" />
                     <Card className="relative p-8 bg-card/80 backdrop-blur-sm border-border/50 group-hover:border-secondary/50 transition-all duration-500 overflow-hidden">
-                      <div className="text-6xl md:text-7xl font-sans font-bold text-secondary/10 group-hover:text-secondary/20 transition-colors absolute top-4 right-4">
+                      <div className="text-6xl md:text-7xl font-display font-normal text-secondary/10 group-hover:text-secondary/20 transition-colors absolute top-4 right-4">
                         {item.step}
                       </div>
                       <div className="relative z-10 text-left pt-8">
-                        <h3 className="text-2xl font-sans font-bold text-foreground mb-3">{item.title}</h3>
+                        <h3 className="text-2xl font-display font-normal text-foreground mb-3">{item.title}</h3>
                         <p className="text-muted-foreground text-lg">{item.desc}</p>
                       </div>
                     </Card>
@@ -213,7 +213,7 @@ export default async function ServicesPage() {
           </SlideUp>
           
           <SlideUp delay={0.2}>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold mb-8 text-white leading-[1.1]">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-8 text-white leading-[1.1]">
               Not Sure What You <span className="text-secondary">Need</span>?
             </h2>
           </SlideUp>

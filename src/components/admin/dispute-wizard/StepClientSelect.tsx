@@ -17,9 +17,9 @@ export function StepClientSelect() {
       <CardHeader>
         <CardTitle>
           Select Client
-          <span className="text-red-600 dark:text-red-400 ml-1">*</span>
+          <span className="text-destructive ml-1">*</span>
           {!selectedClient && (
-            <span className="text-xs text-red-600 dark:text-red-400 ml-3 font-normal">(Required)</span>
+            <span className="text-xs text-destructive ml-3 font-normal">(Required)</span>
           )}
         </CardTitle>
         <CardDescription>Choose a client to generate dispute letters for</CardDescription>

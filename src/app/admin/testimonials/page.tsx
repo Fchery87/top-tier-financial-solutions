@@ -179,7 +179,7 @@ export default function TestimonialsPage() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className={`h-8 w-8 ${item.is_approved ? 'text-yellow-500 hover:text-yellow-600' : 'text-green-500 hover:text-green-600'}`}
+            className={`h-8 w-8 ${item.is_approved ? 'text-warning hover:text-warning' : 'text-success hover:text-success'}`}
             onClick={(e) => {
               e.stopPropagation();
               handleToggleApproval(item);
@@ -273,8 +273,8 @@ export default function TestimonialsPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10">
-              <Check className="w-6 h-6 text-green-500" />
+            <div className="p-3 rounded-xl bg-success/10">
+              <Check className="w-6 h-6 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{approvedCount}</p>
@@ -284,8 +284,8 @@ export default function TestimonialsPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-yellow-500/10">
-              <X className="w-6 h-6 text-yellow-500" />
+            <div className="p-3 rounded-xl bg-warning/10">
+              <X className="w-6 h-6 text-warning" />
             </div>
             <div>
               <p className="text-2xl font-bold">{pendingCount}</p>

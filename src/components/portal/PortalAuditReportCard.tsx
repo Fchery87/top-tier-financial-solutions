@@ -16,7 +16,7 @@ export default function PortalAuditReportCard({ auditReport }: PortalAuditReport
   return (
     <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 backdrop-blur-sm border-secondary/30 hover:border-secondary/50 transition-all">
       <CardHeader>
-        <CardTitle className="font-sans text-xl flex items-center gap-2">
+        <CardTitle className="font-display text-xl flex items-center gap-2">
           <FileText className="w-5 h-5 text-secondary" />
           Credit Analysis Report
         </CardTitle>

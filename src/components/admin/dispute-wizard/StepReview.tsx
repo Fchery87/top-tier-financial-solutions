@@ -30,17 +30,17 @@ export function StepReview() {
 
       {/* AI Analysis Summary */}
       {generationMethod === 'ai' && aiAnalysisSummary && (
-        <Card className="bg-card border border-border border-t-4 border-t-green-500">
+        <Card className="bg-card border border-border border-t-4 border-t-success">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-green-500" />AI Analysis Summary
+            <CardTitle className="font-display text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-success" />AI Analysis Summary
             </CardTitle>
             <CardDescription>
               <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
                 <span>Metro 2 compliance analysis complete</span>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-success"></div>
                     <span className="text-xs">{Math.round(aiAnalysisSummary.averageConfidence * 100)}% avg</span>
                   </div>
                   {aiAnalysisResults.length > 0 && (
@@ -65,10 +65,10 @@ export function StepReview() {
                 <p className="text-xs font-medium text-muted-foreground mb-2">Confidence Breakdown</p>
                 <div className="space-y-1">
                   {[
-                    { range: [0.8, 1.0], label: 'Very High', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/20' },
-                    { range: [0.6, 0.8], label: 'High', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/20' },
-                    { range: [0.4, 0.6], label: 'Medium', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-950/20' },
-                    { range: [0, 0.4], label: 'Low', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/20' },
+                    { range: [0.8, 1.0], label: 'Very High', color: 'text-success', bg: 'bg-success/10' },
+                    { range: [0.6, 0.8], label: 'High', color: 'text-secondary', bg: 'bg-secondary/10' },
+                    { range: [0.4, 0.6], label: 'Medium', color: 'text-warning', bg: 'bg-warning/10' },
+                    { range: [0, 0.4], label: 'Low', color: 'text-destructive', bg: 'bg-destructive/10' },
                   ].map(({ range, label, color, bg }) => {
                     const count = aiAnalysisResults.filter(r => r.confidence >= range[0] && r.confidence < range[1]).length;
                     return (
@@ -111,7 +111,7 @@ export function StepReview() {
       {/* Bulk Actions */}
       <Card className="bg-card border border-border border-t-4 border-t-secondary">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Mark Disputes as Sent</CardTitle>
+          <CardTitle className="font-display text-lg">Mark Disputes as Sent</CardTitle>
           <CardDescription>After mailing your letters, enter tracking info to start the 30-day response deadline</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -131,7 +131,7 @@ export function StepReview() {
             {markingAsSent ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving Disputes...</> : <><CheckCircle className="w-4 h-4 mr-2" />Mark All {generatedLetters.length} Disputes as Sent</>}
           </Button>
           {bulkSentSuccess && (
-            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-green-500 text-sm flex items-center gap-2">
+            <div className="p-3 rounded-lg bg-success/10 border border-success/30 text-success text-sm flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />Successfully saved {generatedLetters.length} disputes. Response deadline set for 30 days.
             </div>
           )}
@@ -171,7 +171,7 @@ export function StepReview() {
                       <>
                         <p className="font-medium flex items-center gap-2">
                           {primaryItem?.kind === 'tradeline' && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${primaryItem?.riskSeverity === 'severe' ? 'bg-red-500/20 text-red-400' : primaryItem?.riskSeverity === 'high' ? 'bg-orange-500/20 text-orange-400' : primaryItem?.riskSeverity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{primaryItem?.riskSeverity || 'unknown'}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${primaryItem?.riskSeverity === 'severe' || primaryItem?.riskSeverity === 'high' ? 'bg-destructive/15 text-destructive' : primaryItem?.riskSeverity === 'medium' ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'}`}>{primaryItem?.riskSeverity || 'unknown'}</span>
                           )}
                           {formatPayloadLabel(primaryItem || { id: '', kind: 'tradeline' })}
                           <span className="text-xs text-muted-foreground">({letter.bureau.charAt(0).toUpperCase() + letter.bureau.slice(1)})</span>
@@ -211,20 +211,20 @@ export function StepReview() {
           ) : (
             <div className="space-y-2">
               {evidenceDocuments.filter((doc) => selectedEvidenceIds.includes(doc.id)).map((doc) => (
-                <motion.div key={doc.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
+                <motion.div key={doc.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-lg">
                   <div className="flex items-center gap-3 flex-1">
-                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{doc.file_name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Attached on {new Date(doc.created_at).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{doc.file_name}</p>
+                      <p className="text-xs text-muted-foreground">Attached on {new Date(doc.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleRemoveEvidence(doc.id)} className="text-muted-foreground hover:text-red-600"><X className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveEvidence(doc.id)} className="text-muted-foreground hover:text-destructive"><X className="w-4 h-4" /></Button>
                 </motion.div>
               ))}
               {selectedEvidenceIds.length < evidenceDocuments.length && (
-                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
-                  <p className="text-xs text-blue-900 dark:text-blue-200"><strong>{evidenceDocuments.length - selectedEvidenceIds.length} more document(s)</strong> available. Go back to Step 3 to add additional evidence.</p>
+                <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
+                  <p className="text-xs text-foreground"><strong>{evidenceDocuments.length - selectedEvidenceIds.length} more document(s)</strong> available. Go back to Step 3 to add additional evidence.</p>
                 </div>
               )}
               <Button variant="outline" className="w-full" onClick={() => setShowEvidenceUploadModal(true)}><Upload className="w-4 h-4 mr-2" />Upload Additional Evidence</Button>
@@ -238,20 +238,20 @@ export function StepReview() {
 
 function LetterStrengthCard({ strength }: { strength: import('@/lib/letter-strength-calculator').LetterStrengthScore }) {
   return (
-    <Card className="bg-card border border-border border-t-4 border-t-purple-500">
+    <Card className="bg-card border border-border border-t-4 border-t-secondary">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2"><Sparkles className="w-5 h-5 text-purple-500" />Letter Strength Score</CardTitle>
+        <CardTitle className="font-display text-lg flex items-center gap-2"><Sparkles className="w-5 h-5 text-secondary" />Letter Strength Score</CardTitle>
         <CardDescription>Overall quality assessment of the dispute letters</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-4">
           <div className="text-center">
-            <div className="text-5xl font-bold text-purple-600 dark:text-purple-400">{strength.overallScore}</div>
+            <div className="font-display text-5xl font-light tabular-nums text-secondary">{strength.overallScore}</div>
             <p className="text-sm text-muted-foreground">/10</p>
           </div>
           <div className="flex-1">
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 h-full rounded-full transition-all duration-300" style={{ width: `${(strength.overallScore / 10) * 100}%` }} />
+            <div className="w-full bg-muted rounded-full h-3">
+              <div className="bg-secondary h-full rounded-full transition-all duration-300" style={{ width: `${(strength.overallScore / 10) * 100}%` }} />
             </div>
             <p className="text-sm text-muted-foreground mt-2">
               {strength.overallScore >= 8 ? 'Excellent - Strong dispute' : strength.overallScore >= 6 ? 'Good - Solid dispute' : 'Fair - Consider improvements'}
@@ -270,7 +270,7 @@ function LetterStrengthCard({ strength }: { strength: import('@/lib/letter-stren
           <div className="space-y-2 pt-2 border-t border-border/50">
             <p className="text-sm font-medium text-muted-foreground">Improvement Suggestions:</p>
             <ul className="space-y-1">
-              {strength.suggestions.map((suggestion, idx) => <li key={idx} className="text-sm text-muted-foreground flex gap-2"><span className="text-blue-600 dark:text-blue-400">•</span><span>{suggestion}</span></li>)}
+              {strength.suggestions.map((suggestion, idx) => <li key={idx} className="text-sm text-muted-foreground flex gap-2"><span className="text-secondary">•</span><span>{suggestion}</span></li>)}
             </ul>
           </div>
         )}

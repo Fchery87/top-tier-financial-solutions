@@ -27,9 +27,9 @@ export function StepItemSelect() {
       <CardHeader>
         <CardTitle>
           Select Dispute Items
-          <span className="text-red-600 dark:text-red-400 ml-1">*</span>
+          <span className="text-destructive ml-1">*</span>
           {selectedItems.length === 0 && selectedPersonalItems.length === 0 && selectedInquiryItems.length === 0 && (
-            <span className="text-xs text-red-600 dark:text-red-400 ml-3 font-normal">(Select at least one)</span>
+            <span className="text-xs text-destructive ml-3 font-normal">(Select at least one)</span>
           )}
         </CardTitle>
         <CardDescription>
@@ -40,8 +40,8 @@ export function StepItemSelect() {
         {renderValidationMessages()}
 
         {generationMethod === 'template' && (
-          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <p className="text-sm text-blue-400">
+          <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
+            <p className="text-sm text-foreground">
               <strong>Template Mode:</strong> Select items below and set a dispute instruction for each one.
               You can choose from pre-built reasons or enter a custom instruction.
             </p>
@@ -64,8 +64,8 @@ export function StepItemSelect() {
         </div>
 
         {generationMethod === 'ai' && (
-          <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-            <p className="text-sm text-green-400">
+          <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+            <p className="text-sm text-success">
               <strong>AI Mode:</strong> Simply select items to dispute. The AI will automatically analyze
               each item for Metro 2 compliance violations and FCRA issues.
             </p>
@@ -91,16 +91,16 @@ function TradelinesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
   return (
     <>
       {triageQuickActions.length > 0 && (
-        <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+        <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
           <div className="flex items-center gap-2 mb-2">
-            <Zap className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-purple-400">Quick Actions</span>
+            <Zap className="w-4 h-4 text-secondary" />
+            <span className="text-sm font-medium text-secondary">Quick Actions</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {triageQuickActions.map((action) => (
               <Button
                 key={action.id} variant="outline" size="sm"
-                className="text-xs border-purple-500/30 hover:bg-purple-500/10"
+                className="text-xs border-secondary/30 hover:bg-secondary/10"
                 onClick={() => {
                   setSelectedItems(prev => [...new Set([...prev, ...action.itemIds])]);
                   if (generationMethod === 'template') {
@@ -191,7 +191,7 @@ function TradelinesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium">{item.creditor_name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.risk_severity === 'severe' ? 'bg-red-500/20 text-red-400' : item.risk_severity === 'high' ? 'bg-orange-500/20 text-orange-400' : item.risk_severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{item.risk_severity}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.risk_severity === 'severe' || item.risk_severity === 'high' ? 'bg-destructive/15 text-destructive' : item.risk_severity === 'medium' ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'}`}>{item.risk_severity}</span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">{formatItemType(item.item_type)} • {formatCurrency(item.amount)}</p>
                       <div className="flex items-center gap-1.5 mt-2">
@@ -204,7 +204,7 @@ function TradelinesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
                           return (
                             <span
                               key={bureau}
-                              className={`text-xs px-1.5 py-0.5 rounded font-medium ${appearsOn ? bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' : bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400' : 'bg-muted/50 text-muted-foreground/50 line-through'}`}
+                              className={`text-xs px-1.5 py-0.5 rounded font-medium ${appearsOn ? 'bg-secondary/15 text-secondary' : 'bg-muted/50 text-muted-foreground/50 line-through'}`}
                               title={appearsOn ? `${bureau}${dateStr ? ` - ${dateStr}` : ''}${bureauStatus ? ` - ${bureauStatus}` : ''}` : `Not reported on ${bureau}`}
                             >
                               {bureau === 'transunion' ? 'TU' : bureau === 'experian' ? 'EXP' : 'EQ'}
@@ -291,7 +291,7 @@ function PersonalInfoTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium">{formatPersonalInfoType(item.type)}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' : item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         {item.bureau === 'transunion' ? 'TransUnion' : item.bureau === 'experian' ? 'Experian' : 'Equifax'}
                       </span>
                     </div>
@@ -360,10 +360,10 @@ function InquiriesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium">{item.creditor_name}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${item.bureau === 'transunion' ? 'bg-blue-500/20 text-blue-400' : item.bureau === 'experian' ? 'bg-purple-500/20 text-purple-400' : item.bureau === 'equifax' ? 'bg-green-500/20 text-green-400' : 'bg-muted/50 text-muted-foreground'}`}>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         {item.bureau ? bureauLabel : 'All bureaus'}
                       </span>
-                      {item.is_past_fcra_limit && <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">FCRA violation</span>}
+                      {item.is_past_fcra_limit && <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/15 text-destructive">FCRA violation</span>}
                     </div>
                     <p className="text-sm text-muted-foreground">{inquiryDate} {item.inquiry_type ? `• ${item.inquiry_type}` : ''}</p>
                     {item.days_since_inquiry !== undefined && item.days_since_inquiry !== null && <p className="text-xs text-muted-foreground">{item.days_since_inquiry} days old</p>}

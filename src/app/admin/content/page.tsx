@@ -232,12 +232,12 @@ export default function ContentPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="surface-panel flex flex-col gap-4 rounded-lg p-5 md:flex-row md:items-center md:justify-between">
         <div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
+            className="font-display text-3xl font-medium tracking-[-0.04em] text-foreground"
           >
             Content Pages
           </motion.h1>
@@ -245,9 +245,9 @@ export default function ContentPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
+            className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground"
           >
-            Manage your website pages and content
+            Govern the public website copy, SEO metadata, and page-level calls to action from one editorial console.
           </motion.p>
         </div>
         <motion.div
@@ -271,7 +271,7 @@ export default function ContentPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="bg-secondary/5 border-secondary/20">
+        <Card className="surface-panel rounded-lg border-secondary/20 bg-accent/40">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">
               <strong className="text-foreground">Note:</strong> This page manages dynamic content stored in the database. 
@@ -311,7 +311,7 @@ export default function ContentPage() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-2xl my-8"
           >
-            <Card className="bg-card border-border shadow-2xl">
+            <Card className="surface-panel rounded-lg shadow-xl">
               <CardHeader>
                 <CardTitle>{editingPage ? 'Edit Page' : 'Add Page'}</CardTitle>
                 <CardDescription>

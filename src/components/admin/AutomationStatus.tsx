@@ -111,24 +111,24 @@ export function AutomationStatus() {
       icon: Mail,
       label: 'Emails sent today',
       value: stats?.emailsSentToday || 0,
-      color: 'text-green-500',
-      bgColor: 'bg-green-500/10',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
       status: 'info',
     },
     {
       icon: Bell,
       label: 'Emails queued',
       value: stats?.pendingEmails || 0,
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-500/10',
+      color: 'text-secondary',
+      bgColor: 'bg-secondary/10',
       status: stats?.pendingEmails ? 'pending' : 'info',
     },
     {
       icon: AlertTriangle,
       label: 'Failures (24h)',
       value: stats?.emailsFailedToday || 0,
-      color: stats && stats.emailsFailedToday > 0 ? 'text-red-500' : 'text-muted-foreground',
-      bgColor: stats && stats.emailsFailedToday > 0 ? 'bg-red-500/10' : 'bg-muted/50',
+      color: stats && stats.emailsFailedToday > 0 ? 'text-destructive' : 'text-muted-foreground',
+      bgColor: stats && stats.emailsFailedToday > 0 ? 'bg-destructive/10' : 'bg-muted/50',
       status: stats && stats.emailsFailedToday > 0 ? 'issue' : 'info',
     },
   ];
@@ -157,12 +157,12 @@ export function AutomationStatus() {
           : 'Escalation automation needs attention';
   const escalationHealthColor =
     escalationHealth === 'healthy'
-      ? 'text-green-500'
+      ? 'text-success'
       : escalationHealth === 'error'
-        ? 'text-red-500'
+        ? 'text-destructive'
         : escalationHealth === 'disabled'
           ? 'text-muted-foreground'
-          : 'text-orange-500';
+          : 'text-warning';
 
   return (
     <Card className="bg-card border border-border">
@@ -177,12 +177,12 @@ export function AutomationStatus() {
               {stats?.automationsActive || 0} active workflows
             </CardDescription>
           </div>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-success/10">
             <span className={`w-2 h-2 rounded-full ${
-              stats && stats.emailsFailedToday > 0 ? 'bg-orange-500 animate-pulse' : 'bg-green-500 animate-pulse'
+              stats && stats.emailsFailedToday > 0 ? 'bg-warning/100 animate-pulse' : 'bg-success/100 animate-pulse'
             }`} />
             <span className={`text-xs font-medium ${
-              stats && stats.emailsFailedToday > 0 ? 'text-orange-500' : 'text-green-500'
+              stats && stats.emailsFailedToday > 0 ? 'text-warning' : 'text-success'
             }`}>
               {stats && stats.emailsFailedToday > 0 ? 'Attention needed' : 'Active'}
             </span>
@@ -268,10 +268,10 @@ export function AutomationStatus() {
               </span>
             </div>
             {disputeEscalations.lastRunDryRun ? (
-              <p className="text-xs text-orange-500">Last run was dry-run mode.</p>
+              <p className="text-xs text-warning">Last run was dry-run mode.</p>
             ) : null}
             {disputeEscalations.lastRunError ? (
-              <p className="text-xs text-red-500 truncate">
+              <p className="text-xs text-destructive truncate">
                 Last escalation error: {disputeEscalations.lastRunError}
               </p>
             ) : null}
@@ -279,7 +279,7 @@ export function AutomationStatus() {
 
           {stats && stats.recentFailures.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-red-500 flex items-center gap-1">
+              <p className="text-xs font-medium text-destructive flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
                 Recent failures
               </p>
@@ -295,9 +295,9 @@ export function AutomationStatus() {
             <span>Last check: just now</span>
             <span className="flex items-center gap-1">
               {stats && stats.emailsFailedToday > 0 ? (
-                <AlertTriangle className="w-3 h-3 text-orange-500" />
+                <AlertTriangle className="w-3 h-3 text-warning" />
               ) : (
-                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                <CheckCircle2 className="w-3 h-3 text-success" />
               )}
               {stats && stats.emailsFailedToday > 0
                 ? 'Some automations are failing'

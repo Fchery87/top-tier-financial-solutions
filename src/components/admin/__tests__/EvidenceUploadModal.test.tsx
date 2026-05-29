@@ -233,7 +233,7 @@ describe('EvidenceUploadModal', () => {
           dataTransfer: { files: [] },
         });
 
-        expect(dropZone.className).toContain('border-blue-500');
+        expect(dropZone.className).toContain('border-secondary');
       }
     });
 
@@ -249,7 +249,7 @@ describe('EvidenceUploadModal', () => {
           dataTransfer: { files: [] },
         });
 
-        expect(dropZone.className).toContain('border-gray-300');
+        expect(dropZone.className).toContain('border-border');
       }
     });
 
@@ -649,7 +649,7 @@ describe('EvidenceUploadModal', () => {
   });
 
   describe('File Icons', () => {
-    it('should show red icon for PDF files', async () => {
+    it('should show icon for PDF files', async () => {
       const user = userEvent.setup();
       render(<EvidenceUploadModal {...defaultProps} />);
 
@@ -662,13 +662,13 @@ describe('EvidenceUploadModal', () => {
         await user.upload(input, file);
         await waitFor(() => {
           const fileRow = screen.getByText('test.pdf').closest('div');
-          const icon = fileRow?.querySelector('.text-red-500');
+          const icon = fileRow?.querySelector('.text-muted-foreground');
           expect(icon).toBeInTheDocument();
         });
       }
     });
 
-    it('should show blue icon for Word files', async () => {
+    it('should show icon for Word files', async () => {
       const user = userEvent.setup();
       render(<EvidenceUploadModal {...defaultProps} />);
 
@@ -683,13 +683,13 @@ describe('EvidenceUploadModal', () => {
         await user.upload(input, file);
         await waitFor(() => {
           const fileRow = screen.getByText('test.docx').closest('div');
-          const icon = fileRow?.querySelector('.text-blue-500');
+          const icon = fileRow?.querySelector('.text-muted-foreground');
           expect(icon).toBeInTheDocument();
         });
       }
     });
 
-    it('should show green icon for Excel files', async () => {
+    it('should show icon for Excel files', async () => {
       const user = userEvent.setup();
       render(<EvidenceUploadModal {...defaultProps} />);
 
@@ -704,13 +704,13 @@ describe('EvidenceUploadModal', () => {
         await user.upload(input, file);
         await waitFor(() => {
           const fileRow = screen.getByText('test.xlsx').closest('div');
-          const icon = fileRow?.querySelector('.text-green-500');
+          const icon = fileRow?.querySelector('.text-muted-foreground');
           expect(icon).toBeInTheDocument();
         });
       }
     });
 
-    it('should show purple icon for image files', async () => {
+    it('should show icon for image files', async () => {
       const user = userEvent.setup();
       render(<EvidenceUploadModal {...defaultProps} />);
 
@@ -723,7 +723,7 @@ describe('EvidenceUploadModal', () => {
         await user.upload(input, file);
         await waitFor(() => {
           const fileRow = screen.getByText('test.png').closest('div');
-          const icon = fileRow?.querySelector('.text-purple-500');
+          const icon = fileRow?.querySelector('.text-muted-foreground');
           expect(icon).toBeInTheDocument();
         });
       }

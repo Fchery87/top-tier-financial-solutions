@@ -1,41 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
   <title id="title">Top Tier Financial Solutions logo</title>
-  <desc id="desc">Clean vector shield monogram for Top Tier Financial Solutions.</desc>
+  <desc id="desc">Ascendant monogram: three rising columns to a champagne apex.</desc>
   <defs>
-    <linearGradient id="champagne" x1="22" y1="12" x2="106" y2="118" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F1DCA3" />
-      <stop offset="0.48" stop-color="#C6A96C" />
+    <linearGradient id="ttGraphite" x1="0" y1="96" x2="96" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1D2026" />
+      <stop offset="1" stop-color="#0A0C10" />
+    </linearGradient>
+    <linearGradient id="ttChampagne" x1="20" y1="80" x2="76" y2="16" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C6A96C" />
       <stop offset="1" stop-color="#8F7440" />
     </linearGradient>
-    <linearGradient id="graphite" x1="28" y1="18" x2="100" y2="116" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1D2026" />
-      <stop offset="1" stop-color="#080A0F" />
-    </linearGradient>
   </defs>
-
-  <path
-    d="M64 7 105 24.25v30.1c0 27.6-16.15 50.45-41 66.65-24.85-16.2-41-39.05-41-66.65v-30.1L64 7Z"
-    fill="url(#graphite)"
-  />
-  <path
-    d="M64 7 105 24.25v30.1c0 27.6-16.15 50.45-41 66.65-24.85-16.2-41-39.05-41-66.65v-30.1L64 7Z"
-    fill="none"
-    stroke="url(#champagne)"
-    stroke-width="5"
-    stroke-linejoin="round"
-  />
-
-  <path d="M37 35h54v10H69v50H59V45H37V35Z" fill="#F8F3E8" />
-  <path d="M42 61h44v9H69v25H59V70H42V61Z" fill="url(#champagne)" />
-  <path d="M38 92h52v8H38v-8Z" fill="url(#champagne)" />
-
-  <path
-    d="M44 82c7.5-2.55 13.85-6.5 19.05-11.85C68.25 75.5 75.25 79.45 84 82"
-    fill="none"
-    stroke="#F8F3E8"
-    stroke-width="5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    opacity="0.92"
-  />
+  <rect x="2" y="2" width="92" height="92" rx="24" fill="url(#ttGraphite)" />
+  <rect x="2" y="2" width="92" height="92" rx="24" fill="none" stroke="#8F7440" stroke-opacity="0.5" stroke-width="1.5" />
+  <rect x="26" y="52" width="13" height="22" rx="3" fill="#EDE8DF" opacity="0.85" />
+  <rect x="42" y="40" width="13" height="34" rx="3" fill="#EDE8DF" opacity="0.85" />
+  <rect x="58" y="22" width="13" height="52" rx="3" fill="url(#ttChampagne)" />
+  <circle cx="64.5" cy="17" r="4.5" fill="url(#ttChampagne)" />
 </svg>

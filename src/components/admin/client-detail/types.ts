@@ -166,10 +166,10 @@ export const DISPUTE_STATUS_LABELS: Record<ClientDisputeStatus, string> = {
 
 export const DISPUTE_STATUS_CLASSES: Record<ClientDisputeStatus, string> = {
   not_started: 'bg-muted text-muted-foreground border-border',
-  waiting_on_client: 'bg-amber-500/10 text-amber-500 border-amber-500/40',
-  with_bureaus: 'bg-blue-500/10 text-blue-500 border-blue-500/40',
-  analyzing_results: 'bg-purple-500/10 text-purple-500 border-purple-500/40',
-  completed: 'bg-green-500/10 text-green-500 border-green-500/40',
+  waiting_on_client: 'bg-warning/10 text-warning border-warning/30',
+  with_bureaus: 'bg-secondary/10 text-secondary border-secondary/30',
+  analyzing_results: 'bg-secondary/10 text-secondary border-secondary/30',
+  completed: 'bg-success/10 text-success border-success/30',
 };
 
 export function appearsOnBureau(
@@ -203,19 +203,17 @@ export function deriveDisputeStatus(
 
 export function getScoreColor(score: number | null) {
   if (!score) return 'text-muted-foreground';
-  if (score >= 750) return 'text-green-500';
-  if (score >= 700) return 'text-lime-500';
-  if (score >= 650) return 'text-yellow-500';
-  if (score >= 600) return 'text-orange-500';
-  return 'text-red-500';
+  if (score >= 700) return 'text-success';
+  if (score >= 620) return 'text-warning';
+  return 'text-destructive';
 }
 
 export function getRiskSeverityColor(severity: string) {
   switch (severity) {
-    case 'severe': return 'text-red-500 bg-red-500/10';
-    case 'high': return 'text-orange-500 bg-orange-500/10';
-    case 'medium': return 'text-yellow-500 bg-yellow-500/10';
-    case 'low': return 'text-green-500 bg-green-500/10';
+    case 'severe': return 'text-destructive bg-destructive/10';
+    case 'high': return 'text-destructive bg-destructive/10';
+    case 'medium': return 'text-warning bg-warning/10';
+    case 'low': return 'text-success bg-success/10';
     default: return 'text-muted-foreground bg-muted';
   }
 }

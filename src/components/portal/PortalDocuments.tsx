@@ -15,7 +15,7 @@ export default function PortalDocuments({ documents, onUpload }: PortalDocuments
     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
       <CardHeader className="flex flex-row items-start justify-between gap-2">
         <div>
-          <CardTitle className="font-sans text-xl flex items-center gap-2">
+          <CardTitle className="font-display text-xl flex items-center gap-2">
             <FileUp className="w-5 h-5 text-secondary" />
             Documents
           </CardTitle>

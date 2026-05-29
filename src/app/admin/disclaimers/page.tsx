@@ -133,8 +133,8 @@ export default function DisclaimersPage() {
       header: 'Name',
       render: (item: Disclaimer) => (
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-orange-500/10">
-            <Scale className="w-4 h-4 text-orange-500" />
+          <div className="p-2 rounded-lg bg-warning/10">
+            <Scale className="w-4 h-4 text-warning" />
           </div>
           <div>
             <p className="font-medium">{item.name}</p>
@@ -191,7 +191,7 @@ export default function DisclaimersPage() {
             {item.is_active ? (
               <X className="w-4 h-4 text-destructive" />
             ) : (
-              <Check className="w-4 h-4 text-green-500" />
+              <Check className="w-4 h-4 text-success" />
             )}
           </Button>
           <Button 
@@ -257,8 +257,8 @@ export default function DisclaimersPage() {
       >
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-orange-500/10">
-              <Scale className="w-6 h-6 text-orange-500" />
+            <div className="p-3 rounded-xl bg-warning/10">
+              <Scale className="w-6 h-6 text-warning" />
             </div>
             <div>
               <p className="text-2xl font-bold">{disclaimers.length}</p>
@@ -268,8 +268,8 @@ export default function DisclaimersPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10">
-              <Check className="w-6 h-6 text-green-500" />
+            <div className="p-3 rounded-xl bg-success/10">
+              <Check className="w-6 h-6 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{activeCount}</p>
@@ -285,10 +285,10 @@ export default function DisclaimersPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
       >
-        <Card className="bg-orange-500/5 border-orange-500/20">
+        <Card className="bg-warning/5 border-warning/20">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">
-              <strong className="text-orange-500">Important:</strong> Legal disclaimers are crucial for compliance. 
+              <strong className="text-warning">Important:</strong> Legal disclaimers are crucial for compliance.
               Consult with a legal professional before making significant changes.
             </p>
           </CardContent>

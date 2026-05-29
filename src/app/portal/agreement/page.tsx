@@ -247,7 +247,7 @@ export default function AgreementPage() {
       const value = initials[field] || '';
       content = content.replace(
         new RegExp(placeholder, 'g'),
-        `<span class="initial-value" style="display: inline-block; min-width: 50px; padding: 2px 8px; background: ${value ? '#d4edda' : '#fff3cd'}; border: 1px solid ${value ? '#28a745' : '#ffc107'}; border-radius: 3px; font-weight: bold; text-align: center;">${value || '___'}</span>`
+        `<span class="initial-value" style="display: inline-block; min-width: 50px; padding: 2px 8px; background: ${value ? '#E2EBE4' : '#F4ECD8'}; border: 1px solid ${value ? '#2F6B4F' : '#B5832B'}; border-radius: 3px; font-weight: bold; text-align: center;">${value || '___'}</span>`
       );
     });
 
@@ -277,7 +277,7 @@ export default function AgreementPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="text-center">
-            <CardTitle className="font-sans text-2xl">Sign In Required</CardTitle>
+            <CardTitle className="font-display text-2xl">Sign In Required</CardTitle>
             <CardDescription>Please sign in to view your service agreement.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -298,10 +298,10 @@ export default function AgreementPage() {
           animate={{ scale: 1, opacity: 1 }}
           className="text-center"
         >
-          <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-green-500" />
+          <div className="w-20 h-20 rounded-full bg-success/15 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-success" />
           </div>
-          <h1 className="text-3xl font-sans font-bold mb-4">Agreement Signed Successfully!</h1>
+          <h1 className="font-display text-3xl font-light mb-4">Agreement Signed Successfully!</h1>
           <p className="text-muted-foreground mb-2">Thank you for signing your service agreement.</p>
           <p className="text-sm text-muted-foreground mb-6">
             You have 3 business days to cancel if you change your mind.
@@ -341,7 +341,7 @@ export default function AgreementPage() {
                 </div>
               </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-sans font-bold mb-2">
+            <h1 className="font-display text-4xl md:text-5xl font-light tracking-tight mb-2">
               Credit Services Agreement
             </h1>
             <p className="text-muted-foreground">
@@ -361,7 +361,7 @@ export default function AgreementPage() {
           ) : !agreement ? (
             <Card className="bg-card/80 backdrop-blur-sm border-border/50 p-8 text-center">
               <FileSignature className="w-12 h-12 text-secondary mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No Agreement Available</h2>
+              <h2 className="font-display text-2xl font-light mb-2">No Agreement Available</h2>
               <p className="text-muted-foreground mb-4">
                 {error || "You don't have a pending service agreement yet. Please contact us to get started with your credit repair journey."}
               </p>
@@ -376,11 +376,11 @@ export default function AgreementPage() {
             </Card>
           ) : agreement?.status === 'signed' ? (
             <div className="space-y-6">
-              <Card className="bg-green-500/10 border-green-500/30">
+              <Card className="bg-success/10 border-success/30">
                 <CardContent className="p-6 flex items-center gap-4">
-                  <CheckCircle className="w-8 h-8 text-green-500 flex-shrink-0" />
+                  <CheckCircle className="w-8 h-8 text-success flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-green-700 dark:text-green-400">Agreement Signed</h3>
+                    <h3 className="font-semibold text-success">Agreement Signed</h3>
                     <p className="text-sm text-muted-foreground">
                       Signed on {new Date(agreement.signed_at!).toLocaleDateString('en-US', {
                         weekday: 'long',
@@ -390,7 +390,7 @@ export default function AgreementPage() {
                       })}
                     </p>
                     {agreement.cancellation_deadline && new Date(agreement.cancellation_deadline) > new Date() && (
-                      <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                      <p className="text-sm text-warning mt-1">
                         <Clock className="w-3 h-3 inline mr-1" />
                         Cancellation deadline: {new Date(agreement.cancellation_deadline).toLocaleDateString()}
                       </p>
@@ -413,19 +413,19 @@ export default function AgreementPage() {
               {/* Agreement Content */}
               <div className="lg:col-span-2 space-y-6">
                 {agreement?.expires_at && new Date(agreement.expires_at) < new Date() ? (
-                  <Card className="bg-red-500/10 border-red-500/30">
+                  <Card className="bg-destructive/10 border-destructive/30">
                     <CardContent className="p-4 flex items-center gap-3">
-                      <AlertTriangle className="w-5 h-5 text-red-500" />
-                      <p className="text-sm text-red-700 dark:text-red-400">
+                      <AlertTriangle className="w-5 h-5 text-destructive" />
+                      <p className="text-sm text-destructive">
                         This agreement has expired. Please contact us for a new agreement.
                       </p>
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="bg-yellow-500/10 border-yellow-500/30">
+                  <Card className="bg-warning/10 border-warning/30">
                     <CardContent className="p-4 flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-yellow-500" />
-                      <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                      <Clock className="w-5 h-5 text-warning" />
+                      <p className="text-sm text-warning">
                         Please review and sign by {agreement?.expires_at ? new Date(agreement.expires_at).toLocaleDateString() : 'the deadline'}.
                       </p>
                     </CardContent>
@@ -449,7 +449,7 @@ export default function AgreementPage() {
                   {/* Initials Section */}
                   <Card className="bg-card/80 backdrop-blur-sm border-border/50 mb-4">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
+                      <CardTitle className="font-display text-lg flex items-center gap-2">
                         <Shield className="w-5 h-5 text-secondary" />
                         Initial Each Section
                       </CardTitle>
@@ -469,7 +469,7 @@ export default function AgreementPage() {
                             placeholder="___"
                             maxLength={3}
                           />
-                          <span className={`text-xs ${initials[field]?.length >= 2 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          <span className={`text-xs ${initials[field]?.length >= 2 ? 'text-success' : 'text-muted-foreground'}`}>
                             {initials[field]?.length >= 2 ? <CheckCircle className="w-4 h-4" /> : 'Required'}
                           </span>
                         </div>
@@ -480,7 +480,7 @@ export default function AgreementPage() {
                   {/* Disclosures Section */}
                   <Card className="bg-card/80 backdrop-blur-sm border-border/50 mb-4">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">Required Disclosures</CardTitle>
+                      <CardTitle className="font-display text-lg">Required Disclosures</CardTitle>
                       <CardDescription>
                         Acknowledge each disclosure to proceed
                       </CardDescription>
@@ -490,8 +490,8 @@ export default function AgreementPage() {
                         <label 
                           key={disclosure.id}
                           className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            acknowledgedDisclosures.has(disclosure.id) 
-                              ? 'bg-green-500/10 border-green-500/30' 
+                            acknowledgedDisclosures.has(disclosure.id)
+                              ? 'bg-success/10 border-success/30'
                               : 'bg-muted/30 border-border hover:bg-muted/50'
                           }`}
                         >
@@ -510,7 +510,7 @@ export default function AgreementPage() {
                   {/* Signature Section */}
                   <Card className="bg-card/80 backdrop-blur-sm border-border/50 mb-4">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
+                      <CardTitle className="font-display text-lg flex items-center gap-2">
                         <FileSignature className="w-5 h-5 text-secondary" />
                         Your Signature
                       </CardTitle>
@@ -598,8 +598,8 @@ export default function AgreementPage() {
                       </label>
 
                       {error && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                          <p className="text-sm text-destructive">{error}</p>
                         </div>
                       )}
 

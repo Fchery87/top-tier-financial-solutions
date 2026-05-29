@@ -39,10 +39,10 @@ export default function BookingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-cyan-500/20">
+        <Card className="bg-gradient-to-br from-secondary/10 to-secondary/10 border-secondary/20">
           <CardHeader>
             <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30">
+              <div className="p-4 rounded-2xl bg-secondary text-secondary-foreground shadow-lg shadow-secondary/25">
                 <Calendar className="w-8 h-8" />
               </div>
               <div>
@@ -81,7 +81,7 @@ export default function BookingsPage() {
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button 
                 asChild
-                className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-lg shadow-cyan-500/30"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/25"
               >
                 <a href={calDashboardUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
@@ -113,27 +113,27 @@ export default function BookingsPage() {
         <Card className="bg-card border border-border">
           <CardHeader>
             <CardTitle className="font-sans flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <CheckCircle className="w-5 h-5 text-success" />
               Integration Status
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${calUsername ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                <div className={`w-3 h-3 rounded-full ${calUsername ? 'bg-success/100' : 'bg-warning/100'}`} />
                 <span className="text-sm">
                   Cal.com Username: {calUsername ? (
                     <span className="font-medium text-foreground">{calUsername}</span>
                   ) : (
-                    <span className="text-yellow-500">Not configured</span>
+                    <span className="text-warning">Not configured</span>
                   )}
                 </span>
               </div>
             </div>
 
             {!calUsername && (
-              <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+              <div className="p-4 rounded-lg bg-warning/10 border border-warning/20">
+                <p className="text-sm text-warning dark:text-warning">
                   <strong>Setup Required:</strong> To enable booking management, add your Cal.com credentials to the environment variables:
                 </p>
                 <pre className="mt-2 p-2 rounded bg-muted text-xs overflow-x-auto">

@@ -230,7 +230,7 @@ export function ScoreTrendChart() {
           {data?.topImprovers && data.topImprovers.length > 0 && (
             <div className="pt-4 border-t border-border/50">
               <div className="flex items-center gap-2 mb-3">
-                <Trophy className="w-4 h-4 text-yellow-500" />
+                <Trophy className="w-4 h-4 text-warning" />
                 <span className="text-sm font-medium">Top Improvers</span>
               </div>
               <div className="space-y-2">
@@ -242,9 +242,9 @@ export function ScoreTrendChart() {
                   >
                     <div className="flex items-center gap-2">
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                        index === 0 ? 'bg-yellow-500/20 text-yellow-500' :
-                        index === 1 ? 'bg-slate-400/20 text-slate-400' :
-                        'bg-orange-500/20 text-orange-500'
+                        index === 0 ? 'bg-warning/20 text-warning' :
+                        index === 1 ? 'bg-muted/20 text-muted-foreground' :
+                        'bg-warning/20 text-warning'
                       }`}>
                         {index + 1}
                       </span>
@@ -254,7 +254,7 @@ export function ScoreTrendChart() {
                       <span className="text-xs text-muted-foreground">
                         {improver.startScore} → {improver.currentScore}
                       </span>
-                      <span className="text-xs font-semibold text-green-500 flex items-center">
+                      <span className="text-xs font-semibold text-success flex items-center">
                         +{improver.improvement}
                         <ArrowUpRight className="w-3 h-3" />
                       </span>

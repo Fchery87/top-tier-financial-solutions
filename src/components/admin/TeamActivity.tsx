@@ -137,7 +137,7 @@ export function TeamActivity() {
                   <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                     <Clock className="w-3 h-3" />
                   </div>
-                  <p className={`text-sm font-semibold ${member.stats.tasksDueToday > 0 ? 'text-orange-500' : ''}`}>
+                  <p className={`text-sm font-semibold ${member.stats.tasksDueToday > 0 ? 'text-warning' : ''}`}>
                     {member.stats.tasksDueToday}
                   </p>
                   <p className="text-[10px] text-muted-foreground">Due Today</p>

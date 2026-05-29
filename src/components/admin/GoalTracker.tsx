@@ -40,7 +40,7 @@ export function GoalTracker() {
               current: stats.itemsRemovedThisMonth || 0,
               target: 50, // Default target - could be user-configurable
               icon: Trophy,
-              color: 'text-yellow-500',
+              color: 'text-warning',
             },
             {
               type: 'new_clients',
@@ -48,7 +48,7 @@ export function GoalTracker() {
               current: stats.newClientsThisMonth || stats.activeClients || 0,
               target: 10, // Default target
               icon: Users,
-              color: 'text-blue-500',
+              color: 'text-secondary',
             },
           ]);
         }
@@ -115,7 +115,7 @@ export function GoalTracker() {
                     <span className="text-sm font-medium">{goal.label}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-sm font-bold ${isComplete ? 'text-green-500' : ''}`}>
+                    <span className={`text-sm font-bold ${isComplete ? 'text-success' : ''}`}>
                       {goal.current}
                     </span>
                     <span className="text-sm text-muted-foreground">/ {goal.target}</span>
@@ -124,10 +124,10 @@ export function GoalTracker() {
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <motion.div
                     className={`h-full rounded-full ${
-                      isComplete 
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
-                        : percentage >= 75 
-                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                      isComplete
+                        ? 'bg-gradient-to-r from-success to-success'
+                        : percentage >= 75
+                          ? 'bg-gradient-to-r from-warning to-warning'
                           : 'bg-gradient-to-r from-secondary to-secondary/70'
                     }`}
                     initial={{ width: 0 }}
@@ -138,7 +138,7 @@ export function GoalTracker() {
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{Math.round(percentage)}% complete</span>
                   {isComplete ? (
-                    <span className="text-green-500 font-medium">Goal achieved!</span>
+                    <span className="text-success font-medium">Goal achieved!</span>
                   ) : (
                     <span>{goal.target - goal.current} to go</span>
                   )}

@@ -25,8 +25,8 @@ export function CalEmbed({ calLink, styles }: CalEmbedProps) {
 
   if (!link) {
     return (
-      <div className="p-8 text-center bg-slate-100 rounded-lg">
-        <p className="text-slate-600">
+      <div className="p-8 text-center bg-muted rounded-lg">
+        <p className="text-muted-foreground">
           Scheduling is currently unavailable. Please contact us directly.
         </p>
       </div>

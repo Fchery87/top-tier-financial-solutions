@@ -136,20 +136,8 @@ export function EvidenceUploadModal({
     }
   };
 
-  const getFileIcon = (fileName: string) => {
-    if (fileName.match(/\.(pdf)$/i)) {
-      return <FileText className="w-4 h-4 text-red-500" />;
-    }
-    if (fileName.match(/\.(doc|docx)$/i)) {
-      return <FileText className="w-4 h-4 text-blue-500" />;
-    }
-    if (fileName.match(/\.(xls|xlsx)$/i)) {
-      return <FileText className="w-4 h-4 text-green-500" />;
-    }
-    if (fileName.match(/\.(jpg|jpeg|png)$/i)) {
-      return <FileText className="w-4 h-4 text-purple-500" />;
-    }
-    return <FileText className="w-4 h-4 text-gray-500" />;
+  const getFileIcon = (_fileName: string) => {
+    return <FileText className="w-4 h-4 text-muted-foreground" />;
   };
 
   if (!isOpen) return null;
@@ -173,7 +161,7 @@ export function EvidenceUploadModal({
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5 text-blue-500" />
+                <Upload className="w-5 h-5 text-secondary" />
                 Upload Evidence Documents
               </CardTitle>
               <CardDescription>
@@ -198,14 +186,14 @@ export function EvidenceUploadModal({
               <div className="space-y-3">
                 <div className="space-y-2">
                   {evidenceRequirements.blockingRequired.length > 0 && (
-                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
-                      <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-2">
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <p className="text-sm font-semibold text-destructive mb-2">
                         Required Evidence:
                       </p>
                       <ul className="space-y-1">
                         {evidenceRequirements.blockingRequired.map((item, idx) => (
-                          <li key={idx} className="text-sm text-red-800 dark:text-red-300 flex items-start gap-2">
-                            <span className="text-red-500 mt-0.5">•</span>
+                          <li key={idx} className="text-sm text-destructive flex items-start gap-2">
+                            <span className="text-destructive mt-0.5">•</span>
                             <span>{item}</span>
                           </li>
                         ))}
@@ -214,14 +202,14 @@ export function EvidenceUploadModal({
                   )}
 
                   {evidenceRequirements.stronglyRecommended.length > 0 && (
-                    <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900">
-                      <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-200 mb-2">
+                    <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+                      <p className="text-sm font-semibold text-warning mb-2">
                         Strongly Recommended:
                       </p>
                       <ul className="space-y-1">
                         {evidenceRequirements.stronglyRecommended.map((item, idx) => (
-                          <li key={idx} className="text-sm text-yellow-800 dark:text-yellow-300 flex items-start gap-2">
-                            <span className="text-yellow-600 mt-0.5">•</span>
+                          <li key={idx} className="text-sm text-warning flex items-start gap-2">
+                            <span className="text-warning mt-0.5">•</span>
                             <span>{item}</span>
                           </li>
                         ))}
@@ -240,8 +228,8 @@ export function EvidenceUploadModal({
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                 dragActive
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
-                  : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/20'
+                  ? 'border-secondary bg-secondary/10'
+                  : 'border-border bg-muted/40'
               }`}
             >
               <input
@@ -257,22 +245,22 @@ export function EvidenceUploadModal({
                 animate={{ scale: dragActive ? 1.05 : 1 }}
                 className="flex flex-col items-center gap-3"
               >
-                <Upload className={`w-8 h-8 ${dragActive ? 'text-blue-500' : 'text-gray-400'}`} />
+                <Upload className={`w-8 h-8 ${dragActive ? 'text-secondary' : 'text-muted-foreground'}`} />
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-foreground">
                     {dragActive ? 'Drop files here' : 'Drag and drop files here'}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     or{' '}
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      className="text-secondary hover:underline"
                       disabled={uploading}
                     >
                       click to browse
                     </button>
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Supported formats: PDF, Word, Excel, Images, Text
                   </p>
                 </div>
@@ -282,7 +270,7 @@ export function EvidenceUploadModal({
             {/* Selected Files for Upload */}
             {selectedFiles.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-foreground">
                   Files to Upload ({selectedFiles.length})
                 </p>
                 <div className="space-y-2">
@@ -292,25 +280,25 @@ export function EvidenceUploadModal({
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-secondary/10 border border-secondary/20 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         {getFileIcon(file.name)}
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {file.name}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-muted-foreground">
                             {(file.size / 1024).toFixed(2)} KB
                           </p>
                         </div>
                       </div>
                       <button
                         onClick={() => removeFile(idx)}
-                        className="p-1 hover:bg-blue-200 dark:hover:bg-blue-900 rounded transition-colors"
+                        className="p-1 hover:bg-secondary/20 rounded transition-colors"
                         disabled={uploading}
                       >
-                        <X className="w-4 h-4 text-gray-500" />
+                        <X className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </motion.div>
                   ))}
@@ -321,7 +309,7 @@ export function EvidenceUploadModal({
             {/* Existing Documents */}
             {existingDocuments.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-foreground">
                   Uploaded Documents ({existingDocuments.length})
                 </p>
                 <div className="space-y-2">
@@ -330,30 +318,30 @@ export function EvidenceUploadModal({
                       key={doc.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         {getFileIcon(doc.file_name)}
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {doc.file_name}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-muted-foreground">
                             {new Date(doc.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <CheckCircle className="w-5 h-5 text-success" />
                       </div>
                       {onRemove && (
                         <button
                           onClick={() => handleRemoveExisting(doc.id)}
                           disabled={removingIds.has(doc.id)}
-                          className="p-1 hover:bg-green-200 dark:hover:bg-green-900 rounded transition-colors ml-2"
+                          className="p-1 hover:bg-success/20 rounded transition-colors ml-2"
                         >
                           {removingIds.has(doc.id) ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                           ) : (
-                            <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-600" />
+                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
                           )}
                         </button>
                       )}
@@ -365,9 +353,9 @@ export function EvidenceUploadModal({
 
             {/* Info Box */}
             {existingDocuments.length === 0 && selectedFiles.length === 0 && (
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-900 dark:text-blue-200">
+              <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-foreground">
                   {reasonCodes.length > 0
                     ? 'Evidence significantly strengthens your dispute. Upload any supporting documents before proceeding.'
                     : 'Upload evidence documents to support your dispute claim.'}

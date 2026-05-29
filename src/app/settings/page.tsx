@@ -159,7 +159,7 @@ export default function SettingsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                    <div className="px-3 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
                       Active
                     </div>
                   </div>

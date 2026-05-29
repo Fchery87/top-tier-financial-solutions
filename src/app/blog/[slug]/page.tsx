@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, Calendar, User, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import { FadeIn, SlideUp } from '@/components/ui/Motion';
-import { GradientOrbs, AnimatedGrid, NoiseOverlay, AuroraBackground, ParticleField } from '@/components/ui/AnimatedBackground';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { sanitizeHtml } from '@/lib/safe-html';
 
@@ -57,19 +56,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="platform-shell flex min-h-screen flex-col">
       {/* Hero Section */}
-      <section className="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
-        <GradientOrbs className="opacity-50" />
-        <AnimatedGrid className="opacity-20" />
-        <NoiseOverlay opacity={0.02} />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background z-[1]" />
+      <section className="relative overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
+        <div className="absolute inset-0 rule-grid opacity-25" />
+        <div className="absolute inset-x-0 top-0 h-px bg-secondary/35" />
 
-        <div className="container relative z-10 mx-auto px-4 md:px-6 max-w-4xl">
+        <div className="container relative z-10 mx-auto max-w-4xl px-4 md:px-6">
           <FadeIn>
             <Link 
               href="/blog" 
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-secondary transition-colors mb-8"
+              className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-secondary"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Blog
@@ -78,7 +75,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
           <SlideUp delay={0.1}>
             {post.category && (
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/20 text-secondary text-sm font-medium mb-6">
+              <span className="mb-6 inline-flex items-center gap-2 rounded-md border border-secondary/25 bg-accent/70 px-3 py-2 text-sm font-medium text-secondary">
                 <Tag className="w-4 h-4" />
                 {post.category.name}
               </span>
@@ -86,13 +83,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </SlideUp>
 
           <SlideUp delay={0.2}>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-sans font-bold mb-6 text-foreground leading-tight">
+            <h1 className="mb-6 font-display text-4xl font-medium leading-[0.98] tracking-[-0.05em] text-foreground md:text-5xl lg:text-6xl">
               {post.title}
             </h1>
           </SlideUp>
 
           <SlideUp delay={0.3}>
-            <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-6 border-t border-border/80 pt-5 text-sm text-muted-foreground">
               {post.author_name && (
                 <span className="flex items-center gap-2">
                   <User className="w-4 h-4" />
@@ -115,12 +112,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       </section>
 
       {/* Content */}
-      <section className="py-12 md:py-16 bg-background">
-        <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+      <section className="bg-background py-12 md:py-16">
+        <div className="container mx-auto max-w-4xl px-4 md:px-6">
           <FadeIn>
-            <article className="prose prose-lg prose-invert max-w-none">
+            <article className="surface-document max-w-none rounded-lg px-6 py-8 md:px-10 md:py-12">
               <div 
-                className="text-foreground leading-relaxed"
+                className="text-[1.02rem] leading-8 text-foreground"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content).replace(/\n/g, '<br />') }}
               />
             </article>
@@ -138,15 +135,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 md:py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-primary" />
-        <AuroraBackground className="opacity-60" />
-        <ParticleField count={15} className="opacity-40" />
-        <NoiseOverlay opacity={0.03} />
+      <section className="relative overflow-hidden bg-[#100E0C] py-24 md:py-32">
+        <div className="absolute inset-0 rule-grid opacity-[0.08]" />
+        <div className="absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-secondary/40" />
         
         <div className="container relative z-10 mx-auto px-4 text-center">
           <SlideUp>
-            <h2 className="text-3xl md:text-4xl font-sans font-bold mb-6 text-white">
+            <h2 className="mb-6 font-display text-3xl font-medium tracking-[-0.04em] text-white md:text-5xl">
               Need <span className="text-secondary">Expert Help</span>?
             </h2>
           </SlideUp>
@@ -156,7 +151,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </p>
           </SlideUp>
           <SlideUp delay={0.4}>
-            <Button asChild size="lg" className="h-14 px-10 bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full">
+            <Button asChild size="lg" className="h-12 rounded-md bg-secondary px-8 text-secondary-foreground hover:bg-secondary/90">
               <Link href="/contact" className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
                 Book Free Consultation

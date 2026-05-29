@@ -1,0 +1,11 @@
+[
+  {
+    "id": "1cd84d2b-80ee-44fd-a95c-841e06608eab",
+    "timestamp": 1779941925100,
+    "project": "top-tier-financial-solutions",
+    "spec_tier": "ambient",
+    "capability": "",
+    "pattern": "",
+    "correction": "<skill name=\"validation-spec-generator\" location=\"/home/nochaserz/.pi/agent/skills/validation-spec-generator/SKILL.md\">\nReferences are relative to /home/nochaserz/.pi/agent/skills/validation-spec-generator.\n\n# Validation Spec Generator\n\nUse this skill to inspect a codebase and generate a maintainabl"
+  }
+]

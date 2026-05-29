@@ -25,7 +25,7 @@ export default function PortalLetterConsent({
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
       <CardHeader>
-        <CardTitle className="font-sans text-xl flex items-center gap-2">
+        <CardTitle className="font-display text-xl flex items-center gap-2">
           <FileSignature className="w-5 h-5 text-secondary" />
           Dispute Letters &amp; Consent
         </CardTitle>
@@ -57,8 +57,8 @@ export default function PortalLetterConsent({
                     </div>
                     <span className={`text-[11px] px-2 py-1 rounded-full border ${
                       letter.status === 'approved'
-                        ? 'bg-green-500/10 border-green-500/40 text-green-500'
-                        : 'bg-yellow-500/10 border-yellow-500/40 text-yellow-500'
+                        ? 'bg-success/10 border-success/30 text-success'
+                        : 'bg-warning/10 border-warning/30 text-warning'
                     }`}>
                       {letter.status === 'approved' ? 'Approved' : 'Needs approval'}
                     </span>

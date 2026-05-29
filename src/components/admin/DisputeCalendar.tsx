@@ -69,13 +69,13 @@ export function DisputeCalendar({ disputes }: Props) {
   const statusColor = (status: string) => {
     switch (status) {
       case "overdue":
-        return "bg-red-500";
+        return "bg-destructive/100";
       case "urgent":
-        return "bg-amber-500";
+        return "bg-warning/100";
       case "resolved":
-        return "bg-emerald-500";
+        return "bg-success/100";
       default:
-        return "bg-blue-500";
+        return "bg-secondary/100";
     }
   };
 
@@ -90,9 +90,9 @@ export function DisputeCalendar({ disputes }: Props) {
             <CardDescription>Response clocks for this month</CardDescription>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Overdue</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> 7d</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Open</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive/100" /> Overdue</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning/100" /> 7d</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary/100" /> Open</span>
           </div>
         </div>
       </CardHeader>
@@ -146,7 +146,7 @@ export function DisputeCalendar({ disputes }: Props) {
             </div>
           )}
           {events.some((e) => e.status === 'overdue') && (
-            <div className="flex items-center gap-2 text-xs text-red-500 mt-1">
+            <div className="flex items-center gap-2 text-xs text-destructive mt-1">
               <AlertTriangle className="w-4 h-4" /> You have overdue disputes that need escalation.
             </div>
           )}

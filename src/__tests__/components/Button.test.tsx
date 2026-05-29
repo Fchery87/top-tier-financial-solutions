@@ -42,7 +42,7 @@ describe('Button component', () => {
   it('applies destructive variant correctly', () => {
     render(<Button variant="destructive">Delete</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-red-500');
+    expect(button).toHaveClass('bg-destructive');
   });
 
   it('applies small size correctly', () => {

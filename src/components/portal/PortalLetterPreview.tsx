@@ -30,7 +30,7 @@ export default function PortalLetterPreview({ letter, onClose }: PortalLetterPre
       >
         <Card className="bg-card border-border shadow-2xl h-full flex flex-col">
           <CardHeader>
-            <CardTitle className="font-sans text-lg flex items-center gap-2">
+            <CardTitle className="font-display text-lg flex items-center gap-2">
               <FileSignature className="w-5 h-5 text-secondary" />
               Dispute Letter Preview
             </CardTitle>

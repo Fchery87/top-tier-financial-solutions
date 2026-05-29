@@ -194,7 +194,7 @@ export function DisputeInsights() {
                           {m.avg_rounds.toFixed(1)}
                         </p>
                       </div>
-                      <span className="ml-2 text-xs font-semibold text-green-500">
+                      <span className="ml-2 text-xs font-semibold text-success">
                         {m.success_rate}%
                       </span>
                     </motion.div>
@@ -272,7 +272,7 @@ export function DisputeInsights() {
                       <p className="font-medium truncate">{r.code}</p>
                       <p className="text-[11px] text-muted-foreground">{r.deleted}/{r.total} deleted</p>
                     </div>
-                    <span className="ml-2 text-xs font-semibold text-green-500">{r.success_rate}%</span>
+                    <span className="ml-2 text-xs font-semibold text-success">{r.success_rate}%</span>
                   </div>
                 ))}
               </div>
@@ -294,7 +294,7 @@ export function DisputeInsights() {
                       <p className="font-medium truncate">{c.creditor}</p>
                       <p className="text-[11px] text-muted-foreground">{c.deleted}/{c.total} deleted</p>
                     </div>
-                    <span className="ml-2 text-xs font-semibold text-green-500">{c.success_rate}%</span>
+                    <span className="ml-2 text-xs font-semibold text-success">{c.success_rate}%</span>
                   </div>
                 ))}
               </div>

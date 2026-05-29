@@ -78,9 +78,9 @@ export default function AuditReportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="platform-shell min-h-screen">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
+      <div className="sticky top-0 z-10 border-b border-border/80 bg-card/92 shadow-sm backdrop-blur-md">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -92,7 +92,7 @@ export default function AuditReportPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-foreground">
+                <h1 className="font-display text-2xl font-medium tracking-[-0.04em] text-foreground">
                   Credit Analysis Report
                 </h1>
                 {clientName && (
@@ -112,7 +112,7 @@ export default function AuditReportPage() {
                   className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                     reportType === 'comprehensive'
                       ? 'bg-secondary text-secondary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      : 'border border-border bg-card text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   {reportType === 'comprehensive' ? 'Comprehensive' : 'Simple'}
@@ -152,10 +152,10 @@ export default function AuditReportPage() {
 
       {/* Report Content */}
       <div className="max-w-[1600px] mx-auto px-6 py-6">
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="surface-panel relative overflow-hidden rounded-lg">
           {/* Loading State */}
           {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-secondary" />
                 <p className="text-sm text-muted-foreground">Loading report...</p>
@@ -194,7 +194,7 @@ export default function AuditReportPage() {
         </div>
 
         {/* Footer Info */}
-        <div className="mt-6 text-center text-sm text-muted-foreground">
+        <div className="surface-panel mt-6 rounded-lg p-4 text-center text-sm leading-6 text-muted-foreground">
           <p>
             Use the <strong>Print</strong> button to print directly or save as PDF using your browser&apos;s print dialog.
           </p>

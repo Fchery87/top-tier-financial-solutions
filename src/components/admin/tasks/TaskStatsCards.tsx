@@ -21,8 +21,8 @@ export function TaskStatsCards({ totalItems, todoCount, inProgressCount, overdue
     >
       <Card className="bg-card border border-border">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-blue-500/10">
-            <CheckSquare className="w-6 h-6 text-blue-500" />
+          <div className="p-3 rounded-xl bg-secondary/10">
+            <CheckSquare className="w-6 h-6 text-secondary" />
           </div>
           <div>
             <p className="text-2xl font-bold">{totalItems}</p>
@@ -32,8 +32,8 @@ export function TaskStatsCards({ totalItems, todoCount, inProgressCount, overdue
       </Card>
       <Card className="bg-card border border-border">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-yellow-500/10">
-            <Clock className="w-6 h-6 text-yellow-500" />
+          <div className="p-3 rounded-xl bg-warning/10">
+            <Clock className="w-6 h-6 text-warning" />
           </div>
           <div>
             <p className="text-2xl font-bold">{todoCount}</p>
@@ -43,8 +43,8 @@ export function TaskStatsCards({ totalItems, todoCount, inProgressCount, overdue
       </Card>
       <Card className="bg-card border border-border">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-purple-500/10">
-            <RefreshCw className="w-6 h-6 text-purple-500" />
+          <div className="p-3 rounded-xl bg-secondary/10">
+            <RefreshCw className="w-6 h-6 text-secondary" />
           </div>
           <div>
             <p className="text-2xl font-bold">{inProgressCount}</p>
@@ -54,8 +54,8 @@ export function TaskStatsCards({ totalItems, todoCount, inProgressCount, overdue
       </Card>
       <Card className="bg-card border border-border">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-red-500/10">
-            <AlertCircle className="w-6 h-6 text-red-500" />
+          <div className="p-3 rounded-xl bg-destructive/10">
+            <AlertCircle className="w-6 h-6 text-destructive" />
           </div>
           <div>
             <p className="text-2xl font-bold">{overdueCount}</p>

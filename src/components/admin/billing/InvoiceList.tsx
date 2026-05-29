@@ -38,8 +38,8 @@ const invoiceColumns = [
     header: 'Invoice',
     render: (item: Invoice) => (
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-blue-500/10">
-          <FileText className="w-4 h-4 text-blue-500" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-muted/60">
+          <FileText className="w-4 h-4 text-muted-foreground" />
         </div>
         <div>
           <p className="font-medium font-mono">{item.invoice_number}</p>
@@ -73,7 +73,7 @@ const invoiceColumns = [
     render: (item: Invoice) => {
       if (!item.services_rendered) {
         return (
-          <span className="text-xs text-red-500 flex items-center gap-1">
+          <span className="text-xs text-destructive flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
             Not documented
           </span>
@@ -82,7 +82,7 @@ const invoiceColumns = [
       try {
         const services = JSON.parse(item.services_rendered);
         return (
-          <span className="text-xs text-green-500 flex items-center gap-1">
+          <span className="text-xs text-success flex items-center gap-1">
             <CheckCircle className="w-3 h-3" />
             {Array.isArray(services) ? `${services.length} service(s)` : 'Documented'}
           </span>

@@ -265,7 +265,7 @@ export default function SettingsPage() {
 
         <div className="flex items-center gap-3">
           {(hasChanges || dashboardHasChanges) && (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 text-sm text-warning bg-warning/10 px-3 py-2 rounded-lg">
               <AlertCircle className="w-4 h-4" />Unsaved changes
             </motion.div>
           )}
@@ -310,11 +310,11 @@ export default function SettingsPage() {
 
       {testResult && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-          <Card className={testResult.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
+          <Card className={testResult.success ? 'border-success/30 bg-success/10' : 'border-destructive/30 bg-destructive/10'}>
             <CardContent className="py-4">
               <div className="flex items-center gap-3">
-                {testResult.success ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <AlertCircle className="w-5 h-5 text-red-600" />}
-                <p className={testResult.success ? 'text-green-700' : 'text-red-700'}>{testResult.message}</p>
+                {testResult.success ? <CheckCircle2 className="w-5 h-5 text-success" /> : <AlertCircle className="w-5 h-5 text-destructive" />}
+                <p className={testResult.success ? 'text-success' : 'text-destructive'}>{testResult.message}</p>
               </div>
             </CardContent>
           </Card>

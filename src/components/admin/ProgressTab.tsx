@@ -140,22 +140,22 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-4 gap-4"
       >
-        <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
+        <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20">
           <CardContent className="p-4 text-center">
-            <Trophy className="w-6 h-6 mx-auto mb-2 text-green-500" />
-            <p className="text-3xl font-bold text-green-500">{totalWins}</p>
+            <Trophy className="w-6 h-6 mx-auto mb-2 text-success" />
+            <p className="text-3xl font-bold text-success">{totalWins}</p>
             <p className="text-xs text-muted-foreground">Items Deleted</p>
           </CardContent>
         </Card>
 
-        <Card className={`bg-gradient-to-br ${scoreChange >= 0 ? 'from-blue-500/10 to-cyan-500/5 border-blue-500/20' : 'from-red-500/10 to-orange-500/5 border-red-500/20'}`}>
+        <Card className={`bg-gradient-to-br ${scoreChange >= 0 ? 'from-secondary/10 to-secondary/5 border-secondary/20' : 'from-destructive/10 to-warning/5 border-destructive/20'}`}>
           <CardContent className="p-4 text-center">
             {scoreChange >= 0 ? (
-              <TrendingUp className="w-6 h-6 mx-auto mb-2 text-blue-500" />
+              <TrendingUp className="w-6 h-6 mx-auto mb-2 text-secondary" />
             ) : (
-              <TrendingDown className="w-6 h-6 mx-auto mb-2 text-red-500" />
+              <TrendingDown className="w-6 h-6 mx-auto mb-2 text-destructive" />
             )}
-            <p className={`text-3xl font-bold ${scoreChange >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
+            <p className={`text-3xl font-bold ${scoreChange >= 0 ? 'text-secondary' : 'text-destructive'}`}>
               {scoreChange >= 0 ? '+' : ''}{scoreChange}
             </p>
             <p className="text-xs text-muted-foreground">Score Change</p>
@@ -164,7 +164,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
 
         <Card className="bg-card shadow-sm">
           <CardContent className="p-4 text-center">
-            <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-purple-500" />
+            <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-secondary" />
             <p className="text-3xl font-bold">{disputes.filter(d => d.status === 'sent').length}</p>
             <p className="text-xs text-muted-foreground">Active Disputes</p>
           </CardContent>
@@ -172,7 +172,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
 
         <Card className="bg-card shadow-sm">
           <CardContent className="p-4 text-center">
-            <GitCompare className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
+            <GitCompare className="w-6 h-6 mx-auto mb-2 text-warning" />
             <p className="text-3xl font-bold">{creditReports.length}</p>
             <p className="text-xs text-muted-foreground">Reports Analyzed</p>
           </CardContent>
@@ -186,10 +186,10 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="bg-gradient-to-r from-green-500/5 via-emerald-500/5 to-green-500/5 border-green-500/20">
+          <Card className="bg-gradient-to-r from-success/5 via-success/5 to-success/5 border-success/20">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-500" />
+                <Trophy className="w-5 h-5 text-warning" />
                 Wins & Deletions
               </CardTitle>
               <CardDescription>Items successfully removed from credit reports</CardDescription>
@@ -202,10 +202,10 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.05 * index }}
-                    className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20"
+                    className="flex items-center justify-between p-3 rounded-lg bg-success/10 border border-success/20"
                   >
                     <div className="flex items-center gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      <CheckCircle2 className="w-5 h-5 text-success" />
                       <div>
                         <p className="font-medium">{win.creditor_name || win.dispute_reason}</p>
                         <p className="text-xs text-muted-foreground">
@@ -305,9 +305,9 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                             key={change.bureau}
                             className={`p-3 rounded-lg text-center ${
                               change.change > 0
-                                ? 'bg-green-500/10 border border-green-500/20'
+                                ? 'bg-success/10 border border-success/20'
                                 : change.change < 0
-                                ? 'bg-red-500/10 border border-red-500/20'
+                                ? 'bg-destructive/10 border border-destructive/20'
                                 : 'bg-muted/50'
                             }`}
                           >
@@ -318,7 +318,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                               <span className="text-sm font-medium">{change.newer_score || '—'}</span>
                             </div>
                             <p className={`text-lg font-bold ${
-                              change.change > 0 ? 'text-green-500' : change.change < 0 ? 'text-red-500' : ''
+                              change.change > 0 ? 'text-success' : change.change < 0 ? 'text-destructive' : ''
                             }`}>
                               {change.change > 0 ? '+' : ''}{change.change}
                             </p>
@@ -332,23 +332,23 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                   {comparison.items_removed_count > 0 && (
                     <div>
                       <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <CheckCircle2 className="w-4 h-4 text-success" />
                         Items Removed ({comparison.items_removed_count})
                       </h4>
                       <div className="space-y-2">
                         {comparison.items_removed.map((item, index) => (
                           <div
                             key={item.id || index}
-                            className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20"
+                            className="flex items-center justify-between p-3 rounded-lg bg-success/10 border border-success/20"
                           >
                             <div>
-                              <p className="font-medium text-green-700 dark:text-green-400">{item.creditor_name}</p>
+                              <p className="font-medium text-success dark:text-success">{item.creditor_name}</p>
                               <p className="text-xs text-muted-foreground">
                                 {formatItemType(item.item_type)} • {item.bureau?.toUpperCase() || 'Unknown'}
                                 {item.amount && ` • ${formatCurrency(item.amount)}`}
                               </p>
                             </div>
-                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                            <CheckCircle2 className="w-5 h-5 text-success" />
                           </div>
                         ))}
                       </div>
@@ -359,14 +359,14 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                   {comparison.items_added_count > 0 && (
                     <div>
                       <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                        <AlertTriangle className="w-4 h-4 text-warning" />
                         New Items ({comparison.items_added_count})
                       </h4>
                       <div className="space-y-2">
                         {comparison.items_added.map((item, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between p-3 rounded-lg bg-orange-500/10 border border-orange-500/20"
+                            className="flex items-center justify-between p-3 rounded-lg bg-warning/10 border border-warning/20"
                           >
                             <div>
                               <p className="font-medium">{item.creditor_name}</p>
@@ -374,7 +374,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                                 {formatItemType(item.item_type)}
                               </p>
                             </div>
-                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                            <AlertTriangle className="w-5 h-5 text-warning" />
                           </div>
                         ))}
                       </div>
@@ -384,13 +384,13 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                   {/* Summary */}
                   <div className={`p-4 rounded-lg ${
                     comparison.summary.is_improvement
-                      ? 'bg-green-500/10 border border-green-500/20'
+                      ? 'bg-success/10 border border-success/20'
                       : 'bg-muted/50'
                   }`}>
                     <p className="text-sm">
                       {comparison.summary.is_improvement ? (
                         <>
-                          <span className="font-medium text-green-600 dark:text-green-400">Progress Made!</span>
+                          <span className="font-medium text-success dark:text-success">Progress Made!</span>
                           {' '}{comparison.summary.net_items_removed} net items removed.
                           {' '}Negative items: {comparison.older_total_negative_items} → {comparison.newer_total_negative_items}
                         </>
@@ -459,15 +459,15 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                         <div className="flex-1">
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-blue-500">TU</span>
+                              <span className="text-xs text-secondary">TU</span>
                               <span className="font-medium">{entry.score_transunion || '—'}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-purple-500">EX</span>
+                              <span className="text-xs text-secondary">EX</span>
                               <span className="font-medium">{entry.score_experian || '—'}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-red-500">EQ</span>
+                              <span className="text-xs text-destructive">EQ</span>
                               <span className="font-medium">{entry.score_equifax || '—'}</span>
                             </div>
                           </div>
@@ -475,7 +475,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
                         <div className="w-20 text-right">
                           {index > 0 && change !== 0 && (
                             <span className={`text-sm font-medium ${
-                              change > 0 ? 'text-green-500' : 'text-red-500'
+                              change > 0 ? 'text-success' : 'text-destructive'
                             }`}>
                               {change > 0 ? '+' : ''}{change}
                             </span>

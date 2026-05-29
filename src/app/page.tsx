@@ -151,7 +151,7 @@ export default async function Home() {
                     ['Policy checks ready', 'Evidence and confirmation gates visible'],
                   ].map(([title, detail]) => (
                     <div key={title} className="flex gap-3 rounded-md border border-border/70 bg-background/40 p-3">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                       <div>
                         <p className="text-sm font-semibold">{title}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{detail}</p>

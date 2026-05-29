@@ -227,6 +227,7 @@ export default function ClientDetailPage() {
 
   return (
     <div className="space-y-6">
+      <div className="h-px w-full bg-gradient-to-r from-secondary/35 via-border to-transparent" />
       <ClientHeader
         client={client}
         disputeStatus={disputeStatus}
@@ -324,7 +325,7 @@ export default function ClientDetailPage() {
       {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowUploadModal(false)}>
           <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <Card className="bg-card border-border shadow-2xl">
+            <Card className="surface-panel rounded-lg shadow-xl">
               <CardHeader>
                 <CardTitle>Upload Credit Report</CardTitle>
                 <CardDescription>Upload a PDF or HTML credit report file.</CardDescription>
@@ -375,7 +376,7 @@ export default function ClientDetailPage() {
       {showReportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
           <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <Card className="bg-card border-border shadow-2xl">
+            <Card className="surface-panel rounded-lg shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ExternalLink className="w-5 h-5 text-secondary" />
@@ -384,7 +385,7 @@ export default function ClientDetailPage() {
                 <CardDescription>Create a professional credit audit report for {client?.first_name} {client?.last_name}.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="space-y-2 rounded-md border border-border/70 bg-muted/40 p-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Negative Items:</span>
                     <span className="font-medium">{negativeItemsCount}</span>

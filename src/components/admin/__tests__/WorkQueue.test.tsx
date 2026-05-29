@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { WorkQueue } from '../WorkQueue';
 
@@ -116,6 +116,7 @@ describe('WorkQueue', () => {
     });
 
     it('should switch tabs when clicking tab buttons', async () => {
+      const user = userEvent.setup();
       vi.mocked(useAdminRole).mockReturnValue(mockAdminContext('user-123'));
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
@@ -129,7 +130,7 @@ describe('WorkQueue', () => {
       });
 
       const tasksTab = screen.getByText('My Tasks');
-      tasksTab.click();
+      await user.click(tasksTab);
 
       await waitFor(() => {
         expect(screen.getByText('No open tasks assigned to you.')).toBeInTheDocument();
@@ -297,9 +298,9 @@ describe('WorkQueue', () => {
 
       // Switch to tasks tab
       await waitFor(() => {
-        const tasksTab = screen.getByText(/My Tasks/);
-        tasksTab.click();
+        expect(screen.getByText(/My Tasks/)).toBeInTheDocument();
       });
+      await userEvent.setup().click(screen.getByText(/My Tasks/));
 
       // Should show only non-done tasks
       await waitFor(() => {
@@ -348,9 +349,9 @@ describe('WorkQueue', () => {
       render(<WorkQueue />);
 
       await waitFor(() => {
-        const overdueTab = screen.getByText('Overdue Responses');
-        user.click(overdueTab);
+        expect(screen.getByText('Overdue Responses')).toBeInTheDocument();
       });
+      await user.click(screen.getByText('Overdue Responses'));
 
       await waitFor(() => {
         expect(
@@ -364,9 +365,9 @@ describe('WorkQueue', () => {
       render(<WorkQueue />);
 
       await waitFor(() => {
-        const tasksTab = screen.getByText(/My Tasks/);
-        user.click(tasksTab);
+        expect(screen.getByText(/My Tasks/)).toBeInTheDocument();
       });
+      await user.click(screen.getByText(/My Tasks/));
 
       await waitFor(() => {
         expect(screen.getByText('No open tasks assigned to you.')).toBeInTheDocument();
@@ -381,9 +382,9 @@ describe('WorkQueue', () => {
 
       // Switch to a different tab first (since tasks tab won't be visible)
       await waitFor(() => {
-        const overdueTab = screen.getByText('Overdue Responses');
-        user.click(overdueTab);
+        expect(screen.getByText('Overdue Responses')).toBeInTheDocument();
       });
+      await user.click(screen.getByText('Overdue Responses'));
 
       // Tasks tab should not be visible
       expect(screen.queryByText('My Tasks')).not.toBeInTheDocument();
@@ -394,9 +395,9 @@ describe('WorkQueue', () => {
       render(<WorkQueue />);
 
       await waitFor(() => {
-        const onboardingTab = screen.getByText('Onboarding');
-        user.click(onboardingTab);
+        expect(screen.getByText('Onboarding')).toBeInTheDocument();
       });
+      await user.click(screen.getByText('Onboarding'));
 
       await waitFor(() => {
         expect(screen.getByText('No pending onboarding clients right now.')).toBeInTheDocument();
@@ -434,9 +435,9 @@ describe('WorkQueue', () => {
 
       // Switch to tasks tab
       await waitFor(() => {
-        const tasksTab = screen.getByText(/My Tasks/);
-        user.click(tasksTab);
+        expect(screen.getByText(/My Tasks/)).toBeInTheDocument();
       });
+      await user.click(screen.getByText(/My Tasks/));
 
       // Wait for tasks to load
       await waitFor(() => {
@@ -499,9 +500,9 @@ describe('WorkQueue', () => {
 
       // Switch to tasks tab
       await waitFor(() => {
-        const tasksTab = screen.getByText(/My Tasks/);
-        user.click(tasksTab);
+        expect(screen.getByText(/My Tasks/)).toBeInTheDocument();
       });
+      await user.click(screen.getByText(/My Tasks/));
 
       await waitFor(() => {
         expect(screen.getByText('Review client documents')).toBeInTheDocument();
@@ -517,8 +518,10 @@ describe('WorkQueue', () => {
         expect(spinner).toBeInTheDocument();
       });
 
-      resolvePut!();
-      await putPromise;
+      await act(async () => {
+        resolvePut!();
+        await putPromise;
+      });
     });
 
     it('should handle task marking errors gracefully', async () => {
@@ -548,9 +551,9 @@ describe('WorkQueue', () => {
 
       // Switch to tasks tab
       await waitFor(() => {
-        const tasksTab = screen.getByText(/My Tasks/);
-        user.click(tasksTab);
+        expect(screen.getByText(/My Tasks/)).toBeInTheDocument();
       });
+      await user.click(screen.getByText(/My Tasks/));
 
       await waitFor(() => {
         expect(screen.getByText('Review client documents')).toBeInTheDocument();
@@ -603,9 +606,9 @@ describe('WorkQueue', () => {
 
       // Switch to tasks tab
       await waitFor(() => {
-        const tasksTab = screen.getByText(/My Tasks/);
-        user.click(tasksTab);
+        expect(screen.getByText(/My Tasks/)).toBeInTheDocument();
       });
+      await user.click(screen.getByText(/My Tasks/));
 
       await waitFor(() => {
         expect(screen.getByText('Review client documents')).toBeInTheDocument();
@@ -619,8 +622,10 @@ describe('WorkQueue', () => {
         expect(checkButtons[0]).toBeDisabled();
       });
 
-      resolvePut!();
-      await putPromise;
+      await act(async () => {
+        resolvePut!();
+        await putPromise;
+      });
     });
   });
 

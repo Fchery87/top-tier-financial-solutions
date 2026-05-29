@@ -85,15 +85,15 @@ export function OverviewTab({
             <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
               <CardContent className={metricCardPadding}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
-                    <Users className="w-4 h-4 text-blue-500" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
+                    <Users className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 ) : (
                   <>
-                    <p className="text-2xl font-bold text-foreground">{stats?.activeClients ?? 0}</p>
+                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.activeClients ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Active Clients</p>
                   </>
                 )}
@@ -105,15 +105,15 @@ export function OverviewTab({
             <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
               <CardContent className={metricCardPadding}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-purple-500/10">
-                    <Scale className="w-4 h-4 text-purple-500" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
+                    <Scale className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 ) : (
                   <>
-                    <p className="text-2xl font-bold text-foreground">{stats?.disputesPending ?? 0}</p>
+                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.disputesPending ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Open Disputes</p>
                   </>
                 )}
@@ -125,15 +125,15 @@ export function OverviewTab({
             <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
               <CardContent className={metricCardPadding}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-orange-500/10">
-                    <FileWarning className="w-4 h-4 text-orange-500" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
+                    <FileWarning className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 ) : (
                   <>
-                    <p className="text-2xl font-bold text-foreground">{stats?.totalNegativeItems ?? 0}</p>
+                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.totalNegativeItems ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Negative Tradelines</p>
                   </>
                 )}
@@ -145,15 +145,15 @@ export function OverviewTab({
             <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
               <CardContent className={metricCardPadding}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-success/20 bg-success/10">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
                   </div>
                 </div>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 ) : (
                   <>
-                    <p className="text-2xl font-bold text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
+                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
                     <p className="text-xs text-muted-foreground">Items Removed (30d)</p>
                   </>
                 )}
@@ -167,15 +167,15 @@ export function OverviewTab({
             <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
               <CardContent className={metricCardPadding}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-cyan-500/10">
-                    <BarChart3 className="w-4 h-4 text-cyan-500" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
+                    <BarChart3 className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 ) : (
                   <>
-                    <p className="text-2xl font-bold text-foreground">{stats?.avgCreditScore || '\u2014'}</p>
+                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.avgCreditScore || '\u2014'}</p>
                     <p className="text-xs text-muted-foreground">Average Credit Score</p>
                   </>
                 )}
@@ -187,15 +187,15 @@ export function OverviewTab({
             <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
               <CardContent className={metricCardPadding}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-green-500/10">
-                    <Target className="w-4 h-4 text-green-500" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-success/20 bg-success/10">
+                    <Target className="w-4 h-4 text-success" />
                   </div>
                 </div>
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 ) : (
                   <>
-                    <p className="text-2xl font-bold text-foreground">{stats?.successRate ?? 0}%</p>
+                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.successRate ?? 0}%</p>
                     <p className="text-xs text-muted-foreground">Dispute Success Rate</p>
                   </>
                 )}
@@ -207,13 +207,13 @@ export function OverviewTab({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card className={`bg-card shadow-sm ${totalAttention > 0 ? 'border-t-4 border-t-orange-500' : ''}`}>
+          <Card className={`bg-card shadow-sm ${totalAttention > 0 ? 'border-t-2 border-t-warning' : ''}`}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-sans flex items-center gap-2">
-                <AlertCircle className={`w-5 h-5 ${totalAttention > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
+              <CardTitle className="text-lg font-display flex items-center gap-2">
+                <AlertCircle className={`w-5 h-5 ${totalAttention > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
                 Today&apos;s Work
                 {totalAttention > 0 && (
-                  <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-orange-500/10 text-orange-500">
+                  <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-warning/10 text-warning">
                     {totalAttention}
                   </span>
                 )}
@@ -236,8 +236,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.pendingReports ?? 0) > 0 && (
                     <Link href="/admin/clients" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-orange-500/10">
-                          <FileText className="w-4 h-4 text-orange-500" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Reports to Analyze</p>
@@ -245,7 +245,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">{stats?.attentionNeeded?.pendingReports}</span>
+                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.pendingReports}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -253,8 +253,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.pendingAgreements ?? 0) > 0 && (
                     <Link href="/admin/agreements" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-blue-500/10">
-                          <FileSignature className="w-4 h-4 text-blue-500" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card">
+                          <FileSignature className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Pending Agreements</p>
@@ -262,7 +262,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">{stats?.attentionNeeded?.pendingAgreements}</span>
+                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.pendingAgreements}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -270,8 +270,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.overdueTasks ?? 0) > 0 && (
                     <Link href="/admin/tasks" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-red-500/10">
-                          <ListTodo className="w-4 h-4 text-red-500" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10">
+                          <ListTodo className="w-4 h-4 text-destructive" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Overdue Tasks</p>
@@ -279,7 +279,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">{stats?.attentionNeeded?.overdueTasks}</span>
+                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.overdueTasks}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -287,8 +287,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.responseDueSoon ?? 0) > 0 && (
                     <Link href="/admin/disputes?awaiting_response=true" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-yellow-500/10">
-                          <Clock className="w-4 h-4 text-yellow-500" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warning/20 bg-warning/10">
+                          <Clock className="w-4 h-4 text-warning" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Response Due Soon</p>
@@ -296,24 +296,24 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">{stats?.attentionNeeded?.responseDueSoon}</span>
+                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.responseDueSoon}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
                   )}
                   {(stats?.attentionNeeded?.overdueResponses ?? 0) > 0 && (
-                    <Link href="/admin/disputes?overdue=true" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group border border-red-500/30">
+                    <Link href="/admin/disputes?overdue=true" className="flex items-center justify-between p-3 rounded-lg bg-destructive/[0.04] hover:bg-destructive/[0.08] transition-colors group border border-destructive/30">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-red-500/10">
-                          <AlertCircle className="w-4 h-4 text-red-500" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10">
+                          <AlertCircle className="w-4 h-4 text-destructive" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-red-500">Overdue Responses</p>
+                          <p className="text-sm font-medium text-destructive">Overdue Responses</p>
                           <p className="text-xs text-muted-foreground">Bureaus past 30-day deadline</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-red-500">{stats?.attentionNeeded?.overdueResponses}</span>
+                        <span className="font-display text-2xl font-light tabular-nums text-destructive">{stats?.attentionNeeded?.overdueResponses}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -329,7 +329,7 @@ export function OverviewTab({
 
           <Card className="bg-card border border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-sans flex items-center gap-2">
+              <CardTitle className="text-lg font-display flex items-center gap-2">
                 <Activity className="w-5 h-5 text-secondary" />
                 Recent Activity
               </CardTitle>
@@ -352,13 +352,11 @@ export function OverviewTab({
                 <div className="space-y-1">
                   {stats.recentActivity.map((item) => (
                     <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className={`mt-0.5 p-1.5 rounded-full ${
-                        item.type === 'dispute' ? 'bg-purple-500/10' : 'bg-blue-500/10'
-                      }`}>
+                      <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-muted/60">
                         {item.type === 'dispute' ? (
-                          <Scale className="w-3 h-3 text-purple-500" />
+                          <Scale className="w-3.5 h-3.5 text-muted-foreground" />
                         ) : (
-                          <FileText className="w-3 h-3 text-blue-500" />
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">

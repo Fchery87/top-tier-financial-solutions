@@ -211,7 +211,7 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
                 </div>
 
                 {responseOutcome === 'verified' && (
-                  <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -230,8 +230,8 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
                 )}
 
                 {responseOutcome === 'deleted' && (
-                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                    <p className="text-sm text-green-600 flex items-center gap-2">
+                  <div className="p-3 rounded-lg bg-success/10 border border-success/30">
+                    <p className="text-sm text-success flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
                       Item will be marked as successfully removed!
                     </p>

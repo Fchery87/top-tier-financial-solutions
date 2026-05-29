@@ -35,6 +35,19 @@ Object.defineProperty(window, 'localStorage', {
 global.fetch = vi.fn();
 const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
 
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  consoleErrorSpy.mockRestore();
+  consoleWarnSpy.mockRestore();
+});
+
 describe('useWizardDraft hook', () => {
   beforeEach(() => {
     localStorageMock.clear();

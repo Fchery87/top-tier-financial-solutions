@@ -90,7 +90,7 @@ export default function BillingPage() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
+            className="font-display text-3xl font-light tracking-tight text-foreground"
           >
             Billing & Invoices
           </motion.h1>
@@ -112,10 +112,10 @@ export default function BillingPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
       >
-        <Card className="bg-amber-500/5 border-amber-500/20">
+        <Card className="bg-warning/[0.06] border-warning/25">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">
-              <strong className="text-amber-500">CROA Compliance:</strong> The Credit Repair Organizations Act
+              <strong className="text-warning">CROA Compliance:</strong> The Credit Repair Organizations Act
               prohibits collecting fees before services are rendered. All invoices require documented
               services before they can be created.
             </p>

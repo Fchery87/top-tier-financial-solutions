@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipWrapper } from "./providers";
 import { Analytics } from '@/components/Analytics';
@@ -14,10 +14,11 @@ const geistSans = Geist({
   display: "swap",
 });
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
   display: "swap",
+  axes: ["opsz"],
 });
 
 const jetbrainsMono = Geist_Mono({
@@ -59,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${bricolage.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${geistSans.variable} ${fraunces.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <ErrorBoundary>
           <Analytics />
           <SkipLink />

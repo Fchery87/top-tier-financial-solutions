@@ -5,21 +5,34 @@ import userEvent from '@testing-library/user-event';
 import { DisputeWizardProgressBar, WizardStep, StepStatus } from '../DisputeWizardProgressBar';
 import { FileText, ClipboardList, Settings, CheckSquare } from 'lucide-react';
 
-// Mock framer-motion to avoid animation-related test issues
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, className, onClick, ...props }: React.ComponentProps<'div'>) => (
-      <div className={className} onClick={onClick} {...props}>
-        {children}
-      </div>
-    ),
-    button: ({ children, className, onClick, disabled, ...props }: React.ComponentProps<'button'>) => (
-      <button className={className} onClick={onClick} disabled={disabled} {...props}>
-        {children}
-      </button>
-    ),
-  },
-}));
+// Mock framer-motion to avoid animation-related test issues.
+// Strip motion-only props so React doesn't warn about unknown DOM attributes.
+vi.mock('framer-motion', () => {
+  const stripMotionProps = ({
+    animate: _animate,
+    exit: _exit,
+    initial: _initial,
+    transition: _transition,
+    whileHover: _whileHover,
+    whileTap: _whileTap,
+    ...domProps
+  }: Record<string, unknown>) => domProps;
+
+  return {
+    motion: {
+      div: ({ children, className, onClick, ...props }: React.ComponentProps<'div'> & Record<string, unknown>) => (
+        <div className={className} onClick={onClick} {...stripMotionProps(props)}>
+          {children}
+        </div>
+      ),
+      button: ({ children, className, onClick, disabled, ...props }: React.ComponentProps<'button'> & Record<string, unknown>) => (
+        <button className={className} onClick={onClick} disabled={disabled} {...stripMotionProps(props)}>
+          {children}
+        </button>
+      ),
+    },
+  };
+});
 
 describe('DisputeWizardProgressBar', () => {
   const mockSteps: WizardStep[] = [
@@ -166,7 +179,7 @@ describe('DisputeWizardProgressBar', () => {
       );
 
       // Should have checkmark indicator (✓) for completed step
-      const checkmarks = Array.from(container.querySelectorAll('.text-green-600')).filter(
+      const checkmarks = Array.from(container.querySelectorAll('.text-success')).filter(
         (el) => el.textContent === '✓'
       );
       expect(checkmarks.length).toBe(1);

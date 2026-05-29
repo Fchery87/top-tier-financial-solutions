@@ -74,7 +74,7 @@ export default function ContactPage() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-sans font-bold tracking-tight leading-[1.1] mb-8"
+            className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-display font-normal tracking-tight leading-[1.1] mb-8"
           >
             <span className="text-foreground">Book Your Free</span>
             <span className="text-secondary block"> Credit Consultation</span>
@@ -139,7 +139,7 @@ export default function ContactPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-sans font-bold mb-4 text-foreground">
+            <h2 className="text-3xl md:text-4xl font-display font-normal mb-4 text-foreground">
               Or Send Us a <span className="text-secondary">Message</span>
             </h2>
             <p className="text-lg text-muted-foreground">
@@ -157,7 +157,7 @@ export default function ContactPage() {
               className="space-y-8"
             >
               <div>
-                <h3 className="text-2xl font-sans font-bold text-foreground mb-4">Contact Information</h3>
+                <h3 className="text-2xl font-display font-normal text-foreground mb-4">Contact Information</h3>
                 <p className="text-lg text-muted-foreground">
                   Have questions about your credit? Ready to start your journey to financial freedom? 
                   Fill out the form or reach out to us directly.
@@ -171,7 +171,7 @@ export default function ContactPage() {
                   { icon: MapPin, title: "Office", line1: "123 Financial District Blvd", line2: "New York, NY 10005" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4 group">
-                    <div className="p-4 rounded-xl bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-white transition-all duration-300">
+                    <div className="p-4 rounded-xl bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-secondary-foreground transition-all duration-300">
                       <item.icon className="h-6 w-6" />
                     </div>
                     <div>
@@ -204,7 +204,7 @@ export default function ContactPage() {
                       <div className="p-4 bg-secondary/20 rounded-full text-secondary">
                         <CheckCircle className="h-12 w-12" />
                       </div>
-                      <h3 className="text-2xl font-sans font-bold text-foreground">Message Sent!</h3>
+                      <h3 className="text-2xl font-display font-normal text-foreground">Message Sent!</h3>
                       <p className="text-muted-foreground">
                         Thank you for contacting us. We have received your message and will be in touch shortly.
                       </p>

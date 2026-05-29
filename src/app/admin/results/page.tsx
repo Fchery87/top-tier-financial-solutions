@@ -117,7 +117,7 @@ export default function ResultsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-3xl font-sans font-bold text-foreground flex items-center gap-3"
           >
-            <Trophy className="w-8 h-8 text-yellow-500" />
+            <Trophy className="w-8 h-8 text-warning" />
             Results & Wins
           </motion.h1>
           <motion.p
@@ -192,27 +192,27 @@ export default function ResultsPage() {
             transition={{ delay: 0.2 }}
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
           >
-            <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
+            <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20">
               <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-success" />
                 </div>
-                <p className="text-5xl font-bold text-green-500">{stats.total_deletions}</p>
+                <p className="text-5xl font-bold text-success">{stats.total_deletions}</p>
                 <p className="text-sm text-muted-foreground mt-1">Items Deleted</p>
                 {stats.deletions_this_month > 0 && (
-                  <p className="text-xs text-green-500 mt-2">
+                  <p className="text-xs text-success mt-2">
                     +{stats.deletions_this_month} this month
                   </p>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border-blue-500/20">
+            <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
               <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <TrendingUp className="w-8 h-8 text-blue-500" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/20 flex items-center justify-center">
+                  <TrendingUp className="w-8 h-8 text-secondary" />
                 </div>
-                <p className="text-5xl font-bold text-blue-500">
+                <p className="text-5xl font-bold text-secondary">
                   +{stats.average_score_increase || 0}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">Avg Score Increase</p>
@@ -220,12 +220,12 @@ export default function ResultsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/20">
+            <Card className="bg-gradient-to-br from-warning/10 to-warning/5 border-warning/20">
               <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                  <Target className="w-8 h-8 text-yellow-500" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-warning/20 flex items-center justify-center">
+                  <Target className="w-8 h-8 text-warning" />
                 </div>
-                <p className="text-5xl font-bold text-yellow-500">{stats.success_rate}%</p>
+                <p className="text-5xl font-bold text-warning">{stats.success_rate}%</p>
                 <p className="text-sm text-muted-foreground mt-1">Success Rate</p>
                 <p className="text-xs text-muted-foreground mt-2">deletion rate</p>
               </CardContent>
@@ -239,18 +239,18 @@ export default function ResultsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
             >
-              <Card className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 border-purple-500/20">
+              <Card className="bg-gradient-to-r from-secondary/10 via-destructive/10 to-secondary/10 border-secondary/20">
                 <CardContent className="p-6 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <PartyPopper className="w-10 h-10 text-purple-500" />
+                    <PartyPopper className="w-10 h-10 text-secondary" />
                     <div>
                       <p className="text-sm text-muted-foreground">Total Debt Removed from Reports</p>
-                      <p className="text-3xl font-bold text-purple-500">
+                      <p className="text-3xl font-bold text-secondary">
                         {formatCurrency(stats.total_amount_removed)}
                       </p>
                     </div>
                   </div>
-                  <Sparkles className="w-8 h-8 text-purple-500/50" />
+                  <Sparkles className="w-8 h-8 text-secondary/50" />
                 </CardContent>
               </Card>
             </motion.div>
@@ -267,7 +267,7 @@ export default function ResultsPage() {
               <Card className="bg-card border border-border h-full">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Award className="w-5 h-5 text-yellow-500" />
+                    <Award className="w-5 h-5 text-warning" />
                     Recent Wins
                   </CardTitle>
                   <CardDescription>Latest successful deletions</CardDescription>
@@ -286,11 +286,11 @@ export default function ResultsPage() {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.1 * index }}
-                          className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20"
+                          className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                              <CheckCircle2 className="w-5 h-5 text-green-500" />
+                            <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                              <CheckCircle2 className="w-5 h-5 text-success" />
                             </div>
                             <div>
                               <p className="font-medium">{win.creditor_name}</p>
@@ -366,7 +366,7 @@ export default function ResultsPage() {
                 <Card className="bg-card border border-border">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-yellow-500" />
+                      <Trophy className="w-4 h-4 text-warning" />
                       Top Performers
                     </CardTitle>
                   </CardHeader>
@@ -385,9 +385,9 @@ export default function ResultsPage() {
                           >
                             <div className="flex items-center gap-2">
                               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                index === 0 ? 'bg-yellow-500/20 text-yellow-500' :
-                                index === 1 ? 'bg-gray-400/20 text-gray-400' :
-                                index === 2 ? 'bg-orange-500/20 text-orange-500' :
+                                index === 0 ? 'bg-warning/20 text-warning' :
+                                index === 1 ? 'bg-muted/20 text-muted-foreground' :
+                                index === 2 ? 'bg-warning/20 text-warning' :
                                 'bg-muted text-muted-foreground'
                               }`}>
                                 {index + 1}
@@ -395,7 +395,7 @@ export default function ResultsPage() {
                               <span className="text-sm font-medium">{performer.client_name}</span>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-bold text-green-500">
+                              <p className="text-sm font-bold text-success">
                                 {performer.deletions_count} wins
                               </p>
                               {performer.score_increase > 0 && (

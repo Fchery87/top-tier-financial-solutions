@@ -46,12 +46,12 @@ interface PipelineData {
 }
 
 const STAGE_CONFIG = {
-  lead: { label: 'Lead', color: 'bg-slate-500', textColor: 'text-slate-500', bgLight: 'bg-slate-500/10' },
-  consultation: { label: 'Consultation', color: 'bg-blue-500', textColor: 'text-blue-500', bgLight: 'bg-blue-500/10' },
-  agreement: { label: 'Agreement', color: 'bg-purple-500', textColor: 'text-purple-500', bgLight: 'bg-purple-500/10' },
-  onboarding: { label: 'Onboarding', color: 'bg-orange-500', textColor: 'text-orange-500', bgLight: 'bg-orange-500/10' },
-  active: { label: 'Active', color: 'bg-green-500', textColor: 'text-green-500', bgLight: 'bg-green-500/10' },
-  completed: { label: 'Completed', color: 'bg-emerald-500', textColor: 'text-emerald-500', bgLight: 'bg-emerald-500/10' },
+  lead: { label: 'Lead', color: 'bg-muted', textColor: 'text-muted-foreground', bgLight: 'bg-muted/10' },
+  consultation: { label: 'Consultation', color: 'bg-secondary/100', textColor: 'text-secondary', bgLight: 'bg-secondary/10' },
+  agreement: { label: 'Agreement', color: 'bg-secondary/100', textColor: 'text-secondary', bgLight: 'bg-secondary/10' },
+  onboarding: { label: 'Onboarding', color: 'bg-warning/100', textColor: 'text-warning', bgLight: 'bg-warning/10' },
+  active: { label: 'Active', color: 'bg-success/100', textColor: 'text-success', bgLight: 'bg-success/10' },
+  completed: { label: 'Completed', color: 'bg-success/100', textColor: 'text-success', bgLight: 'bg-success/10' },
 };
 
 type StageKey = keyof typeof STAGE_CONFIG;
@@ -64,9 +64,9 @@ interface ClientCardProps {
 function ClientCard({ client, onDragStart }: ClientCardProps) {
   const getScoreColor = (score: number | null) => {
     if (!score) return 'text-muted-foreground';
-    if (score >= 700) return 'text-green-500';
-    if (score >= 600) return 'text-yellow-500';
-    return 'text-red-500';
+    if (score >= 700) return 'text-success';
+    if (score >= 600) return 'text-warning';
+    return 'text-destructive';
   };
 
   return (

@@ -21,7 +21,7 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
 
   const statCards = [
     { label: 'Current Score', value: activeCase.credit_score_current ?? '---', icon: Target, tone: 'text-secondary' },
-    { label: 'Score Improvement', value: `+${scoreImprovement} pts`, icon: TrendingUp, tone: 'text-emerald-600' },
+    { label: 'Score Improvement', value: `+${scoreImprovement} pts`, icon: TrendingUp, tone: 'text-success' },
     { label: 'Items Removed', value: activeCase.negative_items_removed || 0, icon: Zap, tone: 'text-secondary' },
     { label: 'Case Status', value: activeCase.status || 'N/A', icon: Calendar, tone: 'text-foreground capitalize' },
   ];
@@ -37,7 +37,7 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className={`mt-2 text-2xl font-semibold tracking-tight ${stat.tone}`}>
+                    <p className={`mt-2 font-display text-3xl font-light tracking-tight tabular-nums ${stat.tone}`}>
                       {stat.value}
                     </p>
                   </div>
@@ -52,7 +52,7 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
+            <CardTitle className="font-display text-xl flex items-center gap-2">
               <Clock className="w-5 h-5 text-secondary" />
               Current Phase and Readiness
             </CardTitle>
@@ -76,8 +76,8 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
 
                 return (
                   <div key={key} className={`flex items-center gap-2 rounded-md border px-3 py-2 ${
-                      isComplete ? 'bg-green-500/20 text-green-400' :
-                      isCurrent ? 'bg-secondary/20 text-secondary' :
+                      isComplete ? 'bg-success/10 text-success border-success/25' :
+                      isCurrent ? 'bg-secondary/10 text-secondary border-secondary/25' :
                       'bg-muted/30 text-muted-foreground'
                     }`}>
                       {isComplete ? (
@@ -97,7 +97,7 @@ export default function PortalCaseStatus({ activeCase }: PortalCaseStatusProps) 
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
+            <CardTitle className="font-display text-xl flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-secondary" />
               Recent Updates
             </CardTitle>

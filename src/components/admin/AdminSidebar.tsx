@@ -32,9 +32,26 @@ import {
   Trophy,
   Settings,
   MailOpen,
-  Hexagon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+function AscendantMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 96 96" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="sb-champagne" x1="20" y1="80" x2="76" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#C6A96C" />
+          <stop offset="1" stopColor="#8F7440" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="92" height="92" rx="24" fill="#1B1714" stroke="rgba(198,169,108,0.28)" strokeWidth="1.5" />
+      <rect x="26" y="52" width="13" height="22" rx="3" fill="#EDE8DF" opacity="0.82" />
+      <rect x="42" y="40" width="13" height="34" rx="3" fill="#EDE8DF" opacity="0.82" />
+      <rect x="58" y="22" width="13" height="52" rx="3" fill="url(#sb-champagne)" />
+      <circle cx="64.5" cy="17" r="4.5" fill="url(#sb-champagne)" />
+    </svg>
+  );
+}
 
 interface NavItem {
   name: string;
@@ -172,17 +189,15 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
       {/* Logo - hidden on mobile (shown in top bar instead) */}
       <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-white/[0.08]">
         <Link href="/admin" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md bg-secondary flex items-center justify-center">
-            <Hexagon className="w-5 h-5 text-white" />
-          </div>
+          <AscendantMark className="w-9 h-9 flex-shrink-0" />
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-base font-semibold text-white"
+              className="font-display text-lg font-medium tracking-tight text-white"
             >
-              Admin
+              Top Tier
             </motion.span>
           )}
         </Link>
@@ -197,10 +212,8 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
       {/* Mobile logo */}
       <div className="md:hidden h-14 flex items-center px-4 border-b border-white/10">
         <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
-            <Hexagon className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-base font-sans font-bold text-white">Admin Panel</span>
+          <AscendantMark className="w-8 h-8 flex-shrink-0" />
+          <span className="font-display text-base font-medium tracking-tight text-white">Top Tier</span>
         </Link>
       </div>
 
@@ -213,13 +226,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === dashboardLink.href 
-              ? "bg-secondary text-white" 
+              ? "bg-secondary text-[#1a1612] font-medium"
               : "text-white/70 hover:bg-white/10 hover:text-white"
           )}
         >
           <dashboardLink.icon className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === dashboardLink.href ? "text-white" : "text-current"
+            pathname === dashboardLink.href ? "text-[#1a1612]" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <motion.span
@@ -295,13 +308,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                             className={cn(
                               "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
                               isActive 
-                                ? "bg-secondary text-white" 
+                                ? "bg-secondary text-[#1a1612] font-medium"
                                 : "text-white/70 hover:bg-white/10 hover:text-white"
                             )}
                           >
                             <item.icon className={cn(
                               "w-4 h-4 flex-shrink-0",
-                              isActive ? "text-white" : "text-current"
+                              isActive ? "text-[#1a1612]" : "text-current"
                             )} />
                             {(!collapsed || mobileOpen) && (
                               <motion.span
@@ -338,13 +351,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === '/admin/settings'
-              ? "bg-secondary text-white" 
+              ? "bg-secondary text-[#1a1612] font-medium"
               : "text-white/70 hover:bg-white/10 hover:text-white"
           )}
         >
           <Settings className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === '/admin/settings' ? "text-white" : "text-current"
+            pathname === '/admin/settings' ? "text-[#1a1612]" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Settings</span>
@@ -381,7 +394,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         initial={false}
         animate={{ width: collapsed ? 80 : 264 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-[hsl(220_24%_7%)] border-r border-white/10 flex-col"
+        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-[#100E0C] border-r border-white/[0.07] flex-col"
       >
         {sidebarContent}
       </motion.aside>
@@ -403,7 +416,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
               animate={{ x: 0 }}
               exit={{ x: -264 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[264px] bg-[hsl(220_24%_7%)] border-r border-white/10 flex flex-col"
+              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[264px] bg-[#100E0C] border-r border-white/[0.07] flex flex-col"
             >
               {sidebarContent}
             </motion.aside>

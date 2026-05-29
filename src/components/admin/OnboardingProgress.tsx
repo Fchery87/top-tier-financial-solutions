@@ -96,25 +96,25 @@ export function OnboardingProgress() {
       icon: FileText, 
       label: 'Report Uploaded', 
       data: stats?.reportUploaded,
-      color: 'bg-blue-500'
+      color: 'bg-secondary/100'
     },
     { 
       icon: CheckCircle2, 
       label: 'Report Analyzed', 
       data: stats?.reportAnalyzed,
-      color: 'bg-purple-500'
+      color: 'bg-secondary/100'
     },
     { 
       icon: FileSignature, 
       label: 'Agreement Signed', 
       data: stats?.agreementSigned,
-      color: 'bg-orange-500'
+      color: 'bg-warning/100'
     },
     { 
       icon: Scale, 
       label: 'First Dispute', 
       data: stats?.firstDispute,
-      color: 'bg-green-500'
+      color: 'bg-success/100'
     },
   ];
 
@@ -132,7 +132,7 @@ export function OnboardingProgress() {
             </CardDescription>
           </div>
           {stats?.newClientsThisWeek !== undefined && stats.newClientsThisWeek > 0 && (
-            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-500">
+            <span className="px-2 py-1 text-xs font-medium rounded-full bg-success/10 text-success">
               +{stats.newClientsThisWeek} this week
             </span>
           )}

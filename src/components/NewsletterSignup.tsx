@@ -93,7 +93,7 @@ export function NewsletterSignup({
               data-form-type="other"
               className="border-white/25 bg-white/10 text-white placeholder:text-white/60"
             />
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button 
               type="submit" 
               disabled={isLoading}
@@ -122,7 +122,7 @@ export function NewsletterSignup({
         </div>
         
         {isSuccess ? (
-          <div className="flex items-center gap-2 text-green-400">
+          <div className="flex items-center gap-2 text-success">
             <CheckCircle className="w-5 h-5" />
             <span>Thank you for subscribing!</span>
           </div>
@@ -173,10 +173,10 @@ export function NewsletterSignup({
           
           <div className="flex-1">
             {isSuccess ? (
-              <div className="flex items-center justify-center gap-3 p-6 rounded-xl bg-green-500/10 border border-green-500/30">
-                <CheckCircle className="w-6 h-6 text-green-400" />
+              <div className="flex items-center justify-center gap-3 p-6 rounded-xl bg-success/10 border border-success/30">
+                <CheckCircle className="w-6 h-6 text-success" />
                 <div>
-                  <p className="font-medium text-green-400">You&apos;re subscribed!</p>
+                  <p className="font-medium text-success">You&apos;re subscribed!</p>
                   <p className="text-sm text-muted-foreground">Check your inbox for updates.</p>
                 </div>
               </div>

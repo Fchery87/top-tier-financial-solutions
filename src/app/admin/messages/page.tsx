@@ -263,7 +263,7 @@ export default function MessagesPage() {
         </div>
         <div className="flex items-center gap-4">
           {totalUnread > 0 && (
-            <span className="px-3 py-1 rounded-full bg-red-500 text-white text-sm font-medium">
+            <span className="px-3 py-1 rounded-full bg-destructive/100 text-white text-sm font-medium">
               {totalUnread} unread
             </span>
           )}
@@ -306,7 +306,7 @@ export default function MessagesPage() {
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate">{thread.client_name}</p>
                           {thread.unread_by_admin > 0 && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-blue-500 text-white text-xs">
+                            <span className="px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs">
                               {thread.unread_by_admin}
                             </span>
                           )}

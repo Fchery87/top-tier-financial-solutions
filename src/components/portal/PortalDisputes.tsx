@@ -13,7 +13,7 @@ export default function PortalDisputes({ disputes, disputeStats }: PortalDispute
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
       <CardHeader>
-        <CardTitle className="font-sans text-xl flex items-center gap-2">
+        <CardTitle className="font-display text-xl flex items-center gap-2">
           <Scale className="w-5 h-5 text-secondary" />
           Dispute Progress
         </CardTitle>
@@ -25,20 +25,20 @@ export default function PortalDisputes({ disputes, disputeStats }: PortalDispute
         {disputeStats && disputeStats.total > 0 ? (
           <div className="space-y-4">
             <div className="grid grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg bg-muted/30 text-center">
-                <p className="text-2xl font-bold text-foreground">{disputeStats.total}</p>
+              <div className="p-3 rounded-lg border border-border bg-muted/40 text-center">
+                <p className="font-display text-3xl font-light tabular-nums text-foreground">{disputeStats.total}</p>
                 <p className="text-xs text-muted-foreground">Total</p>
               </div>
-              <div className="p-3 rounded-lg bg-blue-500/10 text-center">
-                <p className="text-2xl font-bold text-blue-500">{disputeStats.in_progress}</p>
+              <div className="p-3 rounded-lg border border-secondary/20 bg-secondary/10 text-center">
+                <p className="font-display text-3xl font-light tabular-nums text-secondary">{disputeStats.in_progress}</p>
                 <p className="text-xs text-muted-foreground">In Progress</p>
               </div>
-              <div className="p-3 rounded-lg bg-yellow-500/10 text-center">
-                <p className="text-2xl font-bold text-yellow-500">{disputeStats.awaiting}</p>
+              <div className="p-3 rounded-lg border border-warning/20 bg-warning/10 text-center">
+                <p className="font-display text-3xl font-light tabular-nums text-warning">{disputeStats.awaiting}</p>
                 <p className="text-xs text-muted-foreground">Awaiting</p>
               </div>
-              <div className="p-3 rounded-lg bg-green-500/10 text-center">
-                <p className="text-2xl font-bold text-green-500">{disputeStats.deleted}</p>
+              <div className="p-3 rounded-lg border border-success/20 bg-success/10 text-center">
+                <p className="font-display text-3xl font-light tabular-nums text-success">{disputeStats.deleted}</p>
                 <p className="text-xs text-muted-foreground">Deleted</p>
               </div>
             </div>
@@ -49,19 +49,19 @@ export default function PortalDisputes({ disputes, disputeStats }: PortalDispute
                   key={dispute.id}
                   className={`p-3 rounded-lg border transition-colors ${
                     dispute.outcome === 'deleted'
-                      ? 'bg-green-500/10 border-green-500/30'
+                      ? 'bg-success/[0.07] border-success/25'
                       : dispute.status === 'sent'
-                        ? 'bg-blue-500/10 border-blue-500/30'
-                        : 'bg-muted/30 border-border/50'
+                        ? 'bg-secondary/[0.07] border-secondary/25'
+                        : 'bg-muted/30 border-border/60'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         {dispute.outcome === 'deleted' ? (
-                          <Trophy className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          <Trophy className="w-4 h-4 text-success flex-shrink-0" />
                         ) : dispute.status === 'sent' ? (
-                          <Clock className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                          <Clock className="w-4 h-4 text-secondary flex-shrink-0" />
                         ) : (
                           <Scale className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         )}
@@ -74,15 +74,15 @@ export default function PortalDisputes({ disputes, disputeStats }: PortalDispute
                     </div>
                     <div className="text-right flex-shrink-0">
                       {dispute.outcome === 'deleted' ? (
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-500/20 text-green-500">
+                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-success/15 text-success">
                           Removed
                         </span>
                       ) : dispute.outcome === 'verified' ? (
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-500">
+                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-warning/15 text-warning">
                           Escalating
                         </span>
                       ) : dispute.status === 'sent' ? (
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-500">
+                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary/15 text-secondary">
                           In Review
                         </span>
                       ) : (

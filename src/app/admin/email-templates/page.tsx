@@ -196,29 +196,29 @@ export default function EmailTemplatesPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card border-purple-500/10 hover:border-purple-500/30 transition-all duration-300 card-hover">
+          <Card className="glass-card border-secondary/10 hover:border-secondary/30 transition-all duration-300 card-hover">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground font-medium">Marketing</p>
                   <p className="text-3xl font-bold text-foreground mt-2">{marketingCount}</p>
                 </div>
-                <div className="p-3 bg-gradient-to-br from-purple-500/10 to-purple-500/5 rounded-xl">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
+                <div className="p-3 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-xl">
+                  <TrendingUp className="w-6 h-6 text-secondary" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="glass-card border-green-500/10 hover:border-green-500/30 transition-all duration-300 card-hover">
+          <Card className="glass-card border-success/10 hover:border-success/30 transition-all duration-300 card-hover">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground font-medium">Active</p>
                   <p className="text-3xl font-bold text-foreground mt-2">{activeCount}</p>
                 </div>
-                <div className="p-3 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-xl">
-                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                <div className="p-3 bg-gradient-to-br from-success/10 to-success/5 rounded-xl">
+                  <CheckCircle2 className="w-6 h-6 text-success" />
                 </div>
               </div>
             </CardContent>
@@ -282,12 +282,12 @@ export default function EmailTemplatesPage() {
                       {isTransactional(template.trigger_type) ? (
                         <Zap className="w-5 h-5 text-secondary" />
                       ) : (
-                        <TrendingUp className="w-5 h-5 text-purple-600" />
+                        <TrendingUp className="w-5 h-5 text-secondary" />
                       )}
                     </div>
                     <div className="flex gap-2 items-center">
                       {template.is_active && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-700 border border-green-500/20">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           Active
                         </span>
@@ -374,7 +374,7 @@ export default function EmailTemplatesPage() {
                       {isTransactional(selectedTemplate.trigger_type) ? (
                         <Zap className="w-5 h-5 text-secondary" />
                       ) : (
-                        <TrendingUp className="w-5 h-5 text-purple-600" />
+                        <TrendingUp className="w-5 h-5 text-secondary" />
                       )}
                     </div>
                     <div>

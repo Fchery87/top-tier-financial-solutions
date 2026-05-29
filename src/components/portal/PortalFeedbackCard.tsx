@@ -24,7 +24,7 @@ export default function PortalFeedbackCard({
     return (
       <Card className="bg-card/80 backdrop-blur-sm border-border/50">
         <CardHeader>
-          <CardTitle className="font-sans text-xl flex items-center gap-2">
+          <CardTitle className="font-display text-xl flex items-center gap-2">
             <Trophy className="w-5 h-5 text-secondary" />
             Thank you for your feedback
           </CardTitle>
@@ -39,7 +39,7 @@ export default function PortalFeedbackCard({
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
       <CardHeader>
-        <CardTitle className="font-sans text-xl flex items-center gap-2">
+        <CardTitle className="font-display text-xl flex items-center gap-2">
           <Trophy className="w-5 h-5 text-secondary" />
           How is your experience so far?
         </CardTitle>

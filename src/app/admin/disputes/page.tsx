@@ -150,18 +150,18 @@ export default function DisputesPage() {
     if (!deadline) return null;
     const now = new Date();
     const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysLeft < 0) return { status: 'overdue', days: Math.abs(daysLeft), color: 'text-red-500 bg-red-500/10' };
-    if (daysLeft <= 7) return { status: 'urgent', days: daysLeft, color: 'text-yellow-500 bg-yellow-500/10' };
-    return { status: 'ok', days: daysLeft, color: 'text-green-500 bg-green-500/10' };
+    if (daysLeft < 0) return { status: 'overdue', days: Math.abs(daysLeft), color: 'text-destructive bg-destructive/10' };
+    if (daysLeft <= 7) return { status: 'urgent', days: daysLeft, color: 'text-warning bg-warning/10' };
+    return { status: 'ok', days: daysLeft, color: 'text-success bg-success/10' };
   };
 
   const getOutcomeIcon = (outcome: string | null) => {
     switch (outcome) {
-      case 'deleted': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case 'verified': return <RotateCcw className="w-4 h-4 text-yellow-500" />;
-      case 'updated': return <FileText className="w-4 h-4 text-blue-500" />;
-      case 'no_response': return <AlertTriangle className="w-4 h-4 text-orange-500" />;
-      case 'frivolous': return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'deleted': return <CheckCircle2 className="w-4 h-4 text-success" />;
+      case 'verified': return <RotateCcw className="w-4 h-4 text-warning" />;
+      case 'updated': return <FileText className="w-4 h-4 text-secondary" />;
+      case 'no_response': return <AlertTriangle className="w-4 h-4 text-warning" />;
+      case 'frivolous': return <AlertTriangle className="w-4 h-4 text-destructive" />;
       default: return null;
     }
   };
@@ -187,7 +187,7 @@ export default function DisputesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl font-sans font-bold text-foreground">Dispute Management</motion.h1>
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-display text-3xl font-light tracking-tight text-foreground">Dispute Management</motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-muted-foreground mt-1">Track dispute responses, log outcomes, and manage escalations</motion.p>
         </div>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="flex items-center gap-2">
@@ -234,13 +234,13 @@ export default function DisputesPage() {
                 {disputes.map((dispute) => {
                   const deadlineStatus = getDeadlineStatus(dispute);
                   return (
-                    <div key={dispute.id} className={`p-4 rounded-lg bg-muted/50 border transition-all hover:bg-muted cursor-pointer ${deadlineStatus?.status === 'overdue' ? 'border-red-500/50' : 'border-border/50'}`} onClick={() => handleLogResponse(dispute)}>
+                    <div key={dispute.id} className={`p-4 rounded-lg bg-muted/50 border transition-all hover:bg-muted cursor-pointer ${deadlineStatus?.status === 'overdue' ? 'border-destructive/50' : 'border-border/50'}`} onClick={() => handleLogResponse(dispute)}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium">{dispute.client_name}</span>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">R{dispute.round}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${dispute.bureau === 'transunion' ? 'bg-blue-500/10 text-blue-500' : dispute.bureau === 'experian' ? 'bg-purple-500/10 text-purple-500' : 'bg-red-500/10 text-red-500'}`}>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary">R{dispute.round}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                               {dispute.bureau.charAt(0).toUpperCase() + dispute.bureau.slice(1)}
                             </span>
                             {dispute.outcome && (

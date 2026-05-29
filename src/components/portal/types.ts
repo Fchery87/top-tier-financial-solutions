@@ -126,9 +126,9 @@ export const phaseLabels: Record<string, string> = {
 };
 
 export const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  active: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  in_review: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-  closed: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  pending: 'bg-warning/10 text-warning border-warning/25',
+  active: 'bg-secondary/10 text-secondary border-secondary/25',
+  in_review: 'bg-secondary/10 text-secondary border-secondary/25',
+  completed: 'bg-success/10 text-success border-success/25',
+  closed: 'bg-muted text-muted-foreground border-border',
 };

@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Home, ArrowLeft, Search } from 'lucide-react';
@@ -7,7 +9,7 @@ export default function NotFound() {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="text-center max-w-lg">
         <div className="relative mb-8">
-          <span className="text-[150px] md:text-[200px] font-sans font-bold text-secondary/10 leading-none select-none">
+          <span className="text-[150px] md:text-[200px] font-display font-light text-secondary/10 leading-none select-none">
             404
           </span>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -15,7 +17,7 @@ export default function NotFound() {
           </div>
         </div>
         
-        <h1 className="text-3xl md:text-4xl font-sans font-bold text-foreground mb-4">
+        <h1 className="text-3xl md:text-4xl font-display font-normal text-foreground mb-4">
           Page Not Found
         </h1>
         
@@ -24,11 +26,9 @@ export default function NotFound() {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button asChild variant="outline" className="gap-2">
-            <Link href="javascript:history.back()">
-              <ArrowLeft className="w-4 h-4" />
-              Go Back
-            </Link>
+          <Button variant="outline" className="gap-2" onClick={() => window.history.back()}>
+            <ArrowLeft className="w-4 h-4" />
+            Go Back
           </Button>
           <Button asChild className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90">
             <Link href="/">

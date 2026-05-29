@@ -154,9 +154,9 @@ export default function CompliancePage() {
   }, [stats]);
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-500';
-    if (score >= 70) return 'text-amber-500';
-    return 'text-red-500';
+    if (score >= 90) return 'text-success';
+    if (score >= 70) return 'text-warning';
+    return 'text-destructive';
   };
 
   if (loading) {
@@ -214,17 +214,17 @@ export default function CompliancePage() {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground mb-1">Status</p>
                 {complianceScore >= 90 ? (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-sm font-medium">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success/10 text-success text-sm font-medium">
                     <CheckCircle className="w-4 h-4" />
                     Compliant
                   </span>
                 ) : complianceScore >= 70 ? (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-sm font-medium">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-warning/10 text-warning text-sm font-medium">
                     <AlertTriangle className="w-4 h-4" />
                     Needs Attention
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-sm font-medium">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-sm font-medium">
                     <XCircle className="w-4 h-4" />
                     Action Required
                   </span>
@@ -252,28 +252,28 @@ export default function CompliancePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">Written Contracts</p>
                 <p className="text-xs text-muted-foreground">All agreements must be in writing with required disclosures</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">3-Day Right to Cancel</p>
                 <p className="text-xs text-muted-foreground">Clients can cancel within 3 business days of signing</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">No Advance Fees</p>
                 <p className="text-xs text-muted-foreground">Cannot charge until services have been rendered</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">Required Disclosures</p>
                 <p className="text-xs text-muted-foreground">Consumer rights and no-guarantee statements</p>
@@ -289,28 +289,28 @@ export default function CompliancePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">Fee Disclosure</p>
                 <p className="text-xs text-muted-foreground">All fees must be clearly disclosed before purchase</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">No Misrepresentations</p>
                 <p className="text-xs text-muted-foreground">Cannot make false claims about services or results</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">Record Keeping</p>
                 <p className="text-xs text-muted-foreground">Maintain records of all client communications</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
               <div>
                 <p className="font-medium text-sm">Payment Timing</p>
                 <p className="text-xs text-muted-foreground">Charge only after services are fully performed</p>

@@ -36,9 +36,9 @@ export function StepConfigure() {
       <CardHeader>
         <CardTitle>
           Select Dispute Round & Target
-          <span className="text-red-600 dark:text-red-400 ml-1">*</span>
+          <span className="text-destructive ml-1">*</span>
           {selectedBureaus.length === 0 && (
-            <span className="text-xs text-red-600 dark:text-red-400 ml-3 font-normal">(Select at least one bureau)</span>
+            <span className="text-xs text-destructive ml-3 font-normal">(Select at least one bureau)</span>
           )}
         </CardTitle>
         <CardDescription>Configure the dispute round and recipients</CardDescription>
@@ -49,17 +49,17 @@ export function StepConfigure() {
         {loadingDiscrepancies ? (
           <div className="p-3 rounded-lg bg-muted/40 border border-border/50 text-sm text-muted-foreground">Checking for bureau discrepancies...</div>
         ) : discrepancySummary?.highSeverity ? (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-200">
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
             {discrepancySummary.highSeverity} high-severity discrepancies must be resolved before generating letters. Resolve them in the Discrepancies panel, then refresh.
           </div>
         ) : discrepancySummary ? (
-          <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-200">
+          <div className="p-3 rounded-lg bg-success/10 border border-success/20 text-sm text-success">
             No blocking discrepancies detected. ({discrepancySummary.total} total open discrepancies)
           </div>
         ) : null}
 
         {targetRecipient !== 'bureau' && (
-          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm text-blue-100">
+          <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground">
             Enhanced creditor/furnisher letters enabled. This escalation will cite prior verification attempts and request direct investigation from the data furnisher.
           </div>
         )}
@@ -104,7 +104,7 @@ export function StepConfigure() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{methodology.name}</p>
-                        {recommendedMethodology === methodology.code && <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Recommended</span>}
+                        {recommendedMethodology === methodology.code && <span className="text-xs px-1.5 py-0.5 rounded bg-success/15 text-success">Recommended</span>}
                       </div>
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{methodology.description}</p>
                       {methodology.bestFor.length > 0 && (
@@ -122,13 +122,13 @@ export function StepConfigure() {
         </div>
 
         {/* e-OSCAR Bypass */}
-        <div className="space-y-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+        <div className="space-y-3 p-4 rounded-lg bg-secondary/10 border border-secondary/20">
           <div className="flex items-start gap-3">
             <input type="checkbox" id="requestManualReview" checked={requestManualReview} onChange={(e) => setRequestManualReview(e.target.checked)} className="mt-1 w-4 h-4 cursor-pointer" />
             <div className="flex-1">
               <label htmlFor="requestManualReview" className="text-sm font-medium cursor-pointer">Request Manual Review (Bypass e-OSCAR)</label>
               <p className="text-xs text-muted-foreground mt-1">Includes explicit language requesting that this dispute NOT be processed solely through automated e-OSCAR systems and demanding human investigator review.</p>
-              <p className="text-xs text-blue-400 mt-2"><strong>Recommended for:</strong> Cases with evidence, identity theft claims, or complex disputed facts</p>
+              <p className="text-xs text-secondary mt-2"><strong>Recommended for:</strong> Cases with evidence, identity theft claims, or complex disputed facts</p>
             </div>
           </div>
         </div>
@@ -160,11 +160,11 @@ export function StepConfigure() {
             </Button>
           </div>
           {generationMethod === 'ai' && (
-            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm">
+            <div className="p-3 rounded-lg bg-success/10 border border-success/20 text-sm">
               <div className="flex items-start gap-2">
-                <Sparkles className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <Sparkles className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-green-600 dark:text-green-400">AI Analysis Mode</p>
+                  <p className="font-medium text-success">AI Analysis Mode</p>
                   <p className="text-muted-foreground mt-1">The AI will automatically analyze your selected items using Metro 2 compliance knowledge to:</p>
                   <ul className="text-muted-foreground mt-1 space-y-0.5 text-xs list-disc list-inside">
                     <li>Identify the best dispute methodology</li><li>Detect Metro 2 field violations</li><li>Select appropriate reason codes</li><li>Generate unique, FCRA-compliant letters</li>
@@ -226,15 +226,15 @@ export function StepConfigure() {
           )}
 
           {selectedReasonCodes.some(c => ['identity_theft', 'not_mine', 'never_late', 'mixed_file'].includes(c)) && selectedEvidenceIds.length === 0 && (
-            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+            <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Evidence Required for High-Risk Claims</p>
+                  <p className="text-sm font-medium text-warning">Evidence Required for High-Risk Claims</p>
                   <p className="text-xs text-muted-foreground mt-1">The selected reason codes require supporting documentation.</p>
                   <label className="flex items-center gap-2 mt-2">
-                    <input type="checkbox" checked={evidenceOverrideConfirmed} onChange={(e) => setEvidenceOverrideConfirmed(e.target.checked)} className="rounded border-yellow-500" />
-                    <span className="text-xs text-yellow-600 dark:text-yellow-400">I confirm client has provided verbal verification of these claims</span>
+                    <input type="checkbox" checked={evidenceOverrideConfirmed} onChange={(e) => setEvidenceOverrideConfirmed(e.target.checked)} className="rounded border-warning" />
+                    <span className="text-xs text-warning">I confirm client has provided verbal verification of these claims</span>
                   </label>
                 </div>
               </div>
@@ -247,31 +247,31 @@ export function StepConfigure() {
 
           {/* AI Analysis Settings */}
           {generationMethod === 'ai' && (
-            <div data-analysis-settings className="space-y-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+            <div data-analysis-settings className="space-y-3 p-4 rounded-lg bg-secondary/10 border border-secondary/20">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-blue-900 dark:text-blue-200">Analysis Settings</label>
-                <button onClick={() => setShowLowConfidenceItems(!showLowConfidenceItems)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">{showLowConfidenceItems ? 'Hide' : 'Show'} Low Confidence Items</button>
+                <label className="text-sm font-medium text-foreground">Analysis Settings</label>
+                <button onClick={() => setShowLowConfidenceItems(!showLowConfidenceItems)} className="text-xs text-secondary hover:underline">{showLowConfidenceItems ? 'Hide' : 'Show'} Low Confidence Items</button>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Minimum Confidence Threshold</span>
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{Math.round(confidenceThreshold * 100)}%</span>
+                  <span className="text-xs font-semibold text-secondary">{Math.round(confidenceThreshold * 100)}%</span>
                 </div>
-                <input type="range" min="0" max="1" step="0.1" value={confidenceThreshold} onChange={(e) => setConfidenceThreshold(parseFloat(e.target.value))} className="w-full h-2 bg-blue-200 dark:bg-blue-900 rounded-lg appearance-none cursor-pointer" />
+                <input type="range" min="0" max="1" step="0.1" value={confidenceThreshold} onChange={(e) => setConfidenceThreshold(parseFloat(e.target.value))} className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-secondary" />
                 <div className="flex justify-between text-xs text-muted-foreground"><span>Low</span><span>High</span></div>
               </div>
               <p className="text-xs text-muted-foreground italic">Adjust the threshold to filter recommendations. Higher threshold = only highest-confidence items.</p>
 
-              <div className="border-t border-blue-200 dark:border-blue-900 pt-3 mt-3">
-                <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-2">Analysis Aggressiveness</p>
+              <div className="border-t border-secondary/20 pt-3 mt-3">
+                <p className="text-xs font-medium text-foreground mb-2">Analysis Aggressiveness</p>
                 <div className="grid grid-cols-3 gap-2">
                   {(['conservative', 'balanced', 'aggressive'] as const).map((level) => (
-                    <button key={level} onClick={() => setAnalysisAggressiveness(level)} className={`px-3 py-2 rounded text-xs font-medium transition-all ${analysisAggressiveness === level ? level === 'conservative' ? 'bg-blue-600 dark:bg-blue-500 text-white' : level === 'balanced' ? 'bg-blue-500 dark:bg-blue-600 text-white' : 'bg-red-600 dark:bg-red-500 text-white' : 'bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100 hover:bg-blue-300 dark:hover:bg-blue-800'}`}>
+                    <button key={level} onClick={() => setAnalysisAggressiveness(level)} className={`px-3 py-2 rounded text-xs font-medium transition-all ${analysisAggressiveness === level ? level === 'aggressive' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground' : 'bg-muted text-foreground hover:bg-muted/70'}`}>
                       {level.charAt(0).toUpperCase() + level.slice(1)}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 italic">
+                <p className="text-xs text-muted-foreground mt-2 italic">
                   {analysisAggressiveness === 'conservative' ? 'Conservative: Finds only the strongest violations' : analysisAggressiveness === 'balanced' ? 'Balanced: Balanced strength and comprehensiveness' : 'Aggressive: Finds all potential violations (may be less precise)'}
                 </p>
               </div>

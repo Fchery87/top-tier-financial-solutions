@@ -27,33 +27,33 @@ export function BillingStatsCards({ stats }: BillingStatsCardsProps) {
     >
       <Card className="bg-card border border-border">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-blue-500/10">
-            <FileText className="w-6 h-6 text-blue-500" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted/60">
+            <FileText className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-2xl font-bold">{stats.total_invoices}</p>
+            <p className="font-display text-3xl font-light tabular-nums">{stats.total_invoices}</p>
             <p className="text-sm text-muted-foreground">Total Invoices</p>
           </div>
         </CardContent>
       </Card>
       <Card className="bg-card border border-border">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-green-500/10">
-            <DollarSign className="w-6 h-6 text-green-500" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-success/20 bg-success/10">
+            <DollarSign className="w-5 h-5 text-success" />
           </div>
           <div>
-            <p className="text-2xl font-bold">{formatCurrency(stats.total_revenue)}</p>
+            <p className="font-display text-3xl font-light tabular-nums">{formatCurrency(stats.total_revenue)}</p>
             <p className="text-sm text-muted-foreground">Total Revenue</p>
           </div>
         </CardContent>
       </Card>
       <Card className="bg-card border border-border">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-yellow-500/10">
-            <Clock className="w-6 h-6 text-yellow-500" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-warning/20 bg-warning/10">
+            <Clock className="w-5 h-5 text-warning" />
           </div>
           <div>
-            <p className="text-2xl font-bold">{formatCurrency(stats.pending_amount)}</p>
+            <p className="font-display text-3xl font-light tabular-nums">{formatCurrency(stats.pending_amount)}</p>
             <p className="text-sm text-muted-foreground">Pending Amount</p>
           </div>
         </CardContent>

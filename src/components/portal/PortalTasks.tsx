@@ -46,7 +46,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
     <>
       <Card className="bg-card/80 backdrop-blur-sm border-border/50">
         <CardHeader>
-          <CardTitle className="font-sans text-xl flex items-center gap-2">
+          <CardTitle className="font-display text-xl flex items-center gap-2">
             <Target className="w-5 h-5 text-secondary" />
             Your Next Step
           </CardTitle>
@@ -68,7 +68,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
                 )}
                 <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground flex-wrap">
                   {nextTask.is_blocking && (
-                    <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 font-medium">
+                    <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">
                       Required
                     </span>
                   )}
@@ -91,7 +91,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
             </div>
           ) : (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-success" />
               <span>No open action items from us right now.</span>
             </div>
           )}
@@ -101,7 +101,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
       {sortedTasks.length > 0 && (
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader>
-            <CardTitle className="font-sans text-xl flex items-center gap-2">
+            <CardTitle className="font-display text-xl flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-secondary" />
               Your Tasks
             </CardTitle>
@@ -123,7 +123,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
                 )}
                 <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground flex-wrap">
                   {nextTask.is_blocking && (
-                    <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 font-medium">
+                    <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">
                       Required
                     </span>
                   )}
@@ -152,7 +152,7 @@ export default function PortalTasks({ tasks }: PortalTasksProps) {
                     </p>
                     <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground flex-wrap">
                       {task.is_blocking && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500">
+                        <span className="px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
                           Required
                         </span>
                       )}

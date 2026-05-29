@@ -81,8 +81,8 @@ export function PipelineTab({ stats, loading }: PipelineTabProps) {
             <div className="grid grid-cols-4 gap-4">
               <Link href="/admin/disputes?round=1&status=sent" className="block group">
                 <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
-                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-blue-500">R1</span>
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-secondary/10 flex items-center justify-center">
+                    <span className="text-sm font-bold text-secondary">R1</span>
                   </div>
                   <p className="text-2xl font-bold">{stats?.disputePipeline.round1 ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Round 1</p>
@@ -90,8 +90,8 @@ export function PipelineTab({ stats, loading }: PipelineTabProps) {
               </Link>
               <Link href="/admin/disputes?round=2&status=sent" className="block group">
                 <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
-                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-purple-500/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-purple-500">R2</span>
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-secondary/10 flex items-center justify-center">
+                    <span className="text-sm font-bold text-secondary">R2</span>
                   </div>
                   <p className="text-2xl font-bold">{stats?.disputePipeline.round2 ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Round 2</p>
@@ -99,8 +99,8 @@ export function PipelineTab({ stats, loading }: PipelineTabProps) {
               </Link>
               <Link href="/admin/disputes?round=3&status=sent" className="block group">
                 <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
-                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-orange-500/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-orange-500">R3</span>
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-warning/10 flex items-center justify-center">
+                    <span className="text-sm font-bold text-warning">R3</span>
                   </div>
                   <p className="text-2xl font-bold">{stats?.disputePipeline.round3 ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Round 3</p>
@@ -108,8 +108,8 @@ export function PipelineTab({ stats, loading }: PipelineTabProps) {
               </Link>
               <Link href="/admin/disputes?awaiting_response=true" className="block group">
                 <div className="text-center p-4 rounded-xl bg-muted/50 border border-border/50 group-hover:border-secondary/50 group-hover:bg-muted transition-all cursor-pointer">
-                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-yellow-500" />
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-warning/10 flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-warning" />
                   </div>
                   <p className="text-2xl font-bold">{stats?.disputePipeline.awaiting ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Awaiting</p>

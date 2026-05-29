@@ -15,7 +15,7 @@ export default function PortalScoreHistory({ scoreHistory, scoreSummary }: Porta
   return (
     <Card className="bg-card/80 backdrop-blur-sm border-border/50">
       <CardHeader>
-        <CardTitle className="font-sans text-xl flex items-center gap-2">
+        <CardTitle className="font-display text-xl flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-secondary" />
           Score Progress
         </CardTitle>
@@ -31,12 +31,12 @@ export default function PortalScoreHistory({ scoreHistory, scoreSummary }: Porta
                 <p className="text-sm text-muted-foreground">Total Change</p>
                 <div className="flex items-center gap-2">
                   {scoreSummary.total_change >= 0 ? (
-                    <TrendingUp className="w-5 h-5 text-green-500" />
+                    <TrendingUp className="w-5 h-5 text-success" />
                   ) : (
-                    <TrendingDown className="w-5 h-5 text-red-500" />
+                    <TrendingDown className="w-5 h-5 text-destructive" />
                   )}
-                  <p className={`text-2xl font-bold ${
-                    scoreSummary.total_change >= 0 ? 'text-green-500' : 'text-red-500'
+                  <p className={`font-display text-3xl font-light tabular-nums ${
+                    scoreSummary.total_change >= 0 ? 'text-success' : 'text-destructive'
                   }`}>
                     {scoreSummary.total_change >= 0 ? '+' : ''}{scoreSummary.total_change} pts
                   </p>
@@ -44,7 +44,7 @@ export default function PortalScoreHistory({ scoreHistory, scoreSummary }: Porta
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Current Average</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="font-display text-3xl font-light tabular-nums text-foreground">
                   {scoreSummary.current_average || '---'}
                 </p>
               </div>

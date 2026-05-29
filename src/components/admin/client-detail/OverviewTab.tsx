@@ -73,7 +73,7 @@ function buildTimeline(
       icon: FileText,
       description: `Credit report uploaded (${r.bureau || 'combined'})`,
       timestamp: r.uploaded_at,
-      color: 'text-blue-500',
+      color: 'text-muted-foreground',
     });
   }
 
@@ -84,7 +84,7 @@ function buildTimeline(
       icon: Scale,
       description: `Dispute created: ${d.dispute_reason?.slice(0, 60)}${d.dispute_reason?.length > 60 ? '...' : ''}`,
       timestamp: d.created_at,
-      color: 'text-purple-500',
+      color: 'text-secondary',
     });
   }
 
@@ -96,7 +96,7 @@ function buildTimeline(
       icon: CheckSquare,
       description: `Task ${verb}: ${t.title}`,
       timestamp: t.created_at,
-      color: 'text-amber-500',
+      color: 'text-muted-foreground',
     });
   }
 
@@ -107,7 +107,7 @@ function buildTimeline(
       icon: MessageSquare,
       description: `Note added by ${n.author_name || 'unknown'}`,
       timestamp: n.created_at,
-      color: 'text-green-500',
+      color: 'text-muted-foreground',
     });
   }
 
@@ -244,9 +244,9 @@ export function OverviewTab({
               <div
                 className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
                   readiness.is_ready_for_round
-                    ? 'border-green-500/40 bg-green-500/10 text-green-500'
+                    ? 'border-success/30 bg-success/10 text-success'
                     : readiness.blocking_tasks > 0 || readiness.unfinished_client_tasks > 0
-                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-500'
+                      ? 'border-warning/30 bg-warning/10 text-warning'
                       : 'border-muted bg-muted/30 text-muted-foreground'
                 }`}
               >
@@ -268,7 +268,7 @@ export function OverviewTab({
               </div>
 
               {readiness.at_risk && readiness.waiting_on_client_days !== null && (
-                <div className="mt-2 flex items-center justify-between rounded-lg border px-3 py-2 text-xs border-red-500/40 bg-red-500/10 text-red-500">
+                <div className="mt-2 flex items-center justify-between rounded-lg border px-3 py-2 text-xs border-destructive/30 bg-destructive/10 text-destructive">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-3 h-3" />
                     <span className="font-medium">Client at risk</span>
@@ -288,7 +288,7 @@ export function OverviewTab({
                 ].map((item) => (
                   <li key={item.label} className="flex items-center justify-between">
                     <span className="text-muted-foreground">{item.label}</span>
-                    <span className={`flex items-center gap-1 text-xs font-medium ${item.value ? 'text-green-500' : 'text-muted-foreground'}`}>
+                    <span className={`flex items-center gap-1 text-xs font-medium ${item.value ? 'text-success' : 'text-muted-foreground'}`}>
                       {item.value ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                       {item.value ? 'Done' : 'Pending'}
                     </span>
@@ -312,7 +312,7 @@ export function OverviewTab({
       <div className="lg:col-span-2 space-y-6">
         <Card className="bg-card border border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Credit Scores</CardTitle>
+            <CardTitle className="font-display text-lg">Credit Scores</CardTitle>
             <CardDescription>
               {latestAnalysis ? `Last updated ${new Date(latestAnalysis.created_at).toLocaleDateString()}` : 'No analysis available'}
             </CardDescription>
@@ -322,19 +322,19 @@ export function OverviewTab({
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-4 rounded-lg bg-muted/50">
                   <p className="text-sm text-muted-foreground mb-1">TransUnion</p>
-                  <p className={`text-3xl font-bold ${getScoreColor(latestAnalysis.score_transunion)}`}>
+                  <p className={`font-display text-4xl font-light tabular-nums ${getScoreColor(latestAnalysis.score_transunion)}`}>
                     {latestAnalysis.score_transunion || '—'}
                   </p>
                 </div>
                 <div className="text-center p-4 rounded-lg bg-muted/50">
                   <p className="text-sm text-muted-foreground mb-1">Experian</p>
-                  <p className={`text-3xl font-bold ${getScoreColor(latestAnalysis.score_experian)}`}>
+                  <p className={`font-display text-4xl font-light tabular-nums ${getScoreColor(latestAnalysis.score_experian)}`}>
                     {latestAnalysis.score_experian || '—'}
                   </p>
                 </div>
                 <div className="text-center p-4 rounded-lg bg-muted/50">
                   <p className="text-sm text-muted-foreground mb-1">Equifax</p>
-                  <p className={`text-3xl font-bold ${getScoreColor(latestAnalysis.score_equifax)}`}>
+                  <p className={`font-display text-4xl font-light tabular-nums ${getScoreColor(latestAnalysis.score_equifax)}`}>
                     {latestAnalysis.score_equifax || '—'}
                   </p>
                 </div>
@@ -350,29 +350,29 @@ export function OverviewTab({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="bg-card border border-border">
             <CardContent className="p-4 text-center">
-              <Upload className="w-5 h-5 mx-auto mb-2 text-blue-500" />
-              <p className="text-xl font-bold">{creditReports.length}</p>
+              <Upload className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
+              <p className="font-display text-3xl font-light tabular-nums">{creditReports.length}</p>
               <p className="text-xs text-muted-foreground">Reports Uploaded</p>
             </CardContent>
           </Card>
           <Card className="bg-card border border-border">
             <CardContent className="p-4 text-center">
-              <Scale className="w-5 h-5 mx-auto mb-2 text-purple-500" />
-              <p className="text-xl font-bold">{disputes.length}</p>
+              <Scale className="w-5 h-5 mx-auto mb-2 text-secondary" />
+              <p className="font-display text-3xl font-light tabular-nums">{disputes.length}</p>
               <p className="text-xs text-muted-foreground">Disputes Sent</p>
             </CardContent>
           </Card>
           <Card className="bg-card border border-border">
             <CardContent className="p-4 text-center">
-              <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-red-500" />
-              <p className="text-xl font-bold">{negativeItemsCount}</p>
+              <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-destructive" />
+              <p className="font-display text-3xl font-light tabular-nums">{negativeItemsCount}</p>
               <p className="text-xs text-muted-foreground">Items Flagged</p>
             </CardContent>
           </Card>
           <Card className="bg-card border border-border">
             <CardContent className="p-4 text-center">
-              <CheckSquare className="w-5 h-5 mx-auto mb-2 text-green-500" />
-              <p className="text-xl font-bold">{completedTasks}</p>
+              <CheckSquare className="w-5 h-5 mx-auto mb-2 text-success" />
+              <p className="font-display text-3xl font-light tabular-nums">{completedTasks}</p>
               <p className="text-xs text-muted-foreground">Tasks Completed</p>
             </CardContent>
           </Card>
@@ -410,8 +410,8 @@ export function OverviewTab({
         {latestAnalysis?.recommendations && latestAnalysis.recommendations.length > 0 && (
           <Card className="bg-card border border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-yellow-500" />
+              <CardTitle className="font-display text-lg flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-secondary" />
                 Recommendations
               </CardTitle>
             </CardHeader>
@@ -431,8 +431,8 @@ export function OverviewTab({
         {scoreHistory.length > 0 && (
           <Card className="bg-card border border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-500" />
+              <CardTitle className="font-display text-lg flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-success" />
                 Score Progress
               </CardTitle>
               <CardDescription>Credit score changes over time</CardDescription>
@@ -450,7 +450,7 @@ export function OverviewTab({
                     return (
                       <div key={entry.id} className="flex-1 flex flex-col items-center gap-1">
                         <div
-                          className={`w-full rounded-t transition-all ${isImprovement ? 'bg-green-500' : score < prevScore ? 'bg-red-500' : 'bg-blue-500'}`}
+                          className={`w-full rounded-t transition-all ${isImprovement ? 'bg-success' : score < prevScore ? 'bg-destructive' : 'bg-secondary'}`}
                           style={{ height: `${heightPercent}%`, minHeight: '4px' }}
                           title={`${score} - ${new Date(entry.recorded_at).toLocaleDateString()}`}
                         />
@@ -469,8 +469,8 @@ export function OverviewTab({
                         From {scoreHistory[0]?.average_score || '—'} to {scoreHistory[scoreHistory.length - 1]?.average_score || '—'}
                       </p>
                     </div>
-                    <div className={`flex items-center gap-1 text-lg font-bold ${
-                      (scoreHistory[scoreHistory.length - 1]?.average_score || 0) > (scoreHistory[0]?.average_score || 0) ? 'text-green-500' : 'text-red-500'
+                    <div className={`flex items-center gap-1 font-display text-2xl font-light tabular-nums ${
+                      (scoreHistory[scoreHistory.length - 1]?.average_score || 0) > (scoreHistory[0]?.average_score || 0) ? 'text-success' : 'text-destructive'
                     }`}>
                       {(scoreHistory[scoreHistory.length - 1]?.average_score || 0) > (scoreHistory[0]?.average_score || 0) ? (
                         <TrendingUp className="w-5 h-5" />

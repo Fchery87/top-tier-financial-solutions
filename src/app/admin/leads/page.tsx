@@ -234,8 +234,8 @@ export default function LeadsPage() {
       >
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-pink-500/10">
-              <Users className="w-6 h-6 text-pink-500" />
+            <div className="p-3 rounded-xl bg-destructive/10">
+              <Users className="w-6 h-6 text-destructive" />
             </div>
             <div>
               <p className="text-2xl font-bold">{leads.length}</p>
@@ -243,10 +243,10 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-card border border-border border-blue-500/30">
+        <Card className="bg-card border border-border border-secondary/30">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-500/10">
-              <MessageSquare className="w-6 h-6 text-blue-500" />
+            <div className="p-3 rounded-xl bg-secondary/10">
+              <MessageSquare className="w-6 h-6 text-secondary" />
             </div>
             <div>
               <p className="text-2xl font-bold">{newCount}</p>
@@ -256,8 +256,8 @@ export default function LeadsPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-yellow-500/10">
-              <Phone className="w-6 h-6 text-yellow-500" />
+            <div className="p-3 rounded-xl bg-warning/10">
+              <Phone className="w-6 h-6 text-warning" />
             </div>
             <div>
               <p className="text-2xl font-bold">{contactedCount}</p>
@@ -267,8 +267,8 @@ export default function LeadsPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10">
-              <Users className="w-6 h-6 text-green-500" />
+            <div className="p-3 rounded-xl bg-success/10">
+              <Users className="w-6 h-6 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{qualifiedCount}</p>

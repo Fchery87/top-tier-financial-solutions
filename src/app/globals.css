@@ -1,83 +1,89 @@
 @import "tailwindcss";
 
 :root {
-  /* Top Tier Financial OS — Light Mode */
-  --background: 42 32% 96%;        /* soft ivory */
-  --foreground: 220 20% 7%;        /* graphite ink */
-  --card: 42 34% 99%;              /* crisp document surface */
-  --card-foreground: 222 18% 7%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 18% 7%;
+  /* Top Tier Financial — "Quiet Wealth" · Light Mode */
+  --background: 40 30% 94%;         /* warm ivory canvas — #F4F1EC */
+  --foreground: 30 14% 7%;          /* graphite ink — #14110F */
+  --card: 45 33% 98%;               /* document surface — #FBFAF7 */
+  --card-foreground: 30 14% 7%;
+  --popover: 45 33% 98%;
+  --popover-foreground: 30 14% 7%;
 
   /* Primary — financial graphite */
-  --primary: 220 20% 7%;
-  --primary-foreground: 210 20% 98%;
+  --primary: 30 14% 7%;
+  --primary-foreground: 42 22% 94%;
 
-  /* Secondary — champagne metal */
-  --secondary: 39 43% 55%;
-  --secondary-foreground: 220 20% 7%;
+  /* Secondary — champagne (the one accent) — #8F7440 */
+  --secondary: 39 38% 41%;
+  --secondary-foreground: 30 16% 10%;  /* dark ink on champagne for AA contrast */
 
-  /* Muted — Cool greys */
-  --muted: 40 22% 90%;
-  --muted-foreground: 220 9% 36%;
+  /* Muted — warm neutrals */
+  --muted: 40 24% 90%;
+  --muted-foreground: 30 8% 39%;    /* #6B645C */
 
-  /* Accent — private wealth green */
-  --accent: 154 22% 88%;
-  --accent-foreground: 164 38% 18%;
+  /* Accent — soft champagne wash (reinforces single accent) */
+  --accent: 39 43% 87%;             /* #ECE3D2 */
+  --accent-foreground: 36 38% 27%;  /* champagne-dk */
 
-  /* Success / Positive */
-  --success: 160 84% 39%;          /* #10B981 — Mint */
-  --success-foreground: 0 0% 100%;
+  /* Success — deep restoration green (not neon mint) — #2F6B4F */
+  --success: 152 39% 30%;
+  --success-foreground: 134 18% 94%;
 
-  /* Warning */
-  --warning: 38 92% 50%;           /* #F59E0B */
-  --warning-foreground: 0 0% 100%;
+  /* Warning — muted ochre (on-brand with champagne) — #B5832B */
+  --warning: 38 62% 44%;
+  --warning-foreground: 42 30% 96%;
 
-  /* Destructive */
-  --destructive: 0 84% 60%;        /* #EF4444 */
-  --destructive-foreground: 0 0% 100%;
+  /* Destructive — muted brick red — #A23A33 */
+  --destructive: 4 51% 42%;
+  --destructive-foreground: 42 30% 96%;
 
-  /* Border & Input */
-  --border: 34 14% 82%;
-  --input: 34 14% 82%;
-  --ring: 39 43% 55%;
+  /* Border & Input — hairlines — #E4DED4 */
+  --border: 40 23% 86%;
+  --input: 40 23% 86%;
+  --ring: 39 38% 41%;
 
   --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 8px);
+
+  /* Motion — crisp, professional, and interruptible */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .dark {
-  --background: 220 23% 4%;        /* graphite black */
-  --foreground: 42 22% 92%;        /* warm off-white */
-  --card: 220 17% 8%;
-  --card-foreground: 210 13% 94%;
-  --popover: 225 18% 6%;
-  --popover-foreground: 210 13% 94%;
+  /* "Quiet Wealth" · Dark Mode */
+  --background: 30 14% 5%;          /* graphite black — #100E0C */
+  --foreground: 42 22% 90%;         /* warm off-white — #EDE8DF */
+  --card: 30 14% 8%;                /* raised panel — #17130F */
+  --card-foreground: 42 22% 90%;
+  --popover: 30 14% 8%;
+  --popover-foreground: 42 22% 90%;
 
-  --primary: 39 22% 92%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 42 22% 90%;
+  --primary-foreground: 30 14% 7%;
 
-  --secondary: 39 45% 60%;
-  --secondary-foreground: 220 20% 7%;
+  --secondary: 39 45% 60%;          /* champagne, brighter on dark — #C6A96C */
+  --secondary-foreground: 30 14% 7%;
 
-  --muted: 220 15% 12%;
-  --muted-foreground: 38 8% 64%;
+  --muted: 30 12% 13%;
+  --muted-foreground: 36 8% 56%;    /* #9A9085 */
 
-  --accent: 162 28% 16%;
-  --accent-foreground: 154 35% 76%;
+  --accent: 36 24% 18%;             /* deep champagne wash */
+  --accent-foreground: 39 45% 70%;
 
-  --success: 160 84% 39%;
-  --success-foreground: 0 0% 100%;
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
+  --success: 152 36% 46%;
+  --success-foreground: 30 14% 7%;
+  --warning: 38 62% 54%;
+  --warning-foreground: 30 14% 7%;
+  --destructive: 4 56% 54%;
+  --destructive-foreground: 42 30% 96%;
 
-  --border: 220 13% 16%;
-  --input: 220 13% 16%;
+  --border: 36 10% 16%;
+  --input: 36 10% 16%;
   --ring: 39 45% 60%;
 }
 
@@ -107,7 +113,7 @@
   --color-ring: hsl(var(--ring));
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: var(--radius-sm);
@@ -129,7 +135,9 @@ body {
 }
 
 .font-display {
-  font-family: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
 }
 
 .brand-footer {
@@ -367,20 +375,28 @@ body {
   border: 1px solid hsl(var(--border) / 0.4);
 }
 
-.glass-card-hover:hover {
-  background: linear-gradient(135deg, hsl(var(--card) / 0.95), hsl(var(--card) / 0.8));
-  border-color: hsl(var(--secondary) / 0.25);
-  box-shadow: 0 20px 50px -16px hsl(var(--secondary) / 0.15);
+.glass-card-hover {
+  transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glass-card-hover:hover {
+    background: linear-gradient(135deg, hsl(var(--card) / 0.95), hsl(var(--card) / 0.8));
+    border-color: hsl(var(--secondary) / 0.25);
+    box-shadow: 0 20px 50px -16px hsl(var(--secondary) / 0.15);
+  }
 }
 
 /* ── Card Hover ── */
 .card-hover {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out), background-color 200ms var(--ease-out);
 }
 
-.card-hover:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 40px -14px hsl(var(--secondary) / 0.25);
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px -14px hsl(var(--secondary) / 0.22);
+  }
 }
 
 /* ── Border Animated ── */
@@ -429,7 +445,7 @@ body {
 .btn-premium {
   position: relative;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out), background-color 160ms var(--ease-out), color 160ms var(--ease-out);
 }
 
 .btn-premium::before {
@@ -438,16 +454,47 @@ body {
   inset: 0;
   background: linear-gradient(45deg, transparent 30%, hsl(var(--secondary-foreground) / 0.08) 50%, transparent 70%);
   transform: translateX(-100%);
-  transition: transform 0.6s;
+  transition: transform 420ms var(--ease-out);
 }
 
-.btn-premium:hover::before {
-  transform: translateX(100%);
+.btn-premium:active {
+  transform: scale(0.98);
 }
 
-.btn-premium:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px -10px hsl(var(--secondary) / 0.4);
+@media (hover: hover) and (pointer: fine) {
+  .btn-premium:hover::before {
+    transform: translateX(100%);
+  }
+
+  .btn-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px -10px hsl(var(--secondary) / 0.36);
+  }
+}
+
+/* ── Origin-aware transient surfaces ── */
+.ui-popover {
+  transform-origin: top right;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+.ui-mobile-menu {
+  transform-origin: top;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
 }
 
 /* ── Selection ── */
@@ -529,11 +576,20 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    transition-duration: 80ms !important;
+  }
+
+  .card-hover:hover,
+  .btn-premium:hover,
+  .btn-premium:active {
+    transform: none !important;
   }
 }
 

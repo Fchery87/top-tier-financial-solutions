@@ -101,10 +101,10 @@ export default function SubscribersAdminPage() {
   ];
 
   const statCards = [
-    { label: 'Total Subscribers', value: stats.total, icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/20' },
-    { label: 'Active', value: stats.active, icon: Mail, color: 'text-green-500', bgColor: 'bg-green-500/20' },
-    { label: 'Unsubscribed', value: stats.unsubscribed, icon: UserMinus, color: 'text-orange-500', bgColor: 'bg-orange-500/20' },
-    { label: 'Growth Rate', value: stats.active > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : '0%', icon: TrendingUp, color: 'text-purple-500', bgColor: 'bg-purple-500/20' },
+    { label: 'Total Subscribers', value: stats.total, icon: Users, color: 'text-secondary', bgColor: 'bg-secondary/20' },
+    { label: 'Active', value: stats.active, icon: Mail, color: 'text-success', bgColor: 'bg-success/20' },
+    { label: 'Unsubscribed', value: stats.unsubscribed, icon: UserMinus, color: 'text-warning', bgColor: 'bg-warning/20' },
+    { label: 'Growth Rate', value: stats.active > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : '0%', icon: TrendingUp, color: 'text-secondary', bgColor: 'bg-secondary/20' },
   ];
 
   return (

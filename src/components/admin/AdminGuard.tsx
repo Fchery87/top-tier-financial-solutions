@@ -111,8 +111,8 @@ export function AdminGuard({ children }: AdminGuardProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
-            <ShieldX className="w-10 h-10 text-red-500" />
+          <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+            <ShieldX className="w-10 h-10 text-destructive" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Access Denied</h1>
           <p className="text-muted-foreground">

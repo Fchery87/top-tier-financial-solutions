@@ -91,7 +91,7 @@ export function TasksTab({ clientId, tasks, onTasksChanged }: TasksTabProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-blue-500" />
+              <CheckSquare className="w-5 h-5 text-secondary" />
               Tasks
             </CardTitle>
             <CardDescription>{tasks.length} task(s) for this client</CardDescription>
@@ -107,7 +107,7 @@ export function TasksTab({ clientId, tasks, onTasksChanged }: TasksTabProps) {
           ) : (
             <div className="space-y-3">
               {tasks.map((task) => (
-                <div key={task.id} className={`p-3 rounded-lg bg-muted/50 ${isTaskOverdue(task.due_date, task.status) ? 'border border-red-500/30' : ''}`}>
+                <div key={task.id} className={`p-3 rounded-lg bg-muted/50 ${isTaskOverdue(task.due_date, task.status) ? 'border border-destructive/30' : ''}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{task.title}</p>
@@ -115,7 +115,7 @@ export function TasksTab({ clientId, tasks, onTasksChanged }: TasksTabProps) {
                       <div className="flex items-center gap-2 mt-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${getPriorityColor(task.priority)}`}>{task.priority}</span>
                         {task.due_date && (
-                          <span className={`text-xs flex items-center gap-1 ${isTaskOverdue(task.due_date, task.status) ? 'text-red-500' : 'text-muted-foreground'}`}>
+                          <span className={`text-xs flex items-center gap-1 ${isTaskOverdue(task.due_date, task.status) ? 'text-destructive' : 'text-muted-foreground'}`}>
                             <Clock className="w-3 h-3" />
                             {new Date(task.due_date).toLocaleDateString()}
                           </span>

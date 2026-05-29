@@ -30,27 +30,26 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
 
+  // Keep Turbopack scoped to this app when parent directories also contain lockfiles.
+  turbopack: {
+    root: process.cwd(),
+  },
+
   // Server external packages - keep these out of the bundle
   serverExternalPackages: ['pdf-parse', 'canvas', '@napi-rs/canvas'],
 
-  // Headers for caching and security
+  // Headers for public assets. Do not override JS/CSS caching: Next.js/Turbopack
+  // need their own revalidation headers for dev chunks, HMR, and RSC payloads.
   headers: async () => {
+    const revalidatingPublicAssetCache = 'public, max-age=86400, stale-while-revalidate=604800';
+
     return [
       {
         source: '/:all*(svg|jpg|jpeg|png|gif|ico|webp|avif)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/:all*(js|css)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: revalidatingPublicAssetCache,
           },
         ],
       },
@@ -59,7 +58,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: revalidatingPublicAssetCache,
           },
         ],
       },

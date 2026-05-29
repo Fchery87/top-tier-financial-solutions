@@ -58,14 +58,14 @@ export function ClientHeader({
 
   const scoreColor = averageScore
     ? averageScore >= 750
-      ? 'text-green-500'
+      ? 'text-success'
       : averageScore >= 700
-        ? 'text-lime-500'
+        ? 'text-success'
         : averageScore >= 650
-          ? 'text-yellow-500'
+          ? 'text-warning'
           : averageScore >= 600
-            ? 'text-orange-500'
-            : 'text-red-500'
+            ? 'text-warning'
+            : 'text-destructive'
     : 'text-muted-foreground';
 
   return (

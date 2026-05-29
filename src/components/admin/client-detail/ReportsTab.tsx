@@ -115,7 +115,7 @@ export function ReportsTab({
                           Re-analyze
                         </Button>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => setPendingDeleteReportId(report.id)} disabled={deleting === report.id || analyzing === report.id} className="text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-200">
+                      <Button variant="outline" size="sm" onClick={() => setPendingDeleteReportId(report.id)} disabled={deleting === report.id || analyzing === report.id} className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30">
                         {deleting === report.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Trash2 className="w-3 h-3 mr-1" />}
                         Delete
                       </Button>
@@ -130,7 +130,7 @@ export function ReportsTab({
         {creditAccounts.length > 0 && (
           <Card className="bg-card border border-border">
             <CardHeader>
-              <CardTitle className="text-lg">Credit Accounts</CardTitle>
+              <CardTitle className="font-display text-lg">Credit Accounts</CardTitle>
               <CardDescription>{creditAccounts.length} account(s) on file (all tradelines)</CardDescription>
             </CardHeader>
             <CardContent>
@@ -148,7 +148,7 @@ export function ReportsTab({
                   </thead>
                   <tbody>
                     {creditAccounts.map((account) => (
-                      <tr key={account.id} className={`border-b border-border/50 ${account.is_negative ? 'bg-red-500/5' : ''}`}>
+                      <tr key={account.id} className={`border-b border-border/50 ${account.is_negative ? 'bg-destructive/[0.05]' : ''}`}>
                         <td className="p-2">
                           <p className="font-medium">{account.creditor_name}</p>
                           {account.account_number && <p className="text-xs text-muted-foreground">****{account.account_number.slice(-4)}</p>}
@@ -169,9 +169,7 @@ export function ReportsTab({
                                   key={bureau}
                                   className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                                     onBureau
-                                      ? bureau === 'transunion' ? 'bg-blue-500/20 text-blue-500' :
-                                        bureau === 'experian' ? 'bg-purple-500/20 text-purple-500' :
-                                        'bg-green-500/20 text-green-500'
+                                      ? 'bg-secondary/15 text-secondary'
                                       : 'bg-muted/30 text-muted-foreground/30'
                                   }`}
                                   title={onBureau
@@ -187,7 +185,7 @@ export function ReportsTab({
                         <td className="p-2 text-right">{account.balance ? formatCurrency(account.balance) : '—'}</td>
                         <td className="p-2 text-right">{account.credit_limit ? formatCurrency(account.credit_limit) : '—'}</td>
                         <td className="p-2">
-                          <span className={`px-2 py-1 rounded-full text-xs ${account.payment_status === 'current' ? 'bg-green-500/10 text-green-500' : account.is_negative ? 'bg-red-500/10 text-red-500' : 'bg-muted text-muted-foreground'}`}>
+                          <span className={`px-2 py-1 rounded-full text-xs ${account.payment_status === 'current' ? 'bg-success/10 text-success' : account.is_negative ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
                             {account.payment_status?.replace('_', ' ') || account.account_status || '—'}
                           </span>
                         </td>

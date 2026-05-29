@@ -146,16 +146,16 @@ export default function DisputeTemplatesPage() {
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      standard: 'bg-blue-500/20 text-blue-400',
-      method_of_verification: 'bg-purple-500/20 text-purple-400',
-      direct_creditor: 'bg-orange-500/20 text-orange-400',
-      goodwill: 'bg-green-500/20 text-green-400',
-      debt_validation: 'bg-yellow-500/20 text-yellow-400',
-      cease_desist: 'bg-red-500/20 text-red-400',
-      cfpb_complaint: 'bg-pink-500/20 text-pink-400',
-      identity_theft: 'bg-cyan-500/20 text-cyan-400',
+      standard: 'bg-secondary/20 text-secondary',
+      method_of_verification: 'bg-secondary/20 text-secondary',
+      direct_creditor: 'bg-warning/20 text-warning',
+      goodwill: 'bg-success/20 text-success',
+      debt_validation: 'bg-warning/20 text-warning',
+      cease_desist: 'bg-destructive/20 text-destructive',
+      cfpb_complaint: 'bg-destructive/20 text-destructive',
+      identity_theft: 'bg-secondary/20 text-secondary',
     };
-    return colors[type] || 'bg-gray-500/20 text-gray-400';
+    return colors[type] || 'bg-muted/20 text-muted-foreground';
   };
 
   return (
@@ -205,8 +205,8 @@ export default function DisputeTemplatesPage() {
       >
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-500/10">
-              <FileText className="w-6 h-6 text-blue-500" />
+            <div className="p-3 rounded-xl bg-secondary/10">
+              <FileText className="w-6 h-6 text-secondary" />
             </div>
             <div>
               <p className="text-2xl font-bold">{templates.length}</p>
@@ -216,8 +216,8 @@ export default function DisputeTemplatesPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-500/10">
-              <Building2 className="w-6 h-6 text-green-500" />
+            <div className="p-3 rounded-xl bg-success/10">
+              <Building2 className="w-6 h-6 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -229,8 +229,8 @@ export default function DisputeTemplatesPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-orange-500/10">
-              <Briefcase className="w-6 h-6 text-orange-500" />
+            <div className="p-3 rounded-xl bg-warning/10">
+              <Briefcase className="w-6 h-6 text-warning" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -242,8 +242,8 @@ export default function DisputeTemplatesPage() {
         </Card>
         <Card className="bg-card border border-border">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-purple-500/10">
-              <Users className="w-6 h-6 text-purple-500" />
+            <div className="p-3 rounded-xl bg-secondary/10">
+              <Users className="w-6 h-6 text-secondary" />
             </div>
             <div>
               <p className="text-2xl font-bold">

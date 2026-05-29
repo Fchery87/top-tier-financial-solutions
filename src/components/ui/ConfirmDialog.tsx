@@ -57,8 +57,8 @@ export function ConfirmDialog({
             </button>
 
             {variant === 'danger' && (
-              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
               </div>
             )}
 

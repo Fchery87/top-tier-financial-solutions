@@ -58,7 +58,7 @@ export function DisputeWizardProgressBar({
           key={`icon-${step.id}`}
           animate={{ scale: [1, 1.1, 1] }}
           transition={{ duration: 0.6, repeat: Infinity }}
-          className="text-blue-600 dark:text-blue-400"
+          className="text-secondary"
         >
           <StepIcon className="w-6 h-6" />
         </motion.div>
@@ -74,7 +74,7 @@ export function DisputeWizardProgressBar({
           animate={{ scale: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+          <CheckCircle className="w-6 h-6 text-success" />
         </motion.div>
       );
     }
@@ -83,16 +83,16 @@ export function DisputeWizardProgressBar({
       // Error state shows alert icon
       return (
         <motion.div key={`icon-${step.id}`}>
-          <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+          <AlertCircle className="w-6 h-6 text-destructive" />
         </motion.div>
       );
     }
 
     if (status.hasWarnings) {
-      // Warning state shows alert icon in yellow
+      // Warning state shows alert icon
       return (
         <motion.div key={`icon-${step.id}`}>
-          <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+          <AlertCircle className="w-6 h-6 text-warning" />
         </motion.div>
       );
     }
@@ -100,7 +100,7 @@ export function DisputeWizardProgressBar({
     // Pending step shows empty circle
     return (
       <motion.div key={`icon-${step.id}`}>
-        <Circle className="w-6 h-6 text-gray-400 dark:text-gray-600" />
+        <Circle className="w-6 h-6 text-muted-foreground/50" />
       </motion.div>
     );
   };
@@ -110,18 +110,18 @@ export function DisputeWizardProgressBar({
       {/* Progress Bar */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <h3 className="font-display text-sm font-medium text-foreground">
             Progress
           </h3>
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          <span className="font-mono text-sm font-medium tabular-nums text-muted-foreground">
             {progressPercent}%
           </span>
         </div>
 
         {/* Animated progress bar */}
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
           <motion.div
-            className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full"
+            className="bg-secondary h-full rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -153,18 +153,18 @@ export function DisputeWizardProgressBar({
                 disabled={!isClickable}
                 className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all ${
                   isClickable
-                    ? 'cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-blue-400 dark:hover:ring-offset-gray-900'
+                    ? 'cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-secondary/60 hover:ring-offset-background'
                     : 'cursor-default'
                 } ${
                   status?.isCurrentStep
-                    ? 'bg-blue-100 dark:bg-blue-900/30 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
+                    ? 'bg-secondary/15 ring-2 ring-secondary ring-offset-2 ring-offset-background'
                     : status?.isComplete
-                      ? 'bg-green-100 dark:bg-green-900/30'
+                      ? 'bg-success/15'
                       : status?.hasErrors
-                        ? 'bg-red-100 dark:bg-red-900/30'
+                        ? 'bg-destructive/15'
                         : status?.hasWarnings
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                          : 'bg-gray-100 dark:bg-gray-800'
+                          ? 'bg-warning/15'
+                          : 'bg-muted'
                 }`}
                 whileHover={isClickable ? { scale: 1.05 } : undefined}
                 whileTap={isClickable ? { scale: 0.95 } : undefined}
@@ -177,12 +177,12 @@ export function DisputeWizardProgressBar({
                 <p
                   className={`text-xs font-semibold ${
                     status?.isCurrentStep
-                      ? 'text-blue-600 dark:text-blue-400'
+                      ? 'text-secondary'
                       : status?.isComplete
-                        ? 'text-green-600 dark:text-green-400'
+                        ? 'text-success'
                         : status?.hasErrors
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-gray-700 dark:text-gray-300'
+                          ? 'text-destructive'
+                          : 'text-foreground'
                   }`}
                 >
                   {step.name}
@@ -190,11 +190,11 @@ export function DisputeWizardProgressBar({
 
                 {/* Substatus indicators */}
                 {status && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {status.isComplete && <span className="text-green-600 dark:text-green-400">✓</span>}
-                    {status.hasErrors && <span className="text-red-600 dark:text-red-400">Error</span>}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {status.isComplete && <span className="text-success">✓</span>}
+                    {status.hasErrors && <span className="text-destructive">Error</span>}
                     {status.hasWarnings && !status.hasErrors && (
-                      <span className="text-yellow-600 dark:text-yellow-400">Warning</span>
+                      <span className="text-warning">Warning</span>
                     )}
                   </div>
                 )}
@@ -205,8 +205,8 @@ export function DisputeWizardProgressBar({
                 <motion.div
                   className={`absolute left-[50%] top-10 w-0.5 h-8 ${
                     status?.isComplete
-                      ? 'bg-green-400 dark:bg-green-600'
-                      : 'bg-gray-300 dark:bg-gray-600'
+                      ? 'bg-success/60'
+                      : 'bg-border'
                   }`}
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
@@ -222,17 +222,17 @@ export function DisputeWizardProgressBar({
       </div>
 
       {/* Status Summary */}
-      <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <p className="text-xs text-blue-900 dark:text-blue-200">
+      <div className="mt-4 p-3 bg-secondary/10 rounded-lg border border-secondary/20">
+        <p className="text-xs text-foreground">
           <span className="font-semibold">Completed: </span>
           {completedSteps} of {maxSteps} steps
           {stepStatuses.some((s) => s.hasErrors) && (
-            <span className="ml-2 text-red-600 dark:text-red-400">
+            <span className="ml-2 text-destructive">
               • {stepStatuses.filter((s) => s.hasErrors).length} step(s) with errors
             </span>
           )}
           {stepStatuses.some((s) => s.hasWarnings && !s.hasErrors) && (
-            <span className="ml-2 text-yellow-600 dark:text-yellow-400">
+            <span className="ml-2 text-warning">
               • {stepStatuses.filter((s) => s.hasWarnings && !s.hasErrors).length} step(s) with warnings
             </span>
           )}
@@ -241,7 +241,7 @@ export function DisputeWizardProgressBar({
 
       {/* Helpful hint */}
       {stepStatuses.some((s) => s.isComplete && !s.isCurrentStep) && onStepClick && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           Click completed steps to edit
         </p>
       )}

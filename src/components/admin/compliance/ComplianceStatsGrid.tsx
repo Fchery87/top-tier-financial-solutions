@@ -30,8 +30,8 @@ export function ComplianceStatsGrid({ stats }: ComplianceStatsGridProps) {
       <Card className="bg-card border border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <FileSignature className="w-5 h-5 text-blue-500" />
+            <div className="p-2 rounded-lg bg-secondary/10">
+              <FileSignature className="w-5 h-5 text-secondary" />
             </div>
             <p className="text-sm text-muted-foreground">Agreements</p>
           </div>
@@ -45,8 +45,8 @@ export function ComplianceStatsGrid({ stats }: ComplianceStatsGridProps) {
       <Card className="bg-card border border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-amber-500/10">
-              <Clock className="w-5 h-5 text-amber-500" />
+            <div className="p-2 rounded-lg bg-warning/10">
+              <Clock className="w-5 h-5 text-warning" />
             </div>
             <p className="text-sm text-muted-foreground">Cancellation Window</p>
           </div>
@@ -60,8 +60,8 @@ export function ComplianceStatsGrid({ stats }: ComplianceStatsGridProps) {
       <Card className="bg-card border border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <DollarSign className="w-5 h-5 text-green-500" />
+            <div className="p-2 rounded-lg bg-success/10">
+              <DollarSign className="w-5 h-5 text-success" />
             </div>
             <p className="text-sm text-muted-foreground">Invoice Compliance</p>
           </div>
@@ -78,8 +78,8 @@ export function ComplianceStatsGrid({ stats }: ComplianceStatsGridProps) {
       <Card className="bg-card border border-border">
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-purple-500/10">
-              <MessageCircle className="w-5 h-5 text-purple-500" />
+            <div className="p-2 rounded-lg bg-secondary/10">
+              <MessageCircle className="w-5 h-5 text-secondary" />
             </div>
             <p className="text-sm text-muted-foreground">Open Threads</p>
           </div>

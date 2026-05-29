@@ -184,18 +184,18 @@ export default function BlogAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="surface-panel flex flex-col gap-4 rounded-lg p-5 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-sans font-bold text-foreground">Blog Posts</h1>
-          <p className="text-muted-foreground">Manage your blog content and articles.</p>
+          <h1 className="font-display text-3xl font-medium tracking-[-0.04em] text-foreground">Blog Posts</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Manage long-form credit education with the same quiet editorial system clients see on the public site.</p>
         </div>
         <Button onClick={openCreateModal} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           New Post
         </Button>
       </div>
 
-      <Card className="bg-card border border-border">
+      <Card className="surface-panel rounded-lg">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-20">

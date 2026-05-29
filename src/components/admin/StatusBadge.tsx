@@ -9,10 +9,10 @@ interface StatusBadgeProps {
 
 const variantStyles = {
   default: 'bg-muted text-muted-foreground',
-  success: 'bg-green-500/10 text-green-600 dark:text-green-400',
-  warning: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
-  danger: 'bg-red-500/10 text-red-600 dark:text-red-400',
-  info: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  danger: 'bg-destructive/10 text-destructive',
+  info: 'bg-secondary/10 text-secondary',
 };
 
 export function StatusBadge({ status, variant = 'default' }: StatusBadgeProps) {

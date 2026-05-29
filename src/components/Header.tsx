@@ -4,7 +4,6 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, User, LogOut, Settings, LayoutDashboard, ArrowUpRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Logo } from '@/components/Logo';
@@ -20,6 +19,12 @@ const navigation = [
   { name: 'Compliance', href: '/compliance' },
   { name: 'About', href: '/about' },
 ];
+
+const navLinkClass =
+  'relative whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-[160ms] ease-[var(--ease-out)]';
+
+const menuItemClass =
+  'flex items-center gap-2 px-4 py-3 text-sm transition-[background-color,color] duration-[160ms] ease-[var(--ease-out)]';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -43,255 +48,228 @@ export function Header() {
 
   React.useEffect(() => {
     setMobileMenuOpen(false);
+    setUserMenuOpen(false);
   }, [pathname]);
 
   React.useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <motion.header
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+    <header
       className={cn(
-        'fixed top-0 z-50 w-full transition-colors duration-300',
+        'fixed top-0 z-50 w-full transition-[background-color,border-color,box-shadow,backdrop-filter] duration-[200ms] ease-[var(--ease-out)]',
         scrolled
-          ? 'bg-background/92 border-b border-border/70 shadow-sm backdrop-blur-md'
-          : 'bg-background/35 backdrop-blur-[2px]'
+          ? 'border-b border-border/70 bg-background/92 shadow-sm backdrop-blur-md'
+          : 'bg-background/40 backdrop-blur-[2px]'
       )}
     >
-      <div className="container mx-auto flex h-18 items-center justify-between px-4 md:px-6">
+      <div className="container mx-auto flex h-18 items-center justify-between gap-4 px-4 md:px-6">
         <Logo size="md" />
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
-          {navigation.map((item, index) => (
-            <motion.div
-              key={item.name}
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.08, duration: 0.4 }}
-            >
+        <nav className="hidden min-w-0 items-center gap-1 md:flex" aria-label="Primary navigation">
+          {navigation.map((item) => {
+            const active = pathname === item.href;
+            return (
               <Link
+                key={item.name}
                 href={item.href}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative px-3 py-2 text-sm font-medium transition-colors duration-150 rounded-md',
-                  pathname === item.href
-                    ? 'text-secondary'
-                    : 'text-muted-foreground hover:text-foreground'
+                  navLinkClass,
+                  active
+                    ? 'bg-accent text-secondary shadow-[inset_0_0_0_1px_hsl(var(--secondary)/0.14)]'
+                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                 )}
               >
                 {item.name}
-                {pathname === item.href && (
-                  <motion.div
-                    layoutId="nav-indicator"
-                    className="absolute inset-0 bg-accent rounded-md -z-10"
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-                  />
-                )}
               </Link>
-            </motion.div>
-          ))}
-          <div className="flex items-center gap-3 ml-6 pl-6 border-l border-border">
+            );
+          })}
+          <div className="ml-4 flex items-center gap-3 border-l border-border pl-4 lg:ml-6 lg:pl-6">
             <ThemeToggle />
             {mounted && user ? (
               <div className="relative">
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted hover:bg-accent transition-colors"
+                <button
+                  type="button"
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setUserMenuOpen((open) => !open)}
+                  className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 transition-[background-color,transform] duration-[160ms] ease-[var(--ease-out)] hover:bg-accent active:scale-[0.98]"
                 >
-                   <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-secondary">
+                    <User className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
+                  <span className="max-w-[100px] truncate text-sm font-medium text-foreground">
                     {user.name || 'User'}
                   </span>
-                </motion.button>
-                <AnimatePresence>
-                  {userMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-52 surface-panel rounded-lg overflow-hidden z-50"
+                </button>
+                {userMenuOpen && (
+                  <div
+                    role="menu"
+                    className="ui-popover absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-lg surface-panel"
+                  >
+                    {(user.role === 'super_admin' || user.role === 'admin') && (
+                      <>
+                        <Link
+                          href="/admin"
+                          role="menuitem"
+                          onClick={() => setUserMenuOpen(false)}
+                          className={cn(menuItemClass, 'font-medium text-secondary hover:bg-accent')}
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          Admin Dashboard
+                        </Link>
+                        <div className="border-t border-border" />
+                      </>
+                    )}
+                    <Link
+                      href="/profile"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className={cn(menuItemClass, 'text-foreground hover:bg-muted')}
                     >
-                      {(user.role === 'super_admin' || user.role === 'admin') && (
-                        <>
-                          <Link
-                            href="/admin"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2 px-4 py-3 text-sm text-secondary font-medium hover:bg-accent transition-colors"
-                          >
-                            <LayoutDashboard className="w-4 h-4" />
-                            Admin Dashboard
-                          </Link>
-                          <div className="border-t border-border" />
-                        </>
-                      )}
-                      <Link
-                        href="/profile"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
-                      >
-                        <User className="w-4 h-4" />
-                        Profile
-                      </Link>
-                      <Link
-                        href="/settings"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Settings className="w-4 h-4" />
-                        Settings
-                      </Link>
-                      <div className="border-t border-border" />
-                      <button
-                        onClick={handleSignOut}
-                        className="flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <User className="h-4 w-4" />
+                      Profile
+                    </Link>
+                    <Link
+                      href="/settings"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className={cn(menuItemClass, 'text-foreground hover:bg-muted')}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
+                    <div className="border-t border-border" />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleSignOut}
+                      className={cn(menuItemClass, 'w-full text-left text-destructive hover:bg-destructive/10')}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <Button asChild variant="outline">
                 <Link href="/sign-in">Sign In</Link>
               </Button>
             )}
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-              <Button asChild>
-                <Link href="/contact" className="flex items-center gap-2">
-                  <ArrowUpRight className="w-4 h-4" />
-                  Book Consultation
-                </Link>
-              </Button>
-            </motion.div>
+            <Button asChild>
+              <Link href="/contact" className="flex items-center gap-2">
+                <ArrowUpRight className="h-4 w-4" />
+                Book Consultation
+              </Link>
+            </Button>
           </div>
         </nav>
 
         {/* Mobile Menu Button */}
         <div className="flex items-center gap-4 md:hidden">
           <ThemeToggle />
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            className="p-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent transition-colors"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          <button
+            type="button"
+            className="rounded-md p-2 text-muted-foreground transition-[background-color,color,transform] duration-[160ms] ease-[var(--ease-out)] hover:bg-accent hover:text-foreground active:scale-[0.96]"
+            onClick={() => setMobileMenuOpen((open) => !open)}
             aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </motion.button>
+          </button>
         </div>
       </div>
 
       {/* Mobile Navigation */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-            className="md:hidden fixed inset-x-0 top-18 z-40 bg-background/98 backdrop-blur-xl border-b border-border overflow-hidden"
-          >
-            <nav className="container mx-auto px-4 py-6 flex flex-col gap-2">
-              {navigation.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      'block text-lg font-medium py-3 px-4 rounded-lg transition-all',
-                      pathname === item.href
-                        ? 'text-secondary bg-accent'
-                        : 'text-foreground hover:bg-muted'
-                    )}
-                  >
-                    {item.name}
-                  </Link>
-                </motion.div>
-              ))}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="pt-4 mt-2 border-t border-border space-y-3"
-              >
-                {mounted && user ? (
-                  <>
-                    <div className="flex items-center gap-3 px-4 py-2">
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{user.name || 'User'}</p>
-                        <p className="text-sm text-muted-foreground">Signed in</p>
-                      </div>
-                    </div>
-                    {(user.role === 'super_admin' || user.role === 'admin') && (
-                      <Link
-                        href="/admin"
-                        className="flex items-center gap-2 px-4 py-3 text-secondary font-medium hover:bg-accent rounded-lg transition-colors"
-                      >
-                        <LayoutDashboard className="w-5 h-5" />
-                        Admin Dashboard
-                      </Link>
-                    )}
-                    <Link
-                      href="/profile"
-                      className="flex items-center gap-2 px-4 py-3 text-foreground hover:bg-muted rounded-lg transition-colors"
-                    >
-                      <User className="w-5 h-5" />
-                      Profile
-                    </Link>
-                    <Link
-                      href="/settings"
-                      className="flex items-center gap-2 px-4 py-3 text-foreground hover:bg-muted rounded-lg transition-colors"
-                    >
-                      <Settings className="w-5 h-5" />
-                      Account Settings
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="flex items-center gap-2 px-4 py-3 text-destructive hover:bg-destructive/10 rounded-lg transition-colors w-full text-left"
-                    >
-                      <LogOut className="w-5 h-5" />
-                      Sign Out
-                    </button>
-                  </>
-                ) : (
-                  <Button className="w-full h-12 text-lg rounded-lg" variant="outline" asChild>
-                    <Link href="/sign-in" className="flex items-center justify-center gap-2">
-                      <User className="w-5 h-5" />
-                      Sign In
-                    </Link>
-                  </Button>
+      {mobileMenuOpen && (
+        <div className="ui-mobile-menu fixed inset-x-0 top-18 z-40 border-b border-border bg-background shadow-2xl shadow-foreground/10 md:hidden">
+          <nav className="container mx-auto flex flex-col gap-2 px-4 py-6" aria-label="Mobile navigation">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                aria-current={pathname === item.href ? 'page' : undefined}
+                className={cn(
+                  'block rounded-lg px-4 py-3 text-lg font-medium transition-[background-color,color] duration-[160ms] ease-[var(--ease-out)]',
+                  pathname === item.href
+                    ? 'bg-accent text-secondary'
+                    : 'text-foreground hover:bg-muted'
                 )}
-                <Button className="w-full bg-secondary text-secondary-foreground h-12 text-lg rounded-lg shadow-sm" asChild>
-                  <Link href="/contact" className="flex items-center justify-center gap-2">
-                    <ArrowUpRight className="w-5 h-5" />
-                    Book Consultation
+              >
+                {item.name}
+              </Link>
+            ))}
+            <div className="mt-2 space-y-3 border-t border-border pt-4">
+              {mounted && user ? (
+                <>
+                  <div className="flex items-center gap-3 px-4 py-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{user.name || 'User'}</p>
+                      <p className="text-sm text-muted-foreground">Signed in</p>
+                    </div>
+                  </div>
+                  {(user.role === 'super_admin' || user.role === 'admin') && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2 rounded-lg px-4 py-3 font-medium text-secondary transition-[background-color,color] duration-[160ms] ease-[var(--ease-out)] hover:bg-accent"
+                    >
+                      <LayoutDashboard className="h-5 w-5" />
+                      Admin Dashboard
+                    </Link>
+                  )}
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-2 rounded-lg px-4 py-3 text-foreground transition-[background-color,color] duration-[160ms] ease-[var(--ease-out)] hover:bg-muted"
+                  >
+                    <User className="h-5 w-5" />
+                    Profile
+                  </Link>
+                  <Link
+                    href="/settings"
+                    className="flex items-center gap-2 rounded-lg px-4 py-3 text-foreground transition-[background-color,color] duration-[160ms] ease-[var(--ease-out)] hover:bg-muted"
+                  >
+                    <Settings className="h-5 w-5" />
+                    Account Settings
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-left text-destructive transition-[background-color,color] duration-[160ms] ease-[var(--ease-out)] hover:bg-destructive/10"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <Button className="h-12 w-full rounded-lg text-lg" variant="outline" asChild>
+                  <Link href="/sign-in" className="flex items-center justify-center gap-2">
+                    <User className="h-5 w-5" />
+                    Sign In
                   </Link>
                 </Button>
-              </motion.div>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.header>
+              )}
+              <Button className="h-12 w-full rounded-lg bg-secondary text-lg text-secondary-foreground shadow-sm" asChild>
+                <Link href="/contact" className="flex items-center justify-center gap-2">
+                  <ArrowUpRight className="h-5 w-5" />
+                  Book Consultation
+                </Link>
+              </Button>
+            </div>
+          </nav>
+        </div>
+      )}
+    </header>
   );
 }
