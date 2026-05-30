@@ -7,5 +7,23 @@
     "capability": "",
     "pattern": "",
     "correction": "<skill name=\"validation-spec-generator\" location=\"/home/nochaserz/.pi/agent/skills/validation-spec-generator/SKILL.md\">\nReferences are relative to /home/nochaserz/.pi/agent/skills/validation-spec-generator.\n\n# Validation Spec Generator\n\nUse this skill to inspect a codebase and generate a maintainabl"
+  },
+  {
+    "id": "1a8ddbf1-a5a5-40f7-906c-b1dee55f00aa",
+    "timestamp": 1780024663221,
+    "project": "top-tier-financial-solutions",
+    "spec_tier": "ambient",
+    "capability": "",
+    "pattern": "",
+    "correction": "<skill name=\"nextjs-developer\" location=\"/home/nochaserz/.pi/agent/skills/nextjs-developer/SKILL.md\">\nReferences are relative to /home/nochaserz/.pi/agent/skills/nextjs-developer.\n\n# Next.js Developer\n\nSenior Next.js developer with expertise in Next.js 14+ App Router, server components, and full-sta"
+  },
+  {
+    "id": "f5f92734-f39a-4f3e-88ed-20e64ff5ab4b",
+    "timestamp": 1780025579857,
+    "project": "top-tier-financial-solutions",
+    "spec_tier": "ambient",
+    "capability": "",
+    "pattern": "",
+    "correction": "Task: Do a strict maintainability review of this Next.js/FastAPI codebase. Focus on abstraction quality, giant files, spaghetti condition growth, duplicated route/page patterns, brittle tests, and refactoring risks. Return prioritized findings with file paths and line references where possible. Do n"
   }
 ]
