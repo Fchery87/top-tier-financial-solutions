@@ -765,7 +765,7 @@ export const disputes = pgTable('disputes', {
   serviceEngagementId: text('service_engagement_id').references(() => serviceEngagements.id, { onDelete: 'set null' }),
   batchId: text('batch_id').references(() => disputeBatches.id, { onDelete: 'set null' }),
   negativeItemId: text('negative_item_id').references(() => negativeItems.id, { onDelete: 'set null' }),
-  bureau: text('bureau').notNull(), // 'transunion' | 'experian' | 'equifax'
+  bureau: text('bureau').notNull(), // 'transunion' | 'experian' | 'equifax' | secondary CRAs: 'lexisnexis' | 'innovis' | 'chexsystems' | 'ews'
   disputeReason: text('dispute_reason').notNull(),
   disputeType: text('dispute_type').default('standard'), // 'standard' | 'method_of_verification' | 'direct_creditor' | 'goodwill'
   status: text('status').default('draft'), // 'draft' | 'ready' | 'sent' | 'in_progress' | 'responded' | 'resolved' | 'escalated'

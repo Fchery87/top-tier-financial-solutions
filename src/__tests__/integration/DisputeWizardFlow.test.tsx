@@ -437,7 +437,9 @@ describe('DisputeWizard Integration - Letter Strength Calculation', () => {
       const consumerLaw = calculateLetterStrength(analyses, true, 1, 1, 'consumer_law');
       const factual = calculateLetterStrength(analyses, true, 1, 1, 'factual');
 
-      expect(consumerLaw.methodologyScore).toBeGreaterThan(factual.methodologyScore);
+      // Strictly-factual methodologies outscore higher-risk consumer_law claims,
+      // consistent with the deterministic dispute policy.
+      expect(factual.methodologyScore).toBeGreaterThan(consumerLaw.methodologyScore);
     });
   });
 

@@ -190,8 +190,24 @@ export const BUREAUS = [
   { code: 'equifax', label: 'Equifax' },
 ];
 
+// Secondary consumer reporting agencies. Items are not tracked per secondary CRA,
+// so disputes sent to them cover every selected item.
+export const SECONDARY_BUREAUS = [
+  { code: 'lexisnexis', label: 'LexisNexis' },
+  { code: 'innovis', label: 'Innovis' },
+  { code: 'chexsystems', label: 'ChexSystems' },
+  { code: 'ews', label: 'Early Warning Services' },
+];
+
+export function isSecondaryBureau(bureau: string): boolean {
+  return SECONDARY_BUREAUS.some(b => b.code === bureau.toLowerCase());
+}
+
 export function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean {
   const bureauLower = bureau.toLowerCase();
+  // Secondary CRAs aggregate from furnishers, not from big-3 tradeline data;
+  // every selected item is in scope for a secondary-agency dispute.
+  if (isSecondaryBureau(bureauLower)) return true;
   if (bureauLower === 'transunion' && item.on_transunion !== undefined) return item.on_transunion;
   if (bureauLower === 'experian' && item.on_experian !== undefined) return item.on_experian;
   if (bureauLower === 'equifax' && item.on_equifax !== undefined) return item.on_equifax;

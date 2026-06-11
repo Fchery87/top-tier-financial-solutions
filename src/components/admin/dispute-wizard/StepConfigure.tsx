@@ -5,7 +5,7 @@ import { Check, Loader2, Sparkles, FileText, Paperclip, Upload, AlertTriangle } 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWizardContext } from './WizardContext';
-import { BUREAUS } from './types';
+import { BUREAUS, SECONDARY_BUREAUS } from './types';
 
 export function StepConfigure() {
   const ctx = useWizardContext();
@@ -145,6 +145,16 @@ export function StepConfigure() {
                 </Button>
               ))}
             </div>
+            <label className="text-sm font-medium block pt-2">Secondary Agencies (optional)</label>
+            <div className="flex flex-wrap gap-3">
+              {SECONDARY_BUREAUS.map((bureau) => (
+                <Button key={bureau.code} variant={selectedBureaus.includes(bureau.code) ? 'secondary' : 'outline'} onClick={() => handleToggleBureau(bureau.code)}>
+                  {selectedBureaus.includes(bureau.code) && <Check className="w-4 h-4 mr-2" />}
+                  {bureau.label}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Secondary consumer reporting agencies receive a letter covering all selected items. Useful after big-3 deletions so the data does not resurface from LexisNexis, Innovis, or banking-history agencies.</p>
           </div>
         )}
 

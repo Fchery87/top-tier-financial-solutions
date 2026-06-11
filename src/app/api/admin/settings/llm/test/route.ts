@@ -66,7 +66,7 @@ export async function POST(_request: NextRequest) {
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({ apiKey: config.apiKey });
         const response = await openai.chat.completions.create({
-          model: config.model || 'gpt-4o',
+          model: config.model || 'gpt-5',
           messages: [{ role: 'user', content: testPrompt }],
           max_tokens: 50,
         });
@@ -85,7 +85,7 @@ export async function POST(_request: NextRequest) {
         const Anthropic = (await import('@anthropic-ai/sdk')).default;
         const anthropic = new Anthropic({ apiKey: config.apiKey });
         const response = await anthropic.messages.create({
-          model: config.model || 'claude-3-5-sonnet-20241022',
+          model: config.model || 'claude-sonnet-4-6',
           max_tokens: 50,
           messages: [{ role: 'user', content: testPrompt }],
         });

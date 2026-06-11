@@ -24,7 +24,7 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
     case 'openai': {
       const openai = new OpenAI({ apiKey: config.apiKey });
       const response = await openai.chat.completions.create({
-        model: config.model || 'gpt-4o',
+        model: config.model || 'gpt-5',
         messages: [{ role: 'user', content: prompt }],
         temperature: config.temperature || 0.1,
         max_tokens: config.maxTokens || 4096,
@@ -34,7 +34,7 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
     case 'anthropic': {
       const anthropic = new Anthropic({ apiKey: config.apiKey });
       const response = await anthropic.messages.create({
-        model: config.model || 'claude-3-5-sonnet-20241022',
+        model: config.model || 'claude-sonnet-4-6',
         max_tokens: config.maxTokens || 4096,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -107,6 +107,21 @@ Allen, TX 75013`,
   equifax: `Equifax Information Services LLC
 P.O. Box 740256
 Atlanta, GA 30374-0256`,
+  // Secondary consumer reporting agencies (addresses verified June 2026)
+  lexisnexis: `LexisNexis Risk Solutions Consumer Center
+P.O. Box 105108
+Atlanta, GA 30348-5108`,
+  innovis: `Innovis Consumer Assistance
+P.O. Box 530088
+Atlanta, GA 30353-0088`,
+  chexsystems: `Chex Systems, Inc.
+Attn: Consumer Relations
+P.O. Box 583399
+Minneapolis, MN 55458`,
+  ews: `Early Warning Services, LLC
+Attn: Consumer Services
+5801 N. Pima Road
+Scottsdale, AZ 85250`,
 };
 
 const REASON_CODE_DESCRIPTIONS: Record<string, string> = {

@@ -129,17 +129,20 @@ export function calculateLetterStrength(
   }
 
   // ---- METHODOLOGY SCORE (0-1 point) ----
+  // Strictly-factual approaches score highest, consistent with the deterministic
+  // dispute policy: factual and Metro 2 claims are evidence-grounded and low-risk,
+  // while consumer_law claims carry higher risk and need documented willfulness.
   const methodologyScores: Record<string, number> = {
-    'consumer_law': 1.0,
-    'method_of_verification': 0.8,
-    'debt_validation': 0.7,
-    'metro2_compliance': 0.6,
-    'factual': 0.5,
+    'factual': 1.0,
+    'metro2_compliance': 1.0,
+    'method_of_verification': 0.9,
+    'debt_validation': 0.8,
+    'consumer_law': 0.6,
   };
   methodologyScore = methodologyScores[methodology] || 0.5;
 
   if (methodology === 'consumer_law') {
-    suggestions.push('Consumer law approach - powerful for willful non-compliance claims');
+    suggestions.push('Consumer law approach carries higher risk - ensure willful non-compliance is documented before relying on it');
   }
 
   // ---- CALCULATE OVERALL SCORE ----

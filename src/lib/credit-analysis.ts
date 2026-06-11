@@ -11,7 +11,7 @@ import {
   personalInfoDisputes,
   inquiryDisputes,
 } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getFileFromR2 } from './r2-storage';
 import { 
@@ -76,13 +76,25 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     .where(eq(creditReports.id, reportId));
 
   try {
-    // Clear existing parsed data for re-analysis
+    // Clear existing parsed data for re-analysis.
+    // Compliance items must be removed before their negative items: the FK nulls on
+    // delete, which would orphan them. Scope to this report only — deleting by clientId
+    // would wipe compliance items derived from the client's other reports.
+    await db.delete(fcraComplianceItems).where(
+      inArray(
+        fcraComplianceItems.negativeItemId,
+        db.select({ id: negativeItems.id }).from(negativeItems).where(eq(negativeItems.creditReportId, reportId))
+      )
+    );
+    // Sweep rows orphaned before this scoping existed (negativeItemId already nulled)
+    await db.delete(fcraComplianceItems).where(
+      and(eq(fcraComplianceItems.clientId, report.clientId), isNull(fcraComplianceItems.negativeItemId))
+    );
     await db.delete(negativeItems).where(eq(negativeItems.creditReportId, reportId));
     await db.delete(creditAccounts).where(eq(creditAccounts.creditReportId, reportId));
     await db.delete(consumerProfiles).where(eq(consumerProfiles.creditReportId, reportId));
     await db.delete(personalInfoDisputes).where(eq(personalInfoDisputes.creditReportId, reportId));
     await db.delete(inquiryDisputes).where(eq(inquiryDisputes.creditReportId, reportId));
-    await db.delete(fcraComplianceItems).where(eq(fcraComplianceItems.clientId, report.clientId));
 
     // Get file from R2
     const fileBuffer = await getFileFromR2(report.fileUrl);

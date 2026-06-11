@@ -250,6 +250,74 @@ bureaus:
       - "e-OSCAR automated verification"
       - "Direct furnisher contact"
 
+  # ------- Secondary consumer reporting agencies -------
+  # Addresses verified June 2026 against each agency's consumer site / CFPB CRA list.
+  lexisnexis:
+    name: "LexisNexis Risk Solutions"
+    address: |
+      LexisNexis Risk Solutions Consumer Center
+      P.O. Box 105108
+      Atlanta, GA 30348-5108
+    phone: "1-888-497-0011"
+    online_dispute: "https://consumer.risk.lexisnexis.com/"
+    fax: ""
+    specific_requirements:
+      - "Request the LexisNexis Consumer Disclosure Report first to obtain the case/consumer number"
+      - "Feeds public records and risk data to insurers and the big-3 bureaus"
+    response_timeframe_days: 30
+    investigation_methods:
+      - "Manual consumer center review"
+
+  innovis:
+    name: "Innovis"
+    address: |
+      Innovis Consumer Assistance
+      P.O. Box 530088
+      Atlanta, GA 30353-0088
+    phone: "1-800-540-2505"
+    online_dispute: "https://www.innovis.com/personal/disputeResolution"
+    fax: ""
+    specific_requirements:
+      - "Fourth national credit bureau; furnishers may report here even after big-3 deletions"
+      - "Include full name, SSN, DOB, and current address"
+    response_timeframe_days: 30
+    investigation_methods:
+      - "Furnisher verification"
+
+  chexsystems:
+    name: "ChexSystems"
+    address: |
+      Chex Systems, Inc.
+      Attn: Consumer Relations
+      P.O. Box 583399
+      Minneapolis, MN 55458
+    phone: "1-800-428-9623"
+    online_dispute: "https://www.chexsystems.com/"
+    fax: ""
+    specific_requirements:
+      - "Banking history CRA - covers checking/savings account closures and NSF activity"
+      - "Include Consumer ID from the ChexSystems disclosure report when available"
+    response_timeframe_days: 30
+    investigation_methods:
+      - "Source bank verification"
+
+  ews:
+    name: "Early Warning Services"
+    address: |
+      Early Warning Services, LLC
+      Attn: Consumer Services
+      5801 N. Pima Road
+      Scottsdale, AZ 85250
+    phone: "1-800-745-4210"
+    online_dispute: "https://www.earlywarning.com/dispute-file-disclosure"
+    fax: ""
+    specific_requirements:
+      - "Bank-owned deposit/payments CRA - covers account abuse and fraud flags"
+      - "Request the EWS consumer file disclosure before disputing"
+    response_timeframe_days: 30
+    investigation_methods:
+      - "Contributing bank verification"
+
 # ============================================
 # REASON CODES (Organized by Category)
 # ============================================

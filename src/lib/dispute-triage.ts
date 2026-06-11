@@ -6,6 +6,10 @@ export interface NegativeItemForTriage {
   itemType: string;
   amount: number | null;
   dateReported: string | null;
+  // FCRA 7-year clock runs from Date of First Delinquency, not the report date.
+  // dateOfLastActivity is the closest on-report proxy when DOFD is unavailable.
+  dateOfFirstDelinquency?: string | null;
+  dateOfLastActivity?: string | null;
   riskSeverity: string;
   recommendedAction: string | null;
   onTransunion?: boolean;
@@ -48,6 +52,16 @@ export interface QuickAction {
   count: number;
   bureau?: string;
   itemType?: string;
+}
+
+// Best available date for the FCRA obsolescence clock: DOFD > last activity > date reported
+export function getObsolescenceBaseDate(item: NegativeItemForTriage): Date | null {
+  for (const value of [item.dateOfFirstDelinquency, item.dateOfLastActivity, item.dateReported]) {
+    if (!value) continue;
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return null;
 }
 
 // Strategy determination based on item type and characteristics
@@ -280,11 +294,11 @@ export function triageItems(
     }
   }
 
-  // Quick action: Items approaching 7-year limit (6+ years old)
+  // Quick action: Items approaching 7-year limit (6+ years since first delinquency)
   const oldItems = items.filter(item => {
-    if (!item.dateReported) return false;
-    const reportDate = new Date(item.dateReported);
-    const yearsOld = (Date.now() - reportDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    const baseDate = getObsolescenceBaseDate(item);
+    if (!baseDate) return false;
+    const yearsOld = (Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
     return yearsOld >= 6;
   });
   if (oldItems.length > 0) {

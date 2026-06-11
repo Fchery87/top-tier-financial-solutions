@@ -3,9 +3,13 @@ import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { db } from '@/db/client';
-import { negativeItems } from '@/db/schema';
+import { disputeOutcomes, negativeItems } from '@/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { triageItems } from '@/lib/dispute-triage';
+import {
+  buildCreditorStrategyInsights,
+  getRecommendedMethodologyForCreditor,
+} from '@/lib/creditor-strategy-insights';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -43,6 +47,7 @@ export async function POST(request: NextRequest) {
       itemType: item.itemType,
       amount: item.amount,
       dateReported: item.dateReported?.toISOString() ?? null,
+      dateOfLastActivity: item.dateOfLastActivity?.toISOString() ?? null,
       riskSeverity: item.riskSeverity ?? 'medium',
       recommendedAction: item.recommendedAction,
       onTransunion: item.onTransunion ?? undefined,
@@ -56,10 +61,34 @@ export async function POST(request: NextRequest) {
 
     const summary = triageItems(triageReady, round);
 
+    // Historical per-creditor strategy learning across all recorded outcomes.
+    // Advisory only — the deterministic policy engine still gates what is allowed.
+    let historicalRecommendations: Record<string, string> = {};
+    try {
+      const outcomeRows = await db
+        .select({
+          creditorName: disputeOutcomes.creditorName,
+          methodology: disputeOutcomes.methodology,
+          itemType: disputeOutcomes.itemType,
+          outcome: disputeOutcomes.outcome,
+        })
+        .from(disputeOutcomes);
+      const insights = buildCreditorStrategyInsights(outcomeRows);
+      for (const item of triageReady) {
+        const recommended = getRecommendedMethodologyForCreditor(item.creditorName, insights);
+        if (recommended) historicalRecommendations[item.id] = recommended;
+      }
+    } catch (insightError) {
+      // Outcome history is optional decision support; triage still succeeds without it.
+      console.error('Error loading creditor strategy history for triage:', insightError);
+      historicalRecommendations = {};
+    }
+
     return NextResponse.json({
       success: true,
       round,
       items: triageReady.length,
+      historicalRecommendations,
       ...summary,
     });
   } catch (error) {
