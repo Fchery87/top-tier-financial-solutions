@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipWrapper } from "./providers";
 import { Analytics } from '@/components/Analytics';
@@ -8,17 +9,16 @@ import { LayoutWrapper } from '@/components/LayoutWrapper';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Satoshi (Fontshare) — self-hosted primary typeface for headings + body.
+const satoshi = localFont({
+  variable: "--font-satoshi",
   display: "swap",
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz"],
+  src: [
+    { path: "../fonts/Satoshi-Regular.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/Satoshi-Medium.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/Satoshi-Bold.woff2", weight: "700", style: "normal" },
+    { path: "../fonts/Satoshi-Black.woff2", weight: "900", style: "normal" },
+  ],
 });
 
 const jetbrainsMono = Geist_Mono({
@@ -60,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${fraunces.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${satoshi.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <ErrorBoundary>
           <Analytics />
           <SkipLink />
