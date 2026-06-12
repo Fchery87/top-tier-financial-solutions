@@ -1,46 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  /* Top Tier Financial — "Quiet Wealth" · Light Mode */
-  --background: 40 30% 94%;         /* warm ivory canvas — #F4F1EC */
-  --foreground: 30 14% 7%;          /* graphite ink — #14110F */
-  --card: 45 33% 98%;               /* document surface — #FBFAF7 */
-  --card-foreground: 30 14% 7%;
-  --popover: 45 33% 98%;
-  --popover-foreground: 30 14% 7%;
+  /* Top Tier Financial — "Operator Slate + Signal Green" · Light Mode */
+  --background: 210 40% 98%;        /* slate-50 app canvas — #F8FAFC */
+  --foreground: 222 47% 11%;        /* slate-900 ink — #0F172A */
+  --card: 0 0% 100%;                /* white surface — #FFFFFF */
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
 
-  /* Primary — financial graphite */
-  --primary: 30 14% 7%;
-  --primary-foreground: 42 22% 94%;
+  /* Primary — strong slate ink (dark, neutral CTAs + emphasis) */
+  --primary: 222 47% 11%;           /* slate-900 — #0F172A */
+  --primary-foreground: 210 40% 98%;
 
-  /* Secondary — champagne (the one accent) — #8F7440 */
-  --secondary: 39 38% 41%;
-  --secondary-foreground: 30 16% 10%;  /* dark ink on champagne for AA contrast */
+  /* Secondary — Signal Green (the one accent; deep enough for AA text on white) — #047857 */
+  --secondary: 162 94% 24%;
+  --secondary-foreground: 0 0% 100%;  /* white text on emerald-700 (~5.5:1) */
 
-  /* Muted — warm neutrals */
-  --muted: 40 24% 90%;
-  --muted-foreground: 30 8% 39%;    /* #6B645C */
+  /* Muted — cool slate neutrals */
+  --muted: 210 40% 96%;             /* slate-100 — #F1F5F9 */
+  --muted-foreground: 215 16% 42%;  /* slate-500/600 — #5B677A (AA on white) */
 
-  /* Accent — soft champagne wash (reinforces single accent) */
-  --accent: 39 43% 87%;             /* #ECE3D2 */
-  --accent-foreground: 36 38% 27%;  /* champagne-dk */
+  /* Accent — soft emerald wash (reinforces single accent) */
+  --accent: 152 56% 95%;            /* emerald-50 — #ECFDF5 */
+  --accent-foreground: 163 88% 20%; /* deep emerald */
 
-  /* Success — deep restoration green (not neon mint) — #2F6B4F */
-  --success: 152 39% 30%;
-  --success-foreground: 134 18% 94%;
+  /* Success — emerald (aligned with the brand signal) */
+  --success: 160 84% 26%;
+  --success-foreground: 0 0% 100%;
 
-  /* Warning — muted ochre (on-brand with champagne) — #B5832B */
-  --warning: 38 62% 44%;
-  --warning-foreground: 42 30% 96%;
+  /* Warning — deep amber (AA as text on white) — #B45309 */
+  --warning: 30 90% 36%;
+  --warning-foreground: 0 0% 100%;
 
-  /* Destructive — muted brick red — #A23A33 */
-  --destructive: 4 51% 42%;
-  --destructive-foreground: 42 30% 96%;
+  /* Destructive — red-600/700 (AA as text on white) */
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 0% 100%;
 
-  /* Border & Input — hairlines — #E4DED4 */
-  --border: 40 23% 86%;
-  --input: 40 23% 86%;
-  --ring: 39 38% 41%;
+  /* Border & Input — cool hairlines — #E2E8F0 slate-200 */
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 162 94% 24%;
+
+  /* App chrome — near-black operator sidebar (dark in both themes) */
+  --sidebar: 213 39% 7%;            /* near-black — #0B0F14 */
+  --sidebar-foreground: 210 40% 96%;
+  --sidebar-border: 215 28% 17%;
+  --sidebar-muted: 215 16% 56%;
+  --sidebar-active: 156 72% 50%;    /* vibrant emerald on dark chrome */
+  --sidebar-active-foreground: 213 39% 7%;
+
+  /* Directional signal + vibrant brand accent (deltas, sparklines, logo, on tints/dark) */
+  --up: 160 84% 39%;                /* emerald-500 — #10B981 */
+  --down: 0 84% 60%;                /* red-500 — #EF4444 */
+
+  /* Credit score band scale (poor → excellent) */
+  --score-poor: 0 72% 51%;          /* red */
+  --score-fair: 25 95% 53%;         /* orange */
+  --score-good: 38 92% 50%;         /* amber */
+  --score-verygood: 84 81% 44%;     /* lime */
+  --score-excellent: 160 84% 39%;   /* emerald */
 
   --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);
@@ -55,36 +74,54 @@
 }
 
 .dark {
-  /* "Quiet Wealth" · Dark Mode */
-  --background: 30 14% 5%;          /* graphite black — #100E0C */
-  --foreground: 42 22% 90%;         /* warm off-white — #EDE8DF */
-  --card: 30 14% 8%;                /* raised panel — #17130F */
-  --card-foreground: 42 22% 90%;
-  --popover: 30 14% 8%;
-  --popover-foreground: 42 22% 90%;
+  /* "Operator Slate + Signal Green" · Dark Mode (near-black chrome) */
+  --background: 213 39% 7%;         /* near-black — #0B0F14 */
+  --foreground: 210 40% 96%;        /* slate-100 — #F1F5F9 */
+  --card: 215 28% 11%;              /* raised panel — #141A21 */
+  --card-foreground: 210 40% 96%;
+  --popover: 215 28% 11%;
+  --popover-foreground: 210 40% 96%;
 
-  --primary: 42 22% 90%;
-  --primary-foreground: 30 14% 7%;
+  /* In dark mode, primary inverts to near-white (dark text) for strong neutral CTAs */
+  --primary: 210 40% 96%;
+  --primary-foreground: 222 47% 11%;
 
-  --secondary: 39 45% 60%;          /* champagne, brighter on dark — #C6A96C */
-  --secondary-foreground: 30 14% 7%;
+  --secondary: 156 72% 50%;         /* emerald-400, bright on dark — #2DD4A0 */
+  --secondary-foreground: 222 47% 9%;
 
-  --muted: 30 12% 13%;
-  --muted-foreground: 36 8% 56%;    /* #9A9085 */
+  --muted: 215 25% 15%;
+  --muted-foreground: 216 18% 62%;  /* AA on near-black — #8B97A8 */
 
-  --accent: 36 24% 18%;             /* deep champagne wash */
-  --accent-foreground: 39 45% 70%;
+  --accent: 158 44% 14%;            /* deep emerald wash */
+  --accent-foreground: 156 72% 62%;
 
-  --success: 152 36% 46%;
-  --success-foreground: 30 14% 7%;
-  --warning: 38 62% 54%;
-  --warning-foreground: 30 14% 7%;
-  --destructive: 4 56% 54%;
-  --destructive-foreground: 42 30% 96%;
+  --success: 156 72% 48%;
+  --success-foreground: 222 47% 9%;
+  --warning: 38 92% 56%;
+  --warning-foreground: 222 47% 9%;
+  --destructive: 0 74% 60%;
+  --destructive-foreground: 210 40% 98%;
 
-  --border: 36 10% 16%;
-  --input: 36 10% 16%;
-  --ring: 39 45% 60%;
+  --border: 215 22% 18%;
+  --input: 215 22% 18%;
+  --ring: 156 72% 50%;
+
+  /* Chrome matches the dark canvas; accent stays vibrant */
+  --sidebar: 213 42% 5%;            /* deepest near-black — #070A0E */
+  --sidebar-foreground: 210 40% 96%;
+  --sidebar-border: 215 24% 14%;
+  --sidebar-muted: 216 16% 58%;
+  --sidebar-active: 156 72% 52%;
+  --sidebar-active-foreground: 213 42% 5%;
+
+  --up: 156 72% 50%;                /* brighter emerald on dark */
+  --down: 0 84% 65%;
+
+  --score-poor: 0 80% 62%;
+  --score-fair: 25 95% 60%;
+  --score-good: 38 92% 56%;
+  --score-verygood: 84 70% 52%;
+  --score-excellent: 156 72% 50%;
 }
 
 @theme inline {
@@ -111,6 +148,22 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-muted: hsl(var(--sidebar-muted));
+  --color-sidebar-active: hsl(var(--sidebar-active));
+  --color-sidebar-active-foreground: hsl(var(--sidebar-active-foreground));
+
+  --color-up: hsl(var(--up));
+  --color-down: hsl(var(--down));
+
+  --color-score-poor: hsl(var(--score-poor));
+  --color-score-fair: hsl(var(--score-fair));
+  --color-score-good: hsl(var(--score-good));
+  --color-score-verygood: hsl(var(--score-verygood));
+  --color-score-excellent: hsl(var(--score-excellent));
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
@@ -140,6 +193,15 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Operational surfaces (admin/portal) use crisp sans, not editorial serif.
+   Marketing keeps Fraunces. Scoped so headings flip without touching every file. */
+.admin-shell .font-display,
+.portal-shell .font-display {
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
 .brand-footer {
   background: #080a0f;
   color: #f8f3e8;
@@ -154,11 +216,11 @@ body {
 }
 
 .brand-footer-heading {
-  color: #f1dca3;
+  color: hsl(156 72% 62%);
 }
 
 .brand-logo-plate {
-  background: #f8f3e8;
+  background: #ffffff;
   box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.4);
 }
 
@@ -170,10 +232,10 @@ body {
 
 .surface-document {
   background:
-    linear-gradient(180deg, hsl(42 36% 98% / 0.98), hsl(34 22% 94% / 0.94)),
+    linear-gradient(180deg, hsl(0 0% 100% / 0.98), hsl(210 40% 98% / 0.96)),
     hsl(var(--card));
-  color: hsl(224 24% 10%);
-  border: 1px solid hsl(34 18% 80%);
+  color: hsl(222 47% 11%);
+  border: 1px solid hsl(214 32% 88%);
 }
 
 .dark .surface-document {
@@ -184,14 +246,14 @@ body {
 
 .platform-shell {
   background:
-    radial-gradient(circle at 12% 0%, hsl(var(--secondary) / 0.16), transparent 28rem),
-    linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.4));
+    radial-gradient(circle at 12% 0%, hsl(var(--secondary) / 0.08), transparent 28rem),
+    linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.5));
 }
 
 .dark .platform-shell {
   background:
-    radial-gradient(circle at 12% 0%, hsl(var(--secondary) / 0.12), transparent 30rem),
-    radial-gradient(circle at 88% 12%, hsl(162 35% 32% / 0.1), transparent 24rem),
+    radial-gradient(circle at 12% 0%, hsl(156 72% 40% / 0.1), transparent 30rem),
+    radial-gradient(circle at 88% 12%, hsl(200 60% 40% / 0.08), transparent 24rem),
     hsl(var(--background));
 }
 

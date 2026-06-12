@@ -20,7 +20,7 @@ export default function AdminLayout({
 
   return (
     <AdminGuard>
-      <div className="min-h-screen bg-muted/25">
+      <div className="admin-shell min-h-screen bg-muted/25">
         <AdminSidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
