@@ -67,6 +67,9 @@ Important workflow concepts:
 - Bureau-level score and item progress tracking where report data supports it.
 - Deterministic dispute policy decisions before letter generation.
 - AI-assisted letter rendering limited to approved policy inputs.
+- Dispute targeting for the big-3 bureaus plus secondary consumer reporting agencies (LexisNexis, Innovis, ChexSystems, Early Warning Services).
+- FCRA 7-year obsolescence tracking keyed to Date of First Delinquency where available.
+- Per-creditor strategy success analytics with historical methodology recommendations surfaced in triage (advisory only; policy still gates).
 - Submission Tracking for manual mail details, recipients, dates, tracking numbers, proof documents, delivery status, and response deadlines.
 - Response Review with structured outcomes and next-cycle recommendations.
 
@@ -107,7 +110,7 @@ The application must decide dispute eligibility, reason codes, claim risk, targe
 - Database: Neon PostgreSQL with Drizzle ORM and Drizzle Kit migrations.
 - Authentication: Better Auth.
 - File storage: Cloudflare R2 using S3-compatible APIs.
-- AI providers: Google Gemini and OpenAI SDK packages are available; deterministic policy remains the source of truth.
+- AI providers: Google Gemini, OpenAI, Anthropic Claude, and Zhipu are supported for letter rendering, selectable in admin LLM settings; deterministic policy remains the source of truth.
 - Scheduling and booking: Cal.com integration for prospect scheduling.
 - Observability: Sentry for Next.js.
 - Testing: Vitest, Testing Library, Playwright tooling.
@@ -233,6 +236,7 @@ Current production-readiness notes are tracked in the production readiness block
 - [Credit Repair Platform Roadmap](./docs/plans/credit-repair-platform-roadmap.md) - implementation sequence and acceptance criteria.
 - [Production Readiness Blockers](./docs/plans/production-readiness-blockers.md) - current release blockers, warnings, and audit status.
 - [Credit Analysis Implementation](./docs/CREDIT-ANALYSIS-IMPLEMENTATION.md) - credit report analysis implementation details.
+- [Secondary Bureaus And Creditor Analytics](./docs/SECONDARY-BUREAUS-AND-CREDITOR-ANALYTICS.md) - secondary CRA dispute support, per-creditor strategy analytics, and FCRA accuracy fixes.
 - [IdentityIQ Parser Guide](./docs/IDENTITYIQ_PARSER_GUIDE.md) - parser-specific guidance for IdentityIQ reports.
 
 ## License

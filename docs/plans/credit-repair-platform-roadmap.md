@@ -175,6 +175,8 @@ Goal: provide trustworthy internal metrics and client-facing progress without mi
 
 Implement Operator Analytics for internal business operations. Include throughput, SLA breaches, import success rate, response aging, staff workload, billing readiness, Dispute Cycle volume, and other operational health metrics.
 
+Delivered June 2026: per-creditor strategy success analytics (`src/lib/creditor-strategy-insights.ts`, the creditor-strategies insights endpoint, and historical methodology recommendations in the triage response). See `docs/SECONDARY-BUREAUS-AND-CREDITOR-ANALYTICS.md`. Recommendations are advisory only and never override deterministic policy.
+
 Implement Client Outcome Analytics for client-visible outcomes. Include score movement, deletions, updates, verified outcomes, new negative items, progress by bureau, and client-visible milestones.
 
 Avoid numeric projected score increase claims by default. If Score Projections exist, keep them internal by default, label them as estimates, include disclaimers, and never present them as guaranteed outcomes.
