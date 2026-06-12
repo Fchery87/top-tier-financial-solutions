@@ -138,7 +138,6 @@ export function PipelineTab({ stats, loading }: PipelineTabProps) {
               {(['transunion', 'experian', 'equifax'] as const).map((bureauKey) => {
                 const data = stats?.successByBureau?.[bureauKey];
                 const rate = data?.rate ?? 0;
-                const color = bureauKey === 'transunion' ? 'blue' : bureauKey === 'experian' ? 'purple' : 'red';
                 const label = bureauKey;
                 return (
                   <Link
@@ -159,8 +158,7 @@ export function PipelineTab({ stats, loading }: PipelineTabProps) {
                             strokeWidth="6"
                             fill="none"
                             strokeDasharray={`${rate * 1.76} 176`}
-                            className={`text-${color}-500`}
-                            style={{ stroke: `var(--${color}-500, ${color === 'blue' ? '#3b82f6' : color === 'purple' ? '#a855f7' : '#ef4444'})` }}
+                            className="text-up"
                           />
                         </svg>
                         <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">

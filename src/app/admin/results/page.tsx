@@ -333,23 +333,22 @@ export default function ResultsPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {[
-                      { bureau: 'TransUnion', count: stats.by_bureau.transunion, color: 'blue' },
-                      { bureau: 'Experian', count: stats.by_bureau.experian, color: 'purple' },
-                      { bureau: 'Equifax', count: stats.by_bureau.equifax, color: 'red' },
-                    ].map(({ bureau, count, color }) => (
+                      { bureau: 'TransUnion', count: stats.by_bureau.transunion },
+                      { bureau: 'Experian', count: stats.by_bureau.experian },
+                      { bureau: 'Equifax', count: stats.by_bureau.equifax },
+                    ].map(({ bureau, count }) => (
                       <div key={bureau} className="flex items-center justify-between">
                         <span className="text-sm">{bureau}</span>
                         <div className="flex items-center gap-2">
                           <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                             <div
-                              className={`h-full bg-${color}-500 rounded-full`}
+                              className="h-full rounded-full bg-up"
                               style={{
                                 width: `${stats.total_deletions ? (count / stats.total_deletions) * 100 : 0}%`,
-                                backgroundColor: color === 'blue' ? '#3b82f6' : color === 'purple' ? '#a855f7' : '#ef4444',
                               }}
                             />
                           </div>
-                          <span className="text-sm font-medium w-8 text-right">{count}</span>
+                          <span className="text-sm font-medium w-8 text-right tabular-nums">{count}</span>
                         </div>
                       </div>
                     ))}

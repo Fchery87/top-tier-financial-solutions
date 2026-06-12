@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
+import { ScoreBadge } from '@/components/ui/ScoreBadge';
 import type { ClientDetail, ClientDisputeStatus, CreditAnalysis } from './types';
 import { DISPUTE_STATUS_LABELS, DISPUTE_STATUS_CLASSES } from './types';
 
@@ -55,18 +56,6 @@ export function ClientHeader({
           ].filter(Boolean).length,
       )
     : null;
-
-  const scoreColor = averageScore
-    ? averageScore >= 750
-      ? 'text-success'
-      : averageScore >= 700
-        ? 'text-success'
-        : averageScore >= 650
-          ? 'text-warning'
-          : averageScore >= 600
-            ? 'text-warning'
-            : 'text-destructive'
-    : 'text-muted-foreground';
 
   return (
     <div className="border-b border-border/50 pb-4">
@@ -127,29 +116,27 @@ export function ClientHeader({
       <div className="flex items-center gap-6 mt-4 ml-14 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Credit Score</span>
-          <span className={`text-lg font-bold ${scoreColor}`}>
-            {averageScore ?? '—'}
-          </span>
+          <ScoreBadge score={averageScore} variant="gauge" size="md" showLabel />
         </div>
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-2">
           <Scale className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm">
-            <span className="font-medium">{openDisputesCount}</span>{' '}
+            <span className="font-medium tabular-nums">{openDisputesCount}</span>{' '}
             <span className="text-muted-foreground">Open Disputes</span>
           </span>
         </div>
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-2">
           <span className="text-sm">
-            <span className="font-medium">{daysActive}</span>{' '}
+            <span className="font-medium tabular-nums">{daysActive}</span>{' '}
             <span className="text-muted-foreground">Days Active</span>
           </span>
         </div>
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-2">
           <span className="text-sm">
-            <span className="font-medium">{reportsCount}</span>{' '}
+            <span className="font-medium tabular-nums">{reportsCount}</span>{' '}
             <span className="text-muted-foreground">Reports</span>
           </span>
         </div>
