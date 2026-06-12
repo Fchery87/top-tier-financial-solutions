@@ -21,6 +21,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { CalendarWidget } from '@/components/admin/CalendarWidget';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { MetricTile } from '@/components/ui/MetricTile';
+import { ScoreBadge } from '@/components/ui/ScoreBadge';
 
 interface DashboardStats {
   activeClients: number;
@@ -77,131 +79,65 @@ export function OverviewTab({
   metricCardPadding,
   metricGridGap,
 }: OverviewTabProps) {
+  const compact = metricCardPadding.includes('p-3');
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${metricGridGap}`}>
-          <Link href="/admin/clients?status=active" className="block">
-            <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
-              <CardContent className={metricCardPadding}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.activeClients ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Active Clients</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/admin/disputes?awaiting_response=true" className="block">
-            <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
-              <CardContent className={metricCardPadding}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
-                    <Scale className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.disputesPending ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Open Disputes</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/admin/disputes?status=draft" className="block">
-            <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
-              <CardContent className={metricCardPadding}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
-                    <FileWarning className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.totalNegativeItems ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Negative Tradelines</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/admin/results?range=month" className="block">
-            <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
-              <CardContent className={metricCardPadding}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-success/20 bg-success/10">
-                    <CheckCircle2 className="w-4 h-4 text-success" />
-                  </div>
-                </div>
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.itemsRemovedThisMonth ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Items Removed (30d)</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
+        <div className={`grid grid-cols-2 lg:grid-cols-4 ${metricGridGap}`}>
+          <MetricTile
+            label="Active Clients"
+            value={stats?.activeClients ?? 0}
+            icon={Users}
+            href="/admin/clients?status=active"
+            loading={loading}
+            compact={compact}
+          />
+          <MetricTile
+            label="Open Disputes"
+            value={stats?.disputesPending ?? 0}
+            icon={Scale}
+            href="/admin/disputes?awaiting_response=true"
+            loading={loading}
+            compact={compact}
+          />
+          <MetricTile
+            label="Negative Tradelines"
+            value={stats?.totalNegativeItems ?? 0}
+            icon={FileWarning}
+            href="/admin/disputes?status=draft"
+            loading={loading}
+            compact={compact}
+          />
+          <MetricTile
+            label="Items Removed (30d)"
+            value={stats?.itemsRemovedThisMonth ?? 0}
+            icon={CheckCircle2}
+            accent="emerald"
+            href="/admin/results?range=month"
+            loading={loading}
+            compact={compact}
+          />
         </div>
 
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 ${metricGridGap}`}>
-          <Link href="/admin/results?range=all" className="block">
-            <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
-              <CardContent className={metricCardPadding}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60">
-                    <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.avgCreditScore || '\u2014'}</p>
-                    <p className="text-xs text-muted-foreground">Average Credit Score</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/admin/results?range=all" className="block">
-            <Card className="bg-card shadow-sm hover:border-secondary/30 transition-all cursor-pointer">
-              <CardContent className={metricCardPadding}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-success/20 bg-success/10">
-                    <Target className="w-4 h-4 text-success" />
-                  </div>
-                </div>
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <p className="font-display text-4xl font-light tracking-tight tabular-nums text-foreground">{stats?.successRate ?? 0}%</p>
-                    <p className="text-xs text-muted-foreground">Dispute Success Rate</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${metricGridGap}`}>
+          <MetricTile
+            label="Average Credit Score"
+            value={<ScoreBadge score={stats?.avgCreditScore || null} variant="plain" size="lg" showLabel />}
+            icon={BarChart3}
+            href="/admin/results?range=all"
+            loading={loading}
+            compact={compact}
+          />
+          <MetricTile
+            label="Dispute Success Rate"
+            value={`${stats?.successRate ?? 0}%`}
+            icon={Target}
+            accent="emerald"
+            href="/admin/results?range=all"
+            loading={loading}
+            compact={compact}
+          />
         </div>
       </div>
 

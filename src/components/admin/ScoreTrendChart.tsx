@@ -110,7 +110,7 @@ function MiniLineChart({ data, width = 300, height = 100 }: { data: TrendPoint[]
       <motion.path
         d={pathData}
         fill="none"
-        stroke="hsl(var(--secondary))"
+        stroke="hsl(var(--up))"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -127,7 +127,7 @@ function MiniLineChart({ data, width = 300, height = 100 }: { data: TrendPoint[]
           cy={yScale(point.avgScore)}
           r={4}
           fill="hsl(var(--background))"
-          stroke="hsl(var(--secondary))"
+          stroke="hsl(var(--up))"
           strokeWidth={2}
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -151,8 +151,8 @@ function MiniLineChart({ data, width = 300, height = 100 }: { data: TrendPoint[]
       {/* Gradient definition */}
       <defs>
         <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="hsl(var(--secondary))" stopOpacity={0.3} />
-          <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity={0} />
+          <stop offset="0%" stopColor="hsl(var(--up))" stopOpacity={0.3} />
+          <stop offset="100%" stopColor="hsl(var(--up))" stopOpacity={0} />
         </linearGradient>
       </defs>
     </svg>

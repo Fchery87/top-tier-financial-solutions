@@ -98,77 +98,74 @@ export default function AdminDashboard() {
     fetchDashboardPreferences();
   }, [role, hasLocalDensity]);
 
+  const attentionStats = [
+    { icon: AlertTriangle, accent: 'text-warning', value: totalAttention, label: 'Needs attention' },
+    { icon: Clock, accent: 'text-secondary', value: stats?.attentionNeeded?.responseDueSoon ?? 0, label: 'Responses due' },
+    { icon: ShieldCheck, accent: 'text-up', value: stats?.attentionNeeded?.pendingAgreements ?? 0, label: 'Agreement gates' },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="surface-panel rounded-xl p-5 md:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.28em] text-secondary">Operations Console</p>
-            <h1 className="font-display text-4xl font-light tracking-tight text-foreground md:text-[2.75rem]">
-              Credit Repair Command Center
+    <div className="space-y-5">
+      <div className="surface-panel rounded-xl p-4 md:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.28em] text-secondary">Operations Console</p>
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem]">
+              Command Center
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
-              Monitor onboarding blockers, dispute deadlines, compliance exposure, and billing readiness from a single operational surface.
-            </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 xl:w-[34rem]">
-            <div className="rounded-lg border border-border bg-muted/35 p-3">
-              <AlertTriangle className="h-4 w-4 text-warning" />
-              <p className="mt-2 font-display text-3xl font-light tabular-nums">{loading ? '...' :totalAttention}</p>
-              <p className="text-xs text-muted-foreground">Needs attention</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden md:flex items-center gap-1 rounded-md border border-border bg-muted/60 p-0.5 text-[11px] text-muted-foreground">
+              <span className="px-1.5">Density</span>
+              <button
+                type="button"
+                onClick={() => handleSetDensity('comfortable')}
+                className={
+                  `rounded px-2 py-1 transition-colors ` +
+                  (isCompact ? 'text-muted-foreground hover:text-foreground' : 'bg-card text-foreground shadow-sm')
+                }
+              >
+                Comfort
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetDensity('compact')}
+                className={
+                  `rounded px-2 py-1 transition-colors ` +
+                  (isCompact ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')
+                }
+              >
+                Compact
+              </button>
             </div>
-            <div className="rounded-lg border border-border bg-muted/35 p-3">
-              <Clock className="h-4 w-4 text-secondary" />
-              <p className="mt-2 font-display text-3xl font-light tabular-nums">{loading ? '...' :stats?.attentionNeeded?.responseDueSoon ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Responses due</p>
-            </div>
-            <div className="rounded-lg border border-border bg-muted/35 p-3">
-              <ShieldCheck className="h-4 w-4 text-success" />
-              <p className="mt-2 font-display text-3xl font-light tabular-nums">{loading ? '...' :stats?.attentionNeeded?.pendingAgreements ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Agreement gates</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-3 border-t border-border/70 pt-5 md:flex-row md:items-center md:justify-between">
-          <div className="hidden md:flex items-center gap-1 rounded-md bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">
-            <span className="px-2">Density</span>
-            <button
-              type="button"
-              onClick={() => handleSetDensity('comfortable')}
-              className={
-                `px-2 py-1 rounded transition-colors ` +
-                (isCompact ? 'text-muted-foreground' : 'bg-background text-foreground shadow-sm')
-              }
-            >
-              Comfort
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetDensity('compact')}
-              className={
-                `px-2 py-1 rounded transition-colors ` +
-                (isCompact ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground')
-              }
-            >
-              Compact
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button asChild>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/admin/clients">
+                <Users className="mr-1.5 h-4 w-4" />
+                Clients
+              </Link>
+            </Button>
+            <Button variant="secondary" size="sm" asChild>
               <Link href="/admin/disputes/wizard">
-                <Zap className="w-4 h-4 mr-2" />
+                <Zap className="mr-1.5 h-4 w-4" />
                 New Dispute
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link href="/admin/clients">
-                <Users className="w-4 h-4 mr-2" />
-                View Clients
-              </Link>
-            </Button>
           </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border/70 pt-4 sm:max-w-xl">
+          {attentionStats.map(({ icon: Icon, accent, value, label }) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted/60">
+                <Icon className={`h-4 w-4 ${accent}`} />
+              </span>
+              <div className="min-w-0">
+                <p className="font-mono text-xl font-semibold leading-none tabular-nums text-foreground">{loading ? '—' : value}</p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">{label}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
