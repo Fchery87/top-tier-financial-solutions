@@ -139,7 +139,7 @@ export default async function Home() {
                   <h2 className="mt-1.5 text-xl font-semibold tracking-tight">Restoration Plan</h2>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-up" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
                   Active
                 </span>
               </div>
@@ -152,7 +152,7 @@ export default async function Home() {
                   ['Policy checks ready', 'Evidence and confirmation gates visible'],
                 ].map(([title, detail]) => (
                   <div key={title} className="flex gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/50">
-                    <CheckCircle2 className="mt-0.5 h-[18px] w-[18px] shrink-0 text-up" />
+                    <CheckCircle2 className="mt-0.5 h-[18px] w-[18px] shrink-0 text-foreground" />
                     <div>
                       <p className="text-sm font-medium">{title}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
