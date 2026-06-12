@@ -34,24 +34,7 @@ import {
   MailOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-function AscendantMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 96 96" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id="sb-champagne" x1="20" y1="80" x2="76" y2="16" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#C6A96C" />
-          <stop offset="1" stopColor="#8F7440" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="92" height="92" rx="24" fill="#1B1714" stroke="rgba(198,169,108,0.28)" strokeWidth="1.5" />
-      <rect x="26" y="52" width="13" height="22" rx="3" fill="#EDE8DF" opacity="0.82" />
-      <rect x="42" y="40" width="13" height="34" rx="3" fill="#EDE8DF" opacity="0.82" />
-      <rect x="58" y="22" width="13" height="52" rx="3" fill="url(#sb-champagne)" />
-      <circle cx="64.5" cy="17" r="4.5" fill="url(#sb-champagne)" />
-    </svg>
-  );
-}
+import { AscendantMark } from '@/components/brand/AscendantMark';
 
 interface NavItem {
   name: string;
@@ -187,7 +170,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
   const sidebarContent = (
     <>
       {/* Logo - hidden on mobile (shown in top bar instead) */}
-      <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-white/[0.08]">
+      <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <Link href="/admin" className="flex items-center gap-3">
           <AscendantMark className="w-9 h-9 flex-shrink-0" />
           {!collapsed && (
@@ -195,7 +178,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="font-display text-lg font-medium tracking-tight text-white"
+              className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground"
             >
               Top Tier
             </motion.span>
@@ -203,17 +186,17 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         </Link>
         <button
           onClick={onToggle}
-          className="p-2 rounded-md hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+          className="p-2 rounded-md hover:bg-white/5 text-sidebar-muted hover:text-sidebar-foreground transition-colors"
         >
           {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
       </div>
 
       {/* Mobile logo */}
-      <div className="md:hidden h-14 flex items-center px-4 border-b border-white/10">
+      <div className="md:hidden h-14 flex items-center px-4 border-b border-sidebar-border">
         <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2">
           <AscendantMark className="w-8 h-8 flex-shrink-0" />
-          <span className="font-display text-base font-medium tracking-tight text-white">Top Tier</span>
+          <span className="font-display text-base font-semibold tracking-tight text-sidebar-foreground">Top Tier</span>
         </Link>
       </div>
 
@@ -226,13 +209,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === dashboardLink.href 
-              ? "bg-secondary text-[#1a1612] font-medium"
-              : "text-white/70 hover:bg-white/10 hover:text-white"
+              ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
+              : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
           )}
         >
           <dashboardLink.icon className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === dashboardLink.href ? "text-[#1a1612]" : "text-current"
+            pathname === dashboardLink.href ? "text-sidebar-active-foreground" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <motion.span
@@ -245,7 +228,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
             </motion.span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               {dashboardLink.name}
             </div>
           )}
@@ -265,9 +248,9 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                     onClick={() => toggleSection(section.id)}
                     className={cn(
                        "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors duration-150",
-                      sectionActive 
-                        ? "text-secondary" 
-                        : "text-white/50 hover:text-white/70"
+                      sectionActive
+                        ? "text-sidebar-active"
+                        : "text-sidebar-muted hover:text-sidebar-foreground/80"
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -283,7 +266,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                   </button>
                 ) : (
                   <div className="py-2">
-                    <div className="w-8 h-px bg-white/10 mx-auto" />
+                    <div className="w-8 h-px bg-sidebar-border mx-auto" />
                   </div>
                 )}
 
@@ -308,13 +291,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                             className={cn(
                               "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
                               isActive 
-                                ? "bg-secondary text-[#1a1612] font-medium"
-                                : "text-white/70 hover:bg-white/10 hover:text-white"
+                                ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
+                                : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
                             )}
                           >
                             <item.icon className={cn(
                               "w-4 h-4 flex-shrink-0",
-                              isActive ? "text-[#1a1612]" : "text-current"
+                              isActive ? "text-sidebar-active-foreground" : "text-current"
                             )} />
                             {(!collapsed || mobileOpen) && (
                               <motion.span
@@ -327,7 +310,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                               </motion.span>
                             )}
                             {collapsed && !mobileOpen && (
-                              <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                                 {item.name}
                               </div>
                             )}
@@ -344,26 +327,26 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-white/10 space-y-1">
+      <div className="p-3 border-t border-sidebar-border space-y-1">
         <Link
           href="/admin/settings"
           onClick={handleNavClick}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === '/admin/settings'
-              ? "bg-secondary text-[#1a1612] font-medium"
-              : "text-white/70 hover:bg-white/10 hover:text-white"
+              ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
+              : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
           )}
         >
           <Settings className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === '/admin/settings' ? "text-[#1a1612]" : "text-current"
+            pathname === '/admin/settings' ? "text-sidebar-active-foreground" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Settings</span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Settings
             </div>
           )}
@@ -371,14 +354,14 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         <Link
           href="/"
           onClick={handleNavClick}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-150 group relative"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground transition-colors duration-150 group relative"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Back to Site</span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-[hsl(220_24%_7%)] rounded-md text-white text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Back to Site
             </div>
           )}
@@ -394,7 +377,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         initial={false}
         animate={{ width: collapsed ? 80 : 264 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-[#100E0C] border-r border-white/[0.07] flex-col"
+        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border flex-col"
       >
         {sidebarContent}
       </motion.aside>
@@ -416,7 +399,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
               animate={{ x: 0 }}
               exit={{ x: -264 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[264px] bg-[#100E0C] border-r border-white/[0.07] flex flex-col"
+              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[264px] bg-sidebar border-r border-sidebar-border flex flex-col"
             >
               {sidebarContent}
             </motion.aside>
