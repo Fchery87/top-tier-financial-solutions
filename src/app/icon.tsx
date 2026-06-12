@@ -23,12 +23,10 @@ export default function Icon() {
           justifyContent: 'center',
         }}
       >
-        <svg width="32" height="32" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="92" height="92" rx="24" fill="#0B0F14" stroke="#34D399" strokeOpacity="0.5" strokeWidth="2" />
-          <rect x="26" y="52" width="13" height="22" rx="3" fill="#E2E8F0" fillOpacity="0.6" />
-          <rect x="42" y="40" width="13" height="34" rx="3" fill="#E2E8F0" fillOpacity="0.8" />
-          <rect x="58" y="22" width="13" height="52" rx="3" fill="#10B981" />
-          <circle cx="64.5" cy="17" r="4.5" fill="#34D399" />
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="32" height="32" rx="8" fill="#18181B" />
+          <path d="M6 23 L16 9 L26 23" stroke="#FFFFFF" strokeWidth="3.2" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M11.5 23 L16 16.5 L20.5 23" stroke="#8A90F0" strokeWidth="3.2" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
       </div>
     ),

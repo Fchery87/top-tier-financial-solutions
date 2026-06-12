@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { ApexMark } from '@/components/brand/ApexMark';
 
 interface LogoProps {
   variant?: 'default' | 'light' | 'dark';
@@ -11,13 +11,11 @@ interface LogoProps {
   className?: string;
 }
 
-const logoPath = '/brand/top-tier-logo.svg';
-
 export function Logo({ variant = 'default', size = 'md', showText = true, className }: LogoProps) {
   const sizes = {
-    sm: { mark: 'size-9', text: 'text-lg', subtext: 'text-[10px]' },
-    md: { mark: 'size-11', text: 'text-xl md:text-2xl', subtext: 'text-[10px]' },
-    lg: { mark: 'size-16', text: 'text-3xl md:text-4xl', subtext: 'text-xs' },
+    sm: { mark: 'size-8', text: 'text-lg', subtext: 'text-[10px]' },
+    md: { mark: 'size-9', text: 'text-xl', subtext: 'text-[10px]' },
+    lg: { mark: 'size-12', text: 'text-2xl md:text-3xl', subtext: 'text-xs' },
   };
 
   const currentSize = sizes[size];
@@ -25,29 +23,15 @@ export function Logo({ variant = 'default', size = 'md', showText = true, classN
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <Link href="/" className="flex items-center gap-3">
-        <span
-          className={cn(
-            'relative block shrink-0 overflow-hidden rounded-md',
-            currentSize.mark
-          )}
-        >
-          <Image
-            src={logoPath}
-            alt="Top Tier Financial Solutions logo"
-            fill
-            priority={size !== 'sm'}
-            sizes="(max-width: 768px) 44px, 64px"
-            className="object-contain"
-          />
-        </span>
+      <Link href="/" className="flex items-center gap-2.5">
+        <ApexMark className={cn('shrink-0', currentSize.mark)} />
 
         {showText && (
           <span className="flex flex-col justify-center">
-            <span className={cn(currentSize.text, 'font-display font-semibold tracking-[-0.04em] leading-none', textColor)}>
+            <span className={cn(currentSize.text, 'font-semibold tracking-[-0.03em] leading-none', textColor)}>
               Top Tier
             </span>
-            <span className={cn(currentSize.subtext, 'mt-1 font-medium uppercase tracking-[0.22em] text-secondary')}>
+            <span className={cn(currentSize.subtext, 'mt-1 font-medium uppercase tracking-[0.2em] text-secondary')}>
               Financial Solutions
             </span>
           </span>
@@ -61,16 +45,8 @@ export function LogoHorizontal({ variant = 'default', className }: Omit<LogoProp
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <Link href="/" className="flex items-center gap-2">
-        <span className="relative block size-9 overflow-hidden rounded-md">
-          <Image
-            src={logoPath}
-            alt="Top Tier Financial Solutions logo"
-            fill
-            sizes="36px"
-            className="object-contain"
-          />
-        </span>
-        <span className={cn('font-display text-lg font-semibold tracking-[-0.03em]', variant === 'light' ? 'text-white' : 'text-foreground')}>
+        <ApexMark className="size-8 shrink-0" />
+        <span className={cn('text-lg font-semibold tracking-[-0.03em]', variant === 'light' ? 'text-white' : 'text-foreground')}>
           TTFS
         </span>
       </Link>
@@ -81,19 +57,9 @@ export function LogoHorizontal({ variant = 'default', className }: Omit<LogoProp
 export function LogoIcon({ size = 'md', className }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const sizes = {
     sm: 'size-7',
-    md: 'size-11',
-    lg: 'size-16',
+    md: 'size-9',
+    lg: 'size-12',
   };
 
-  return (
-    <span className={cn('relative block overflow-hidden rounded-md', sizes[size], className)}>
-      <Image
-        src={logoPath}
-        alt="Top Tier Financial Solutions logo"
-        fill
-        sizes="64px"
-        className="object-contain"
-      />
-    </span>
-  );
+  return <ApexMark className={cn(sizes[size], className)} />;
 }

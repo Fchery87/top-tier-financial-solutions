@@ -86,26 +86,25 @@ export default async function Home() {
 
   return (
     <div className="platform-shell overflow-hidden">
-      <section className="relative min-h-screen pt-32 pb-20 md:pt-40 md:pb-24">
-        <div className="absolute inset-0 rule-grid opacity-35" />
+      <section className="relative border-b border-border pt-24 pb-16 md:pt-32 md:pb-24">
         <div className="container relative mx-auto px-4 md:px-6">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="max-w-4xl">
-              <div className="mb-8 inline-flex items-center gap-2 rounded-md border border-border bg-card/70 px-3 py-2 text-sm text-muted-foreground">
-                <ShieldCheck className="h-4 w-4 text-secondary" />
-                Premium credit repair operations, built around compliance gates
+          <div className="grid items-center gap-14 lg:grid-cols-[1fr_0.92fr]">
+            <div className="max-w-2xl">
+              <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
+                Compliance-first credit repair platform
               </div>
 
-              <h1 className="font-display text-6xl leading-[0.9] tracking-[-0.05em] text-foreground md:text-8xl lg:text-[7.8rem]">
+              <h1 className="font-display text-5xl leading-[1.04] tracking-[-0.04em] text-foreground md:text-7xl text-balance">
                 Wealth is a mindset.
-                <span className="block text-secondary">Credit is the key.</span>
+                <span className="block text-muted-foreground">Credit is the key.</span>
               </h1>
 
-              <p className="mt-8 max-w-2xl text-lg leading-8 text-muted-foreground md:text-xl">
-                Top Tier Financial Solutions pairs a premium client experience with the operational controls credit repair work requires: onboarding, report analysis, dispute cycles, letter approvals, response tracking, and billing readiness in one system.
+              <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground md:text-lg">
+                One system for the whole credit-repair operation — onboarding, report analysis, dispute cycles, letter approvals, response tracking, and billing — with the compliance controls the work requires.
               </p>
 
-              <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg">
                   <Link href="/contact" className="gap-2">
                     Book a Strategy Call
@@ -120,58 +119,59 @@ export default async function Home() {
                 </Button>
               </div>
 
-              <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
                 {trustMarkers.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.label} className="surface-panel rounded-lg p-4 text-sm text-muted-foreground">
-                      <Icon className="mb-3 h-5 w-5 text-secondary" />
+                    <span key={item.label} className="inline-flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-muted-foreground/80" />
                       {item.label}
-                    </div>
+                    </span>
                   );
                 })}
               </div>
             </div>
 
-            <div className="surface-panel relative rounded-xl p-4 md:p-6">
-              <div className="surface-document rounded-lg p-5 md:p-7">
-                <div className="flex items-start justify-between border-b border-border/70 pb-5">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Client Case File</p>
-                    <h2 className="mt-1 text-2xl font-semibold tracking-tight">Restoration Plan</h2>
+            <div className="rounded-xl border border-border bg-card p-5 shadow-[0_1px_2px_rgba(24,24,27,0.04),0_8px_24px_-12px_rgba(24,24,27,0.12)] md:p-6">
+              <div className="flex items-start justify-between border-b border-border pb-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Client Case File</p>
+                  <h2 className="mt-1.5 text-xl font-semibold tracking-tight">Restoration Plan</h2>
+                </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-up" />
+                  Active
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-1">
+                {[
+                  ['Agreement signed', 'CROA disclosures acknowledged'],
+                  ['Documents verified', 'Identity and proof of address uploaded'],
+                  ['Report analyzed', 'Negative items and discrepancies extracted'],
+                  ['Policy checks ready', 'Evidence and confirmation gates visible'],
+                ].map(([title, detail]) => (
+                  <div key={title} className="flex gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/50">
+                    <CheckCircle2 className="mt-0.5 h-[18px] w-[18px] shrink-0 text-up" />
+                    <div>
+                      <p className="text-sm font-medium">{title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
+                    </div>
                   </div>
-                  <span className="rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">Active</span>
-                </div>
+                ))}
+              </div>
 
-                <div className="mt-6 space-y-4">
-                  {[
-                    ['Agreement signed', 'CROA disclosures acknowledged'],
-                    ['Documents verified', 'Identity and proof of address uploaded'],
-                    ['Report analyzed', 'Negative items and discrepancies extracted'],
-                    ['Policy checks ready', 'Evidence and confirmation gates visible'],
-                  ].map(([title, detail]) => (
-                    <div key={title} className="flex gap-3 rounded-md border border-border/70 bg-background/40 p-3">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
-                      <div>
-                        <p className="text-sm font-semibold">{title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 grid grid-cols-3 gap-3 border-t border-border/70 pt-5">
-                  {[
-                    ['12', 'Items reviewed'],
-                    ['3', 'Bureaus compared'],
-                    ['0', 'Upfront fees'],
-                  ].map(([value, label]) => (
-                    <div key={label}>
-                      <p className="text-2xl font-semibold tracking-tight">{value}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-5 grid grid-cols-3 gap-3 border-t border-border pt-5">
+                {[
+                  ['12', 'Items reviewed'],
+                  ['3', 'Bureaus compared'],
+                  ['0', 'Upfront fees'],
+                ].map(([value, label]) => (
+                  <div key={label}>
+                    <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
