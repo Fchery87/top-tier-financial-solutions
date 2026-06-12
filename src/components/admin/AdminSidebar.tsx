@@ -186,7 +186,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         </Link>
         <button
           onClick={onToggle}
-          className="p-2 rounded-md hover:bg-white/5 text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+          className="p-2 rounded-md hover:bg-accent text-sidebar-muted hover:text-foreground transition-colors"
         >
           {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
@@ -209,13 +209,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === dashboardLink.href 
-              ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
-              : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
+              ? "bg-accent text-foreground font-medium"
+              : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
           )}
         >
           <dashboardLink.icon className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === dashboardLink.href ? "text-sidebar-active-foreground" : "text-current"
+            pathname === dashboardLink.href ? "text-secondary" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <motion.span
@@ -228,7 +228,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
             </motion.span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               {dashboardLink.name}
             </div>
           )}
@@ -291,13 +291,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                             className={cn(
                               "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
                               isActive 
-                                ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
-                                : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
+                                ? "bg-accent text-foreground font-medium"
+                                : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
                             )}
                           >
                             <item.icon className={cn(
                               "w-4 h-4 flex-shrink-0",
-                              isActive ? "text-sidebar-active-foreground" : "text-current"
+                              isActive ? "text-secondary" : "text-current"
                             )} />
                             {(!collapsed || mobileOpen) && (
                               <motion.span
@@ -310,7 +310,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                               </motion.span>
                             )}
                             {collapsed && !mobileOpen && (
-                              <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                                 {item.name}
                               </div>
                             )}
@@ -334,19 +334,19 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === '/admin/settings'
-              ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
-              : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
+              ? "bg-accent text-foreground font-medium"
+              : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
           )}
         >
           <Settings className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === '/admin/settings' ? "text-sidebar-active-foreground" : "text-current"
+            pathname === '/admin/settings' ? "text-secondary" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Settings</span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Settings
             </div>
           )}
@@ -354,14 +354,14 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         <Link
           href="/"
           onClick={handleNavClick}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground transition-colors duration-150 group relative"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground hover:bg-accent hover:text-foreground transition-colors duration-150 group relative"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Back to Site</span>
           )}
           {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar border border-sidebar-border rounded-md text-sidebar-foreground text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               Back to Site
             </div>
           )}

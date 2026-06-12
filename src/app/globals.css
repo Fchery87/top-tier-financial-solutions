@@ -1,65 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  /* Top Tier Financial — "Operator Slate + Signal Green" · Light Mode */
-  --background: 210 40% 98%;        /* slate-50 app canvas — #F8FAFC */
-  --foreground: 222 47% 11%;        /* slate-900 ink — #0F172A */
+  /* Top Tier Financial — "Quiet Precision" (Linear/Vercel) · Light Mode */
+  --background: 0 0% 99%;            /* near-white canvas — #FCFCFC */
+  --foreground: 240 6% 10%;         /* zinc-900 ink — #18181B */
   --card: 0 0% 100%;                /* white surface — #FFFFFF */
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 240 6% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 240 6% 10%;
 
-  /* Primary — strong slate ink (dark, neutral CTAs + emphasis) */
-  --primary: 222 47% 11%;           /* slate-900 — #0F172A */
-  --primary-foreground: 210 40% 98%;
+  /* Primary — near-black ink (neutral CTAs + emphasis) */
+  --primary: 240 6% 10%;            /* zinc-900 — #18181B */
+  --primary-foreground: 0 0% 100%;
 
-  /* Secondary — Signal Green (the one accent; deep enough for AA text on white) — #047857 */
-  --secondary: 162 94% 24%;
-  --secondary-foreground: 0 0% 100%;  /* white text on emerald-700 (~5.5:1) */
+  /* Secondary — the single indigo accent (Linear) — #5E6AD2 */
+  --secondary: 234 56% 60%;
+  --secondary-foreground: 0 0% 100%;  /* white text on indigo (~4.6:1) */
 
-  /* Muted — cool slate neutrals */
-  --muted: 210 40% 96%;             /* slate-100 — #F1F5F9 */
-  --muted-foreground: 215 16% 42%;  /* slate-500/600 — #5B677A (AA on white) */
+  /* Muted — quiet zinc neutrals */
+  --muted: 240 5% 96%;              /* zinc-100 — #F4F4F5 */
+  --muted-foreground: 240 4% 46%;   /* zinc-500 — #71717A (AA on white) */
 
-  /* Accent — soft emerald wash (reinforces single accent) */
-  --accent: 152 56% 95%;            /* emerald-50 — #ECFDF5 */
-  --accent-foreground: 163 88% 20%; /* deep emerald */
+  /* Accent — faint zinc fill for hover/active (kept neutral, not tinted) */
+  --accent: 240 5% 96%;             /* zinc-100 */
+  --accent-foreground: 240 6% 10%;
 
-  /* Success — emerald (aligned with the brand signal) */
-  --success: 160 84% 26%;
+  /* Success / Warning / Destructive — refined semantic, used sparingly */
+  --success: 142 71% 36%;           /* green-600 — #16A34A */
   --success-foreground: 0 0% 100%;
-
-  /* Warning — deep amber (AA as text on white) — #B45309 */
-  --warning: 30 90% 36%;
+  --warning: 35 92% 40%;            /* amber-ish */
   --warning-foreground: 0 0% 100%;
-
-  /* Destructive — red-600/700 (AA as text on white) */
-  --destructive: 0 72% 42%;
+  --destructive: 0 72% 45%;         /* red-600 — #DC2626 */
   --destructive-foreground: 0 0% 100%;
 
-  /* Border & Input — cool hairlines — #E2E8F0 slate-200 */
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 162 94% 24%;
+  /* Border & Input — very light hairlines — #E4E4E7 zinc-200 */
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 234 56% 60%;
 
-  /* App chrome — near-black operator sidebar (dark in both themes) */
-  --sidebar: 213 39% 7%;            /* near-black — #0B0F14 */
-  --sidebar-foreground: 210 40% 96%;
-  --sidebar-border: 215 28% 17%;
-  --sidebar-muted: 215 16% 56%;
-  --sidebar-active: 156 72% 50%;    /* vibrant emerald on dark chrome */
-  --sidebar-active-foreground: 213 39% 7%;
+  /* App chrome — LIGHT sidebar (Linear/Vercel), hairline border, indigo active */
+  --sidebar: 240 5% 98%;            /* zinc-50 — #FAFAFA */
+  --sidebar-foreground: 240 5% 26%; /* zinc-700 */
+  --sidebar-border: 240 6% 90%;
+  --sidebar-muted: 240 4% 46%;
+  --sidebar-active: 234 56% 60%;    /* indigo */
+  --sidebar-active-foreground: 0 0% 100%;
 
-  /* Directional signal + vibrant brand accent (deltas, sparklines, logo, on tints/dark) */
-  --up: 160 84% 39%;                /* emerald-500 — #10B981 */
-  --down: 0 84% 60%;                /* red-500 — #EF4444 */
+  /* Directional signal — ONLY color allowed on data (tiny up/down deltas) */
+  --up: 142 71% 38%;                /* green — #1AAE4E */
+  --down: 0 72% 51%;                /* red — #DC2626 */
 
-  /* Credit score band scale (poor → excellent) */
+  /* Credit score band scale — restrained 3-tone semantic (poor→excellent) */
   --score-poor: 0 72% 51%;          /* red */
-  --score-fair: 25 95% 53%;         /* orange */
-  --score-good: 38 92% 50%;         /* amber */
-  --score-verygood: 84 81% 44%;     /* lime */
-  --score-excellent: 160 84% 39%;   /* emerald */
+  --score-fair: 35 92% 45%;         /* amber */
+  --score-good: 38 70% 45%;         /* muted amber */
+  --score-verygood: 142 55% 40%;    /* green */
+  --score-excellent: 142 71% 36%;   /* green */
 
   --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);
@@ -74,54 +70,54 @@
 }
 
 .dark {
-  /* "Operator Slate + Signal Green" · Dark Mode (near-black chrome) */
-  --background: 213 39% 7%;         /* near-black — #0B0F14 */
-  --foreground: 210 40% 96%;        /* slate-100 — #F1F5F9 */
-  --card: 215 28% 11%;              /* raised panel — #141A21 */
-  --card-foreground: 210 40% 96%;
-  --popover: 215 28% 11%;
-  --popover-foreground: 210 40% 96%;
+  /* "Quiet Precision" · Dark Mode (Linear-style dark zinc) */
+  --background: 240 6% 7%;          /* #111113 */
+  --foreground: 0 0% 95%;           /* #F2F2F2 */
+  --card: 240 5% 10%;               /* raised panel — #19191C */
+  --card-foreground: 0 0% 95%;
+  --popover: 240 5% 10%;
+  --popover-foreground: 0 0% 95%;
 
   /* In dark mode, primary inverts to near-white (dark text) for strong neutral CTAs */
-  --primary: 210 40% 96%;
-  --primary-foreground: 222 47% 11%;
+  --primary: 0 0% 95%;
+  --primary-foreground: 240 6% 10%;
 
-  --secondary: 156 72% 50%;         /* emerald-400, bright on dark — #2DD4A0 */
-  --secondary-foreground: 222 47% 9%;
+  --secondary: 234 78% 72%;         /* indigo, brighter on dark — #8A90F0 */
+  --secondary-foreground: 240 6% 10%;
 
-  --muted: 215 25% 15%;
-  --muted-foreground: 216 18% 62%;  /* AA on near-black — #8B97A8 */
+  --muted: 240 5% 15%;
+  --muted-foreground: 240 5% 64%;   /* AA on dark — #9D9DA6 */
 
-  --accent: 158 44% 14%;            /* deep emerald wash */
-  --accent-foreground: 156 72% 62%;
+  --accent: 240 5% 15%;             /* neutral zinc fill */
+  --accent-foreground: 0 0% 95%;
 
-  --success: 156 72% 48%;
-  --success-foreground: 222 47% 9%;
+  --success: 142 64% 47%;
+  --success-foreground: 240 6% 10%;
   --warning: 38 92% 56%;
-  --warning-foreground: 222 47% 9%;
+  --warning-foreground: 240 6% 10%;
   --destructive: 0 74% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 98%;
 
-  --border: 215 22% 18%;
-  --input: 215 22% 18%;
-  --ring: 156 72% 50%;
+  --border: 240 5% 17%;             /* subtle hairline on dark */
+  --input: 240 5% 17%;
+  --ring: 234 78% 72%;
 
-  /* Chrome matches the dark canvas; accent stays vibrant */
-  --sidebar: 213 42% 5%;            /* deepest near-black — #070A0E */
-  --sidebar-foreground: 210 40% 96%;
-  --sidebar-border: 215 24% 14%;
-  --sidebar-muted: 216 16% 58%;
-  --sidebar-active: 156 72% 52%;
-  --sidebar-active-foreground: 213 42% 5%;
+  /* Chrome — slightly distinct dark surface from the canvas, hairline border */
+  --sidebar: 240 6% 9%;             /* #151517 */
+  --sidebar-foreground: 240 5% 72%;
+  --sidebar-border: 240 5% 16%;
+  --sidebar-muted: 240 5% 56%;
+  --sidebar-active: 234 78% 72%;    /* indigo */
+  --sidebar-active-foreground: 240 6% 10%;
 
-  --up: 156 72% 50%;                /* brighter emerald on dark */
-  --down: 0 84% 65%;
+  --up: 142 64% 50%;                /* green on dark */
+  --down: 0 80% 66%;
 
-  --score-poor: 0 80% 62%;
-  --score-fair: 25 95% 60%;
-  --score-good: 38 92% 56%;
-  --score-verygood: 84 70% 52%;
-  --score-excellent: 156 72% 50%;
+  --score-poor: 0 80% 64%;
+  --score-fair: 35 92% 58%;
+  --score-good: 38 70% 56%;
+  --score-verygood: 142 55% 52%;
+  --score-excellent: 142 64% 50%;
 }
 
 @theme inline {
@@ -166,7 +162,7 @@
   --color-score-excellent: hsl(var(--score-excellent));
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: var(--radius-sm);
@@ -187,19 +183,11 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
 }
 
+/* Linear/Vercel: display headings are a tight, confident sans — no serif. */
 .font-display {
-  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
-  font-optical-sizing: auto;
-  letter-spacing: -0.01em;
-}
-
-/* Operational surfaces (admin/portal) use crisp sans, not editorial serif.
-   Marketing keeps Fraunces. Scoped so headings flip without touching every file. */
-.admin-shell .font-display,
-.portal-shell .font-display {
   font-family: var(--font-sans);
-  font-optical-sizing: auto;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .brand-footer {
@@ -216,7 +204,7 @@ body {
 }
 
 .brand-footer-heading {
-  color: hsl(156 72% 62%);
+  color: hsl(240 5% 82%);
 }
 
 .brand-logo-plate {
@@ -225,9 +213,8 @@ body {
 }
 
 .surface-panel {
-  background: hsl(var(--card) / 0.92);
-  border: 1px solid hsl(var(--border) / 0.78);
-  box-shadow: 0 1px 0 hsl(var(--foreground) / 0.04), 0 18px 40px -32px hsl(220 30% 2% / 0.45);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
 }
 
 .surface-document {
@@ -245,16 +232,11 @@ body {
 }
 
 .platform-shell {
-  background:
-    radial-gradient(circle at 12% 0%, hsl(var(--secondary) / 0.08), transparent 28rem),
-    linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.5));
+  background: hsl(var(--background));
 }
 
 .dark .platform-shell {
-  background:
-    radial-gradient(circle at 12% 0%, hsl(156 72% 40% / 0.1), transparent 30rem),
-    radial-gradient(circle at 88% 12%, hsl(200 60% 40% / 0.08), transparent 24rem),
-    hsl(var(--background));
+  background: hsl(var(--background));
 }
 
 .rule-grid {
@@ -443,21 +425,20 @@ body {
 
 @media (hover: hover) and (pointer: fine) {
   .glass-card-hover:hover {
-    background: linear-gradient(135deg, hsl(var(--card) / 0.95), hsl(var(--card) / 0.8));
-    border-color: hsl(var(--secondary) / 0.25);
-    box-shadow: 0 20px 50px -16px hsl(var(--secondary) / 0.15);
+    border-color: hsl(var(--border));
+    box-shadow: 0 1px 2px hsl(240 6% 10% / 0.04);
   }
 }
 
-/* ── Card Hover ── */
+/* ── Card Hover (Linear: subtle border shift, no float) ── */
 .card-hover {
-  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out), background-color 200ms var(--ease-out);
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 40px -14px hsl(var(--secondary) / 0.22);
+    border-color: hsl(var(--foreground) / 0.16);
+    box-shadow: 0 1px 2px hsl(240 6% 10% / 0.05);
   }
 }
 
@@ -510,27 +491,13 @@ body {
   transition: transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out), background-color 160ms var(--ease-out), color 160ms var(--ease-out);
 }
 
-.btn-premium::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(45deg, transparent 30%, hsl(var(--secondary-foreground) / 0.08) 50%, transparent 70%);
-  transform: translateX(-100%);
-  transition: transform 420ms var(--ease-out);
-}
-
 .btn-premium:active {
   transform: scale(0.98);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .btn-premium:hover::before {
-    transform: translateX(100%);
-  }
-
   .btn-premium:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px -10px hsl(var(--secondary) / 0.36);
+    box-shadow: 0 1px 2px hsl(240 6% 10% / 0.08);
   }
 }
 

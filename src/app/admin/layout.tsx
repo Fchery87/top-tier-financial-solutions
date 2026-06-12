@@ -38,7 +38,7 @@ export default function AdminLayout({
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg hover:bg-white/5 text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+            className="p-2 rounded-lg hover:bg-accent text-sidebar-muted hover:text-foreground transition-colors"
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
