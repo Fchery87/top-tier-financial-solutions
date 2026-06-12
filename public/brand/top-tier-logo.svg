@@ -1,20 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
   <title id="title">Top Tier Financial Solutions logo</title>
-  <desc id="desc">Ascendant monogram: three rising columns to a champagne apex.</desc>
+  <desc id="desc">Ascendant monogram: three rising columns to an emerald apex.</desc>
   <defs>
-    <linearGradient id="ttGraphite" x1="0" y1="96" x2="96" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1D2026" />
-      <stop offset="1" stop-color="#0A0C10" />
+    <linearGradient id="ttSlate" x1="0" y1="96" x2="96" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#11161D" />
+      <stop offset="1" stop-color="#0B0F14" />
     </linearGradient>
-    <linearGradient id="ttChampagne" x1="20" y1="80" x2="76" y2="16" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#C6A96C" />
-      <stop offset="1" stop-color="#8F7440" />
+    <linearGradient id="ttEmerald" x1="20" y1="80" x2="76" y2="16" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34D399" />
+      <stop offset="1" stop-color="#059669" />
     </linearGradient>
   </defs>
-  <rect x="2" y="2" width="92" height="92" rx="24" fill="url(#ttGraphite)" />
-  <rect x="2" y="2" width="92" height="92" rx="24" fill="none" stroke="#8F7440" stroke-opacity="0.5" stroke-width="1.5" />
-  <rect x="26" y="52" width="13" height="22" rx="3" fill="#EDE8DF" opacity="0.85" />
-  <rect x="42" y="40" width="13" height="34" rx="3" fill="#EDE8DF" opacity="0.85" />
-  <rect x="58" y="22" width="13" height="52" rx="3" fill="url(#ttChampagne)" />
-  <circle cx="64.5" cy="17" r="4.5" fill="url(#ttChampagne)" />
+  <rect x="2" y="2" width="92" height="92" rx="24" fill="url(#ttSlate)" />
+  <rect x="2" y="2" width="92" height="92" rx="24" fill="none" stroke="#34D399" stroke-opacity="0.4" stroke-width="1.5" />
+  <rect x="26" y="52" width="13" height="22" rx="3" fill="#E2E8F0" opacity="0.55" />
+  <rect x="42" y="40" width="13" height="34" rx="3" fill="#E2E8F0" opacity="0.78" />
+  <rect x="58" y="22" width="13" height="52" rx="3" fill="url(#ttEmerald)" />
+  <circle cx="64.5" cy="17" r="4.5" fill="#34D399" />
 </svg>

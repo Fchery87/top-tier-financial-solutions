@@ -28,7 +28,7 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="brand-footer relative overflow-hidden" style={{ backgroundColor: '#080A0F', color: '#F8F3E8' }}>
+    <footer className="brand-footer relative overflow-hidden" style={{ backgroundColor: '#080A0F', color: '#E2E8F0' }}>
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute left-1/4 top-0 h-[500px] w-[500px] rounded-full bg-secondary/10 blur-[150px]" />
         <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-accent/8 blur-[120px]" />
@@ -46,7 +46,7 @@ export function Footer() {
             className="flex flex-col gap-6"
           >
             <Logo variant="light" size="md" />
-            <p className="brand-footer-copy max-w-xs text-sm leading-relaxed" style={{ color: 'rgb(248 243 232 / 0.84)' }}>
+            <p className="brand-footer-copy max-w-xs text-sm leading-relaxed" style={{ color: 'rgb(226 232 240 / 0.84)' }}>
               Empowering you to take control of your financial future with expert credit repair solutions.
             </p>
             <div className="flex gap-3">
@@ -71,14 +71,14 @@ export function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <h4 className="brand-footer-heading mb-6 text-lg font-bold tracking-wide" style={{ color: '#F1DCA3' }}>Company</h4>
+            <h4 className="brand-footer-heading mb-6 text-lg font-bold tracking-wide" style={{ color: '#6EE7B7' }}>Company</h4>
             <ul className="flex flex-col gap-3">
               {footerLinks.company.map((item) => (
                 <li key={item.name}>
                   <Link
                     href={item.href}
                     className="brand-footer-copy group inline-flex items-center gap-1 text-sm transition-colors duration-200 hover:text-secondary"
-                    style={{ color: 'rgb(248 243 232 / 0.84)' }}
+                    style={{ color: 'rgb(226 232 240 / 0.84)' }}
                   >
                     {item.name}
                     <ArrowUpRight className="size-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
@@ -94,14 +94,14 @@ export function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <h4 className="brand-footer-heading mb-6 text-lg font-bold tracking-wide" style={{ color: '#F1DCA3' }}>Legal</h4>
+            <h4 className="brand-footer-heading mb-6 text-lg font-bold tracking-wide" style={{ color: '#6EE7B7' }}>Legal</h4>
             <ul className="flex flex-col gap-3">
               {footerLinks.legal.map((item) => (
                 <li key={item.name}>
                   <Link
                     href={item.href}
                     className="brand-footer-copy group inline-flex items-center gap-1 text-sm transition-colors duration-200 hover:text-secondary"
-                    style={{ color: 'rgb(248 243 232 / 0.84)' }}
+                    style={{ color: 'rgb(226 232 240 / 0.84)' }}
                   >
                     {item.name}
                     <ArrowUpRight className="size-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
@@ -124,11 +124,11 @@ export function Footer() {
               source="footer"
             />
             <div className="mt-6 flex flex-col gap-3">
-              <div className="brand-footer-copy flex items-center gap-3 text-sm" style={{ color: 'rgb(248 243 232 / 0.84)' }}>
+              <div className="brand-footer-copy flex items-center gap-3 text-sm" style={{ color: 'rgb(226 232 240 / 0.84)' }}>
                 <MapPin className="size-4 text-secondary" />
                 <span>New York, NY</span>
               </div>
-              <div className="brand-footer-copy flex items-center gap-3 text-sm" style={{ color: 'rgb(248 243 232 / 0.84)' }}>
+              <div className="brand-footer-copy flex items-center gap-3 text-sm" style={{ color: 'rgb(226 232 240 / 0.84)' }}>
                 <Mail className="size-4 text-secondary" />
                 <a
                   href="mailto:info@toptierfinancial.com"
@@ -148,10 +148,10 @@ export function Footer() {
           transition={{ duration: 0.5, delay: 0.4 }}
           className="mt-16 border-t border-secondary/25 pt-8"
         >
-          <div className="brand-footer-muted flex flex-col items-center justify-between gap-4 text-sm md:flex-row" style={{ color: 'rgb(248 243 232 / 0.76)' }}>
+          <div className="brand-footer-muted flex flex-col items-center justify-between gap-4 text-sm md:flex-row" style={{ color: 'rgb(226 232 240 / 0.76)' }}>
             <p>&copy; {new Date().getFullYear()} Top Tier Financial Solutions. All rights reserved.</p>
             <p className="flex items-center gap-2">
-              Designed with <span className="brand-footer-heading" style={{ color: '#F1DCA3' }}>precision</span> for your success
+              Designed with <span className="brand-footer-heading" style={{ color: '#6EE7B7' }}>precision</span> for your success
             </p>
           </div>
         </motion.div>
