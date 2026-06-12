@@ -147,7 +147,7 @@ export default function AgreementPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    ctx.strokeStyle = '#1a365d';
+    ctx.strokeStyle = '#0F172A';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -247,7 +247,7 @@ export default function AgreementPage() {
       const value = initials[field] || '';
       content = content.replace(
         new RegExp(placeholder, 'g'),
-        `<span class="initial-value" style="display: inline-block; min-width: 50px; padding: 2px 8px; background: ${value ? '#E2EBE4' : '#F4ECD8'}; border: 1px solid ${value ? '#2F6B4F' : '#B5832B'}; border-radius: 3px; font-weight: bold; text-align: center;">${value || '___'}</span>`
+        `<span class="initial-value" style="display: inline-block; min-width: 50px; padding: 2px 8px; background: ${value ? '#D1FAE5' : '#F1F5F9'}; border: 1px solid ${value ? '#059669' : '#94A3B8'}; border-radius: 3px; font-weight: bold; text-align: center;">${value || '___'}</span>`
       );
     });
 
@@ -313,7 +313,7 @@ export default function AgreementPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="portal-shell flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative pt-32 pb-8 md:pt-40 md:pb-12 overflow-hidden">
         <GradientOrbs className="opacity-50" />

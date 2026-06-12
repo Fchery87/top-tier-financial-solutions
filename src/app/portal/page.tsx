@@ -140,7 +140,7 @@ export default function PortalPage() {
   const activeCase = cases.find((c) => c.status === 'active') || cases[0];
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="portal-shell flex flex-col min-h-screen">
       <PortalHeader userName={user.name?.split(' ')[0] || 'Client'} />
       <PortalNav />
 

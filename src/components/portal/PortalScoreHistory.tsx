@@ -2,6 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { ScoreBadge } from '@/components/ui/ScoreBadge';
+import { scoreBandInfo } from '@/lib/credit-score';
+import { cn } from '@/lib/utils';
 import type { ScoreHistoryEntry, ScoreSummary } from '@/components/portal/types';
 
 interface PortalScoreHistoryProps {
@@ -42,11 +45,9 @@ export default function PortalScoreHistory({ scoreHistory, scoreSummary }: Porta
                   </p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="flex flex-col items-end">
                 <p className="text-sm text-muted-foreground">Current Average</p>
-                <p className="font-display text-3xl font-light tabular-nums text-foreground">
-                  {scoreSummary.current_average || '---'}
-                </p>
+                <ScoreBadge score={scoreSummary.current_average || null} variant="plain" size="lg" showLabel />
               </div>
             </div>
           </div>
@@ -61,7 +62,7 @@ export default function PortalScoreHistory({ scoreHistory, scoreSummary }: Porta
             return (
               <div key={entry.id} className="flex-1 flex flex-col items-center gap-1">
                 <div
-                  className="w-full bg-secondary rounded-t transition-all hover:bg-secondary/80"
+                  className={cn('w-full rounded-t transition-all hover:opacity-80', scoreBandInfo(score).dot)}
                   style={{ height: `${Math.max(heightPercent, 5)}%`, minHeight: '4px' }}
                   title={`${score} - ${new Date(entry.recorded_at).toLocaleDateString()}`}
                 />

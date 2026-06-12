@@ -108,7 +108,7 @@ export default function PortalAuditReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="portal-shell min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
