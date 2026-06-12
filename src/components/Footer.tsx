@@ -28,13 +28,8 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="brand-footer relative overflow-hidden" style={{ backgroundColor: '#080A0F', color: '#E2E8F0' }}>
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute left-1/4 top-0 h-[500px] w-[500px] rounded-full bg-secondary/10 blur-[150px]" />
-        <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-accent/8 blur-[120px]" />
-      </div>
-
-      <div className="h-px bg-gradient-to-r from-transparent via-secondary/40 to-transparent" />
+    <footer className="brand-footer relative" style={{ backgroundColor: '#0A0A0B', color: '#E4E4E7' }}>
+      <div className="h-px bg-white/10" />
 
       <div className="container relative z-10 mx-auto px-4 py-16 md:px-6 md:py-20">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
@@ -56,7 +51,7 @@ export function Footer() {
                   href={item.href}
                   whileHover={{ scale: 1.1, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex size-10 items-center justify-center rounded-lg border border-secondary/35 bg-secondary/12 text-secondary transition-colors duration-200 hover:bg-secondary hover:text-primary"
+                  className="flex size-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/70 transition-colors duration-200 hover:bg-white/10 hover:text-white"
                 >
                   <span className="sr-only">{item.name}</span>
                   <span className="text-xs font-bold">{item.name.charAt(0)}</span>
@@ -71,13 +66,13 @@ export function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <h4 className="brand-footer-heading mb-6 text-lg font-bold tracking-wide" style={{ color: '#6EE7B7' }}>Company</h4>
+            <h4 className="brand-footer-heading mb-5 text-xs font-semibold uppercase tracking-wider">Company</h4>
             <ul className="flex flex-col gap-3">
               {footerLinks.company.map((item) => (
                 <li key={item.name}>
                   <Link
                     href={item.href}
-                    className="brand-footer-copy group inline-flex items-center gap-1 text-sm transition-colors duration-200 hover:text-secondary"
+                    className="brand-footer-copy group inline-flex items-center gap-1 text-sm transition-colors duration-200 hover:text-white"
                     style={{ color: 'rgb(226 232 240 / 0.84)' }}
                   >
                     {item.name}
@@ -94,13 +89,13 @@ export function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <h4 className="brand-footer-heading mb-6 text-lg font-bold tracking-wide" style={{ color: '#6EE7B7' }}>Legal</h4>
+            <h4 className="brand-footer-heading mb-5 text-xs font-semibold uppercase tracking-wider">Legal</h4>
             <ul className="flex flex-col gap-3">
               {footerLinks.legal.map((item) => (
                 <li key={item.name}>
                   <Link
                     href={item.href}
-                    className="brand-footer-copy group inline-flex items-center gap-1 text-sm transition-colors duration-200 hover:text-secondary"
+                    className="brand-footer-copy group inline-flex items-center gap-1 text-sm transition-colors duration-200 hover:text-white"
                     style={{ color: 'rgb(226 232 240 / 0.84)' }}
                   >
                     {item.name}
@@ -125,14 +120,14 @@ export function Footer() {
             />
             <div className="mt-6 flex flex-col gap-3">
               <div className="brand-footer-copy flex items-center gap-3 text-sm" style={{ color: 'rgb(226 232 240 / 0.84)' }}>
-                <MapPin className="size-4 text-secondary" />
+                <MapPin className="size-4 text-white/40" />
                 <span>New York, NY</span>
               </div>
               <div className="brand-footer-copy flex items-center gap-3 text-sm" style={{ color: 'rgb(226 232 240 / 0.84)' }}>
-                <Mail className="size-4 text-secondary" />
+                <Mail className="size-4 text-white/40" />
                 <a
                   href="mailto:info@toptierfinancial.com"
-                  className="transition-colors hover:text-secondary"
+                  className="transition-colors hover:text-white"
                 >
                   info@toptierfinancial.com
                 </a>
@@ -146,12 +141,12 @@ export function Footer() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-16 border-t border-secondary/25 pt-8"
+          className="mt-16 border-t border-white/10 pt-8"
         >
           <div className="brand-footer-muted flex flex-col items-center justify-between gap-4 text-sm md:flex-row" style={{ color: 'rgb(226 232 240 / 0.76)' }}>
             <p>&copy; {new Date().getFullYear()} Top Tier Financial Solutions. All rights reserved.</p>
             <p className="flex items-center gap-2">
-              Designed with <span className="brand-footer-heading" style={{ color: '#6EE7B7' }}>precision</span> for your success
+              Designed with <span className="text-white/90">precision</span> for your success
             </p>
           </div>
         </motion.div>
