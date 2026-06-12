@@ -77,12 +77,12 @@ export function DataTable<T extends { id: string }>({
       <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
+            <TableRow className="sticky top-0 z-10 bg-muted/60 backdrop-blur-sm hover:bg-muted/60">
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
                   className={cn(
-                    "px-4 py-3 text-xs font-semibold text-muted-foreground",
+                    "px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground",
                     column.sortable && "cursor-pointer hover:text-foreground transition-colors select-none",
                     column.className
                   )}
@@ -116,14 +116,14 @@ export function DataTable<T extends { id: string }>({
                   key={item.id}
                   onClick={() => onRowClick?.(item)}
                   className={cn(
-                    "hover:bg-muted/40",
+                    "transition-colors hover:bg-accent/40",
                     onRowClick && "cursor-pointer"
                   )}
                 >
                   {columns.map((column) => (
                     <TableCell
                       key={column.key}
-                      className={cn("px-4 py-4 text-sm text-foreground", column.className)}
+                      className={cn("px-4 py-2.5 text-sm text-foreground", column.className)}
                     >
                       {column.render 
                         ? column.render(item) 
