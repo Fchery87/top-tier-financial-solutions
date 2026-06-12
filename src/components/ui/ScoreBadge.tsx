@@ -43,8 +43,8 @@ export function ScoreBadge({
   if (variant === 'plain') {
     return (
       <span className={cn('inline-flex items-baseline gap-1.5', className)}>
-        <span className={cn('font-mono tabular-nums font-semibold', s.num, info.text)}>{score}</span>
-        {showLabel && <span className={cn('font-medium', s.label, info.text)}>{info.label}</span>}
+        <span className={cn('font-mono tabular-nums font-semibold text-foreground', s.num)}>{score}</span>
+        {showLabel && <span className={cn('font-medium text-muted-foreground', s.label)}>{info.label}</span>}
       </span>
     );
   }
@@ -53,10 +53,10 @@ export function ScoreBadge({
     return (
       <span className={cn('inline-flex flex-col gap-1', className)}>
         <span className="inline-flex items-baseline gap-1.5">
-          <span className={cn('font-mono tabular-nums font-semibold', s.num, info.text)}>{score}</span>
-          {showLabel && <span className={cn('font-medium', s.label, 'text-muted-foreground')}>{info.label}</span>}
+          <span className={cn('font-mono tabular-nums font-semibold text-foreground', s.num)}>{score}</span>
+          {showLabel && <span className={cn('font-medium text-muted-foreground', s.label)}>{info.label}</span>}
         </span>
-        <span className="relative h-1.5 w-full min-w-[64px] overflow-hidden rounded-full bg-muted">
+        <span className="relative h-1 w-full min-w-[64px] overflow-hidden rounded-full bg-muted">
           <span
             className={cn('absolute inset-y-0 left-0 rounded-full', info.dot)}
             style={{ width: `${Math.round(scorePosition(score) * 100)}%` }}
@@ -66,19 +66,18 @@ export function ScoreBadge({
     );
   }
 
-  // pill
+  // pill — neutral chip, ink number, small band dot as the only color
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border font-medium',
-        info.bg,
-        info.border,
+        'inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 font-medium',
         s.pad,
         className,
       )}
     >
-      <span className={cn('font-mono tabular-nums font-semibold', s.num, info.text)}>{score}</span>
-      {showLabel && <span className={cn(s.label, info.text)}>{info.label}</span>}
+      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', info.dot)} />
+      <span className={cn('font-mono tabular-nums font-semibold text-foreground', s.num)}>{score}</span>
+      {showLabel && <span className={cn('text-muted-foreground', s.label)}>{info.label}</span>}
     </span>
   );
 }

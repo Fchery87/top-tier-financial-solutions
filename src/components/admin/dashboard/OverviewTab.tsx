@@ -172,8 +172,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.pendingReports ?? 0) > 0 && (
                     <Link href="/admin/clients" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card">
-                          <FileText className="w-4 h-4 text-muted-foreground" />
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          <FileText className="h-[18px] w-[18px] text-muted-foreground" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Reports to Analyze</p>
@@ -181,7 +181,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.pendingReports}</span>
+                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.pendingReports}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -189,8 +189,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.pendingAgreements ?? 0) > 0 && (
                     <Link href="/admin/agreements" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card">
-                          <FileSignature className="w-4 h-4 text-muted-foreground" />
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          <FileSignature className="h-[18px] w-[18px] text-muted-foreground" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Pending Agreements</p>
@@ -198,7 +198,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.pendingAgreements}</span>
+                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.pendingAgreements}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -206,8 +206,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.overdueTasks ?? 0) > 0 && (
                     <Link href="/admin/tasks" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10">
-                          <ListTodo className="w-4 h-4 text-destructive" />
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          <ListTodo className="h-[18px] w-[18px] text-destructive" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Overdue Tasks</p>
@@ -215,7 +215,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.overdueTasks}</span>
+                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.overdueTasks}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -223,8 +223,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.responseDueSoon ?? 0) > 0 && (
                     <Link href="/admin/disputes?awaiting_response=true" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-warning/20 bg-warning/10">
-                          <Clock className="w-4 h-4 text-warning" />
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          <Clock className="h-[18px] w-[18px] text-warning" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Response Due Soon</p>
@@ -232,7 +232,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-display text-2xl font-light tabular-nums">{stats?.attentionNeeded?.responseDueSoon}</span>
+                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.responseDueSoon}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -240,8 +240,8 @@ export function OverviewTab({
                   {(stats?.attentionNeeded?.overdueResponses ?? 0) > 0 && (
                     <Link href="/admin/disputes?overdue=true" className="flex items-center justify-between p-3 rounded-lg bg-destructive/[0.04] hover:bg-destructive/[0.08] transition-colors group border border-destructive/30">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10">
-                          <AlertCircle className="w-4 h-4 text-destructive" />
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          <AlertCircle className="h-[18px] w-[18px] text-destructive" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-destructive">Overdue Responses</p>
@@ -249,7 +249,7 @@ export function OverviewTab({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-display text-2xl font-light tabular-nums text-destructive">{stats?.attentionNeeded?.overdueResponses}</span>
+                        <span className="font-mono text-xl font-semibold tabular-nums text-destructive">{stats?.attentionNeeded?.overdueResponses}</span>
                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                       </div>
                     </Link>
@@ -288,7 +288,7 @@ export function OverviewTab({
                 <div className="space-y-1">
                   {stats.recentActivity.map((item) => (
                     <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-muted/60">
+                      <div className="mt-0.5 flex h-7 w-7 items-center justify-center">
                         {item.type === 'dispute' ? (
                           <Scale className="w-3.5 h-3.5 text-muted-foreground" />
                         ) : (
