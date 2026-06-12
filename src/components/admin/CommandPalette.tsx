@@ -2,19 +2,18 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, LayoutDashboard, Users, Scale, CheckSquare, FileText, Settings } from 'lucide-react';
+import { Search, LayoutDashboard, Users, Scale, CheckSquare, FileText, Settings, CreditCard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const commands = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Clients', href: '/admin/clients', icon: Users },
+  { label: 'New Dispute', href: '/admin/disputes/wizard', icon: Scale },
   { label: 'Disputes', href: '/admin/disputes', icon: Scale },
   { label: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
+  { label: 'Billing', href: '/admin/billing', icon: CreditCard },
   { label: 'Content', href: '/admin/content', icon: FileText },
   { label: 'Settings', href: '/admin/settings', icon: Settings },
-  { label: 'New Dispute', href: '/admin/disputes/wizard', icon: Scale },
-  { label: 'Clients List', href: '/admin/clients', icon: Users },
-  { label: 'Billing', href: '/admin/billing', icon: Settings },
 ];
 
 export function CommandPalette() {
@@ -91,7 +90,7 @@ export function CommandPalette() {
               <div className="max-h-80 overflow-y-auto p-2 space-y-0.5">
                 {filtered.map((cmd) => (
                   <button
-                    key={cmd.href}
+                    key={cmd.label}
                     onClick={() => handleSelect(cmd.href)}
                     className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground hover:bg-muted transition-colors text-left"
                   >
