@@ -1,173 +1,154 @@
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
-import { Search, FileText, TrendingUp, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
+import { Search, FileText, TrendingUp, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { SlideUp, SlideIn, StaggerContainer, StaggerItem, ScaleIn, TiltCard } from '@/components/ui/Motion';
-import { GradientOrbs, NoiseOverlay, AuroraBackground } from '@/components/ui/AnimatedBackground';
+
+const steps = [
+  {
+    icon: Search,
+    step: '01',
+    title: 'Analysis & Onboarding',
+    description:
+      'We start by pulling your credit reports from all three bureaus. Our team analyzes them line-by-line to identify negative items that can lawfully be disputed.',
+    details: [
+      'CROA disclosures and agreement first',
+      'Identity and address documents verified',
+      'Three-bureau line-by-line comparison',
+      'Dispute candidates ranked by evidence',
+    ],
+  },
+  {
+    icon: FileText,
+    step: '02',
+    title: 'Dispute & Challenge',
+    description:
+      'We prepare custom dispute letters citing specific consumer protection laws, sent to credit bureaus and creditors on your behalf — only after every policy gate clears.',
+    details: [
+      'Reason codes tied to FCRA provisions',
+      'Evidence attached to every claim',
+      'Your written confirmation before sending',
+      'Certified tracking on every letter',
+    ],
+  },
+  {
+    icon: TrendingUp,
+    step: '03',
+    title: 'Monitor & Optimize',
+    description:
+      'We track every bureau response against its statutory clock. As items are corrected or removed, we plan the next compliant cycle until your reports are accurate.',
+    details: [
+      '30-day FCRA response clock tracked',
+      'Outcomes logged item by item',
+      'Portal updates in real time',
+      'Next cycle planned from results',
+    ],
+  },
+];
+
+const assurances = [
+  'No hidden fees or long-term contracts',
+  '24/7 access to your client portal',
+  'Cancellation rights honored in writing',
+  'Dedicated case manager for every client',
+];
 
 export default function HowItWorksPage() {
-  const steps = [
-    {
-      icon: Search,
-      step: "01",
-      title: "Analysis & Onboarding",
-      description: "We start by pulling your credit reports from all three bureaus. Our team analyzes them line-by-line to identify negative items that can be disputed."
-    },
-    {
-      icon: FileText,
-      step: "02",
-      title: "Dispute & Challenge",
-      description: "We create custom dispute letters citing specific consumer protection laws. We send these to the credit bureaus and creditors on your behalf."
-    },
-    {
-      icon: TrendingUp,
-      step: "03",
-      title: "Monitor & Optimize",
-      description: "We track the results of our disputes. As items are removed, you'll see changes in your credit report. We continue optimizing until you reach your goals."
-    }
-  ];
-
   return (
     <div className="flex flex-col">
       <PageHeader
         badge="Our Process"
-        title="How It"
-        titleHighlight="Works"
-        description="Our proven three-step process is designed to be transparent, effective, and hassle-free. Here is what you can expect when you work with us."
+        title="Three steps."
+        titleHighlight="Fully documented."
+        description="Our process is designed to be transparent, effective, and hassle-free. Here is exactly what happens when you work with us — and what the law requires at each step."
         variant="dramatic"
       />
 
-      {/* Steps Section */}
-      <section className="py-24 md:py-32 bg-background relative overflow-hidden">
-        <GradientOrbs className="opacity-40" />
-        <NoiseOverlay opacity={0.02} />
-        
-        <div className="container relative z-10 mx-auto px-4 md:px-6">
-          {/* Connecting Line */}
-          <div className="hidden lg:block absolute top-1/2 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-secondary/30 to-transparent -translate-y-1/2" />
-          
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-            {steps.map((step, index) => (
-              <StaggerItem key={index}>
-                <ScaleIn delay={index * 0.2}>
-                  <TiltCard>
-                    <Card className="h-full p-8 md:p-10 bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/50 transition-all duration-500 group relative overflow-hidden text-center">
-                      <div className="absolute top-4 right-4 text-6xl md:text-7xl font-display font-normal text-secondary/10 group-hover:text-secondary/20 transition-colors">
-                        {step.step}
-                      </div>
-                      <div className="absolute top-0 right-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl group-hover:bg-secondary/10 transition-colors duration-500" />
-                      
-                      <div className="relative z-10">
-                        <div className="mx-auto mb-8 w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary to-secondary/70 text-primary flex items-center justify-center shadow-lg shadow-secondary/30 group-hover:shadow-secondary/50 transition-shadow">
-                          <step.icon className="h-10 w-10" />
-                        </div>
-                        <h3 className="text-2xl font-display font-normal mb-4 text-foreground">{step.title}</h3>
-                        <p className="text-muted-foreground leading-relaxed text-lg">
-                          {step.description}
-                        </p>
-                      </div>
-                    </Card>
-                  </TiltCard>
-                </ScaleIn>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {/* Why Choose Us Section */}
-      <section className="py-24 md:py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background" />
-        <GradientOrbs className="opacity-30" />
-        <NoiseOverlay opacity={0.02} />
-        
-        <div className="container relative z-10 mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-            <SlideIn direction="left">
-              <div className="space-y-8">
-                <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-secondary/10 border border-secondary/20 text-foreground text-sm font-medium">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary" />
-                  </span>
-                  Why Top Tier
+      {/* Steps — deep dive */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="space-y-px overflow-hidden rounded-xl border border-border bg-border">
+            {steps.map((step) => (
+              <article key={step.step} className="grid gap-8 bg-card p-7 md:grid-cols-[auto_1fr_1fr] md:gap-12 md:p-10">
+                <div className="flex items-start gap-5 md:block">
+                  <p className="font-editorial text-5xl leading-none text-secondary/70 md:text-6xl">{step.step}</p>
+                  <step.icon className="mt-1 h-6 w-6 text-secondary md:mt-6" strokeWidth={1.75} />
                 </div>
-                <h2 className="text-4xl md:text-5xl font-display font-normal text-foreground leading-[1.1]">
-                  Why Choose <span className="text-secondary">Top Tier</span>?
-                </h2>
-                <ul className="space-y-5">
-                  {[
-                    "No hidden fees or long-term contracts",
-                    "24/7 access to your client portal",
-                    "Money-back guarantee policy",
-                    "Dedicated case manager for every client"
-                  ].map((item, i) => (
-                    <SlideUp key={i} delay={i * 0.1}>
-                      <li className="flex items-center gap-4 text-foreground group">
-                        <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
-                          <CheckCircle className="w-5 h-5 text-secondary" />
-                        </div>
-                        <span className="font-medium text-lg">{item}</span>
-                      </li>
-                    </SlideUp>
+                <div>
+                  <h3 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">{step.title}</h3>
+                  <p className="mt-3 leading-7 text-muted-foreground">{step.description}</p>
+                </div>
+                <ul className="grid content-start gap-3 border-t border-border pt-6 md:border-t-0 md:border-l md:pt-0 md:pl-10">
+                  {step.details.map((detail) => (
+                    <li key={detail} className="flex items-start gap-2.5 text-sm leading-6 text-foreground">
+                      <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-secondary" />
+                      {detail}
+                    </li>
                   ))}
                 </ul>
-                <SlideUp delay={0.5}>
-                  <Button asChild size="lg" className="h-14 px-10 bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full shadow-lg shadow-secondary/30 hover:shadow-secondary/50 transition-all hover:scale-105">
-                    <Link href="/contact" className="flex items-center gap-3">
-                      <Sparkles className="w-5 h-5" />
-                      Start Your Journey
-                      <ArrowRight className="w-5 h-5" />
-                    </Link>
-                  </Button>
-                </SlideUp>
-              </div>
-            </SlideIn>
-            
-            <SlideIn direction="right">
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-r from-secondary/20 to-secondary/5 rounded-3xl blur-3xl animate-breathe" />
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/50 shadow-2xl group">
-                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent" />
-                </div>
-              </div>
-            </SlideIn>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-32 md:py-40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-primary" />
-        <AuroraBackground className="opacity-60" />
-        <NoiseOverlay opacity={0.03} />
-        
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[150px] animate-breathe" />
+      {/* Why Top Tier */}
+      <section className="border-y border-border bg-muted/30 py-20 md:py-28">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div>
+              <p className="font-mono text-[11px] font-medium uppercase tracking-[0.3em] text-secondary">
+                Why Top Tier
+              </p>
+              <h2 className="font-editorial mt-5 text-4xl leading-[1.1] text-foreground md:text-5xl">
+                The fine print, <em>up front.</em>
+              </h2>
+              <p className="mt-5 max-w-lg leading-7 text-muted-foreground">
+                Credit repair is a regulated service. We treat the regulations as a feature —
+                everything we commit to is in writing before any work begins.
+              </p>
+              <Button asChild size="lg" className="mt-8">
+                <Link href="/contact" className="gap-2">
+                  Start Your Journey
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+
+            <ul className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
+              {assurances.map((item) => (
+                <li key={item} className="flex items-center gap-3.5 bg-card p-6">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-secondary" />
+                  <span className="text-sm font-medium leading-6 text-foreground">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        
-        <div className="container relative z-10 mx-auto px-4 text-center">
-          <SlideUp>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal mb-8 text-white leading-[1.1]">
-              Ready to <span className="text-secondary">Transform</span> Your Credit?
-            </h2>
-          </SlideUp>
-          <SlideUp delay={0.2}>
-            <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-12 font-light">
-              Take the first step towards financial freedom today.
-            </p>
-          </SlideUp>
-          <SlideUp delay={0.4}>
-            <Button asChild size="lg" className="h-16 md:h-20 px-12 md:px-16 text-lg md:text-xl bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full shadow-lg hover:shadow-secondary/25 transition-all duration-300 btn-premium">
-              <Link href="/contact" className="flex items-center gap-4">
-                <Sparkles className="w-6 h-6" />
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 md:py-28">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="surface-ink relative overflow-hidden rounded-2xl px-7 py-14 text-center md:px-14 md:py-20">
+            <div className="absolute inset-0 rule-grid-ink" aria-hidden />
+            <div className="absolute inset-0 brass-glow" aria-hidden />
+            <div className="relative mx-auto max-w-2xl">
+              <h2 className="font-editorial text-4xl leading-[1.08] text-ink-foreground md:text-5xl">
+                Ready to work <em>your case?</em>
+              </h2>
+              <p className="mt-5 leading-7 text-ink-muted">
+                Take the first step toward accurate credit reporting today. Free consultation,
+                no upfront fees.
+              </p>
+              <Link
+                href="/contact"
+                className="group/cta mt-9 inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-ink-foreground px-7 text-[15px] font-medium text-ink shadow-[inset_0_1px_0_hsl(0_0%_100%/0.5),0_1px_3px_hsl(0_0%_0%/0.4)] transition-[background-color,transform] duration-[160ms] ease-[var(--ease-out)] hover:bg-white active:scale-[0.97]"
+              >
                 Book Free Consultation
-                <ArrowRight className="w-6 h-6" />
+                <ArrowUpRight className="h-4 w-4 transition-transform duration-[160ms] ease-[var(--ease-out)] group-hover/cta:translate-x-0.5 group-hover/cta:-translate-y-0.5" />
               </Link>
-            </Button>
-          </SlideUp>
+            </div>
+          </div>
         </div>
       </section>
     </div>

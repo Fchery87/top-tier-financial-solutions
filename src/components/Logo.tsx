@@ -20,6 +20,7 @@ export function Logo({ variant = 'default', size = 'md', showText = true, classN
 
   const currentSize = sizes[size];
   const textColor = variant === 'light' ? 'text-white' : 'text-foreground';
+  const subtextColor = variant === 'light' ? 'text-brass' : 'text-secondary';
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
@@ -31,7 +32,7 @@ export function Logo({ variant = 'default', size = 'md', showText = true, classN
             <span className={cn(currentSize.text, 'font-semibold tracking-[-0.03em] leading-none', textColor)}>
               Top Tier
             </span>
-            <span className={cn(currentSize.subtext, 'mt-1 font-medium uppercase tracking-[0.2em] text-secondary')}>
+            <span className={cn(currentSize.subtext, 'mt-1 font-medium uppercase tracking-[0.2em]', subtextColor)}>
               Financial Solutions
             </span>
           </span>

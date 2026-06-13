@@ -1,40 +1,65 @@
-import { Users, Target, ShieldCheck, Award, Heart, Zap, Sparkles } from 'lucide-react';
+import { Users, Target, ShieldCheck, Award, Heart, Zap } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { FadeIn, SlideUp, SlideIn, StaggerContainer, StaggerItem, TiltCard, ScaleIn } from '@/components/ui/Motion';
-import { GradientOrbs, NoiseOverlay } from '@/components/ui/AnimatedBackground';
-import { Card } from '@/components/ui/Card';
+import { SlideUp } from '@/components/ui/Motion';
 
 const values = [
   {
     icon: Users,
-    title: "Client-Centric Approach",
-    description: "We believe that every client's situation is unique. That's why we tailor our dispute strategies to your specific credit report."
+    title: 'Client-centric approach',
+    description:
+      "Every credit report tells a different story. Dispute strategies are tailored to your specific accounts, history, and goals — never templated.",
   },
   {
     icon: Target,
-    title: "Results-Driven",
-    description: "Our primary goal is to get you results. We work tirelessly to remove inaccurate, unverifiable, and erroneous items from your report."
+    title: 'Results through process',
+    description:
+      'We pursue inaccurate, unverifiable, and erroneous items methodically — every claim documented, every cycle tracked to its outcome.',
   },
   {
     icon: ShieldCheck,
-    title: "Full Compliance",
-    description: "We operate with strict adherence to the Credit Repair Organizations Act (CROA) and all relevant state and federal laws."
+    title: 'Full compliance',
+    description:
+      'We operate in strict adherence to the Credit Repair Organizations Act (CROA), the FCRA, and all relevant state and federal laws.',
   },
   {
     icon: Award,
-    title: "Excellence",
-    description: "We hold ourselves to the highest standards in the industry, constantly improving our methods and staying ahead of regulations."
+    title: 'Excellence',
+    description:
+      'We hold ourselves to the highest standard in the industry — constantly refining methods and staying ahead of regulation.',
   },
   {
     icon: Heart,
-    title: "Empathy",
-    description: "We understand the stress of financial challenges. Our team approaches every case with compassion and understanding."
+    title: 'Empathy',
+    description:
+      'Financial stress is human. Every case gets approached with compassion, plain language, and zero judgment.',
   },
   {
     icon: Zap,
-    title: "Efficiency",
-    description: "Time is valuable. We work swiftly and effectively to get you the results you need as quickly as possible."
-  }
+    title: 'Efficiency',
+    description:
+      'Statutory clocks matter. We work each dispute cycle promptly so no FCRA response window is ever wasted.',
+  },
+];
+
+const principles = [
+  {
+    label: 'The vision',
+    title: 'Started with a simple conviction',
+    description:
+      'People deserve to understand their own credit. We began by making reports legible — accounts, items, and rights explained in plain language.',
+  },
+  {
+    label: 'The practice',
+    title: 'Built around documentation',
+    description:
+      'A team of credit specialists working one disciplined system: agreements before action, evidence before claims, records of everything.',
+  },
+  {
+    label: 'The standard',
+    title: 'Transparency over promises',
+    description:
+      'We will never promise a score. We promise clear status, honest assessment of what can be disputed, and work you can verify.',
+  },
 ];
 
 export default function AboutPage() {
@@ -42,175 +67,95 @@ export default function AboutPage() {
     <div className="flex flex-col">
       <PageHeader
         badge="Our Story"
-        title="About Top Tier"
-        titleHighlight="Financial"
-        description="We are a team of dedicated credit repair specialists committed to helping you achieve your financial goals through personalized, legal, and effective strategies."
+        title="Credit repair,"
+        titleHighlight="practiced properly."
+        description="A team of dedicated credit repair specialists helping you pursue accurate credit reporting through personalized, lawful, and documented strategies."
         variant="dramatic"
       />
 
-      {/* Values Grid - Premium Design */}
-      <section className="py-24 md:py-32 bg-background relative overflow-hidden">
-        <GradientOrbs className="opacity-40" />
-        <NoiseOverlay opacity={0.02} />
-        
-        <div className="container relative z-10 mx-auto px-4 md:px-6">
-          <FadeIn className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 border border-secondary/20 text-foreground/80 text-sm font-medium mb-6">
-              <Sparkles className="w-4 h-4 text-secondary" />
-              What We Stand For
-            </div>
-            <h2 className="text-4xl md:text-5xl font-display font-normal mb-6 text-foreground">
-              Our Core <span className="text-secondary">Values</span>
-            </h2>
-            <p className="text-muted-foreground text-lg md:text-xl">
-              These principles guide everything we do and define who we are as a company.
+      {/* Values */}
+      <section className="py-20 md:py-28">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="mb-14 max-w-2xl">
+            <p className="font-mono text-[11px] font-medium uppercase tracking-[0.3em] text-secondary">
+              What we stand for
             </p>
-          </FadeIn>
-          
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {values.map((value, index) => (
-              <StaggerItem key={index}>
-                <ScaleIn delay={index * 0.1}>
-                  <TiltCard>
-                    <Card className="h-full p-8 bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/50 transition-all duration-500 group overflow-hidden relative">
-                      <div className="absolute top-0 right-0 w-40 h-40 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors duration-500" />
-                      <div className="relative z-10">
-                        <div className="mb-6 p-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 text-secondary flex items-center justify-center group-hover:from-secondary group-hover:to-secondary/80 group-hover:text-white transition-all duration-500 shadow-lg">
-                          <value.icon className="w-8 h-8" />
-                        </div>
-                        <h3 className="text-xl font-display font-normal mb-3 text-foreground">{value.title}</h3>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {value.description}
-                        </p>
-                      </div>
-                    </Card>
-                  </TiltCard>
-                </ScaleIn>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
+            <h2 className="font-editorial mt-5 text-4xl leading-[1.1] text-foreground md:text-5xl">
+              Principles that guide <em>every case.</em>
+            </h2>
+          </div>
 
-      {/* Mission Section - Premium Design */}
-      <section className="py-24 md:py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background" />
-        <GradientOrbs className="opacity-30" />
-        <NoiseOverlay opacity={0.02} />
-        
-        <div className="container relative z-10 mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-            <SlideIn direction="left">
-              <div className="space-y-8">
-                <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-secondary/10 border border-secondary/20 text-foreground text-sm font-medium">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary" />
-                  </span>
-                  Our Mission
-                </div>
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-normal text-foreground leading-[1.1]">
-                  Empowering Your <span className="text-secondary">Financial Future</span>
-                </h2>
-                <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-                  Our mission is to empower individuals and families to take control of their financial future. We understand that a low credit score can be a significant barrier to achieving your dreams, whether it&apos;s buying a home, starting a business, or simply having peace of mind.
-                </p>
-                <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-                  We strive to provide transparent, educational, and effective credit repair services that not only improve your score but also give you the knowledge to maintain it.
-                </p>
-                <div className="grid grid-cols-2 gap-8 pt-8">
-                  {[
-                    { value: "98%", label: "Success Rate" },
-                    { value: "2,500+", label: "Happy Clients" }
-                  ].map((stat, i) => (
-                    <div key={i} className="relative group">
-                      <div className="absolute inset-0 bg-secondary/5 rounded-xl blur-lg group-hover:bg-secondary/10 transition-colors" />
-                      <div className="relative p-6 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm">
-                        <div className="text-4xl md:text-5xl font-display font-normal text-secondary mb-2">{stat.value}</div>
-                        <div className="text-sm uppercase tracking-wider text-muted-foreground">{stat.label}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </SlideIn>
-            
-            <SlideIn direction="right">
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-r from-secondary/20 to-secondary/5 rounded-3xl blur-3xl animate-breathe" />
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/50 shadow-2xl group">
-                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1632&q=80')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-8">
-                    <p className="text-xl text-white/90 font-sans italic">
-                      &quot;Building financial freedom, one credit score at a time.&quot;
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </SlideIn>
+          <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+            {values.map((value) => (
+              <article
+                key={value.title}
+                className="group bg-card p-7 transition-colors duration-[200ms] ease-[var(--ease-out)] hover:bg-muted/40 md:p-8"
+              >
+                <value.icon className="h-5 w-5 text-secondary" strokeWidth={1.75} />
+                <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">{value.title}</h3>
+                <p className="mt-2.5 text-sm leading-6 text-muted-foreground">{value.description}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Why Choose Us - Timeline Section */}
-      <section className="py-24 md:py-32 bg-background relative overflow-hidden">
-        <NoiseOverlay opacity={0.02} />
-        
-        <div className="container relative z-10 mx-auto px-4 md:px-6">
-          <div className="max-w-5xl mx-auto">
-            <SlideUp className="text-center mb-20">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 border border-secondary/20 text-foreground/80 text-sm font-medium mb-6">
-                <Award className="w-4 h-4 text-secondary" />
-                Our Journey
+      {/* Mission — ink panel */}
+      <section className="pb-20 md:pb-28">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="surface-ink relative overflow-hidden rounded-2xl px-7 py-14 md:px-14 md:py-18">
+            <div className="absolute inset-0 rule-grid-ink" aria-hidden />
+            <div className="absolute inset-0 brass-glow" aria-hidden />
+            <div className="relative grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+              <div>
+                <p className="font-mono text-[11px] font-medium uppercase tracking-[0.3em] text-brass">
+                  Our mission
+                </p>
+                <h2 className="font-editorial mt-5 text-4xl leading-[1.08] text-ink-foreground md:text-5xl">
+                  A low score shouldn&rsquo;t decide <em>who gets a future.</em>
+                </h2>
+                <p className="mt-6 max-w-xl leading-7 text-ink-muted">
+                  A credit score can stand between a family and a home, a founder and a business,
+                  a person and peace of mind. Our mission is to make sure that what stands there
+                  is at least <span className="text-ink-foreground">accurate</span> — and to give
+                  you the understanding to keep it that way.
+                </p>
               </div>
-              <h2 className="text-4xl md:text-5xl font-display font-normal mb-6 text-foreground">
-                Why Families <span className="text-secondary">Trust Us</span>
-              </h2>
-              <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-                We&apos;ve helped thousands of families achieve their financial dreams through dedication and expertise.
-              </p>
-            </SlideUp>
-            
-            <div className="relative">
-              {/* Animated timeline line */}
-              <div className="absolute left-1/2 top-0 bottom-0 w-px hidden md:block">
-                <div className="h-full bg-gradient-to-b from-secondary via-secondary/50 to-transparent" />
-              </div>
-              
-              {[
-                { year: "Founded", title: "Started with a Vision", description: "We began with a simple mission: help people understand and improve their credit.", icon: Target },
-                { year: "Growing", title: "Expanded Our Team", description: "Built a team of certified credit specialists and legal experts.", icon: Users },
-                { year: "Today", title: "Industry Leaders", description: "Now serving thousands of clients with a 98% success rate.", icon: Award },
-              ].map((item, index) => (
-                <ScaleIn key={index} delay={index * 0.2}>
-                  <div className={`flex flex-col md:flex-row items-center gap-8 mb-16 last:mb-0 ${index % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
-                    <div className={`flex-1 ${index % 2 === 1 ? 'md:text-right' : ''}`}>
-                      <Card className="p-8 bg-card/80 backdrop-blur-sm border-border/50 hover:border-secondary/30 transition-all duration-500 group">
-                        <div className={`flex items-center gap-4 mb-4 ${index % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
-                          <div className="p-3 rounded-xl bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-secondary-foreground transition-all duration-300">
-                            <item.icon className="w-6 h-6" />
-                          </div>
-                          <div className="px-4 py-1.5 rounded-full bg-secondary/10 text-secondary text-sm font-bold">
-                            {item.year}
-                          </div>
-                        </div>
-                        <h3 className="text-2xl font-display font-normal text-foreground mb-3">{item.title}</h3>
-                        <p className="text-muted-foreground text-lg">{item.description}</p>
-                      </Card>
-                    </div>
-                    
-                    {/* Timeline dot */}
-                    <div className="relative hidden md:block">
-                      <div className="absolute inset-0 bg-secondary/30 rounded-full blur-md animate-pulse" />
-                      <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-secondary to-secondary/70 shadow-lg shadow-secondary/50" />
-                    </div>
-                    
-                    <div className="flex-1 hidden md:block" />
-                  </div>
-                </ScaleIn>
-              ))}
+              <blockquote className="border-l-2 border-brass/50 pl-6">
+                <p className="font-editorial text-2xl leading-snug text-ink-foreground md:text-3xl">
+                  &ldquo;Building financial freedom, <em>one accurate report at a time.</em>&rdquo;
+                </p>
+              </blockquote>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Journey */}
+      <section className="border-t border-border bg-muted/30 py-20 md:py-28">
+        <div className="container mx-auto px-4 md:px-6">
+          <SlideUp className="mb-14 max-w-2xl">
+            <p className="font-mono text-[11px] font-medium uppercase tracking-[0.3em] text-secondary">
+              Why families trust us
+            </p>
+            <h2 className="font-editorial mt-5 text-4xl leading-[1.1] text-foreground md:text-5xl">
+              Built on discipline, <em>not promises.</em>
+            </h2>
+          </SlideUp>
+
+          <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-3">
+            {principles.map((item, index) => (
+              <article key={item.title} className="bg-card p-7 md:p-9">
+                <div className="flex items-baseline justify-between">
+                  <p className="font-editorial text-4xl text-secondary/70">0{index + 1}</p>
+                  <p className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                    {item.label}
+                  </p>
+                </div>
+                <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">{item.title}</h3>
+                <p className="mt-2.5 text-sm leading-6 text-muted-foreground">{item.description}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>

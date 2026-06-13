@@ -13,12 +13,12 @@ export default function PortalHeader({ userName }: PortalHeaderProps) {
       <div className="container relative mx-auto px-4 md:px-6">
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-md border border-border bg-card/70 px-3 py-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4 text-secondary" />
+            <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.28em] text-secondary">
+              <Shield className="h-3.5 w-3.5" />
               Secure client workspace
             </div>
-            <h1 className="font-display text-4xl leading-tight tracking-[-0.04em] text-foreground md:text-6xl">
-              Welcome back, <span className="text-secondary">{userName}</span>
+            <h1 className="font-editorial text-4xl leading-[1.08] text-foreground md:text-6xl">
+              Welcome back, <em>{userName}</em>
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
               Follow your current phase, complete required tasks, approve documents, and review progress without sorting through internal operations data.

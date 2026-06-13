@@ -11,9 +11,8 @@ interface MotionProps extends HTMLMotionProps<"div"> {
   className?: string;
 }
 
-// Smooth easing curves
-const smoothEase: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
-const bounceEase: [number, number, number, number] = [0.68, -0.55, 0.265, 1.55];
+// Strong ease-out — entrances start fast and settle
+const smoothEase: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 export function FadeIn({ children, delay = 0, duration = 0.6, className, ...props }: MotionProps) {
   return (
@@ -30,10 +29,10 @@ export function FadeIn({ children, delay = 0, duration = 0.6, className, ...prop
   );
 }
 
-export function SlideUp({ children, delay = 0, duration = 0.6, className, ...props }: MotionProps) {
+export function SlideUp({ children, delay = 0, duration = 0.5, className, ...props }: MotionProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration, delay, ease: smoothEase }}
@@ -46,7 +45,7 @@ export function SlideUp({ children, delay = 0, duration = 0.6, className, ...pro
 }
 
 export function SlideIn({ children, delay = 0, duration = 0.6, className, direction = "left", ...props }: MotionProps & { direction?: "left" | "right" }) {
-  const x = direction === "left" ? -60 : 60;
+  const x = direction === "left" ? -20 : 20;
   return (
     <motion.div
       initial={{ opacity: 0, x }}
@@ -61,13 +60,13 @@ export function SlideIn({ children, delay = 0, duration = 0.6, className, direct
   );
 }
 
-export function ScaleIn({ children, delay = 0, duration = 0.6, className, ...props }: MotionProps) {
+export function ScaleIn({ children, delay = 0, duration = 0.5, className, ...props }: MotionProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
+      initial={{ opacity: 0, scale: 0.97 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration, delay, ease: bounceEase }}
+      transition={{ duration, delay, ease: smoothEase }}
       className={cn(className)}
       {...props}
     >
@@ -143,46 +142,10 @@ export function MagneticHover({ children, className, strength = 0.3 }: { childre
   );
 }
 
-// 3D Tilt Card Effect
+// Retired 3D tilt — now a plain wrapper. Mouse-tracking tilt reads as
+// gimmick on a financial product; cards should sit still and be readable.
 export function TiltCard({ children, className }: { children: ReactNode, className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const rotateX = useTransform(y, [-0.5, 0.5], [8, -8]);
-  const rotateY = useTransform(x, [-0.5, 0.5], [-8, 8]);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const xPos = (e.clientX - rect.left) / rect.width - 0.5;
-    const yPos = (e.clientY - rect.top) / rect.height - 0.5;
-    x.set(xPos);
-    y.set(yPos);
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.div
-      ref={ref}
-      style={{
-        rotateX,
-        rotateY,
-        transformStyle: "preserve-3d",
-        perspective: 1000,
-      }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      transition={{ type: "spring", damping: 20, stiffness: 100 }}
-      className={cn(className)}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={cn(className)}>{children}</div>;
 }
 
 // Glowing border animation

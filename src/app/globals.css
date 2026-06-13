@@ -1,61 +1,63 @@
 @import "tailwindcss";
 
 :root {
-  /* Top Tier Financial — "Quiet Precision" (Linear/Vercel) · Light Mode */
-  --background: 0 0% 99%;            /* near-white canvas — #FCFCFC */
-  --foreground: 240 6% 10%;         /* zinc-900 ink — #18181B */
-  --card: 0 0% 100%;                /* white surface — #FFFFFF */
-  --card-foreground: 240 6% 10%;
+  /* Top Tier Financial — "Midnight & Brass" · Light Mode
+     Warm stone neutrals, near-black ink, single brass accent.
+     Private-banking editorial meets modern SaaS. */
+  --background: 40 22% 98%;           /* warm paper — #FBFAF8 */
+  --foreground: 24 10% 10%;           /* warm ink — #1D1A17 */
+  --card: 0 0% 100%;                  /* white surface */
+  --card-foreground: 24 10% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 6% 10%;
+  --popover-foreground: 24 10% 10%;
 
-  /* Primary — near-black ink (neutral CTAs + emphasis) */
-  --primary: 240 6% 10%;            /* zinc-900 — #18181B */
-  --primary-foreground: 0 0% 100%;
+  /* Primary — ink CTAs and emphasis */
+  --primary: 24 10% 10%;              /* #1D1A17 */
+  --primary-foreground: 40 30% 97%;
 
-  /* Secondary — the single indigo accent (Linear) — #5E6AD2 */
-  --secondary: 234 56% 60%;
-  --secondary-foreground: 0 0% 100%;  /* white text on indigo (~4.6:1) */
+  /* Secondary — the single brass accent (AA on white at this depth) */
+  --secondary: 36 62% 36%;            /* deep brass — #95661F */
+  --secondary-foreground: 0 0% 100%;
 
-  /* Muted — quiet zinc neutrals */
-  --muted: 240 5% 96%;              /* zinc-100 — #F4F4F5 */
-  --muted-foreground: 240 4% 46%;   /* zinc-500 — #71717A (AA on white) */
+  /* Muted — quiet warm stone */
+  --muted: 40 14% 94%;                /* stone-100 — #F2F0EC */
+  --muted-foreground: 30 6% 42%;      /* stone-500 — #6F6A64 */
 
-  /* Accent — faint zinc fill for hover/active (kept neutral, not tinted) */
-  --accent: 240 5% 96%;             /* zinc-100 */
-  --accent-foreground: 240 6% 10%;
+  /* Accent — faint warm fill for hover/active */
+  --accent: 40 14% 93%;
+  --accent-foreground: 24 10% 10%;
 
-  /* Success / Warning / Destructive — refined semantic, used sparingly */
-  --success: 142 71% 36%;           /* green-600 — #16A34A */
+  /* Semantic — used sparingly, never decorative */
+  --success: 152 55% 30%;             /* forest — #226B4D */
   --success-foreground: 0 0% 100%;
-  --warning: 35 92% 40%;            /* amber-ish */
+  --warning: 32 90% 38%;              /* burnt amber */
   --warning-foreground: 0 0% 100%;
-  --destructive: 0 72% 45%;         /* red-600 — #DC2626 */
+  --destructive: 4 66% 44%;           /* brick red — #BA2E26 */
   --destructive-foreground: 0 0% 100%;
 
-  /* Border & Input — very light hairlines — #E4E4E7 zinc-200 */
-  --border: 240 6% 90%;
-  --input: 240 6% 90%;
-  --ring: 234 56% 60%;
+  /* Border & Input — warm hairlines */
+  --border: 40 10% 88%;               /* #E4E1DC */
+  --input: 40 10% 86%;
+  --ring: 36 62% 40%;
 
-  /* App chrome — LIGHT sidebar (Linear/Vercel), hairline border, indigo active */
-  --sidebar: 240 5% 98%;            /* zinc-50 — #FAFAFA */
-  --sidebar-foreground: 240 5% 26%; /* zinc-700 */
-  --sidebar-border: 240 6% 90%;
-  --sidebar-muted: 240 4% 46%;
-  --sidebar-active: 234 56% 60%;    /* indigo */
-  --sidebar-active-foreground: 0 0% 100%;
+  /* App chrome — INK sidebar (the SaaS product surface) */
+  --sidebar: 26 12% 9%;               /* near-black warm ink — #1A1714 */
+  --sidebar-foreground: 38 14% 76%;   /* warm grey text */
+  --sidebar-border: 30 8% 16%;
+  --sidebar-muted: 32 7% 52%;
+  --sidebar-active: 42 78% 62%;       /* brass on ink */
+  --sidebar-active-foreground: 26 12% 9%;
 
-  /* Directional signal — ONLY color allowed on data (tiny up/down deltas) */
-  --up: 142 71% 38%;                /* green — #1AAE4E */
-  --down: 0 72% 51%;                /* red — #DC2626 */
+  /* Directional signal — only color allowed on raw data deltas */
+  --up: 152 55% 32%;
+  --down: 4 66% 48%;
 
-  /* Credit score band scale — restrained 3-tone semantic (poor→excellent) */
-  --score-poor: 0 72% 51%;          /* red */
-  --score-fair: 35 92% 45%;         /* amber */
-  --score-good: 38 70% 45%;         /* muted amber */
-  --score-verygood: 142 55% 40%;    /* green */
-  --score-excellent: 142 71% 36%;   /* green */
+  /* Credit score band scale (poor → excellent) */
+  --score-poor: 4 66% 48%;
+  --score-fair: 24 85% 45%;
+  --score-good: 38 80% 42%;
+  --score-verygood: 110 38% 38%;
+  --score-excellent: 152 55% 32%;
 
   --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);
@@ -63,61 +65,74 @@
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 8px);
 
-  /* Motion — crisp, professional, and interruptible */
+  /* Motion — crisp, professional, interruptible */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Ink section tokens — shared by hero, footer, dark panels */
+  --ink: 26 12% 8%;                   /* #181512 */
+  --ink-raised: 27 11% 11%;
+  --ink-border: 32 9% 19%;
+  --ink-foreground: 40 26% 96%;
+  --ink-muted: 33 8% 62%;
+  --brass: 42 78% 62%;                /* bright brass for dark surfaces — #ECC056 */
+  --brass-deep: 36 62% 36%;
 }
 
 .dark {
-  /* "Quiet Precision" · Dark Mode (Linear-style dark zinc) */
-  --background: 240 6% 7%;          /* #111113 */
-  --foreground: 0 0% 95%;           /* #F2F2F2 */
-  --card: 240 5% 10%;               /* raised panel — #19191C */
-  --card-foreground: 0 0% 95%;
-  --popover: 240 5% 10%;
-  --popover-foreground: 0 0% 95%;
+  /* "Midnight & Brass" · Dark Mode — the whole app sits on warm ink */
+  --background: 26 12% 7%;            /* #151311 */
+  --foreground: 40 22% 94%;           /* warm paper text */
+  --card: 27 11% 10%;                 /* raised ink panel */
+  --card-foreground: 40 22% 94%;
+  --popover: 27 11% 10%;
+  --popover-foreground: 40 22% 94%;
 
-  /* In dark mode, primary inverts to near-white (dark text) for strong neutral CTAs */
-  --primary: 0 0% 95%;
-  --primary-foreground: 240 6% 10%;
+  --primary: 40 26% 95%;              /* paper CTAs on ink */
+  --primary-foreground: 26 12% 9%;
 
-  --secondary: 234 78% 72%;         /* indigo, brighter on dark — #8A90F0 */
-  --secondary-foreground: 240 6% 10%;
+  --secondary: 42 78% 62%;            /* bright brass — #ECC056 */
+  --secondary-foreground: 26 12% 9%;
 
-  --muted: 240 5% 15%;
-  --muted-foreground: 240 5% 64%;   /* AA on dark — #9D9DA6 */
+  --muted: 28 9% 14%;
+  --muted-foreground: 35 8% 64%;
 
-  --accent: 240 5% 15%;             /* neutral zinc fill */
-  --accent-foreground: 0 0% 95%;
+  --accent: 28 9% 15%;
+  --accent-foreground: 40 22% 94%;
 
-  --success: 142 64% 47%;
-  --success-foreground: 240 6% 10%;
-  --warning: 38 92% 56%;
-  --warning-foreground: 240 6% 10%;
-  --destructive: 0 74% 60%;
-  --destructive-foreground: 0 0% 98%;
+  --success: 152 45% 50%;
+  --success-foreground: 26 12% 9%;
+  --warning: 38 92% 58%;
+  --warning-foreground: 26 12% 9%;
+  --destructive: 4 78% 62%;
+  --destructive-foreground: 26 12% 9%;
 
-  --border: 240 5% 17%;             /* subtle hairline on dark */
-  --input: 240 5% 17%;
-  --ring: 234 78% 72%;
+  --border: 30 8% 17%;
+  --input: 30 8% 19%;
+  --ring: 42 78% 62%;
 
-  /* Chrome — slightly distinct dark surface from the canvas, hairline border */
-  --sidebar: 240 6% 9%;             /* #151517 */
-  --sidebar-foreground: 240 5% 72%;
-  --sidebar-border: 240 5% 16%;
-  --sidebar-muted: 240 5% 56%;
-  --sidebar-active: 234 78% 72%;    /* indigo */
-  --sidebar-active-foreground: 240 6% 10%;
+  --sidebar: 26 13% 6%;
+  --sidebar-foreground: 38 14% 74%;
+  --sidebar-border: 30 8% 14%;
+  --sidebar-muted: 32 7% 48%;
+  --sidebar-active: 42 78% 62%;
+  --sidebar-active-foreground: 26 12% 9%;
 
-  --up: 142 64% 50%;                /* green on dark */
-  --down: 0 80% 66%;
+  --up: 152 45% 52%;
+  --down: 4 78% 64%;
 
-  --score-poor: 0 80% 64%;
-  --score-fair: 35 92% 58%;
-  --score-good: 38 70% 56%;
-  --score-verygood: 142 55% 52%;
-  --score-excellent: 142 64% 50%;
+  --score-poor: 4 78% 62%;
+  --score-fair: 24 85% 58%;
+  --score-good: 38 85% 56%;
+  --score-verygood: 110 40% 52%;
+  --score-excellent: 152 45% 52%;
+
+  --ink: 26 13% 6%;
+  --ink-raised: 27 11% 10%;
+  --ink-border: 30 8% 16%;
+  --ink-foreground: 40 26% 96%;
+  --ink-muted: 33 8% 62%;
 }
 
 @theme inline {
@@ -152,6 +167,13 @@
   --color-sidebar-active: hsl(var(--sidebar-active));
   --color-sidebar-active-foreground: hsl(var(--sidebar-active-foreground));
 
+  --color-ink: hsl(var(--ink));
+  --color-ink-raised: hsl(var(--ink-raised));
+  --color-ink-border: hsl(var(--ink-border));
+  --color-ink-foreground: hsl(var(--ink-foreground));
+  --color-ink-muted: hsl(var(--ink-muted));
+  --color-brass: hsl(var(--brass));
+
   --color-up: hsl(var(--up));
   --color-down: hsl(var(--down));
 
@@ -163,6 +185,7 @@
 
   --font-sans: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, 'Times New Roman', serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: var(--radius-sm);
@@ -183,33 +206,49 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
 }
 
-/* Linear/Vercel: display headings are a tight, confident sans — no serif. */
+/* Display — tight confident sans for product UI headings */
 .font-display {
   font-family: var(--font-sans);
   font-weight: 600;
   letter-spacing: -0.03em;
 }
 
+/* Editorial — serif display voice for marketing headlines */
+.font-editorial {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}
+
+.font-editorial em,
+.font-editorial .em {
+  font-style: italic;
+  color: hsl(var(--brass));
+}
+
+/* ── Ink surfaces (hero, footer, dark marketing panels) ── */
+.surface-ink {
+  background-color: hsl(var(--ink));
+  color: hsl(var(--ink-foreground));
+}
+
+.surface-ink-raised {
+  background-color: hsl(var(--ink-raised));
+  border: 1px solid hsl(var(--ink-border));
+}
+
 .brand-footer {
-  background: #080a0f;
-  color: #e2e8f0;
+  background: hsl(var(--ink));
+  color: hsl(var(--ink-foreground));
 }
 
-.brand-footer-copy {
-  color: rgb(226 232 240 / 0.84);
-}
-
-.brand-footer-muted {
-  color: rgb(226 232 240 / 0.76);
-}
-
-.brand-footer-heading {
-  color: hsl(240 5% 82%);
-}
+.brand-footer-copy { color: hsl(var(--ink-muted)); }
+.brand-footer-muted { color: hsl(33 8% 48%); }
+.brand-footer-heading { color: hsl(var(--ink-foreground) / 0.92); }
 
 .brand-logo-plate {
   background: #ffffff;
-  box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.4);
+  box-shadow: 0 0 0 1px hsl(var(--brass) / 0.4);
 }
 
 .surface-panel {
@@ -219,14 +258,14 @@ body {
 
 .surface-document {
   background:
-    linear-gradient(180deg, hsl(0 0% 100% / 0.98), hsl(210 40% 98% / 0.96)),
+    linear-gradient(180deg, hsl(0 0% 100% / 0.98), hsl(40 30% 98% / 0.96)),
     hsl(var(--card));
-  color: hsl(222 47% 11%);
-  border: 1px solid hsl(214 32% 88%);
+  color: hsl(24 10% 12%);
+  border: 1px solid hsl(40 12% 86%);
 }
 
 .dark .surface-document {
-  background: linear-gradient(180deg, hsl(220 16% 12% / 0.98), hsl(220 18% 8% / 0.98));
+  background: linear-gradient(180deg, hsl(27 11% 12% / 0.98), hsl(26 13% 8% / 0.98));
   color: hsl(var(--foreground));
   border-color: hsl(var(--border));
 }
@@ -235,18 +274,21 @@ body {
   background: hsl(var(--background));
 }
 
-.dark .platform-shell {
-  background: hsl(var(--background));
-}
-
+/* ── Texture: hairline grid for ink surfaces ── */
 .rule-grid {
   background-image:
-    linear-gradient(to right, hsl(var(--border) / 0.34) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.24) 1px, transparent 1px);
+    linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.3) 1px, transparent 1px);
   background-size: 56px 56px;
 }
 
-/* ── Background Patterns ── */
+.rule-grid-ink {
+  background-image:
+    linear-gradient(to right, hsl(var(--ink-foreground) / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--ink-foreground) / 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
 .bg-grid-pattern {
   background-image:
     linear-gradient(to right, hsl(var(--border) / 0.3) 1px, transparent 1px),
@@ -257,6 +299,13 @@ body {
 .bg-dot-pattern {
   background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.12) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+/* ── Brass glow — single radial accent for ink heroes ── */
+.brass-glow {
+  background:
+    radial-gradient(ellipse 56% 44% at 72% -6%, hsl(var(--brass) / 0.13), transparent 64%),
+    radial-gradient(ellipse 40% 32% at 18% 110%, hsl(var(--brass) / 0.05), transparent 60%);
 }
 
 /* ── Gradient Masks ── */
@@ -276,119 +325,7 @@ body {
   font-weight: 600;
 }
 
-/* ── Floating ── */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-16px); }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-float-slow {
-  animation: float 8s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float 6s ease-in-out infinite;
-  animation-delay: 2s;
-}
-
-/* ── Shimmer ── */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(var(--secondary) / 0.1) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 3s infinite;
-}
-
-/* ── Pulse Glow ── */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px hsl(var(--secondary) / 0.2); }
-  50% { box-shadow: 0 0 40px hsl(var(--secondary) / 0.4); }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-/* ── Gradient Orb ── */
-@keyframes orb-float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(8%, -8%) scale(1.04); }
-  50% { transform: translate(-4%, 4%) scale(0.96); }
-  75% { transform: translate(-8%, -4%) scale(1.02); }
-}
-
-.animate-orb {
-  animation: orb-float 20s ease-in-out infinite;
-}
-
-.animate-orb-delayed {
-  animation: orb-float 25s ease-in-out infinite;
-  animation-delay: -5s;
-}
-
-/* ── Morph Gradient ── */
-@keyframes morph-gradient {
-  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(0deg); }
-  50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: rotate(180deg); }
-}
-
-.animate-morph {
-  animation: morph-gradient 15s ease-in-out infinite;
-}
-
-/* ── Shine ── */
-@keyframes shine {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
-.animate-shine {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(var(--secondary) / 0.2) 25%,
-    hsl(var(--secondary) / 0.4) 50%,
-    hsl(var(--secondary) / 0.2) 75%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shine 3s linear infinite;
-}
-
-/* ── Breathe ── */
-@keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-}
-
-.animate-breathe {
-  animation: breathe 4s ease-in-out infinite;
-}
-
-/* ── Ripple ── */
-@keyframes ripple {
-  0% { transform: scale(0.8); opacity: 1; }
-  100% { transform: scale(2.4); opacity: 0; }
-}
-
-.animate-ripple {
-  animation: ripple 1.5s linear infinite;
-}
-
-/* ── Page Header ── */
+/* ── Page Header (secondary marketing pages) ── */
 .page-header {
   position: relative;
   padding-top: 8rem;
@@ -401,15 +338,15 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--secondary) / 0.08), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 0%, hsl(var(--secondary) / 0.05), transparent);
+    radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--brass) / 0.07), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 0%, hsl(var(--brass) / 0.04), transparent);
   pointer-events: none;
 }
 
 /* ── Section Divider ── */
 .section-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, hsl(var(--secondary) / 0.3), transparent);
+  background: linear-gradient(90deg, transparent, hsl(var(--brass) / 0.35), transparent);
 }
 
 /* ── Glass Card ── */
@@ -426,62 +363,20 @@ body {
 @media (hover: hover) and (pointer: fine) {
   .glass-card-hover:hover {
     border-color: hsl(var(--border));
-    box-shadow: 0 1px 2px hsl(240 6% 10% / 0.04);
+    box-shadow: 0 1px 2px hsl(24 10% 10% / 0.04);
   }
 }
 
-/* ── Card Hover (Linear: subtle border shift, no float) ── */
+/* ── Card Hover — border shift, no float ── */
 .card-hover {
   transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .card-hover:hover {
-    border-color: hsl(var(--foreground) / 0.16);
-    box-shadow: 0 1px 2px hsl(240 6% 10% / 0.05);
+    border-color: hsl(var(--foreground) / 0.18);
+    box-shadow: 0 1px 2px hsl(24 10% 10% / 0.05);
   }
-}
-
-/* ── Border Animated ── */
-@property --border-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-.border-animated {
-  position: relative;
-  background: hsl(var(--card));
-  border-radius: var(--radius);
-}
-
-.border-animated::before {
-  content: '';
-  position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  background: conic-gradient(
-    from var(--border-angle),
-    hsl(var(--secondary)),
-    transparent 45%,
-    transparent 75%,
-    hsl(var(--secondary) / 0.3)
-  );
-  animation: rotate-border 4s linear infinite;
-  z-index: -1;
-}
-
-.border-animated::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: hsl(var(--card));
-  border-radius: inherit;
-  z-index: -1;
-}
-
-@keyframes rotate-border {
-  to { --border-angle: 360deg; }
 }
 
 /* ── Premium Button ── */
@@ -497,7 +392,7 @@ body {
 
 @media (hover: hover) and (pointer: fine) {
   .btn-premium:hover {
-    box-shadow: 0 1px 2px hsl(240 6% 10% / 0.08);
+    box-shadow: 0 1px 2px hsl(24 10% 10% / 0.08);
   }
 }
 
@@ -526,41 +421,119 @@ body {
   }
 }
 
+/* ── Reveal on scroll (used with IntersectionObserver / Motion) ── */
+.reveal-up {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 500ms var(--ease-out), transform 500ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* ── Marquee (trust strip) ── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 36s linear infinite;
+}
+
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+/* ── Score arc draw ── */
+@keyframes arc-draw {
+  from { stroke-dashoffset: var(--arc-length, 240); }
+  to { stroke-dashoffset: var(--arc-offset, 60); }
+}
+
+.animate-arc {
+  animation: arc-draw 1.1s var(--ease-out) 250ms both;
+}
+
+/* ── Ticker count-up shimmer (decorative, rare) ── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--brass) / 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+/* ── Float (decorative, marketing only) ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16px); }
+}
+
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-slow { animation: float 8s ease-in-out infinite; }
+.animate-float-delayed { animation: float 6s ease-in-out infinite; animation-delay: 2s; }
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.animate-breathe { animation: breathe 4s ease-in-out infinite; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px hsl(var(--brass) / 0.2); }
+  50% { box-shadow: 0 0 40px hsl(var(--brass) / 0.4); }
+}
+
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
 /* ── Selection ── */
 ::selection {
-  background: hsl(var(--secondary) / 0.25);
+  background: hsl(var(--brass) / 0.3);
   color: hsl(var(--foreground));
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: hsl(var(--muted)); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--secondary) / 0.4);
+  background: hsl(var(--muted-foreground) / 0.28);
   border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--secondary) / 0.6); }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.45); }
 
 /* ── Decorative ── */
 .decorative-line {
   height: 1px;
-  background: linear-gradient(90deg, transparent, hsl(var(--secondary) / 0.4) 20%, hsl(var(--secondary)) 50%, hsl(var(--secondary) / 0.4) 80%, transparent);
+  background: linear-gradient(90deg, transparent, hsl(var(--brass) / 0.4) 20%, hsl(var(--brass)) 50%, hsl(var(--brass) / 0.4) 80%, transparent);
 }
 
 .decorative-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: hsl(var(--secondary));
-  box-shadow: 0 0 10px hsl(var(--secondary) / 0.4);
+  background: hsl(var(--brass));
+  box-shadow: 0 0 10px hsl(var(--brass) / 0.4);
 }
 
 /* ── Section Gradients ── */
 .section-gradient-top {
-  background: linear-gradient(to bottom, hsl(var(--secondary) / 0.04), transparent);
+  background: linear-gradient(to bottom, hsl(var(--brass) / 0.04), transparent);
 }
 
 .section-gradient-bottom {
-  background: linear-gradient(to top, hsl(var(--secondary) / 0.04), transparent);
+  background: linear-gradient(to top, hsl(var(--brass) / 0.04), transparent);
 }
 
 /* ── Accessibility ── */
@@ -585,7 +558,7 @@ body {
 }
 
 *:focus-visible {
-  outline: 2px solid hsl(var(--secondary));
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
 
@@ -595,12 +568,12 @@ body {
 
 @media (prefers-contrast: high) {
   :root {
-    --border: 210 12% 55%;
-    --muted-foreground: 220 8% 28%;
+    --border: 30 10% 52%;
+    --muted-foreground: 28 8% 26%;
   }
   .dark {
-    --border: 225 14% 38%;
-    --muted-foreground: 215 10% 80%;
+    --border: 32 10% 40%;
+    --muted-foreground: 36 10% 80%;
   }
 }
 
@@ -645,7 +618,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid hsl(var(--secondary));
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -655,8 +628,8 @@ textarea:focus-visible {
   top: 1rem; left: 1rem;
   z-index: 9999;
   padding: 0.75rem 1rem;
-  background: hsl(var(--secondary));
-  color: hsl(var(--secondary-foreground));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   border-radius: 0.5rem;
   text-decoration: none;
   font-weight: 600;

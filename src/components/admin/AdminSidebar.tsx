@@ -172,21 +172,26 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
       {/* Logo - hidden on mobile (shown in top bar instead) */}
       <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <Link href="/admin" className="flex items-center gap-3">
-          <AscendantMark className="w-9 h-9 flex-shrink-0" />
+          <AscendantMark className="w-8 h-8 flex-shrink-0" />
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground"
+              className="flex flex-col"
             >
-              Top Tier
+              <span className="font-display text-[15px] font-semibold leading-none tracking-tight text-white">
+                Top Tier
+              </span>
+              <span className="mt-1 font-mono text-[9px] font-medium uppercase tracking-[0.24em] text-sidebar-active">
+                Operations
+              </span>
             </motion.span>
           )}
         </Link>
         <button
           onClick={onToggle}
-          className="p-2 rounded-md hover:bg-accent text-sidebar-muted hover:text-foreground transition-colors"
+          className="p-2 rounded-md text-sidebar-muted transition-colors hover:bg-white/[0.06] hover:text-white"
         >
           {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
@@ -196,7 +201,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
       <div className="md:hidden h-14 flex items-center px-4 border-b border-sidebar-border">
         <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2">
           <AscendantMark className="w-8 h-8 flex-shrink-0" />
-          <span className="font-display text-base font-semibold tracking-tight text-sidebar-foreground">Top Tier</span>
+          <span className="font-display text-base font-semibold tracking-tight text-white">Top Tier</span>
         </Link>
       </div>
 
@@ -208,14 +213,14 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           onClick={handleNavClick}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
-            pathname === dashboardLink.href 
-              ? "bg-accent text-foreground font-medium"
-              : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
+            pathname === dashboardLink.href
+              ? "bg-white/[0.07] text-white font-medium shadow-[inset_2px_0_0_hsl(var(--sidebar-active))]"
+              : "text-sidebar-foreground hover:bg-white/[0.05] hover:text-white"
           )}
         >
           <dashboardLink.icon className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === dashboardLink.href ? "text-secondary" : "text-current"
+            pathname === dashboardLink.href ? "text-sidebar-active" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <motion.span
@@ -250,7 +255,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                        "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors duration-150",
                       sectionActive
                         ? "text-sidebar-active"
-                        : "text-sidebar-muted hover:text-sidebar-foreground/80"
+                        : "text-sidebar-muted hover:text-sidebar-foreground"
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -290,14 +295,14 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
                             onClick={handleNavClick}
                             className={cn(
                               "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
-                              isActive 
-                                ? "bg-accent text-foreground font-medium"
-                                : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
+                              isActive
+                                ? "bg-white/[0.07] text-white font-medium shadow-[inset_2px_0_0_hsl(var(--sidebar-active))]"
+                                : "text-sidebar-foreground hover:bg-white/[0.05] hover:text-white"
                             )}
                           >
                             <item.icon className={cn(
                               "w-4 h-4 flex-shrink-0",
-                              isActive ? "text-secondary" : "text-current"
+                              isActive ? "text-sidebar-active" : "text-current"
                             )} />
                             {(!collapsed || mobileOpen) && (
                               <motion.span
@@ -334,13 +339,13 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
             pathname === '/admin/settings'
-              ? "bg-accent text-foreground font-medium"
-              : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
+              ? "bg-white/[0.07] text-white font-medium shadow-[inset_2px_0_0_hsl(var(--sidebar-active))]"
+              : "text-sidebar-foreground hover:bg-white/[0.05] hover:text-white"
           )}
         >
           <Settings className={cn(
             "w-5 h-5 flex-shrink-0",
-            pathname === '/admin/settings' ? "text-secondary" : "text-current"
+            pathname === '/admin/settings' ? "text-sidebar-active" : "text-current"
           )} />
           {(!collapsed || mobileOpen) && (
             <span className="text-sm font-medium">Settings</span>
@@ -354,7 +359,7 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
         <Link
           href="/"
           onClick={handleNavClick}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground hover:bg-accent hover:text-foreground transition-colors duration-150 group relative"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground hover:bg-white/[0.05] hover:text-white transition-colors duration-150 group relative"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {(!collapsed || mobileOpen) && (

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { Geist_Mono } from "next/font/google";
+import { Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { TooltipWrapper } from "./providers";
 import { Analytics } from '@/components/Analytics';
@@ -27,14 +27,23 @@ const jetbrainsMono = Geist_Mono({
   display: "swap",
 });
 
+// Instrument Serif — editorial display voice for marketing headlines only.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
     themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FAFBFC' },
-    { media: '(prefers-color-scheme: dark)', color: '#080A0F' },
+    { media: '(prefers-color-scheme: light)', color: '#FBFAF8' },
+    { media: '(prefers-color-scheme: dark)', color: '#151311' },
   ],
 };
 
@@ -60,7 +69,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className={`${satoshi.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${satoshi.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable} font-sans antialiased`}>
         <ErrorBoundary>
           <Analytics />
           <SkipLink />
