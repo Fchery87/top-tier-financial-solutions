@@ -102,9 +102,21 @@ AI is used as a letter renderer, not as a policy decision-maker.
 
 The application must decide dispute eligibility, reason codes, claim risk, target recipients, required evidence, and escalation paths with deterministic code before calling an AI provider. AI-generated text must be traceable to approved policy inputs and must not invent facts, upgrade claims, or create unsupported guarantees.
 
+## Design System
+
+The interface runs on one design language — **"Midnight & Brass"** — across the public marketing site, the admin SaaS console, and the client portal. It pairs a warm paper canvas with dark ink "bookends" (header + footer) and a single brass accent, built for a regulated financial product: editorial where it persuades, dense where it operates, restrained everywhere.
+
+- **Palette**: warm stone/paper neutrals, near-black warm ink, a single brass accent. Green and red are reserved for data signals (deltas, credit-score bands) and risk states — never decoration.
+- **Typography**: `Instrument Serif` for editorial headlines (`.font-editorial`), self-hosted `Satoshi` for UI and body, `Geist Mono` for numbers, labels, and eyebrows.
+- **Tokens**: defined in `src/app/globals.css` (`:root` light, `.dark` dark) and exposed to Tailwind v4 via `@theme inline`. Use semantic utilities (`bg-secondary`, `text-muted-foreground`, `border-border`) — never hardcoded hex.
+- **Shared components**: `AdminPageHeader` and `StatGrid` standardize admin page headers and stat strips; `MetricTile`, `ScoreBadge`, `StatusBadge`, and `DataTable` cover dense data display.
+- **Motion**: crisp, custom ease-out, under ~300ms, interruptible. No infinite-loop decoration.
+
+See [`docs/DESIGN-SYSTEM.md`](./docs/DESIGN-SYSTEM.md) for the full token table, component reference, and usage rules, and [`brand-spec.md`](./brand-spec.md) for the brand summary.
+
 ## Tech Stack
 
-- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS v4, Framer Motion.
+- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS v4. Typography: Satoshi (self-hosted) + Instrument Serif + Geist Mono. Framer Motion for modal/transition motion only (ambient/decorative animation is static CSS).
 - Backend: Next.js App Router and API routes as the primary application backend.
 - Legacy service: optional Python FastAPI backend for older or auxiliary workflows.
 - Database: Neon PostgreSQL with Drizzle ORM and Drizzle Kit migrations.
@@ -232,6 +244,8 @@ Current production-readiness notes are tracked in the production readiness block
 ## Documentation Index
 
 - [Setup Guide](./SETUP_GUIDE.md) - detailed local setup and environment guidance.
+- [Design System](./docs/DESIGN-SYSTEM.md) - "Midnight & Brass" tokens, shared components, typography, and motion rules.
+- [Brand Spec](./brand-spec.md) - logo, palette, and brand summary.
 - [Domain Context](./CONTEXT.md) - canonical project glossary and workflow language.
 - [Credit Repair Platform Roadmap](./docs/plans/credit-repair-platform-roadmap.md) - implementation sequence and acceptance criteria.
 - [Production Readiness Blockers](./docs/plans/production-readiness-blockers.md) - current release blockers, warnings, and audit status.
