@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, CheckCircle, Loader2, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { DisputeWizardProgressBar } from '@/components/admin/DisputeWizardProgressBar';
 import { WizardProvider, useWizardContext } from '@/components/admin/dispute-wizard/WizardContext';
 import { WizardModals } from '@/components/admin/dispute-wizard/WizardModals';
@@ -32,35 +33,29 @@ function DisputeWizardContent() {
     <div className="space-y-6">
       <WizardModals />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-display text-3xl font-light tracking-tight text-foreground">
-            Dispute Wizard
-          </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-muted-foreground mt-1">
-            Generate AI-powered dispute letters with FCRA, CRSA, and Metro 2 compliance
-          </motion.p>
-        </div>
-        <Button variant="outline" onClick={() => router.push('/admin/clients')}>
-          <ArrowLeft className="w-4 h-4 mr-2" />Back to Clients
-        </Button>
-      </div>
+      <AdminPageHeader
+        eyebrow="Disputes"
+        title="Dispute Wizard"
+        description="Generate AI-powered dispute letters with FCRA, CRSA, and Metro 2 compliance."
+        actions={
+          <Button variant="outline" onClick={() => router.push('/admin/clients')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />Back to Clients
+          </Button>
+        }
+      />
 
       {/* Progress Steps */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-6">
-            <DisputeWizardProgressBar
-              steps={WIZARD_STEPS}
-              currentStep={currentStep}
-              stepStatuses={stepStatuses}
-              onStepClick={handleStepClick}
-              maxSteps={WIZARD_STEPS.length}
-            />
-          </CardContent>
-        </Card>
-      </motion.div>
+      <Card className="bg-card border border-border">
+        <CardContent className="p-6">
+          <DisputeWizardProgressBar
+            steps={WIZARD_STEPS}
+            currentStep={currentStep}
+            stepStatuses={stepStatuses}
+            onStepClick={handleStepClick}
+            maxSteps={WIZARD_STEPS.length}
+          />
+        </CardContent>
+      </Card>
 
       {/* Step Content */}
       <motion.div key={currentStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
@@ -71,7 +66,7 @@ function DisputeWizardContent() {
       </motion.div>
 
       {/* Navigation Buttons */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <Button variant="outline" onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))} disabled={currentStep === 1} title="Keyboard shortcut: Escape">
           <ArrowLeft className="w-4 h-4 mr-2" />Back<span className="hidden sm:inline ml-2 text-xs text-muted-foreground">(Esc)</span>
         </Button>
@@ -112,7 +107,7 @@ function DisputeWizardContent() {
             Next<ArrowRight className="w-4 h-4 ml-2" /><span className="hidden sm:inline ml-2 text-xs">(↵)</span>
           </Button>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

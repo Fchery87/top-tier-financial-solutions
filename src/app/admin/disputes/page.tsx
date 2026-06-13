@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -185,16 +185,21 @@ export default function DisputesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="font-display text-3xl font-light tracking-tight text-foreground">Dispute Management</motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-muted-foreground mt-1">Track dispute responses, log outcomes, and manage escalations</motion.p>
-        </div>
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="flex items-center gap-2">
-          <Button variant="outline" onClick={fetchDisputes} disabled={loading}><RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Refresh</Button>
-          <Button asChild><Link href="/admin/disputes/wizard"><Wand2 className="w-4 h-4 mr-2" />New Disputes</Link></Button>
-        </motion.div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Disputes"
+        title="Dispute Management"
+        description="Track dispute responses, log outcomes, and manage escalations."
+        actions={
+          <>
+            <Button variant="outline" onClick={fetchDisputes} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh
+            </Button>
+            <Button asChild>
+              <Link href="/admin/disputes/wizard"><Wand2 className="mr-2 h-4 w-4" />New Disputes</Link>
+            </Button>
+          </>
+        }
+      />
 
       <DisputeStatsCards stats={stats} showOverdueOnly={showOverdueOnly} onOverdueToggle={() => { setShowOverdueOnly(!showOverdueOnly); resetAuxFilters(); }} />
       <DisputeCalendar disputes={disputes} />
@@ -214,7 +219,7 @@ export default function DisputesPage() {
         statusOptions={STATUS_OPTIONS} bureauOptions={BUREAU_OPTIONS}
       />
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+      <div>
         <Card className="bg-card border border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Disputes ({disputes.length})</CardTitle>
@@ -270,7 +275,7 @@ export default function DisputesPage() {
             )}
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       <DisputeDetailPanel open={showResponseModal} dispute={selectedDispute} onClose={() => { setShowResponseModal(false); setSelectedDispute(null); }} onResponseLogged={fetchDisputes} />
     </div>

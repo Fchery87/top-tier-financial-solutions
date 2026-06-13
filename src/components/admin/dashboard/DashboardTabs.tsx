@@ -20,23 +20,23 @@ interface DashboardTabsProps {
 
 export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
   return (
-    <div className="surface-panel rounded-lg px-2">
+    <div className="border-b border-border">
       <div className="flex gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              'relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap',
+              'relative flex items-center gap-2 px-3.5 py-3 text-sm font-medium transition-colors duration-[160ms] ease-[var(--ease-out)] whitespace-nowrap',
               activeTab === tab.id
                 ? 'text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <tab.icon className="w-4 h-4" />
+            <tab.icon className={cn('h-4 w-4', activeTab === tab.id ? 'text-secondary' : 'text-current')} strokeWidth={1.75} />
             <span>{tab.name}</span>
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-secondary" />
+              <div className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-secondary" />
             )}
           </button>
         ))}

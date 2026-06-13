@@ -6,6 +6,7 @@ import { Plus, FileText, Eye, EyeOff, Pencil, Trash2, Loader2 } from 'lucide-rea
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import type { Page } from '@/lib/admin-api';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -231,46 +232,20 @@ export default function ContentPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="surface-panel flex flex-col gap-4 rounded-lg p-5 md:flex-row md:items-center md:justify-between">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-display text-3xl font-medium tracking-[-0.04em] text-foreground"
-          >
-            Content Pages
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground"
-          >
-            Govern the public website copy, SEO metadata, and page-level calls to action from one editorial console.
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button 
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-            onClick={openCreateModal}
-          >
-            <Plus className="w-4 h-4 mr-2" />
+      <AdminPageHeader
+        eyebrow="Content"
+        title="Content Pages"
+        description="Govern public website copy, SEO metadata, and page-level calls to action from one editorial console."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 h-4 w-4" />
             Add Page
           </Button>
-        </motion.div>
-      </div>
+        }
+      />
 
       {/* Info Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
+      <div>
         <Card className="surface-panel rounded-lg border-secondary/20 bg-accent/40">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">
@@ -279,21 +254,15 @@ export default function ContentPage() {
             </p>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Data Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <DataTable
-          columns={columns}
-          data={pages}
-          loading={loading}
-          emptyMessage="No pages found. Create your first page to get started."
-        />
-      </motion.div>
+      <DataTable
+        columns={columns}
+        data={pages}
+        loading={loading}
+        emptyMessage="No pages found. Create your first page to get started."
+      />
 
       {/* Add/Edit Modal */}
       {isModalOpen && (

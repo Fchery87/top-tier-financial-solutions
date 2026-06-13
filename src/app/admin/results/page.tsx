@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { useAdminRole } from '@/contexts/AdminContext';
 import { toast } from 'sonner';
 import { formatCurrency, formatItemType } from '@/lib/format';
@@ -109,65 +110,46 @@ export default function ResultsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground flex items-center gap-3"
-          >
-            <Trophy className="w-8 h-8 text-warning" />
-            Results & Wins
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Celebrate client successes and track deletion metrics
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-2"
-        >
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            {(['week', 'month', 'all'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 text-sm transition-colors ${
-                  timeRange === range
-                    ? 'bg-secondary text-primary'
-                    : 'bg-background hover:bg-muted'
-                }`}
-              >
-                {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'All Time'}
-              </button>
-            ))}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                window.localStorage.setItem(preferencesKey, timeRange);
-                toast.success('Current range saved as your default.');
-              }
-            }}
-          >
-            Save as Default
-          </Button>
-          <Button variant="outline" onClick={fetchResults} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Disputes"
+        title="Results & Wins"
+        description="Celebrate client successes and track deletion metrics."
+        actions={
+          <>
+            <div className="flex overflow-hidden rounded-lg border border-border">
+              {(['week', 'month', 'all'] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-3 py-1.5 text-sm transition-colors duration-[160ms] ease-[var(--ease-out)] ${
+                    timeRange === range
+                      ? 'bg-secondary text-secondary-foreground'
+                      : 'bg-card hover:bg-muted'
+                  }`}
+                >
+                  {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'All Time'}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.localStorage.setItem(preferencesKey, timeRange);
+                  toast.success('Current range saved as your default.');
+                }
+              }}
+            >
+              Save as Default
+            </Button>
+            <Button variant="outline" onClick={fetchResults} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-20">

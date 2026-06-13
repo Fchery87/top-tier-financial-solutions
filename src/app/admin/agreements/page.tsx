@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 import { NY_SERVICE_AGREEMENT_TEMPLATE, REQUIRED_DISCLOSURES_NY } from '@/lib/service-agreement-template';
 import { sanitizeHtml } from '@/lib/safe-html';
 import { toast } from 'sonner';
@@ -336,98 +338,44 @@ export default function AgreementsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Agreement Templates
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            CROA-compliant client agreement templates
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
+      <AdminPageHeader
+        eyebrow="Case Management"
+        title="Agreement Templates"
+        description="CROA-compliant client agreement templates."
+        actions={
           <Button onClick={openCreateModal}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Create Template
           </Button>
-        </motion.div>
-      </div>
+        }
+      />
 
-      {/* Stats */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-      >
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-secondary/10">
-              <FileSignature className="w-6 h-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{templates.length}</p>
-              <p className="text-sm text-muted-foreground">Total Templates</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-success/10">
-              <Check className="w-6 h-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{activeCount}</p>
-              <p className="text-sm text-muted-foreground">Active Templates</p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <StatGrid
+        items={[
+          { label: 'Total Templates', value: templates.length, icon: FileSignature },
+          { label: 'Active Templates', value: activeCount, tone: 'up', icon: Check },
+        ]}
+        columns={2}
+      />
 
       {/* CROA Notice */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <Card className="bg-secondary/5 border-secondary/20">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-secondary">CROA Compliance:</strong> All agreements include mandatory
-              3-day right to cancel, required disclosures, and prohibition on advance fees.
-              Templates should be reviewed by legal counsel.
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <Card className="border-secondary/20 bg-secondary/5">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-secondary">CROA Compliance:</strong> All agreements include mandatory
+            3-day right to cancel, required disclosures, and prohibition on advance fees.
+            Templates should be reviewed by legal counsel.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Data Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <DataTable
-          columns={columns}
-          data={templates}
-          loading={loading}
-          emptyMessage="No agreement templates found. Create your first template to get started."
-        />
-      </motion.div>
+      <DataTable
+        columns={columns}
+        data={templates}
+        loading={loading}
+        emptyMessage="No agreement templates found. Create your first template to get started."
+      />
 
       {/* Create/Edit Modal */}
       {isModalOpen && (

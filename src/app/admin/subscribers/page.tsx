@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid, type StatItem } from '@/components/admin/StatGrid';
 import { Mail, Users, UserMinus, TrendingUp, Loader2, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -100,51 +101,33 @@ export default function SubscribersAdminPage() {
     )},
   ];
 
-  const statCards = [
-    { label: 'Total Subscribers', value: stats.total, icon: Users, color: 'text-secondary', bgColor: 'bg-secondary/20' },
-    { label: 'Active', value: stats.active, icon: Mail, color: 'text-success', bgColor: 'bg-success/20' },
-    { label: 'Unsubscribed', value: stats.unsubscribed, icon: UserMinus, color: 'text-warning', bgColor: 'bg-warning/20' },
-    { label: 'Growth Rate', value: stats.active > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : '0%', icon: TrendingUp, color: 'text-secondary', bgColor: 'bg-secondary/20' },
+  const statItems: StatItem[] = [
+    { label: 'Total Subscribers', value: stats.total, icon: Users, tone: 'brass' },
+    { label: 'Active', value: stats.active, icon: Mail, tone: 'up' },
+    { label: 'Unsubscribed', value: stats.unsubscribed, icon: UserMinus, tone: 'warning' },
+    {
+      label: 'Growth Rate',
+      value: stats.active > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : '0%',
+      icon: TrendingUp,
+      tone: 'brass',
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-sans font-bold text-foreground">Email Subscribers</h1>
-          <p className="text-muted-foreground">Manage your newsletter subscribers.</p>
-        </div>
-        <Button onClick={handleExport} variant="outline">
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </Button>
-      </div>
+      <AdminPageHeader
+        eyebrow="Content"
+        title="Email Subscribers"
+        description="Manage your newsletter subscribers."
+        actions={
+          <Button onClick={handleExport} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+        }
+      />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className="bg-card border border-border">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+      <StatGrid items={statItems} columns={4} />
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2">

@@ -12,6 +12,8 @@ import { AnalyticsTab } from '@/components/admin/dashboard/AnalyticsTab';
 import { OperationsTab } from '@/components/admin/dashboard/OperationsTab';
 import { useDashboardStats } from '@/hooks/useAdminQueries';
 import { formatTimeAgo } from '@/lib/format';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid, type StatItem } from '@/components/admin/StatGrid';
 
 const TAB_STORAGE_KEY = 'admin-dashboard-tab';
 
@@ -98,31 +100,42 @@ export default function AdminDashboard() {
     fetchDashboardPreferences();
   }, [role, hasLocalDensity]);
 
-  const attentionStats = [
-    { icon: AlertTriangle, accent: 'text-warning', value: totalAttention, label: 'Needs attention' },
-    { icon: Clock, accent: 'text-secondary', value: stats?.attentionNeeded?.responseDueSoon ?? 0, label: 'Responses due' },
-    { icon: ShieldCheck, accent: 'text-up', value: stats?.attentionNeeded?.pendingAgreements ?? 0, label: 'Agreement gates' },
+  const attentionStats: StatItem[] = [
+    {
+      icon: AlertTriangle,
+      tone: totalAttention > 0 ? 'warning' : 'default',
+      value: loading ? '—' : totalAttention,
+      label: 'Needs attention',
+    },
+    {
+      icon: Clock,
+      tone: 'brass',
+      value: loading ? '—' : stats?.attentionNeeded?.responseDueSoon ?? 0,
+      label: 'Responses due',
+    },
+    {
+      icon: ShieldCheck,
+      tone: 'up',
+      value: loading ? '—' : stats?.attentionNeeded?.pendingAgreements ?? 0,
+      label: 'Agreement gates',
+    },
   ];
 
   return (
-    <div className="space-y-5">
-      <div className="surface-panel rounded-xl p-4 md:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.28em] text-secondary">Operations Console</p>
-            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem]">
-              Command Center
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="hidden md:flex items-center gap-1 rounded-md border border-border bg-muted/60 p-0.5 text-[11px] text-muted-foreground">
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Operations Console"
+        title="Command Center"
+        description="Live view of clients, disputes, and the work that needs attention today."
+        actions={
+          <>
+            <div className="hidden md:flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-0.5 text-[11px] text-muted-foreground">
               <span className="px-1.5">Density</span>
               <button
                 type="button"
                 onClick={() => handleSetDensity('comfortable')}
                 className={
-                  `rounded px-2 py-1 transition-colors ` +
+                  `rounded-md px-2 py-1 transition-colors duration-[160ms] ease-[var(--ease-out)] ` +
                   (isCompact ? 'text-muted-foreground hover:text-foreground' : 'bg-card text-foreground shadow-sm')
                 }
               >
@@ -132,7 +145,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={() => handleSetDensity('compact')}
                 className={
-                  `rounded px-2 py-1 transition-colors ` +
+                  `rounded-md px-2 py-1 transition-colors duration-[160ms] ease-[var(--ease-out)] ` +
                   (isCompact ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')
                 }
               >
@@ -151,23 +164,11 @@ export default function AdminDashboard() {
                 New Dispute
               </Link>
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border/70 pt-4 sm:max-w-xl">
-          {attentionStats.map(({ icon: Icon, accent, value, label }) => (
-            <div key={label} className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted/60">
-                <Icon className={`h-4 w-4 ${accent}`} />
-              </span>
-              <div className="min-w-0">
-                <p className="font-mono text-xl font-semibold leading-none tabular-nums text-foreground">{loading ? '—' : value}</p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">{label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <StatGrid items={attentionStats} columns={3} className="sm:max-w-2xl" />
 
       <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

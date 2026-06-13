@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface MessageThread {
   id: string;
@@ -242,37 +243,26 @@ export default function MessagesPage() {
 
   return (
     <div className="h-[calc(100vh-6rem)]">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Messages
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Secure client communication portal
-          </motion.p>
-        </div>
-        <div className="flex items-center gap-4">
-          {totalUnread > 0 && (
-            <span className="px-3 py-1 rounded-full bg-destructive/100 text-white text-sm font-medium">
-              {totalUnread} unread
-            </span>
-          )}
-          <Button onClick={() => setShowNewThreadModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Message
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        className="mb-6"
+        eyebrow="Case Management"
+        title="Messages"
+        description="Secure client communication portal."
+        actions={
+          <>
+            {totalUnread > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-sm font-medium text-destructive">
+                <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                {totalUnread} unread
+              </span>
+            )}
+            <Button onClick={() => setShowNewThreadModal(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Message
+            </Button>
+          </>
+        }
+      />
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100%-5rem)]">

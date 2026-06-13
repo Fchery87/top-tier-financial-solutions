@@ -1,10 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Users,
   Mail,
   Phone,
   Eye,
@@ -12,14 +10,12 @@ import {
   RefreshCw,
   Plus,
   UserPlus,
-  FileText,
-  AlertTriangle,
-  CheckCircle2,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid, type StatItem } from '@/components/admin/StatGrid';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/format';
 import { getSafeFullName, getSafeInitials } from '@/lib/client-utils';
@@ -116,13 +112,13 @@ export default function ClientsPage() {
 
         return (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted font-mono text-xs font-semibold text-foreground">
               {initials}
             </div>
             <div>
               <p className="font-medium">{fullName}</p>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Mail className="w-3 h-3" />
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Mail className="h-3 w-3" />
                 {item.email || '—'}
               </p>
             </div>
@@ -195,126 +191,54 @@ export default function ClientsPage() {
   const pendingCount = clients.filter(c => c.status === 'pending').length;
   const completedCount = clients.filter(c => c.status === 'completed').length;
 
+  const stats: StatItem[] = [
+    { label: 'Total Clients', value: clients.length },
+    { label: 'Active', value: activeCount, tone: 'up', href: '/admin/clients?status=active' },
+    { label: 'Pending', value: pendingCount, tone: 'warning', href: '/admin/clients?status=pending' },
+    { label: 'Completed', value: completedCount, tone: 'brass', href: '/admin/clients?status=completed' },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Clients
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Manage clients and credit analysis
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-2"
-        >
-          <Button variant="outline" onClick={fetchClients} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button variant="outline" onClick={() => setShowConvertModal(true)}>
-            <UserPlus className="w-4 h-4 mr-2" />
-            Convert Lead
-          </Button>
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Client
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Case Management"
+        title="Clients"
+        description="Manage clients, agreements, and credit analysis."
+        actions={
+          <>
+            <Button variant="outline" onClick={fetchClients} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button variant="outline" onClick={() => setShowConvertModal(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Convert Lead
+            </Button>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Client
+            </Button>
+          </>
+        }
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-4 gap-4"
-      >
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-destructive/10">
-              <Users className="w-6 h-6 text-destructive" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{clients.length}</p>
-              <p className="text-sm text-muted-foreground">Total Clients</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-success/10">
-              <CheckCircle2 className="w-6 h-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{activeCount}</p>
-              <p className="text-sm text-muted-foreground">Active</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-warning/10">
-              <AlertTriangle className="w-6 h-6 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{pendingCount}</p>
-              <p className="text-sm text-muted-foreground">Pending</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-secondary/10">
-              <FileText className="w-6 h-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{completedCount}</p>
-              <p className="text-sm text-muted-foreground">Completed</p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <StatGrid items={stats} columns={4} />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <ClientFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          selectedStatus={selectedStatus}
-          onStatusChange={setSelectedStatus}
-          options={statusOptions}
-        />
-      </motion.div>
+      <ClientFilters
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
+        options={statusOptions}
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <DataTable
-          columns={columns}
-          data={clients}
-          loading={loading}
-          onRowClick={(item) => router.push(`/admin/clients/${item.id}`)}
-          emptyMessage="No clients found. Add a new client or convert a lead to get started."
-        />
-      </motion.div>
+      <DataTable
+        columns={columns}
+        data={clients}
+        loading={loading}
+        onRowClick={(item) => router.push(`/admin/clients/${item.id}`)}
+        emptyMessage="No clients found. Add a new client or convert a lead to get started."
+      />
 
       <CreateClientModal
         open={showAddModal}

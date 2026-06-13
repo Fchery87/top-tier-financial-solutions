@@ -51,17 +51,12 @@ export function DisputeWizardProgressBar({
     if (!status) return null;
 
     if (status.isCurrentStep) {
-      // Current step shows the step icon
+      // Current step shows the step icon (ring on the button conveys "active")
       const StepIcon = step.icon;
       return (
-        <motion.div
-          key={`icon-${step.id}`}
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 0.6, repeat: Infinity }}
-          className="text-secondary"
-        >
+        <div key={`icon-${step.id}`} className="text-secondary">
           <StepIcon className="w-6 h-6" />
-        </motion.div>
+        </div>
       );
     }
 

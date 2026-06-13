@@ -3,11 +3,12 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AdminGuard } from '@/components/admin/AdminGuard';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
   Mail,
-  MailOpen,
   Sparkles,
   Eye,
   Code2,
@@ -93,15 +94,11 @@ export default function EmailTemplatesPage() {
   if (loading) {
     return (
       <AdminGuard>
-        <div className="flex items-center justify-center min-h-screen">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <Loader2 className="w-12 h-12 text-secondary animate-spin mx-auto glow-gold" />
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-secondary" />
             <p className="mt-4 text-muted-foreground">Loading email templates...</p>
-          </motion.div>
+          </div>
         </div>
       </AdminGuard>
     );
@@ -109,225 +106,107 @@ export default function EmailTemplatesPage() {
 
   return (
     <AdminGuard>
-      <div className="min-h-screen">
-        {/* Premium Header with Gradient Background */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative mb-8 pb-8"
-        >
-          {/* Decorative Background Gradient */}
-          <div className="absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] animate-pulse-glow" />
-            <div className="absolute top-20 left-20 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px]" />
-          </div>
+      <div className="space-y-6">
+        <AdminPageHeader
+          eyebrow="Content"
+          title="Email Templates"
+          description="Automated communication workflows for client engagement."
+          actions={
+            <Button variant="outline" size="sm">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Create Template
+            </Button>
+          }
+        />
 
-          <div className="flex items-start justify-between">
-            <div>
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="flex items-center gap-3 mb-4"
-              >
-                <div className="p-3 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-2xl glow-gold">
-                  <MailOpen className="w-8 h-8 text-secondary" />
-                </div>
-                <div>
-                  <h1 className="text-4xl font-sans font-bold text-secondary">
-                    Email Templates
-                  </h1>
-                  <p className="text-muted-foreground mt-1">
-                    Automated communication workflows for client engagement
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-secondary/30 hover:bg-secondary/10 hover:border-secondary"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Create Template
-              </Button>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* Stats Cards - Premium Glass Effect */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
-        >
-          <Card className="glass-card border-secondary/10 hover:border-secondary/30 transition-all duration-300 card-hover">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Total Templates</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">{templates.length}</p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-xl">
-                  <Mail className="w-6 h-6 text-secondary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card border-primary/10 hover:border-primary/30 transition-all duration-300 card-hover">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Transactional</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">{transactionalCount}</p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl">
-                  <Zap className="w-6 h-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card border-secondary/10 hover:border-secondary/30 transition-all duration-300 card-hover">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Marketing</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">{marketingCount}</p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-xl">
-                  <TrendingUp className="w-6 h-6 text-secondary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card border-success/10 hover:border-success/30 transition-all duration-300 card-hover">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Active</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">{activeCount}</p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-success/10 to-success/5 rounded-xl">
-                  <CheckCircle2 className="w-6 h-6 text-success" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <StatGrid
+          items={[
+            { label: 'Total Templates', value: templates.length, icon: Mail, tone: 'brass' },
+            { label: 'Transactional', value: transactionalCount, icon: Zap },
+            { label: 'Marketing', value: marketingCount, icon: TrendingUp, tone: 'brass' },
+            { label: 'Active', value: activeCount, icon: CheckCircle2, tone: 'up' },
+          ]}
+          columns={4}
+        />
 
         {/* Filter Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex gap-2 mb-6"
-        >
+        <div className="flex gap-2">
           {[
             { value: 'all', label: 'All Templates', icon: Mail },
             { value: 'transactional', label: 'Transactional', icon: Zap },
             { value: 'marketing', label: 'Marketing', icon: TrendingUp }
-          ].map((tab, _index) => (
+          ].map((tab) => (
             <Button
               key={tab.value}
               variant={activeTab === tab.value ? 'secondary' : 'outline'}
               size="sm"
               onClick={() => setActiveTab(tab.value as typeof activeTab)}
-              className={
-                activeTab === tab.value
-                  ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90 glow-gold'
-                  : 'border-secondary/20 hover:bg-secondary/10'
-              }
             >
               <tab.icon className="w-4 h-4 mr-2" />
               {tab.label}
             </Button>
           ))}
-        </motion.div>
+        </div>
 
         {/* Templates Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {filteredTemplates.map((template, index) => (
-            <motion.div
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-2 lg:grid-cols-3">
+          {filteredTemplates.map((template) => (
+            <Card
               key={template.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * index }}
+              className="group h-full cursor-pointer rounded-none border-0 bg-card shadow-none transition-colors duration-[160ms] ease-[var(--ease-out)] hover:bg-muted/40"
+              onClick={() => {
+                setSelectedTemplate(template);
+                setShowPreview(true);
+              }}
             >
-              <Card
-                className="glass-card border-secondary/10 hover:border-secondary/30 transition-all duration-300 card-hover cursor-pointer h-full group"
-                onClick={() => {
-                  setSelectedTemplate(template);
-                  setShowPreview(true);
-                }}
-              >
-                <CardContent className="pt-6">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="p-2 bg-gradient-to-br from-secondary/15 to-secondary/5 rounded-lg group-hover:glow-gold transition-all">
-                      {isTransactional(template.trigger_type) ? (
-                        <Zap className="w-5 h-5 text-secondary" />
-                      ) : (
-                        <TrendingUp className="w-5 h-5 text-secondary" />
-                      )}
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      {template.is_active && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Active
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-1">
-                    {template.name}
-                  </h3>
-                  
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {template.subject}
-                  </p>
-
-                  {/* Meta */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <code className="px-2 py-1 bg-muted/50 rounded border border-secondary/10">
-                      {template.trigger_type}
-                    </code>
-                    <span className="flex items-center gap-1">
-                      <Code2 className="w-3 h-3" />
-                      {template.variables.length} vars
+              <CardContent className="pt-6">
+                {/* Header */}
+                <div className="mb-4 flex items-start justify-between">
+                  {isTransactional(template.trigger_type) ? (
+                    <Zap className="h-5 w-5 text-secondary" strokeWidth={1.75} />
+                  ) : (
+                    <TrendingUp className="h-5 w-5 text-secondary" strokeWidth={1.75} />
+                  )}
+                  {template.is_active && (
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-up" />
+                      Active
                     </span>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Hover Action */}
-                  <div className="mt-4 pt-4 border-t border-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="flex items-center text-sm font-medium text-secondary">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Details
-                      <ChevronRight className="w-4 h-4 ml-auto" />
-                    </div>
+                {/* Content */}
+                <h3 className="mb-2 line-clamp-1 text-lg font-semibold tracking-tight text-foreground">
+                  {template.name}
+                </h3>
+
+                <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
+                  {template.subject}
+                </p>
+
+                {/* Meta */}
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <code className="rounded border border-border bg-muted/50 px-2 py-1 font-mono">
+                    {template.trigger_type}
+                  </code>
+                  <span className="flex items-center gap-1">
+                    <Code2 className="h-3 w-3" />
+                    {template.variables.length} vars
+                  </span>
+                </div>
+
+                {/* Hover Action */}
+                <div className="mt-4 border-t border-border pt-4 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center text-sm font-medium text-secondary">
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Details
+                    <ChevronRight className="ml-auto h-4 w-4" />
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </motion.div>
+        </div>
 
         {/* Empty State */}
         {filteredTemplates.length === 0 && (

@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 import type { FAQ } from '@/lib/admin-api';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
@@ -215,99 +217,42 @@ export default function FAQsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            FAQs
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Manage frequently asked questions
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button 
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-            onClick={openCreateModal}
-          >
-            <Plus className="w-4 h-4 mr-2" />
+      <AdminPageHeader
+        eyebrow="Content"
+        title="FAQs"
+        description="Manage frequently asked questions shown on the public site."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 h-4 w-4" />
             Add FAQ
           </Button>
-        </motion.div>
-      </div>
+        }
+      />
 
-      {/* Stats */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-      >
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-secondary/10">
-              <HelpCircle className="w-6 h-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{faqs.length}</p>
-              <p className="text-sm text-muted-foreground">Total FAQs</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-success/10">
-              <Eye className="w-6 h-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{publishedCount}</p>
-              <p className="text-sm text-muted-foreground">Published</p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <StatGrid
+        items={[
+          { label: 'Total FAQs', value: faqs.length, icon: HelpCircle, tone: 'brass' },
+          { label: 'Published', value: publishedCount, icon: Eye, tone: 'up' },
+        ]}
+        columns={2}
+      />
 
       {/* Info */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <Card className="bg-secondary/5 border-secondary/20">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">Tip:</strong> Only published FAQs will appear on the website.
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <Card className="border-secondary/20 bg-secondary/5">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-foreground">Tip:</strong> Only published FAQs will appear on the website.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Data Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <DataTable
-          columns={columns}
-          data={faqs}
-          loading={loading}
-          emptyMessage="No FAQs found. Add your first FAQ to get started."
-        />
-      </motion.div>
+      <DataTable
+        columns={columns}
+        data={faqs}
+        loading={loading}
+        emptyMessage="No FAQs found. Add your first FAQ to get started."
+      />
 
       {/* Add/Edit Modal */}
       {isModalOpen && (

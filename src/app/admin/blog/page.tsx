@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { DataTable } from '@/components/admin/DataTable';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
@@ -184,16 +185,17 @@ export default function BlogAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="surface-panel flex flex-col gap-4 rounded-lg p-5 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-medium tracking-[-0.04em] text-foreground">Blog Posts</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Manage long-form credit education with the same quiet editorial system clients see on the public site.</p>
-        </div>
-        <Button onClick={openCreateModal} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-          <Plus className="mr-2 h-4 w-4" />
-          New Post
-        </Button>
-      </div>
+      <AdminPageHeader
+        eyebrow="Content"
+        title="Blog Posts"
+        description="Manage long-form credit education with the same editorial system clients see on the public site."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Post
+          </Button>
+        }
+      />
 
       <Card className="surface-panel rounded-lg">
         <CardContent className="p-0">

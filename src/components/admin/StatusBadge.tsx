@@ -7,22 +7,22 @@ interface StatusBadgeProps {
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info';
 }
 
-const variantStyles = {
-  default: 'bg-muted text-muted-foreground',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  danger: 'bg-destructive/10 text-destructive',
-  info: 'bg-secondary/10 text-secondary',
+const dotStyles = {
+  default: 'bg-muted-foreground/50',
+  success: 'bg-up',
+  warning: 'bg-warning',
+  danger: 'bg-destructive',
+  info: 'bg-secondary',
 };
 
 export function StatusBadge({ status, variant = 'default' }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize",
-        variantStyles[variant]
+        'inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium capitalize text-foreground',
       )}
     >
+      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotStyles[variant])} />
       {status}
     </span>
   );

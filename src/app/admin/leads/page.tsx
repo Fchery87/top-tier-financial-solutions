@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge, getStatusVariant } from '@/components/admin/StatusBadge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 import type { ContactFormSubmission, ConsultationStatus } from '@/lib/admin-api';
 import { formatTimeAgo } from '@/lib/format';
 import { getSafeFullName, getSafeInitials } from '@/lib/client-utils';
@@ -103,7 +105,7 @@ export default function LeadsPage() {
       header: 'Contact',
       render: (item: ContactFormSubmission) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted font-mono text-xs font-semibold text-foreground">
             {getSafeInitials(item.first_name, item.last_name)}
           </div>
           <div>
@@ -193,98 +195,30 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Contact Leads
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Manage contact form submissions and leads
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-2"
-        >
+      <AdminPageHeader
+        eyebrow="Operations"
+        title="Contact Leads"
+        description="Manage contact form submissions and inbound leads."
+        actions={
           <Button variant="outline" onClick={fetchLeads} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-        </motion.div>
-      </div>
+        }
+      />
 
-      {/* Stats */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-4 gap-4"
-      >
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-destructive/10">
-              <Users className="w-6 h-6 text-destructive" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{leads.length}</p>
-              <p className="text-sm text-muted-foreground">Total Leads</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border border-secondary/30">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-secondary/10">
-              <MessageSquare className="w-6 h-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{newCount}</p>
-              <p className="text-sm text-muted-foreground">New</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-warning/10">
-              <Phone className="w-6 h-6 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{contactedCount}</p>
-              <p className="text-sm text-muted-foreground">Contacted</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-success/10">
-              <Users className="w-6 h-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{qualifiedCount}</p>
-              <p className="text-sm text-muted-foreground">Qualified</p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <StatGrid
+        items={[
+          { label: 'Total Leads', value: leads.length },
+          { label: 'New', value: newCount, tone: 'brass', icon: MessageSquare },
+          { label: 'Contacted', value: contactedCount, tone: 'warning', icon: Phone },
+          { label: 'Qualified', value: qualifiedCount, tone: 'up', icon: Users },
+        ]}
+        columns={4}
+      />
 
       {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-        className="flex items-center gap-2"
-      >
+      <div className="flex items-center gap-2">
         <Filter className="w-4 h-4 text-muted-foreground" />
         <div className="flex gap-2">
           {statusOptions.map((option) => (
@@ -304,22 +238,16 @@ export default function LeadsPage() {
             </Button>
           ))}
         </div>
-      </motion.div>
+      </div>
 
       {/* Data Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <DataTable
-          columns={columns}
-          data={leads}
-          loading={loading}
-          onRowClick={(item) => setSelectedLead(item)}
-          emptyMessage="No leads found. Leads will appear here when visitors submit the contact form."
-        />
-      </motion.div>
+      <DataTable
+        columns={columns}
+        data={leads}
+        loading={loading}
+        onRowClick={(item) => setSelectedLead(item)}
+        emptyMessage="No leads found. Leads will appear here when visitors submit the contact form."
+      />
 
       {/* Lead Detail Modal */}
       {selectedLead && (

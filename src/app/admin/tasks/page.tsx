@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   Plus,
   RefreshCw,
@@ -287,40 +287,23 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Tasks
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Manage tasks and follow-ups
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-2"
-        >
-          <Button variant="outline" onClick={fetchTasks} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Task
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Operations"
+        title="Tasks"
+        description="Manage tasks and follow-ups across every case."
+        actions={
+          <>
+            <Button variant="outline" onClick={fetchTasks} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Task
+            </Button>
+          </>
+        }
+      />
 
       <TaskStatsCards
         totalItems={totalItems}
@@ -329,28 +312,18 @@ export default function TasksPage() {
         overdueCount={overdueCount}
       />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <TaskFilters
-          searchQuery={searchQuery}
-          onSearchChange={(v) => { setSearchQuery(v); setPage(1); }}
-          selectedStatus={selectedStatus}
-          onStatusChange={(v) => { setSelectedStatus(v); setPage(1); }}
-          selectedPriority={selectedPriority}
-          onPriorityChange={(v) => { setSelectedPriority(v); setPage(1); }}
-          statusOptions={statusOptions}
-          priorityOptions={priorityOptions}
-        />
-      </motion.div>
+      <TaskFilters
+        searchQuery={searchQuery}
+        onSearchChange={(v) => { setSearchQuery(v); setPage(1); }}
+        selectedStatus={selectedStatus}
+        onStatusChange={(v) => { setSelectedStatus(v); setPage(1); }}
+        selectedPriority={selectedPriority}
+        onPriorityChange={(v) => { setSelectedPriority(v); setPage(1); }}
+        statusOptions={statusOptions}
+        priorityOptions={priorityOptions}
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
+      <div>
         <DataTable
           columns={columns}
           data={tasks}
@@ -367,7 +340,7 @@ export default function TasksPage() {
           onPageChange={setPage}
           onItemsPerPageChange={(n) => { setItemsPerPage(n); setPage(1); }}
         />
-      </motion.div>
+      </div>
 
       <TaskCreateModal open={showAddModal} editingTask={null} clients={clients} onClose={() => setShowAddModal(false)} onSaved={fetchTasks} />
       <TaskCreateModal open={showEditModal} editingTask={selectedTask} clients={clients} onClose={() => { setShowEditModal(false); setSelectedTask(null); }} onSaved={fetchTasks} />

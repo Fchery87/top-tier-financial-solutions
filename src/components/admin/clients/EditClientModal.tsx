@@ -111,7 +111,7 @@ export function EditClientModal({ open, onClose, onConverted }: EditClientModalP
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted font-mono text-xs font-semibold text-foreground">
                         {getSafeInitials(lead.first_name, lead.last_name)}
                       </div>
                       <div>

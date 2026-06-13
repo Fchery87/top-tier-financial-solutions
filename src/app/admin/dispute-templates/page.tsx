@@ -20,6 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/Input';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 
 interface Template {
   id: string;
@@ -160,108 +162,36 @@ export default function DisputeTemplatesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Dispute Templates
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Library of dispute letter templates with FCRA, CRSA, and Metro 2 compliance
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-2"
-        >
-          <Button variant="outline" onClick={fetchTemplates} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Template
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Disputes"
+        title="Dispute Templates"
+        description="Library of dispute letter templates with FCRA, CRSA, and Metro 2 compliance."
+        actions={
+          <>
+            <Button variant="outline" onClick={fetchTemplates} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Template
+            </Button>
+          </>
+        }
+      />
 
-      {/* Stats */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="grid grid-cols-1 sm:grid-cols-4 gap-4"
-      >
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-secondary/10">
-              <FileText className="w-6 h-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{templates.length}</p>
-              <p className="text-sm text-muted-foreground">Total Templates</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-success/10">
-              <Building2 className="w-6 h-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">
-                {templates.filter(t => t.target_recipient === 'bureau').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Bureau Letters</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-warning/10">
-              <Briefcase className="w-6 h-6 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">
-                {templates.filter(t => t.target_recipient === 'creditor').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Creditor Letters</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-secondary/10">
-              <Users className="w-6 h-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">
-                {templates.filter(t => t.target_recipient === 'collector').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Collector Letters</p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <StatGrid
+        items={[
+          { label: 'Total Templates', value: templates.length, icon: FileText, tone: 'brass' },
+          { label: 'Bureau Letters', value: templates.filter(t => t.target_recipient === 'bureau').length, icon: Building2, tone: 'up' },
+          { label: 'Creditor Letters', value: templates.filter(t => t.target_recipient === 'creditor').length, icon: Briefcase, tone: 'warning' },
+          { label: 'Collector Letters', value: templates.filter(t => t.target_recipient === 'collector').length, icon: Users, tone: 'brass' },
+        ]}
+        columns={4}
+      />
 
       {/* Search and Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="flex flex-col gap-4"
-      >
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -310,14 +240,10 @@ export default function DisputeTemplatesPage() {
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Templates Grid */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
+      <div>
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-secondary" />
@@ -391,7 +317,7 @@ export default function DisputeTemplatesPage() {
             })}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Preview Modal */}
       {previewTemplate && (

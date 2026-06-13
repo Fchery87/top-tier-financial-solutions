@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
 import { StatusBadge } from '@/components/admin/StatusBadge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 import type { Disclaimer } from '@/lib/admin-api';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
@@ -214,100 +216,43 @@ export default function DisclaimersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Legal Disclaimers
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Manage legal disclaimers and compliance text
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button 
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-            onClick={openCreateModal}
-          >
-            <Plus className="w-4 h-4 mr-2" />
+      <AdminPageHeader
+        eyebrow="Content"
+        title="Legal Disclaimers"
+        description="Manage legal disclaimers and compliance text."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 h-4 w-4" />
             Add Disclaimer
           </Button>
-        </motion.div>
-      </div>
+        }
+      />
 
-      {/* Stats */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-      >
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-warning/10">
-              <Scale className="w-6 h-6 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{disclaimers.length}</p>
-              <p className="text-sm text-muted-foreground">Total Disclaimers</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-success/10">
-              <Check className="w-6 h-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{activeCount}</p>
-              <p className="text-sm text-muted-foreground">Active</p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <StatGrid
+        items={[
+          { label: 'Total Disclaimers', value: disclaimers.length, icon: Scale, tone: 'warning' },
+          { label: 'Active', value: activeCount, icon: Check, tone: 'up' },
+        ]}
+        columns={2}
+      />
 
       {/* Warning */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <Card className="bg-warning/5 border-warning/20">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-warning">Important:</strong> Legal disclaimers are crucial for compliance.
-              Consult with a legal professional before making significant changes.
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <Card className="border-warning/20 bg-warning/5">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-warning">Important:</strong> Legal disclaimers are crucial for compliance.
+            Consult with a legal professional before making significant changes.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Data Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <DataTable
-          columns={columns}
-          data={disclaimers}
-          loading={loading}
-          emptyMessage="No disclaimers found. Add your first disclaimer to get started."
-        />
-      </motion.div>
+      <DataTable
+        columns={columns}
+        data={disclaimers}
+        loading={loading}
+        emptyMessage="No disclaimers found. Add your first disclaimer to get started."
+      />
 
       {/* Add/Edit Modal */}
       {isModalOpen && (

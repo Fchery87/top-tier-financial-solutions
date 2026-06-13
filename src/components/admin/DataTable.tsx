@@ -74,15 +74,15 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_2px_hsl(24_10%_10%/0.03)]">
         <Table>
           <TableHeader>
-            <TableRow className="sticky top-0 z-10 bg-muted/60 backdrop-blur-sm hover:bg-muted/60">
+            <TableRow className="sticky top-0 z-10 border-b border-border bg-muted/50 backdrop-blur-sm hover:bg-muted/50">
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
                   className={cn(
-                    "px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground",
+                    "px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground",
                     column.sortable && "cursor-pointer hover:text-foreground transition-colors select-none",
                     column.className
                   )}
@@ -116,14 +116,14 @@ export function DataTable<T extends { id: string }>({
                   key={item.id}
                   onClick={() => onRowClick?.(item)}
                   className={cn(
-                    "transition-colors hover:bg-accent/40",
+                    "border-b border-border/60 transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-muted/40 last:border-0",
                     onRowClick && "cursor-pointer"
                   )}
                 >
                   {columns.map((column) => (
                     <TableCell
                       key={column.key}
-                      className={cn("px-4 py-2.5 text-sm text-foreground", column.className)}
+                      className={cn("px-4 py-3 text-sm text-foreground", column.className)}
                     >
                       {column.render 
                         ? column.render(item) 

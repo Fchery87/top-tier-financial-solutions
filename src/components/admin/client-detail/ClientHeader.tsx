@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -65,31 +64,25 @@ export function ClientHeader({
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-2xl font-sans font-bold text-foreground"
-            >
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.28em] text-secondary">
+              Client Case File
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground">
               {client.first_name} {client.last_name}
-            </motion.h1>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="flex items-center gap-2 mt-1 flex-wrap"
-            >
+            </h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <StatusBadge status={client.status} variant={getStatusVariant(client.status)} />
-              <span className="text-muted-foreground text-sm">
+              <span className="text-sm text-muted-foreground">
                 Client since {new Date(client.converted_at).toLocaleDateString()}
               </span>
               {disputeStatus && (
                 <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full border ${DISPUTE_STATUS_CLASSES[disputeStatus]}`}
+                  className={`rounded-md border px-2 py-0.5 text-xs font-medium ${DISPUTE_STATUS_CLASSES[disputeStatus]}`}
                 >
                   Disputes: {DISPUTE_STATUS_LABELS[disputeStatus]}
                 </span>
               )}
-            </motion.div>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -115,7 +108,7 @@ export function ClientHeader({
 
       <div className="flex items-center gap-6 mt-4 ml-14 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">Credit Score</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Credit Score</span>
           <ScoreBadge score={averageScore} variant="gauge" size="md" showLabel />
         </div>
         <div className="h-4 w-px bg-border" />

@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
 import { Calendar, ExternalLink, Settings, Clock, Users, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 export default function BookingsPage() {
   const calUsername = process.env.NEXT_PUBLIC_CAL_USERNAME;
@@ -12,41 +12,22 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Consultation Bookings
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            Manage your consultation bookings via Cal.com
-          </motion.p>
-        </div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Operations"
+        title="Consultation Bookings"
+        description="Manage your consultation bookings via Cal.com."
+      />
 
       {/* Cal.com Integration Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="bg-gradient-to-br from-secondary/10 to-secondary/10 border-secondary/20">
+      <div>
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-secondary text-secondary-foreground shadow-lg shadow-secondary/25">
-                <Calendar className="w-8 h-8" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-muted">
+                <Calendar className="h-6 w-6 text-secondary" strokeWidth={1.75} />
               </div>
               <div>
-                <CardTitle className="text-2xl">Cal.com Dashboard</CardTitle>
+                <CardTitle className="text-xl font-semibold tracking-tight">Cal.com Dashboard</CardTitle>
                 <CardDescription className="text-base">
                   Manage all your consultation bookings, availability, and settings
                 </CardDescription>
@@ -64,13 +45,11 @@ export default function BookingsPage() {
                 { icon: Users, title: 'Manage Clients', description: 'View client information and history' },
                 { icon: Settings, title: 'Configure Settings', description: 'Set availability and preferences' },
               ].map((item, index) => (
-                <Card key={index} className="bg-card/50 border-border/50">
-                  <CardContent className="p-4 flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-secondary/10">
-                      <item.icon className="w-5 h-5 text-secondary" />
-                    </div>
+                <Card key={index}>
+                  <CardContent className="flex items-start gap-3 p-4">
+                    <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-secondary" strokeWidth={1.75} />
                     <div>
-                      <p className="font-medium text-sm">{item.title}</p>
+                      <p className="text-sm font-medium">{item.title}</p>
                       <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
                   </CardContent>
@@ -79,10 +58,7 @@ export default function BookingsPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button 
-                asChild
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/25"
-              >
+              <Button asChild>
                 <a href={calDashboardUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Open Cal.com Dashboard
@@ -102,17 +78,13 @@ export default function BookingsPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Setup Instructions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <Card className="bg-card border border-border">
+      <div>
+        <Card>
           <CardHeader>
-            <CardTitle className="font-sans flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-success" />
               Integration Status
             </CardTitle>
@@ -174,7 +146,7 @@ NEXT_PUBLIC_CAL_EVENT_TYPE=consultation`}
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }

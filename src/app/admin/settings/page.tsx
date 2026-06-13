@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import {
-  Settings as SettingsIcon,
   Sparkles,
   Database,
   Server,
@@ -14,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 import { LLMConfigSection } from '@/components/admin/settings/LLMConfigSection';
 import { DashboardPrefsSection } from '@/components/admin/settings/DashboardPrefsSection';
 import { SystemSettingsSection } from '@/components/admin/settings/SystemSettingsSection';
@@ -257,56 +258,32 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-sans font-bold text-foreground flex items-center gap-3"><SettingsIcon className="w-8 h-8 text-primary" />System Settings</h1>
-          <p className="text-muted-foreground mt-1">Configure LLM providers, API keys, and system-wide settings</p>
-        </div>
+      <AdminPageHeader
+        eyebrow="System"
+        title="System Settings"
+        description="Configure LLM providers, API keys, and system-wide settings."
+        actions={
+          <>
+            {(hasChanges || dashboardHasChanges) && (
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-sm font-medium text-warning">
+                <AlertCircle className="h-4 w-4" />Unsaved changes
+              </span>
+            )}
+            <Button onClick={handleSaveAll} disabled={(!hasChanges && !dashboardHasChanges) || saving} variant="primary" size="md">
+              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-3">
-          {(hasChanges || dashboardHasChanges) && (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 text-sm text-warning bg-warning/10 px-3 py-2 rounded-lg">
-              <AlertCircle className="w-4 h-4" />Unsaved changes
-            </motion.div>
-          )}
-          <Button onClick={handleSaveAll} disabled={(!hasChanges && !dashboardHasChanges) || saving} variant="primary" size="md">
-            {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save Changes</>}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="border-2 border-primary/20 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div><p className="text-sm text-muted-foreground">LLM Provider</p><p className="text-2xl font-bold text-primary capitalize mt-1">{llmConfig?.provider || 'Not Set'}</p></div>
-                <Sparkles className="w-8 h-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div><p className="text-sm text-muted-foreground">Active Model</p><p className="text-2xl font-bold text-foreground mt-1">{llmConfig?.model || 'N/A'}</p></div>
-                <Server className="w-8 h-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div><p className="text-sm text-muted-foreground">Total Settings</p><p className="text-2xl font-bold text-foreground mt-1">{totalSettingsCount}</p></div>
-                <Database className="w-8 h-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+      <StatGrid
+        items={[
+          { label: 'LLM Provider', value: <span className="capitalize">{llmConfig?.provider || 'Not Set'}</span>, icon: Sparkles, tone: 'brass' },
+          { label: 'Active Model', value: llmConfig?.model || 'N/A', icon: Server },
+          { label: 'Total Settings', value: totalSettingsCount, icon: Database },
+        ]}
+        columns={3}
+      />
 
       {testResult && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>

@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/Card';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { BillingStatsCards } from '@/components/admin/billing/BillingStatsCards';
 import { InvoiceList } from '@/components/admin/billing/InvoiceList';
 import { FeeConfigSection } from '@/components/admin/billing/FeeConfigSection';
@@ -85,43 +85,23 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-display text-3xl font-light tracking-tight text-foreground"
-          >
-            Billing & Invoices
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            CROA-compliant billing management (no advance fees)
-          </motion.p>
-        </div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Case Management"
+        title="Billing & Invoices"
+        description="CROA-compliant billing management — no advance fees."
+      />
 
       <BillingStatsCards stats={stats} />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <Card className="bg-warning/[0.06] border-warning/25">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-warning">CROA Compliance:</strong> The Credit Repair Organizations Act
-              prohibits collecting fees before services are rendered. All invoices require documented
-              services before they can be created.
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <Card className="border-warning/25 bg-warning/[0.06]">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-warning">CROA Compliance:</strong> The Credit Repair Organizations Act
+            prohibits collecting fees before services are rendered. All invoices require documented
+            services before they can be created.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="flex gap-2 border-b border-border">
         <button
@@ -146,11 +126,7 @@ export default function BillingPage() {
         </button>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
+      <div>
         {activeTab === 'invoices' ? (
           <InvoiceList invoices={invoices} loading={loading} />
         ) : (
@@ -160,7 +136,7 @@ export default function BillingPage() {
             onConfigChanged={fetchFeeConfigs}
           />
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

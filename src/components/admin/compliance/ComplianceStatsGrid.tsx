@@ -1,8 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { FileSignature, Clock, DollarSign, MessageCircle } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/Card';
+import { StatGrid, type StatItem } from '@/components/admin/StatGrid';
 
 interface ComplianceStats {
   clients_with_agreements: number;
@@ -20,75 +19,36 @@ interface ComplianceStatsGridProps {
 export function ComplianceStatsGrid({ stats }: ComplianceStatsGridProps) {
   if (!stats) return null;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-    >
-      <Card className="bg-card border border-border">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-secondary/10">
-              <FileSignature className="w-5 h-5 text-secondary" />
-            </div>
-            <p className="text-sm text-muted-foreground">Agreements</p>
-          </div>
-          <p className="text-2xl font-bold">{stats.clients_with_agreements}</p>
-          <p className="text-xs text-muted-foreground">
-            Signed | {stats.pending_agreements} pending
-          </p>
-        </CardContent>
-      </Card>
+  const items: StatItem[] = [
+    {
+      label: 'Agreements',
+      value: stats.clients_with_agreements,
+      icon: FileSignature,
+      tone: 'brass',
+      hint: `Signed · ${stats.pending_agreements} pending`,
+    },
+    {
+      label: 'Cancellation Window',
+      value: stats.agreements_in_cancellation,
+      icon: Clock,
+      tone: 'warning',
+      hint: 'Within 3-day CROA period',
+    },
+    {
+      label: 'Invoice Compliance',
+      value: `${stats.total_invoices - stats.invoices_without_services}/${stats.total_invoices}`,
+      icon: DollarSign,
+      tone: 'up',
+      hint: 'With documented services',
+    },
+    {
+      label: 'Open Threads',
+      value: stats.open_message_threads,
+      icon: MessageCircle,
+      tone: 'brass',
+      hint: 'Client messages',
+    },
+  ];
 
-      <Card className="bg-card border border-border">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <Clock className="w-5 h-5 text-warning" />
-            </div>
-            <p className="text-sm text-muted-foreground">Cancellation Window</p>
-          </div>
-          <p className="text-2xl font-bold">{stats.agreements_in_cancellation}</p>
-          <p className="text-xs text-muted-foreground">
-            Within 3-day CROA period
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card border border-border">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <DollarSign className="w-5 h-5 text-success" />
-            </div>
-            <p className="text-sm text-muted-foreground">Invoice Compliance</p>
-          </div>
-          <p className="text-2xl font-bold">
-            {stats.total_invoices - stats.invoices_without_services}
-            <span className="text-sm text-muted-foreground font-normal">/{stats.total_invoices}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            With documented services
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card border border-border">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-secondary/10">
-              <MessageCircle className="w-5 h-5 text-secondary" />
-            </div>
-            <p className="text-sm text-muted-foreground">Open Threads</p>
-          </div>
-          <p className="text-2xl font-bold">{stats.open_message_threads}</p>
-          <p className="text-xs text-muted-foreground">
-            Client messages
-          </p>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
+  return <StatGrid items={items} columns={4} />;
 }

@@ -50,8 +50,8 @@ export function MetricTile({
   const content = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-        {Icon && <Icon className={cn('h-4 w-4 shrink-0', accentText[accent])} />}
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+        {Icon && <Icon className={cn('h-4 w-4 shrink-0', accentText[accent])} strokeWidth={1.75} />}
       </div>
 
       <div className="mt-2 flex items-end justify-between gap-3">
@@ -78,8 +78,8 @@ export function MetricTile({
   );
 
   const base = cn(
-    'block rounded-lg border border-border bg-card p-4 transition-colors',
-    href && 'hover:border-secondary/40 hover:bg-accent/40',
+    'block rounded-xl border border-border bg-card p-4 shadow-[0_1px_2px_hsl(24_10%_10%/0.03)] transition-colors duration-[160ms] ease-[var(--ease-out)]',
+    href && 'hover:border-secondary/40 hover:bg-muted/40',
     className,
   );
 

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'framer-motion';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   ShieldCheck,
   CheckCircle,
@@ -169,34 +169,18 @@ export default function CompliancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-sans font-bold text-foreground"
-          >
-            Compliance Dashboard
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
-          >
-            CROA/TSR compliance monitoring and alerts
-          </motion.p>
-        </div>
-        <Button variant="outline" onClick={fetchComplianceData}>
-          Refresh
-        </Button>
-      </div>
+      <AdminPageHeader
+        eyebrow="Disputes"
+        title="Compliance Dashboard"
+        description="CROA/TSR compliance monitoring and alerts."
+        actions={
+          <Button variant="outline" onClick={fetchComplianceData}>
+            Refresh
+          </Button>
+        }
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
+      <div>
         <Card className="bg-card border border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -233,18 +217,13 @@ export default function CompliancePage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       <ComplianceAlerts alerts={alerts} />
 
       <ComplianceStatsGrid stats={stats} />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border border-border">
           <CardHeader>
             <CardTitle className="text-lg">CROA Requirements</CardTitle>
@@ -318,7 +297,7 @@ export default function CompliancePage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { Plus, Briefcase, Pencil, Trash2, Loader2, GripVertical } from 'lucide-r
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/admin/DataTable';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatGrid } from '@/components/admin/StatGrid';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Service {
@@ -184,72 +186,30 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="surface-panel flex flex-col gap-4 rounded-lg p-5 md:flex-row md:items-center md:justify-between">
-        <div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-display text-3xl font-medium tracking-[-0.04em] text-foreground"
-          >
-            Services
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground"
-          >
-            Keep public service offerings aligned with the quieter premium brand language.
-          </motion.p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button 
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
-            onClick={openCreateModal}
-          >
-            <Plus className="w-4 h-4 mr-2" />
+      <AdminPageHeader
+        eyebrow="Content"
+        title="Services"
+        description="Keep public service offerings aligned with the brand language."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 h-4 w-4" />
             Add Service
           </Button>
-        </motion.div>
-      </div>
+        }
+      />
 
-      {/* Stats */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="surface-panel rounded-lg">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="rounded-md bg-accent p-3">
-              <Briefcase className="w-6 h-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{services.length}</p>
-              <p className="text-sm text-muted-foreground">Total Services</p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <StatGrid
+        items={[{ label: 'Total Services', value: services.length, icon: Briefcase, tone: 'brass' }]}
+        columns={2}
+      />
 
       {/* Data Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <DataTable
-          columns={columns}
-          data={services}
-          loading={loading}
-          emptyMessage="No services found. Add your first service to get started."
-        />
-      </motion.div>
+      <DataTable
+        columns={columns}
+        data={services}
+        loading={loading}
+        emptyMessage="No services found. Add your first service to get started."
+      />
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
