@@ -36,6 +36,18 @@ The problem was in the **credit report parsing workflow**. Here's what was happe
 
 ## FIXES IMPLEMENTED
 
+### Fix #0: Narrowed the balance rules to impossible-data cases only
+**Files:** `src/lib/ai-letter-generator.ts`, `src/lib/__tests__/negative-item-analysis.test.ts`
+
+**What Changed:**
+- Removed the false rule that flagged any `closed` account with a balance
+- Removed the false rule that flagged any retained `charge_off` with a balance
+- Kept the rule only for statuses where balance reporting is actually contradictory: `paid`, `sold`, `transferred`
+
+**New Standard:**
+- A violation should only be emitted when a furnisher compliance reviewer would agree the data is impossible or internally contradictory
+- Retained charge-offs with unpaid balances are now treated as normal reporting, not automatic violations
+
 ### Fix #1: Link Negative Items to Credit Accounts
 **File:** `src/lib/credit-analysis.ts` (Lines 73-115)
 
@@ -201,9 +213,9 @@ I am challenging the Metro 2 format compliance of each of these tradelines."
 The AI analysis now checks for:
 
 ### 1. Balance & Amount Inconsistencies
-- Balance > $0 on account marked "paid" or "closed"
+- Balance > $0 on account marked `paid`, `sold`, or `transferred`
 - Past due amount reported while payment status shows "current"
-- Charge-off amount doesn't match account balance
+- No generic retained-charge-off balance rule
 
 ### 2. Status & Payment History Conflicts
 - Account status shows "charge-off" but payment status shows "current"

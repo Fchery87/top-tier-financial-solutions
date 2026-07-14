@@ -21,6 +21,7 @@ Added a comprehensive "Clients" section to the admin dashboard for credit repair
 | `credit_reports` | Uploaded credit report files (stored in R2) |
 | `credit_accounts` | Parsed tradelines from reports |
 | `negative_items` | Collections, charge-offs, late payments, etc. |
+| `fcra_compliance_items` | FCRA reporting-window tracking with clock confidence |
 | `credit_analyses` | Summary scores and metrics per client |
 | `disputes` | Dispute tracking with rounds and outcomes |
 | `dispute_letter_templates` | Pre-built letter templates for disputes |
@@ -148,6 +149,9 @@ R2_BUCKET_NAME=credit-reports
 ### Analysis Engine (`src/lib/credit-analysis.ts`)
 - Coordinates parsing based on file type
 - Stores parsed accounts and negative items
+- Persists parsed `remarks` untouched on `credit_accounts`
+- Stores `credit_accounts.completeness_score` and `credit_accounts.missing_fields` separately from remarks
+- Persists `negative_items.date_of_first_delinquency` and `negative_items.bureau_stated_removal_date` when the source exposes them
 - Generates analysis summary with:
   - Score averages
   - Account breakdown
@@ -160,6 +164,22 @@ R2_BUCKET_NAME=credit-reports
   - Late payments
   - Charge-offs
   - Inquiry count
+
+### FCRA Clock Behavior
+- Shared clock logic now lives in `src/lib/fcra-clock.ts`
+- Source-of-truth order is:
+  1. `bureauStatedRemovalDate`
+  2. `dateOfFirstDelinquency`
+  3. `dateOfLastActivity`
+  4. `dateReported`
+- `fcra_compliance_items.dofd_confidence` records which source produced the clock
+- Items computed from `dateReported` alone are treated as low-confidence estimates and do not get automatic `FCRA VIOLATION` wording
+- `convertToMetro2Format` no longer labels `dateReported` as DOFD in LLM payloads
+
+### Revised Metro 2 Balance Rules
+- Removed the false generic rule that treated all `closed` accounts with balances as violations
+- Removed the false generic rule that treated all retained charge-offs with balances as violations
+- The remaining balance-zero rule is limited to statuses where a balance is actually inconsistent: `paid`, `sold`, and `transferred`
 
 ---
 

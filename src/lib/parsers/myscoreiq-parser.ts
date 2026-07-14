@@ -380,9 +380,10 @@ function extractMSIQNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioA
         creditorName: account.creditorName,
         amount: account.balance,
         dateReported: account.dateReported,
+        bureauStatedRemovalDate: extractRemovalDateFromText(account.sourceText),
         riskSeverity: account.riskLevel || 'medium',
       });
-    }
+      }
   }
 
   // From alert sections
@@ -394,11 +395,15 @@ function extractMSIQNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioA
 
       if (nameMatch) {
         const name = nameMatch[1].trim();
-        if (!items.some(i => i.creditorName.toLowerCase() === name.toLowerCase())) {
+        const existing = items.find(i => i.creditorName.toLowerCase() === name.toLowerCase());
+        if (existing) {
+          existing.bureauStatedRemovalDate = existing.bureauStatedRemovalDate || extractRemovalDateFromText(elText);
+        } else {
           items.push({
             itemType: 'collection',
             creditorName: name,
             amount: toMoney(amountMatch?.[1]),
+            bureauStatedRemovalDate: extractRemovalDateFromText(elText),
             riskSeverity: 'high',
           });
         }
@@ -493,6 +498,20 @@ function toDate(str: string | undefined | null): Date | undefined {
   if (!str) return undefined;
   const d = new Date(str.replace(/-/g, '/'));
   return isNaN(d.getTime()) ? undefined : d;
+}
+
+function extractRemovalDateFromText(text: string | undefined | null): Date | undefined {
+  if (!text) return undefined;
+  const match = text.match(/(?:on\s*record\s*until|will\s*be\s*removed\s*by)\s*(\d{1,2}[\/\-]\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+  if (!match) return undefined;
+
+  const value = match[1];
+  if (/^\d{1,2}[\/\-]\d{4}$/.test(value)) {
+    const [month, year] = value.split(/[\/\-]/);
+    return new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+  }
+
+  return toDate(value);
 }
 
 function inferStatus(text: string): string {

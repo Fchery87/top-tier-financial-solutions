@@ -526,6 +526,8 @@ export const creditAccounts = pgTable('credit_accounts', {
   equifaxBalance: integer('equifax_balance'),
   isNegative: boolean('is_negative').default(false),
   riskLevel: text('risk_level'), // 'low' | 'medium' | 'high' | 'severe'
+  completenessScore: integer('completeness_score'),
+  missingFields: text('missing_fields').array(),
   remarks: text('remarks'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => [
@@ -545,6 +547,8 @@ export const negativeItems = pgTable('negative_items', {
   amount: integer('amount'),
   dateReported: timestamp('date_reported'),
   dateOfLastActivity: timestamp('date_of_last_activity'),
+  dateOfFirstDelinquency: timestamp('date_of_first_delinquency'),
+  bureauStatedRemovalDate: timestamp('bureau_stated_removal_date'),
   bureau: text('bureau'), // Legacy field for backward compatibility
   // Per-bureau presence fields - accurate tracking of which bureaus report this item
   onTransunion: boolean('on_transunion').default(false),
@@ -655,6 +659,7 @@ export const fcraComplianceItems = pgTable('fcra_compliance_items', {
   itemType: text('item_type').notNull(), // 'collection' | 'charge_off' | 'bankruptcy' | 'late_payment' | etc.
   creditorName: text('creditor_name').notNull(),
   dateOfFirstDelinquency: timestamp('date_of_first_delinquency'),
+  dofdConfidence: text('dofd_confidence'),
   fcraExpirationDate: timestamp('fcra_expiration_date'), // When item should fall off
   reportingLimitYears: integer('reporting_limit_years'), // 7 or 10 years
   daysUntilExpiration: integer('days_until_expiration'), // Calculated field

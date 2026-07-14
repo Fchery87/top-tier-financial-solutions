@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto';
 import { and, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { clients, disputes, negativeItems, slaInstances, tasks } from '@/db/schema';
+import { clients, disputes, negativeItems, creditAccounts, slaInstances, tasks } from '@/db/schema';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { setSetting } from '@/lib/settings-service';
-import { buildEscalationPlan, getDisputeSlaInstanceId } from '@/lib/dispute-automation';
+import { buildEscalationPlan, getDisputeSlaInstanceId, type EscalationPlan } from '@/lib/dispute-automation';
 
 export const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run';
 
@@ -19,6 +19,40 @@ export interface RunDisputeEscalationResult {
   escalated: number;
   would_escalate: number;
   skipped: number;
+}
+
+interface EscalationLetterParamsInput {
+  client: Pick<typeof clients.$inferSelect, 'firstName' | 'lastName'>;
+  dispute: Pick<typeof disputes.$inferSelect, 'bureau'>;
+  negativeItem: Pick<
+    typeof negativeItems.$inferSelect,
+    'id' | 'creditorName' | 'originalCreditor' | 'itemType' | 'amount' | 'dateReported'
+  >;
+  creditAccount: Pick<typeof creditAccounts.$inferSelect, 'accountNumber'> | null;
+  plan: EscalationPlan;
+}
+
+export function buildEscalationLetterParams(input: EscalationLetterParamsInput) {
+  return {
+    disputeType: input.plan.disputeType,
+    round: input.plan.nextRound,
+    targetRecipient: input.plan.targetRecipient,
+    methodology: input.plan.methodology,
+    clientData: {
+      name: `${input.client.firstName} ${input.client.lastName}`,
+    },
+    itemData: {
+      creditorName: input.negativeItem.creditorName,
+      originalCreditor: input.negativeItem.originalCreditor || undefined,
+      accountNumber: input.creditAccount?.accountNumber || undefined,
+      itemType: input.negativeItem.itemType,
+      amount: input.negativeItem.amount || undefined,
+      dateReported: input.negativeItem.dateReported?.toISOString() || undefined,
+      bureau: input.dispute.bureau,
+    },
+    reasonCodes: input.plan.reasonCodes,
+    customReason: input.plan.customReason,
+  };
 }
 
 function getTaskMarker(disputeId: string): string {
@@ -79,6 +113,14 @@ export async function runDisputeEscalationAutomation(
       .where(eq(negativeItems.id, dispute.negativeItemId))
       .limit(1);
 
+    const [creditAccount] = negativeItem?.creditAccountId
+      ? await db
+          .select({ accountNumber: creditAccounts.accountNumber })
+          .from(creditAccounts)
+          .where(eq(creditAccounts.id, negativeItem.creditAccountId))
+          .limit(1)
+      : [null];
+
     if (!client || !negativeItem) {
       skippedCount += 1;
       continue;
@@ -95,26 +137,15 @@ export async function runDisputeEscalationAutomation(
       continue;
     }
 
-    const letterContent = await generateUniqueDisputeLetter({
-      disputeType: plan.disputeType,
-      round: plan.nextRound,
-      targetRecipient: plan.targetRecipient,
-      methodology: plan.methodology,
-      clientData: {
-        name: `${client.firstName} ${client.lastName}`,
-      },
-      itemData: {
-        creditorName: negativeItem.creditorName,
-        originalCreditor: negativeItem.originalCreditor || undefined,
-        accountNumber: negativeItem.id.slice(-8),
-        itemType: negativeItem.itemType,
-        amount: negativeItem.amount || undefined,
-        dateReported: negativeItem.dateReported?.toISOString() || undefined,
-        bureau: dispute.bureau,
-      },
-      reasonCodes: plan.reasonCodes,
-      customReason: plan.customReason,
+    const letterParams = buildEscalationLetterParams({
+      client,
+      dispute,
+      negativeItem,
+      creditAccount: creditAccount || null,
+      plan,
     });
+
+    const letterContent = await generateUniqueDisputeLetter(letterParams);
 
     const createdAt = new Date();
     const nextDisputeId = randomUUID();
@@ -131,7 +162,7 @@ export async function runDisputeEscalationAutomation(
       escalationPath: plan.targetRecipient,
       letterContent,
       creditorName: negativeItem.creditorName,
-      accountNumber: negativeItem.id.slice(-8),
+      accountNumber: creditAccount?.accountNumber || null,
       generatedByAi: true,
       methodology: plan.methodology,
       priorDisputeId: dispute.id,

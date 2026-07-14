@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
       itemType: item.itemType,
       amount: item.amount,
       dateReported: item.dateReported?.toISOString() ?? null,
+      dateOfFirstDelinquency: item.dateOfFirstDelinquency?.toISOString() ?? null,
+      bureauStatedRemovalDate: item.bureauStatedRemovalDate?.toISOString() ?? null,
       dateOfLastActivity: item.dateOfLastActivity?.toISOString() ?? null,
       riskSeverity: item.riskSeverity ?? 'medium',
       recommendedAction: item.recommendedAction,

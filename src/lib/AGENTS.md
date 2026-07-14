@@ -1,7 +1,7 @@
 # Core Library - Agent Development Guide
 
 ## Package Identity
-Core business logic, utilities, and services for the credit repair platform. Includes authentication, database helpers, AI integration, credit report parsing, and email services.
+Core business logic, utilities, and services for the credit repair platform. Includes authentication, database helpers, AI integration, credit report parsing, FCRA clock handling, and email services.
 
 ## Setup & Run
 ```bash
@@ -17,7 +17,7 @@ npm run test                  # Unit tests for lib functions
 ### File Organization
 - Authentication: `auth.ts`, `admin-auth.ts`, `auth-client.ts`
 - Database: Database operations handled in API routes, client in `@/db/client`
-- Business logic: Domain-specific files (e.g., `credit-analysis.ts`, `ai-letter-generator.ts`)
+- Business logic: Domain-specific files (e.g., `credit-analysis.ts`, `ai-letter-generator.ts`, `fcra-clock.ts`, `credit-account-ingest.ts`)
 - Utilities: `utils.ts` for helper functions
 - API clients: `admin-api.ts` for admin API calls
 - Parsers: `parsers/` directory for credit report parsing logic
@@ -93,6 +93,8 @@ try {
 - Utilities: `utils.ts` (cn function)
 - Admin API client: `admin-api.ts`
 - Credit analysis: `credit-analysis.ts`
+- FCRA clock helpers: `fcra-clock.ts`
+- Credit account ingest helpers: `credit-account-ingest.ts`
 - AI letter generator: `ai-letter-generator.ts`
 - Email service: `email-service.ts`
 - Parsers: `parsers/` directory for credit report parsing
@@ -113,6 +115,8 @@ try {
 - Email automation requires proper template names and client data
 - AI integration needs proper API key configuration and error handling
 - Credit report parsers must handle multiple provider formats
+- `remarks` on `credit_accounts` must stay parser-authored; completeness metadata belongs in `completenessScore` / `missingFields`
+- FCRA clock calculations must use `fcra-clock.ts` instead of inferring DOFD ad hoc from `dateReported`
 - Use absolute imports: `@/db/client`, `@/lib/utils`
 
 ## Pre-PR Checks

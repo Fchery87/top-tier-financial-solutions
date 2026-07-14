@@ -23,12 +23,13 @@ import {
 } from './parsers/pdf-parser';
 import { parseHtmlCreditReport } from './parsers/html-parser';
 import {
-  calculateCompletenessScore,
   FCRA_REPORTING_LIMITS,
   isAccountNegative,
   calculateRiskLevel,
   type StandardizedAccount,
 } from './parsers/metro2-mapping';
+import { buildFcraComplianceStatus, getObsolescenceClock } from './fcra-clock';
+import { buildCreditAccountDerivedFields } from './credit-account-ingest';
 
 // Helper function to check if parsed data has extended bureau info
 function isExtendedParsedData(data: ParsedCreditData): data is ExtendedParsedCreditData {
@@ -134,18 +135,18 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       const paymentStatus = account.paymentStatus as StandardizedAccount['paymentStatus'] | undefined;
       const accountCategory = account.accountType as StandardizedAccount['accountCategory'] | undefined;
 
-      // Calculate completeness score
-      const { score: completenessScore, missingFields } = calculateCompletenessScore({
+      const { completenessScore, missingFields, remarks } = buildCreditAccountDerivedFields({
         creditorName: account.creditorName,
         accountNumber: account.accountNumber,
         accountType: account.accountType,
-        accountStatus,
+        accountStatus: account.accountStatus,
         balance: account.balance,
         creditLimit: account.creditLimit,
         highCredit: account.highCredit,
         dateOpened: account.dateOpened,
         dateReported: account.dateReported,
-        paymentStatus,
+        paymentStatus: account.paymentStatus,
+        remarks: account.remarks,
       });
       
       // Re-calculate negative status and risk using metro2 functions
@@ -222,9 +223,9 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         equifaxBalance: accountOnEquifax ? account.balance : undefined,
         isNegative: isNegativeCalc,
         riskLevel: riskLevelCalc,
-        remarks: missingFields.length > 0 
-          ? `Completeness: ${completenessScore}%. Missing: ${missingFields.join(', ')}`
-          : account.remarks,
+        completenessScore,
+        missingFields,
+        remarks,
         createdAt: new Date(),
       });
     }
@@ -369,6 +370,8 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         amount: item.amount,
         dateReported: item.dateReported,
         dateOfLastActivity: item.dateOfLastActivity, // Add this field for DOFD analysis
+        dateOfFirstDelinquency: item.dateOfFirstDelinquency,
+        bureauStatedRemovalDate: item.bureauStatedRemovalDate,
         bureau: report.bureau, // Legacy field for backward compatibility
         // Per-bureau presence fields
         onTransunion,
@@ -625,7 +628,14 @@ async function saveConsumerProfile(
 async function saveFcraComplianceItem(
   clientId: string,
   negativeItemId: string,
-  item: { itemType: string; creditorName: string; dateReported?: Date },
+  item: {
+    itemType: string;
+    creditorName: string;
+    dateReported?: Date;
+    dateOfLastActivity?: Date;
+    dateOfFirstDelinquency?: Date;
+    bureauStatedRemovalDate?: Date;
+  },
   bureau: string | null
 ): Promise<void> {
   // Determine reporting limit based on item type
@@ -648,8 +658,14 @@ async function saveFcraComplianceItem(
     reportingLimitYears = FCRA_REPORTING_LIMITS.repossessions;
   }
   
-  // Calculate FCRA expiration date
-  const dateOfFirstDelinquency = item.dateReported; // Using dateReported as proxy
+  // Calculate FCRA expiration date from the best available source.
+  const obsolescenceClock = getObsolescenceClock({
+    bureauStatedRemovalDate: item.bureauStatedRemovalDate,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency,
+    dateOfLastActivity: item.dateOfLastActivity,
+    dateReported: item.dateReported,
+  });
+  const dateOfFirstDelinquency = obsolescenceClock.baseDate;
   let fcraExpirationDate: Date | null = null;
   let daysUntilExpiration: number | null = null;
   let isPastLimit = false;
@@ -660,8 +676,14 @@ async function saveFcraComplianceItem(
     
     const now = new Date();
     daysUntilExpiration = Math.ceil((fcraExpirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    isPastLimit = daysUntilExpiration <= 0;
   }
+
+  const complianceStatus = buildFcraComplianceStatus({
+    confidence: obsolescenceClock.confidence,
+    reportingLimitYears,
+    daysUntilExpiration,
+  });
+  isPastLimit = complianceStatus.isPastLimit;
   
   await db.insert(fcraComplianceItems).values({
     id: randomUUID(),
@@ -670,17 +692,14 @@ async function saveFcraComplianceItem(
     itemType: item.itemType,
     creditorName: item.creditorName,
     dateOfFirstDelinquency,
+    dofdConfidence: obsolescenceClock.confidence,
     fcraExpirationDate,
     reportingLimitYears,
     daysUntilExpiration,
     isPastLimit,
     bureau,
-    disputeStatus: isPastLimit ? 'pending' : null,
-    notes: isPastLimit 
-      ? `FCRA VIOLATION: Item past ${reportingLimitYears}-year reporting limit. Immediate dispute recommended.`
-      : daysUntilExpiration && daysUntilExpiration < 180
-        ? `Item expires in ${daysUntilExpiration} days. Consider waiting or disputing.`
-        : null,
+    disputeStatus: complianceStatus.disputeStatus,
+    notes: complianceStatus.notes,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

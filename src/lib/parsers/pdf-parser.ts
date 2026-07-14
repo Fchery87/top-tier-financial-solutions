@@ -74,6 +74,7 @@ export interface ParsedAccount {
   isNegative: boolean;
   riskLevel?: string;
   remarks?: string;
+  sourceText?: string;
 }
 
 export interface ParsedNegativeItem {
@@ -84,6 +85,8 @@ export interface ParsedNegativeItem {
   amount?: number;
   dateReported?: Date;
   dateOfLastActivity?: Date; // For DOFD/obsolescence analysis
+  dateOfFirstDelinquency?: Date;
+  bureauStatedRemovalDate?: Date;
   bureau?: string;
   riskSeverity: string;
 }

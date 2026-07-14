@@ -265,6 +265,7 @@ function extractSCNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI
         creditorName: account.creditorName,
         amount: account.balance,
         dateReported: account.dateReported,
+        bureauStatedRemovalDate: extractRemovalDateFromText(account.sourceText),
         riskSeverity: account.riskLevel || 'medium',
       });
     }
@@ -276,17 +277,21 @@ function extractSCNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI
     const nameMatch = elText.match(/([A-Z][A-Za-z0-9\s&.,'-]{2,50})/);
     const amountMatch = elText.match(/\$?([\d,]+(?:\.\d{2})?)/);
 
-    if (nameMatch) {
-      const creditorName = nameMatch[1].trim();
-      if (!negativeItems.some(n => n.creditorName.toLowerCase() === creditorName.toLowerCase())) {
-        negativeItems.push({
-          itemType: 'collection',
-          creditorName,
-          amount: amountMatch ? parseMoneyValue(amountMatch[1]) : undefined,
-          riskSeverity: 'high',
-        });
+      if (nameMatch) {
+        const creditorName = nameMatch[1].trim();
+        const existing = negativeItems.find(n => n.creditorName.toLowerCase() === creditorName.toLowerCase());
+        if (existing) {
+          existing.bureauStatedRemovalDate = existing.bureauStatedRemovalDate || extractRemovalDateFromText(elText);
+        } else {
+          negativeItems.push({
+            itemType: 'collection',
+            creditorName,
+            amount: amountMatch ? parseMoneyValue(amountMatch[1]) : undefined,
+            bureauStatedRemovalDate: extractRemovalDateFromText(elText),
+            riskSeverity: 'high',
+          });
+        }
       }
-    }
   });
 
   return negativeItems;
@@ -382,6 +387,20 @@ function parseDate(str: string | undefined | null): Date | undefined {
   if (!str) return undefined;
   const d = new Date(str.replace(/-/g, '/'));
   return isNaN(d.getTime()) ? undefined : d;
+}
+
+function extractRemovalDateFromText(text: string | undefined | null): Date | undefined {
+  if (!text) return undefined;
+  const match = text.match(/(?:on\s*record\s*until|will\s*be\s*removed\s*by)\s*(\d{1,2}[\/\-]\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+  if (!match) return undefined;
+
+  const value = match[1];
+  if (/^\d{1,2}[\/\-]\d{4}$/.test(value)) {
+    const [month, year] = value.split(/[\/\-]/);
+    return new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+  }
+
+  return parseDate(value);
 }
 
 function parseAddressText(text: string): { street: string; city: string; state: string; zipCode: string } | null {

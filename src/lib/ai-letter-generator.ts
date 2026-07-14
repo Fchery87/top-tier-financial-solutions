@@ -8,6 +8,7 @@ import {
   buildLegalCitationsString,
   type PromptConfig,
 } from './dispute-config-loader';
+import { getObsolescenceClock } from './fcra-clock';
 import { getLLMConfig, type LLMConfig } from './settings-service';
 
 async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
@@ -124,7 +125,7 @@ Attn: Consumer Services
 Scottsdale, AZ 85250`,
 };
 
-const REASON_CODE_DESCRIPTIONS: Record<string, string> = {
+export const REASON_CODE_DESCRIPTIONS: Record<string, string> = {
   // === FACTUAL/METRO 2 COMPLIANCE REASON CODES (USE THESE BY DEFAULT) ===
   unverified_account: 'I am requesting verification of this account under FCRA Section 611. The furnisher must provide documented proof that this information is complete and accurate per Metro 2 reporting standards.',
   inaccurate_reporting: 'The information being reported contains inaccuracies that do not reflect the true status of this account. I am disputing the accuracy of this data under FCRA Section 623.',
@@ -134,6 +135,11 @@ const REASON_CODE_DESCRIPTIONS: Record<string, string> = {
   status_inconsistency: 'The Account Status Code is inconsistent with the Payment Rating and payment history pattern. This internal data inconsistency violates Metro 2 format requirements.',
   balance_discrepancy: 'The reported balance information is inaccurate or inconsistent with other account data fields. This discrepancy indicates a data integrity failure.',
   verification_required: 'I am demanding documented verification of this account information. Under FCRA Section 611, you must conduct a reasonable investigation and verify all data fields with the original furnisher.',
+  previously_disputed: 'This item has already been disputed previously and remains under challenge because the prior response did not resolve the reporting concerns.',
+  request_verification_method: 'Please provide the specific method of verification used in your prior investigation, including how the disputed information was verified and with whom.',
+  no_response: 'I did not receive a timely response to my prior dispute, so I am requesting reinvestigation and a complete written response.',
+  repeat_verification: 'This item has been repeatedly verified without sufficient supporting detail or documentation to show that the reporting is complete and accurate.',
+  fcra_non_compliance: 'Your handling of this dispute appears inconsistent with the investigation and accuracy duties required under the Fair Credit Reporting Act, so I am requesting corrective action and a compliant response.',
   
   // === LEGACY CODES (ONLY USE WHEN CLIENT SPECIFICALLY CONFIRMS) ===
   not_mine: 'This account does not belong to me. I have never opened, authorized, or used this account.',
@@ -184,7 +190,7 @@ function buildMetro2ViolationsSection(violations?: string[]): string {
   return ['=== METRO 2 COMPLIANCE VIOLATIONS (MUST CITE THESE IN LETTER BODY) ===', 'The AI analysis identified the following specific Metro 2 violations.', 'You MUST integrate these into your dispute explanation section.', '', ...uniqueViolations.map((v, i) => `${i + 1}. ${v}`), '', '=== END OF VIOLATIONS - CITE ALL OF THESE IN YOUR LETTER ==='].join('\n');
 }
 
-function getReasonDescriptions(reasonCodes: string[]): string {
+export function getReasonDescriptions(reasonCodes: string[]): string {
   return reasonCodes
     .map(code => REASON_CODE_DESCRIPTIONS[code] || code)
     .join(' Additionally, ');
@@ -854,6 +860,8 @@ interface AnalyzeItemParams {
   amount?: number | null;
   dateReported?: string | null;
   dateOfLastActivity?: string | null;
+  dateOfFirstDelinquency?: string | null;
+  bureauStatedRemovalDate?: string | null;
   bureau?: string | null;
   riskSeverity?: string | null;
   // Metro 2 relevant fields from credit account
@@ -908,8 +916,8 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   const hasBalance = item.currentBalance !== null && item.currentBalance !== undefined && item.currentBalance > 0;
   const amount = item.amount || item.currentBalance || 0;
   
-  // Balance > $0 on account marked as paid or closed
-  if (hasBalance && (accountStatus === 'paid' || accountStatus === 'closed')) {
+  // Balance > $0 on account marked as paid, sold, or transferred
+  if (hasBalance && (accountStatus === 'paid' || accountStatus === 'sold' || accountStatus === 'transferred')) {
     const balanceAmount = item.currentBalance! / 100; // Convert cents to dollars
     metro2Violations.push(`Balance of $${balanceAmount.toFixed(2)} reported on account with status "${accountStatus}" - balance should be $0`);
     reasonCodes.push('balance_discrepancy');
@@ -978,19 +986,12 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     violationSeverities.push(0.2);
   }
 
-  // P3.5: Charge-off with balance that's not zero - double violation
-  if ((itemType === 'charge_off' || accountStatus === 'charge_off') && hasBalance && item.currentBalance !== 0) {
-    metro2Violations.push(`Charge-off account reports non-zero balance of $${(item.currentBalance! / 100).toFixed(2)} - charge-offs should show $0 balance`);
-    reasonCodes.push('balance_discrepancy');
-    violationSeverities.push(0.25); // High severity - specific Metro 2 requirement
-  }
-
-
-  
   const reportDate = item.dateReported ? new Date(item.dateReported) : null;
   const lastActivityDate = item.dateOfLastActivity ? new Date(item.dateOfLastActivity) : null;
+  const dofdDate = item.dateOfFirstDelinquency ? new Date(item.dateOfFirstDelinquency) : null;
+  const bureauRemovalDate = item.bureauStatedRemovalDate ? new Date(item.bureauStatedRemovalDate) : null;
   const openedDate = item.dateOpened ? new Date(item.dateOpened) : null;
-  const effectiveDate = lastActivityDate || reportDate;
+  const effectiveDate = bureauRemovalDate || dofdDate || lastActivityDate || reportDate;
 
   if (effectiveDate) {
     const yearsSinceActivity = (now.getTime() - effectiveDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
@@ -1695,19 +1696,34 @@ export function convertToMetro2Format(item: {
   amount?: number | null;
   dateReported?: string | null;
   dateOfLastActivity?: string | null;
+  dateOfFirstDelinquency?: string | null;
+  bureauStatedRemovalDate?: string | null;
+  accountNumber?: string | null;
   bureau?: string | null;
   accountStatus?: string | null;
   paymentStatus?: string | null;
 }, bureau: string): Metro2NegativeItem {
+  const obsolescenceClock = getObsolescenceClock({
+    bureauStatedRemovalDate: item.bureauStatedRemovalDate,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency,
+    dateOfLastActivity: item.dateOfLastActivity,
+    dateReported: item.dateReported,
+  });
+
+  const dateOfFirstDelinquency =
+    obsolescenceClock.confidence === 'dofd' || obsolescenceClock.confidence === 'last_activity'
+      ? item.dateOfFirstDelinquency || item.dateOfLastActivity || undefined
+      : undefined;
+
   return {
     itemId: item.id,
     bureauName: bureau,
     furnisherName: item.creditorName,
-    accountNumberMasked: `****${item.id.slice(-4)}`,
+    accountNumberMasked: item.accountNumber || `****${item.id.slice(-4)}`,
     accountType: mapItemTypeToAccountType(item.itemType),
     accountStatusCode: item.accountStatus || item.paymentStatus || 'unknown',
     currentBalance: item.amount || undefined,
-    dateOfFirstDelinquency: item.dateReported || item.dateOfLastActivity || undefined,
+    dateOfFirstDelinquency,
   };
 }
 

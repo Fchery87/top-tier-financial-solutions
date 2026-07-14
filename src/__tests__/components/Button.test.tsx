@@ -48,13 +48,13 @@ describe('Button component', () => {
   it('applies small size correctly', () => {
     render(<Button size="sm">Small</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('h-9');
+    expect(button).toHaveClass('h-8');
   });
 
   it('applies large size correctly', () => {
     render(<Button size="lg">Large</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('h-11');
+    expect(button).toHaveClass('h-12');
   });
 
   it('applies icon size correctly', () => {

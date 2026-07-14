@@ -1,5 +1,7 @@
 // Dispute Triage System - Auto-grouping and strategy recommendation
 
+import { getObsolescenceBaseDate as getSharedObsolescenceBaseDate } from './fcra-clock';
+
 export interface NegativeItemForTriage {
   id: string;
   creditorName: string;
@@ -9,6 +11,7 @@ export interface NegativeItemForTriage {
   // FCRA 7-year clock runs from Date of First Delinquency, not the report date.
   // dateOfLastActivity is the closest on-report proxy when DOFD is unavailable.
   dateOfFirstDelinquency?: string | null;
+  bureauStatedRemovalDate?: string | null;
   dateOfLastActivity?: string | null;
   riskSeverity: string;
   recommendedAction: string | null;
@@ -56,12 +59,7 @@ export interface QuickAction {
 
 // Best available date for the FCRA obsolescence clock: DOFD > last activity > date reported
 export function getObsolescenceBaseDate(item: NegativeItemForTriage): Date | null {
-  for (const value of [item.dateOfFirstDelinquency, item.dateOfLastActivity, item.dateReported]) {
-    if (!value) continue;
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) return parsed;
-  }
-  return null;
+  return getSharedObsolescenceBaseDate(item);
 }
 
 // Strategy determination based on item type and characteristics

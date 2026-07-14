@@ -62,6 +62,8 @@ const EX_PATTERNS = {
   originalAmount: /(?:Original\s*Amount|Original\s*Balance)[:\s]*\$?([\d,]+(?:\.\d{2})?)/i,
   dateOpened: /(?:Date\s*Opened|Opened)[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
   dateReported: /(?:Date\s*(?:of\s*)?(?:Last\s*)?Report(?:ed)?|Updated)[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+  dofd: /(?:Date\s*of\s*First\s*Delinquency|First\s*Delinquency|DOFD)[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+  removalDate: /(?:On\s*record\s*until|Will\s*be\s*removed\s*by|Scheduled\s*to\s*continue\s*until)[:\s]*(\d{1,2}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
   paymentPattern: /(?:Status|Payment\s*Status)[:\s]*([A-Za-z0-9\s,]+)/i,
   accountOwner: /(?:Responsibility|Owner)[:\s]*([A-Za-z\s]+)/i,
 };
@@ -282,6 +284,7 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element, headers: Map<string,
     bureau: 'experian',
     isNegative: false,
     riskLevel: 'low',
+    sourceText: rowText,
   };
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
@@ -338,8 +341,8 @@ function parseTextAccounts(text: string): ParsedAccount[] {
     const creditorName = nameMatch[1].trim().substring(0, 100);
     if (creditorName.length < 2) continue;
 
-    const account: ParsedAccount = {
-      creditorName,
+  const account: ParsedAccount = {
+    creditorName,
       accountNumber: section.match(EX_PATTERNS.accountNumber)?.[1],
       balance: parseMoney(section.match(EX_PATTERNS.balance)?.[1]),
       creditLimit: parseMoney(section.match(EX_PATTERNS.creditLimit)?.[1]),
@@ -350,6 +353,7 @@ function parseTextAccounts(text: string): ParsedAccount[] {
       bureau: 'experian',
       isNegative: false,
       riskLevel: 'low',
+      sourceText: section,
     };
 
     account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
@@ -362,38 +366,57 @@ function parseTextAccounts(text: string): ParsedAccount[] {
 
 function extractEXNegativeItems(accounts: ParsedAccount[], $: cheerio.CheerioAPI, _text: string): ParsedNegativeItem[] {
   const items: ParsedNegativeItem[] = [];
+  const mergeItemDates = (item: ParsedNegativeItem, sourceText: string) => {
+    item.dateOfFirstDelinquency = item.dateOfFirstDelinquency || parseFlexibleDate(sourceText.match(EX_PATTERNS.dofd)?.[1]);
+    item.bureauStatedRemovalDate = item.bureauStatedRemovalDate || parseFlexibleDate(sourceText.match(EX_PATTERNS.removalDate)?.[1]);
+  };
 
   for (const account of accounts) {
     if (account.isNegative) {
-      items.push({
+      const sourceText = account.sourceText || [account.creditorName, account.accountNumber, account.accountStatus, account.paymentStatus]
+        .filter(Boolean)
+        .join(' ');
+
+      const item: ParsedNegativeItem = {
         itemType: getItemType(account),
         creditorName: account.creditorName,
         amount: account.balance,
         dateReported: account.dateReported,
         bureau: 'experian',
         riskSeverity: account.riskLevel || 'medium',
-      });
+      };
+      mergeItemDates(item, sourceText);
+      items.push(item);
     }
   }
 
   // From negative sections (Experian calls this "Potentially Negative")
-  $(`${EX_SELECTORS.negativeSection}, ${EX_SELECTORS.collectionSection}`).find('tr, .item, li, .account').each((_, el) => {
+  $(`${EX_SELECTORS.negativeSection}, ${EX_SELECTORS.collectionSection}`).each((_, el) => {
     const elText = $(el).text();
-    const nameMatch = elText.match(/([A-Z][A-Za-z0-9\s&.,'-]{2,50})/);
+    const explicitName = $(el).find(EX_SELECTORS.creditorName).first().text().trim();
+    const nameMatch = explicitName ? null : elText.match(/([A-Z][A-Za-z0-9\s&.,'-]{2,50})/);
     const amountMatch = elText.match(/\$?([\d,]+(?:\.\d{2})?)/);
 
-    if (nameMatch) {
-      const name = nameMatch[1].trim();
-      if (!items.some(i => i.creditorName.toLowerCase() === name.toLowerCase())) {
-        items.push({
-          itemType: 'collection',
-          creditorName: name,
-          amount: parseMoney(amountMatch?.[1]),
-          bureau: 'experian',
-          riskSeverity: 'high',
-        });
-      }
+    const name = explicitName || nameMatch?.[1]?.trim();
+    if (!name) {
+      return;
     }
+
+    const existing = items.find(i => i.creditorName.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      mergeItemDates(existing, elText);
+      return;
+    }
+
+    const item: ParsedNegativeItem = {
+      itemType: 'collection',
+      creditorName: name,
+      amount: parseMoney(amountMatch?.[1]),
+      bureau: 'experian',
+      riskSeverity: 'high',
+    };
+    mergeItemDates(item, elText);
+    items.push(item);
   });
 
   return items;
@@ -466,6 +489,21 @@ function parseDate(str: string | undefined | null): Date | undefined {
   if (!str) return undefined;
   const d = new Date(str.replace(/-/g, '/'));
   return isNaN(d.getTime()) ? undefined : d;
+}
+
+function parseFlexibleDate(str: string | undefined | null): Date | undefined {
+  if (!str) return undefined;
+  const trimmed = str.trim();
+  if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(trimmed)) {
+    const [month, day, yearRaw] = trimmed.split(/[-\/]/);
+    const year = yearRaw.length === 2 ? Number(`20${yearRaw}`) : Number(yearRaw);
+    return new Date(Date.UTC(year, Number(month) - 1, Number(day)));
+  }
+  if (/^\d{1,2}[-\/]\d{4}$/.test(trimmed)) {
+    const [month, year] = trimmed.split(/[-\/]/);
+    return new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+  }
+  return parseDate(trimmed);
 }
 
 function parseStatus(text: string): string {
