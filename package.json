@@ -21,6 +21,7 @@
     "lint": "eslint",
     "lint:python": "./venv/bin/ruff check api/",
     "lint:python:fix": "./venv/bin/ruff check api/ --fix",
+    "pretypecheck": "rm -rf .next/dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
