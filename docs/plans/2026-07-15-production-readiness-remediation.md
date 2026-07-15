@@ -464,6 +464,8 @@ There is a GitHub remote but no `.github/workflows`. Nothing enforces validate/a
 
 **Step 1: Create the workflow**
 
+Use `npm run typecheck`, not raw `npx tsc --noEmit`, for the typecheck step below. Task 1 added a `pretypecheck` script (`rm -rf .next/dev`) because `next-env.d.ts` statically imports `.next/dev/types/routes.d.ts`, which `tsconfig.json`'s `exclude` cannot filter out (exclude only prunes glob-based `include` matches, not files reached via direct import). Only the npm script's `pretypecheck` hook guarantees a clean typecheck. This is moot today since CI always runs on a fresh checkout (`.next/dev` never exists), but becomes load-bearing the moment `.next` build caching is added to CI — don't revert this to raw `tsc` for a marginal speedup.
+
 ```yaml
 name: CI
 
@@ -488,7 +490,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
       - run: npx vitest run
       - run: npm audit --audit-level=high
 
