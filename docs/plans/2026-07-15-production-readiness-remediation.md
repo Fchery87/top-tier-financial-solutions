@@ -93,7 +93,7 @@ Expected: latest 16.x, which clears the middleware-bypass and cache-poisoning ad
 
 **Step 5: Verify nothing broke**
 
-Run: `npx tsc --noEmit && npx vitest run src/__tests__/api --reporter=dot`
+Run: `npm run typecheck && npx vitest run src/__tests__/api --reporter=dot`
 Expected: typecheck clean; API tests pass (auth-dependent tests are the canary for the better-auth bump).
 
 Then a live smoke: `npm run dev`, sign in at `/sign-in` with a dev account, confirm `/admin` loads and `/api/admin/stats` returns 200 (not 401). Stop the server.
