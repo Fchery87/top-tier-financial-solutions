@@ -22,6 +22,7 @@ export interface CreditReport {
   bureau: string | null;
   report_date: string | null;
   parse_status: string;
+  parser_review_status?: string | null;
   uploaded_at: string;
 }
 
@@ -65,6 +66,7 @@ export interface CreditAccount {
   balance: number | null;
   credit_limit: number | null;
   payment_status: string | null;
+  payment_history_grid?: Record<string, Record<string, string>> | null;
   date_opened: string | null;
   bureau: string | null;
   bureaus?: string[];
@@ -181,8 +183,7 @@ export function appearsOnBureau(
   if (bureauLower === 'experian' && item.on_experian !== undefined) return item.on_experian;
   if (bureauLower === 'equifax' && item.on_equifax !== undefined) return item.on_equifax;
   if (item.bureaus && item.bureaus.length > 0) return item.bureaus.includes(bureauLower);
-  if (!item.bureau || item.bureau === 'combined') return true;
-  return item.bureau.toLowerCase() === bureauLower;
+  return item.bureau?.toLowerCase() === bureauLower;
 }
 
 export function deriveDisputeStatus(

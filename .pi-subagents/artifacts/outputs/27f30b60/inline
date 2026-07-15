@@ -1,0 +1,59 @@
+status: success
+summary: Refactored negative-item ingest in src/lib/credit-analysis.ts to stop using the combined=>all-bureaus fallback. Added src/lib/credit-negative-item-bureau-presence.ts to resolve negative-item presence from derogatory parser evidence first, then linked account bureau evidence via existing getAccountPresence, then single-bureau report context, and otherwise leave bureau presence false/omitted. Added focused combined-report tests covering single-bureau evidence, linked-account evidence, and no-evidence behavior. Verification passed: `npm run test -- src/lib/__tests__/credit-analysis-account-presence.test.ts src/lib/__tests__/credit-negative-item-bureau-presence.test.ts`, `npm run typecheck`, and `npx eslint src/lib/credit-analysis.ts src/lib/credit-negative-item-bureau-presence.ts src/lib/__tests__/credit-analysis-account-presence.test.ts src/lib/__tests__/credit-negative-item-bureau-presence.test.ts`.
+findings:
+  - Changed files: src/lib/credit-analysis.ts; src/lib/credit-negative-item-bureau-presence.ts; src/lib/__tests__/credit-negative-item-bureau-presence.test.ts
+  - Tests added/updated: src/lib/__tests__/credit-negative-item-bureau-presence.test.ts
+  - Remaining P1.1 work: other Phase 1.1 slices outside this ingest change were not touched; likely remaining work is broader parser/consumer alignment beyond negative-item combined-report presence.
+  - Risk: negative-item fallback now prefers omission/false when no bureau evidence exists, so any downstream code that previously depended on guessed all-bureau presence may surface fewer bureaus until more parser/linkage evidence is available.
+  - Risk: linked-account reuse still depends on current creditor/account-number matching heuristics in credit-analysis.ts; mismatches will intentionally yield no inferred bureau presence.
+```acceptance-report
+{
+  "criteriaSatisfied": [
+    {
+      "id": "criterion-1",
+      "status": "satisfied",
+      "evidence": "Negative-item bureau presence in src/lib/credit-analysis.ts now delegates to evidence-based resolution via src/lib/credit-negative-item-bureau-presence.ts, removing the prior combined-report all-bureaus fallback without changing unrelated behavior."
+    }
+  ],
+  "changedFiles": [
+    "src/lib/credit-analysis.ts",
+    "src/lib/credit-negative-item-bureau-presence.ts",
+    "src/lib/__tests__/credit-negative-item-bureau-presence.test.ts"
+  ],
+  "testsAddedOrUpdated": [
+    "src/lib/__tests__/credit-negative-item-bureau-presence.test.ts"
+  ],
+  "commandsRun": [
+    {
+      "command": "npm run test -- src/lib/__tests__/credit-analysis-account-presence.test.ts src/lib/__tests__/credit-negative-item-bureau-presence.test.ts",
+      "result": "passed",
+      "summary": "2 test files passed, 6 tests passed."
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "passed",
+      "summary": "tsc --noEmit completed successfully."
+    },
+    {
+      "command": "npx eslint src/lib/credit-analysis.ts src/lib/credit-negative-item-bureau-presence.ts src/lib/__tests__/credit-analysis-account-presence.test.ts src/lib/__tests__/credit-negative-item-bureau-presence.test.ts",
+      "result": "passed",
+      "summary": "Lint passed for touched files; browserslist emitted a stale data warning only."
+    }
+  ],
+  "validationOutput": [
+    "Vitest: 2 passed files, 6 passed tests.",
+    "Typecheck: passed.",
+    "ESLint: passed on touched files; non-blocking browserslist outdated-data warning shown."
+  ],
+  "residualRisks": [
+    "Negative items in combined reports now remain false/omitted when no derogatory or linked-account evidence exists, which may reduce bureau coverage until parser evidence improves.",
+    "Linked-account evidence reuse still depends on existing creditor/account-number matching heuristics, so weak matches can intentionally produce no inferred bureau presence."
+  ],
+  "noStagedFiles": true,
+  "diffSummary": "Removed negative-item combined=>all-bureaus guessing, added a small evidence-based presence helper, and added focused combined-report tests for one-bureau and no-evidence cases.",
+  "reviewFindings": [
+    "no blockers"
+  ],
+  "manualNotes": "There were unrelated pre-existing worktree changes outside this slice; only the files listed above were modified for this task."
+}
+```

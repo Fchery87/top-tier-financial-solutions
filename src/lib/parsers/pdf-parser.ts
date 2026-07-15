@@ -1,5 +1,6 @@
 // PDF parsing utility - using pdf-parse v1.x simple API
 import { detectPdfSource, type SourceDetectionResult } from './detect-source';
+import { parseReportDate } from './report-date';
 
 async function parsePdf(buffer: Buffer): Promise<{ text: string; numpages: number }> {
   // Dynamic require to avoid build-time bundling issues
@@ -57,6 +58,27 @@ export interface ParsedConsumerProfile {
   }>;
 }
 
+export type ParsedAccountBureau = 'transunion' | 'experian' | 'equifax';
+
+export type PaymentHistoryCode = 'OK' | '30' | '60' | '90' | '120' | '150' | '180' | 'CO' | 'COL' | 'UNK';
+export type PaymentHistoryGrid = Record<string, PaymentHistoryCode>;
+
+export interface ParsedAccountBureauEvidence {
+  accountNumber?: string;
+  accountType?: string;
+  accountStatus?: string;
+  balance?: number;
+  creditLimit?: number;
+  highCredit?: number;
+  monthlyPayment?: number;
+  pastDueAmount?: number;
+  paymentStatus?: string;
+  dateOpened?: Date;
+  dateReported?: Date;
+  paymentHistoryGrid?: PaymentHistoryGrid;
+  sourceText?: string;
+}
+
 export interface ParsedAccount {
   creditorName: string;
   accountNumber?: string;
@@ -71,6 +93,8 @@ export interface ParsedAccount {
   dateOpened?: Date;
   dateReported?: Date;
   bureau?: string;
+  bureauEvidence?: Partial<Record<ParsedAccountBureau, ParsedAccountBureauEvidence>>;
+  paymentHistoryGrid?: Partial<Record<ParsedAccountBureau, PaymentHistoryGrid>>;
   isNegative: boolean;
   riskLevel?: string;
   remarks?: string;
@@ -159,18 +183,24 @@ export interface DerogatoryAccount {
     accountDate?: string;
     paymentStatus?: string;
     paymentHistory?: PaymentHistorySummary;
+    dateOfFirstDelinquency?: Date;
+    bureauStatedRemovalDate?: Date;
   };
   experian: {
     accountStatus?: string;
     accountDate?: string;
     paymentStatus?: string;
     paymentHistory?: PaymentHistorySummary;
+    dateOfFirstDelinquency?: Date;
+    bureauStatedRemovalDate?: Date;
   };
   equifax: {
     accountStatus?: string;
     accountDate?: string;
     paymentStatus?: string;
     paymentHistory?: PaymentHistorySummary;
+    dateOfFirstDelinquency?: Date;
+    bureauStatedRemovalDate?: Date;
   };
 }
 
@@ -347,8 +377,8 @@ function extractConsumerProfile(text: string): ParsedConsumerProfile {
   // Extract DOB
   const dobMatch = text.match(/(?:DOB|Date\s*of\s*Birth|Birth\s*Date)[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
   if (dobMatch) {
-    const date = new Date(dobMatch[1].replace(/-/g, '/'));
-    if (!isNaN(date.getTime())) {
+    const date = parseReportDate(dobMatch[1]);
+    if (date) {
       profile.dateOfBirth = date;
     }
   }
@@ -533,7 +563,7 @@ function extractInquiries(text: string): ParsedInquiry[] {
   for (const match of inquiryMatches) {
     inquiries.push({
       creditorName: match[1].trim(),
-      inquiryDate: new Date(match[2]),
+      inquiryDate: parseReportDate(match[2]),
     });
   }
   

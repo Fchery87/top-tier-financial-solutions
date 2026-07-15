@@ -7,6 +7,8 @@ interface AutoSelectSummaryResponse {
   recommendedMethodology?: string;
   recommendedReasonCodes?: string[];
   allReasonCodes?: string[];
+  allMetro2Violations?: string[];
+  allFcraIssues?: string[];
   averageConfidence?: number;
 }
 
@@ -90,8 +92,8 @@ export function useDisputeAutoSelection({
         allReasonCodes: data.summary.allReasonCodes ?? [],
         recommendedReasonCodes: data.summary.recommendedReasonCodes ?? [],
         averageConfidence: data.summary.averageConfidence ?? 0,
-        allMetro2Violations: [],
-        allFcraIssues: [],
+        allMetro2Violations: data.summary.allMetro2Violations ?? [],
+        allFcraIssues: data.summary.allFcraIssues ?? [],
         analysisNotes: '',
       } : null);
       setAutoSelectSummary(`Selected ${recommendedIds.length} of ${data.summary?.itemCount ?? getNegativeItemCount()} disputable items (avg confidence ${data.summary?.averageConfidence ?? 0})`);

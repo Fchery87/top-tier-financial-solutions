@@ -41,7 +41,7 @@ describe('dispute automation helpers', () => {
     expect(plan.reasonCodes).toEqual(['previously_disputed', 'request_verification_method']);
   });
 
-  it('builds no-response escalation to cfpb from round 3', () => {
+  it('builds no-response escalation to cfpb from round 3 with factual methodology', () => {
     const plan = buildEscalationPlan({
       currentRound: 3,
       trigger: 'no_response',
@@ -52,10 +52,26 @@ describe('dispute automation helpers', () => {
       nextRound: 4,
       targetRecipient: 'cfpb',
       disputeType: 'fcra_violation_notice',
-      methodology: 'consumer_law',
+      methodology: 'factual',
     });
 
     expect(plan.reasonCodes).toContain('no_response');
+  });
+
+  it('uses a factual direct-furnisher escalation at round 3 for verified items', () => {
+    const plan = buildEscalationPlan({
+      currentRound: 2,
+      trigger: 'verified',
+      currentBureau: 'equifax',
+    });
+
+    expect(plan).toMatchObject({
+      nextRound: 3,
+      targetRecipient: 'creditor',
+      disputeType: 'direct_creditor',
+      methodology: 'factual',
+    });
+    expect(plan.customReason).toContain('623(a)(8)');
   });
 
   it('builds deterministic dispute SLA instance IDs', () => {

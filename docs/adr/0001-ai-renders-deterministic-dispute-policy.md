@@ -22,6 +22,8 @@ AI may draft letter language from approved inputs, but it must not decide policy
 
 This reduces compliance risk and makes dispute decisions auditable.
 
+Output-side generation is also linted deterministically before return/send so prompt failures cannot silently reach users.
+
 It requires a deterministic dispute policy engine and stronger tests around policy decisions.
 
 Letter generation may be less flexible than a fully AI-driven workflow, but safer and easier to explain during audits or reviews.

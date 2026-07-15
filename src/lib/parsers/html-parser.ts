@@ -10,6 +10,7 @@ import { parseAnnualCreditReport } from './annualcreditreport-parser';
 import { parseTransUnionReport } from './transunion-parser';
 import { parseExperianReport } from './experian-parser';
 import { parseEquifaxReport } from './equifax-parser';
+import { parseReportDate } from './report-date';
 
 export { type ParsedCreditData, type ParsedAccount, type ParsedNegativeItem, type ParsedInquiry };
 export { type CreditReportSource, type SourceDetectionResult };
@@ -312,7 +313,7 @@ function extractInquiries($: cheerio.CheerioAPI, _text: string): ParsedInquiry[]
     for (const match of matches) {
       inquiries.push({
         creditorName: match[1].trim(),
-        inquiryDate: new Date(match[2]),
+        inquiryDate: parseReportDate(match[2]),
       });
     }
   });

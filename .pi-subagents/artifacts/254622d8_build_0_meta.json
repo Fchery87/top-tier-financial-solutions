@@ -1,0 +1,37 @@
+{
+  "runId": "254622d8",
+  "agent": "build",
+  "task": "Continue Phase 1.1 in /home/nochaserz/Documents/Coding Projects/top-tier-financial-solutions with the next implementation slice. Extend SmartCredit and MyScoreIQ parsers to emit ParsedAccount.bureauEvidence for combined/tri-merge reports where bureau context is available, then tighten account ingest behavior so combined reports without parser evidence no longer blindly imply all bureaus unless there is a strong single-bureau basis. Keep the diff minimal and avoid broad UI/discrepancy work in this slice. Add/update targeted tests for parser bureauEvidence and ingest fallback behavior. Run targeted tests, typecheck, and lint on touched files. Report changed files, exact verification results, what remains for P1.1, and any blockers/risks.\n\n---\n**Output:**\nWrite your findings to exactly this path: /home/nochaserz/Documents/Coding Projects/top-tier-financial-solutions/.pi-subagents/artifacts/outputs/254622d8/inline\nThis path is authoritative for this run.\nIgnore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.",
+  "exitCode": 0,
+  "usage": {
+    "input": 150629,
+    "output": 13368,
+    "cacheRead": 1331200,
+    "cacheWrite": 0,
+    "cost": 1.8197849999999998,
+    "turns": 33
+  },
+  "model": "theclawbay/gpt-5.5",
+  "attemptedModels": [
+    "theclawbay/gpt-5.5"
+  ],
+  "modelAttempts": [
+    {
+      "model": "theclawbay/gpt-5.5",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 150629,
+        "output": 13368,
+        "cacheRead": 1331200,
+        "cacheWrite": 0,
+        "cost": 1.8197849999999998,
+        "turns": 33
+      }
+    }
+  ],
+  "durationMs": 1110329,
+  "toolCount": 72,
+  "transcriptPath": "/home/nochaserz/Documents/Coding Projects/top-tier-financial-solutions/.pi-subagents/artifacts/254622d8_build_0_transcript.jsonl",
+  "timestamp": 1784064571171
+}

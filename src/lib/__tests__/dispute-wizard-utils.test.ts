@@ -97,14 +97,13 @@ describe('dispute-wizard-utils - itemAppearsOnBureau', () => {
       expect(itemAppearsOnBureau(item, 'experian')).toBe(false);
     });
 
-    it('should handle empty bureaus array', () => {
+    it('should handle empty bureaus array without implying bureau presence', () => {
       const item: NegativeItem = {
         id: '1',
         creditor_name: 'Test',
         bureaus: [],
       };
-      // Falls through to legacy bureau logic
-      expect(itemAppearsOnBureau(item, 'transunion')).toBe(true); // No specific bureau = all bureaus
+      expect(itemAppearsOnBureau(item, 'transunion')).toBe(false);
     });
   });
 
@@ -119,25 +118,25 @@ describe('dispute-wizard-utils - itemAppearsOnBureau', () => {
       expect(itemAppearsOnBureau(item, 'experian')).toBe(false);
     });
 
-    it('should return true for all bureaus when bureau is "combined"', () => {
+    it('should not imply bureau presence when legacy bureau is "combined"', () => {
       const item: NegativeItem = {
         id: '1',
         creditor_name: 'Test',
         bureau: 'combined',
       };
-      expect(itemAppearsOnBureau(item, 'transunion')).toBe(true);
-      expect(itemAppearsOnBureau(item, 'experian')).toBe(true);
-      expect(itemAppearsOnBureau(item, 'equifax')).toBe(true);
+      expect(itemAppearsOnBureau(item, 'transunion')).toBe(false);
+      expect(itemAppearsOnBureau(item, 'experian')).toBe(false);
+      expect(itemAppearsOnBureau(item, 'equifax')).toBe(false);
     });
 
-    it('should return true for all bureaus when bureau is undefined', () => {
+    it('should not imply bureau presence when legacy bureau is undefined', () => {
       const item: NegativeItem = {
         id: '1',
         creditor_name: 'Test',
         bureau: undefined,
       };
-      expect(itemAppearsOnBureau(item, 'transunion')).toBe(true);
-      expect(itemAppearsOnBureau(item, 'experian')).toBe(true);
+      expect(itemAppearsOnBureau(item, 'transunion')).toBe(false);
+      expect(itemAppearsOnBureau(item, 'experian')).toBe(false);
     });
 
     it('should be case insensitive for legacy bureau field', () => {
@@ -160,6 +159,34 @@ describe('dispute-wizard-utils - itemAppearsOnBureau', () => {
         bureaus: ['transunion'],
       };
       expect(itemAppearsOnBureau(item, 'transunion')).toBe(false);
+    });
+
+    it('should prefer explicit false bureau flags over combined legacy bureau values', () => {
+      const item: NegativeItem = {
+        id: '1',
+        creditor_name: 'Test',
+        on_transunion: false,
+        on_experian: false,
+        on_equifax: false,
+        bureau: 'combined',
+      };
+      expect(itemAppearsOnBureau(item, 'transunion')).toBe(false);
+      expect(itemAppearsOnBureau(item, 'experian')).toBe(false);
+      expect(itemAppearsOnBureau(item, 'equifax')).toBe(false);
+    });
+
+    it('should keep a single true bureau flag scoped to that bureau', () => {
+      const item: NegativeItem = {
+        id: '1',
+        creditor_name: 'Test',
+        on_transunion: true,
+        on_experian: false,
+        on_equifax: false,
+        bureau: 'combined',
+      };
+      expect(itemAppearsOnBureau(item, 'transunion')).toBe(true);
+      expect(itemAppearsOnBureau(item, 'experian')).toBe(false);
+      expect(itemAppearsOnBureau(item, 'equifax')).toBe(false);
     });
 
     it('should prefer bureaus array over legacy bureau field', () => {

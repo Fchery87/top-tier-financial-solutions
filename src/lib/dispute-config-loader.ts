@@ -171,26 +171,26 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
       },
       escalation_triggers: { verified: 'direct_creditor', no_response: 'fcra_violation_notice', deleted: null },
     },
-    consumer_law: {
-      name: 'Consumer Law Dispute',
-      description: 'Leverages federal consumer protection laws to challenge reporting',
+    factual_escalation: {
+      name: 'Factual Escalation',
+      description: 'Uses documented reporting issues and prior dispute history to escalate factually',
       round_range: [2, 3],
       target_recipients: ['bureau', 'creditor', 'collector', 'furnisher'],
-      best_for: ['Time-barred debts still reporting', 'Re-aged accounts', 'Post-bankruptcy reporting errors', 'FDCPA violations'],
+      best_for: ['Time-barred debts still reporting', 'Re-aged accounts', 'Post-bankruptcy reporting errors', 'Unresolved documented inaccuracies'],
       legal_citations: {
         primary: [
           { section: 'FCRA Section 605', code: '15 U.S.C. § 1681c', description: 'Requirements relating to information in consumer reports (7-year rule)' },
           { section: 'FDCPA Section 809', code: '15 U.S.C. § 1692g', description: 'Validation of debts' },
         ],
       },
-      escalation_triggers: { verified: 'intent_to_sue_notice', no_response: 'cfpb_complaint', deleted: null },
+      escalation_triggers: { verified: 'direct_creditor', no_response: 'cfpb_complaint', deleted: null },
     },
     method_of_verification: {
       name: '611 Method of Verification',
       description: 'Demands disclosure of how disputed information was verified',
       round_range: [2, 3],
       target_recipients: ['bureau'],
-      best_for: ['Items verified without documentation', 'E-OSCAR rubber stamp responses', 'Follow-up to prior verified disputes'],
+      best_for: ['Items verified without documentation', 'Sparse reinvestigation responses', 'Follow-up to prior verified disputes'],
       legal_citations: {
         primary: [
           { section: 'FCRA Section 611(a)(6)(B)(iii)', code: '15 U.S.C. § 1681i(a)(6)(B)(iii)', description: 'Consumer right to description of reinvestigation procedure' },
@@ -234,7 +234,7 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
       fax: '1-610-546-4771',
       specific_requirements: ['Include full SSN for faster processing'],
       response_timeframe_days: 30,
-      investigation_methods: ['e-OSCAR automated verification', 'Manual review for complex disputes'],
+      investigation_methods: ['Automated verification workflow', 'Manual review for complex disputes'],
     },
     experian: {
       name: 'Experian',
@@ -244,7 +244,7 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
       fax: '1-972-390-3837',
       specific_requirements: ['Requires 2 forms of ID for identity verification'],
       response_timeframe_days: 30,
-      investigation_methods: ['e-OSCAR automated verification', 'ACDV form transmission'],
+      investigation_methods: ['Automated verification workflow', 'ACDV form transmission'],
     },
     equifax: {
       name: 'Equifax',
@@ -254,7 +254,7 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
       fax: '1-888-826-0549',
       specific_requirements: ['Include Equifax file number for faster processing'],
       response_timeframe_days: 30,
-      investigation_methods: ['e-OSCAR automated verification', 'Direct furnisher contact'],
+      investigation_methods: ['Automated verification workflow', 'Direct furnisher contact'],
     },
     // Secondary consumer reporting agencies (addresses verified June 2026)
     lexisnexis: {
@@ -300,30 +300,30 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
   },
   reason_codes: {
     accuracy: [
-      { code: 'not_mine', label: 'Not My Account', description: 'This account does not belong to me.', methodology_fit: ['factual', 'consumer_law'], fcra_section: '611(a)', dispute_strength: 'strong' },
+      { code: 'not_mine', label: 'Not My Account', description: 'This account does not belong to me.', methodology_fit: ['factual', 'factual_escalation'], fcra_section: '611(a)', dispute_strength: 'strong' },
       { code: 'never_late', label: 'Never Late', description: 'The reported late payment history is inaccurate.', methodology_fit: ['factual'], fcra_section: '623(a)(1)', dispute_strength: 'medium' },
       { code: 'wrong_balance', label: 'Incorrect Balance', description: 'The reported balance and/or payment amounts are incorrect.', methodology_fit: ['factual', 'metro2_compliance'], fcra_section: '623(a)(1)', dispute_strength: 'medium' },
       { code: 'wrong_dates', label: 'Incorrect Dates', description: 'The dates associated with this account are being reported incorrectly.', methodology_fit: ['factual', 'metro2_compliance'], fcra_section: '623(a)(1)', dispute_strength: 'medium' },
       { code: 'wrong_status', label: 'Incorrect Account Status', description: 'The account status being reported is inaccurate.', methodology_fit: ['factual', 'metro2_compliance'], fcra_section: '623(a)(1)', dispute_strength: 'medium' },
     ],
     ownership: [
-      { code: 'identity_theft', label: 'Identity Theft', description: 'This account was opened fraudulently as a result of identity theft.', methodology_fit: ['factual', 'consumer_law'], fcra_section: '605B', dispute_strength: 'strong' },
-      { code: 'mixed_file', label: 'Mixed Credit File', description: 'This account belongs to another consumer.', methodology_fit: ['factual', 'consumer_law'], fcra_section: '607(b)', dispute_strength: 'strong' },
+      { code: 'identity_theft', label: 'Identity Theft', description: 'This account was opened fraudulently as a result of identity theft.', methodology_fit: ['factual', 'factual_escalation'], fcra_section: '605B', dispute_strength: 'strong' },
+      { code: 'mixed_file', label: 'Mixed Credit File', description: 'This account belongs to another consumer.', methodology_fit: ['factual', 'factual_escalation'], fcra_section: '607(b)', dispute_strength: 'strong' },
     ],
     compliance: [
-      { code: 'obsolete', label: 'Obsolete Information', description: 'This information has exceeded the 7-year reporting period.', methodology_fit: ['consumer_law'], fcra_section: '605(a)', dispute_strength: 'strong' },
+      { code: 'obsolete', label: 'Obsolete Information', description: 'This information has exceeded the 7-year reporting period.', methodology_fit: ['factual_escalation'], fcra_section: '605(a)', dispute_strength: 'strong' },
       { code: 'duplicate', label: 'Duplicate Entry', description: 'This account appears multiple times on my credit report.', methodology_fit: ['factual', 'metro2_compliance'], fcra_section: '607(b)', dispute_strength: 'strong' },
     ],
     collections: [
       { code: 'paid_collection', label: 'Paid Collection', description: 'This collection has been paid in full but is still being reported as unpaid.', methodology_fit: ['factual'], fcra_section: '623(a)(1)', dispute_strength: 'medium' },
-      { code: 'no_validation', label: 'Unvalidated Debt', description: 'Collector failed to validate debt within 30 days as required by FDCPA.', methodology_fit: ['debt_validation', 'consumer_law'], fcra_section: 'FDCPA 809', dispute_strength: 'strong' },
+      { code: 'no_validation', label: 'Unvalidated Debt', description: 'Collector failed to validate debt within 30 days as required by FDCPA.', methodology_fit: ['debt_validation', 'factual_escalation'], fcra_section: 'FDCPA 809', dispute_strength: 'strong' },
     ],
     metro2_violations: [
       { code: 'missing_dofd', label: 'Missing Date of First Delinquency', description: 'Required DOFD field is missing or invalid for derogatory account.', methodology_fit: ['metro2_compliance'], dispute_strength: 'strong', metro2_field: 'Date of First Delinquency' },
       { code: 'invalid_status_code', label: 'Invalid Account Status Code', description: 'Account status code does not match account condition.', methodology_fit: ['metro2_compliance'], dispute_strength: 'medium', metro2_field: 'Account Status' },
     ],
     inquiries: [
-      { code: 'unauthorized_inquiry', label: 'Unauthorized Inquiry', description: 'This inquiry was made without my authorization.', methodology_fit: ['factual', 'consumer_law'], fcra_section: '604', dispute_strength: 'medium' },
+      { code: 'unauthorized_inquiry', label: 'Unauthorized Inquiry', description: 'This inquiry was made without my authorization.', methodology_fit: ['factual', 'factual_escalation'], fcra_section: '604', dispute_strength: 'medium' },
     ],
   },
   escalation_paths: {},
@@ -337,7 +337,7 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
     collection: { recommended_methodologies: ['debt_validation', 'factual', 'metro2_compliance'], common_issues: ['Missing original creditor', 'Re-aged account'], required_metro2_fields: ['K1 Segment', 'Date of First Delinquency'] },
     charge_off: { recommended_methodologies: ['factual', 'metro2_compliance'], common_issues: ['Wrong date of charge-off', 'Incorrect balance'] },
     late_payment: { recommended_methodologies: ['factual', 'goodwill'], common_issues: ['Incorrect late date', 'Wrong number of days late'] },
-    bankruptcy: { recommended_methodologies: ['consumer_law', 'factual'], common_issues: ['Accounts should show $0 balance', 'Wrong discharge date'], reporting_limit_years: 10 },
+    bankruptcy: { recommended_methodologies: ['factual_escalation', 'factual'], common_issues: ['Accounts should show $0 balance', 'Wrong discharge date'], reporting_limit_years: 10 },
     inquiry: { recommended_methodologies: ['factual'], common_issues: ['No permissible purpose', 'Duplicate inquiry'], reporting_limit_years: 2 },
   },
 };
@@ -395,14 +395,14 @@ const EMBEDDED_PROMPTS: Record<string, PromptConfig> = {
 
 ## REQUIRED STRUCTURE
 1. Current date and properly formatted recipient address
-2. Clear RE: line with "FORMAL DISPUTE - DEMAND FOR DELETION"
+2. Clear RE: line with a factual dispute subject requesting investigation and correction/removal if unverifiable
 3. Opening: State this is a formal dispute under FCRA Section 611
 4. Account Details: List each disputed account with specifics
 5. Inaccuracies: Clearly explain WHY each item is inaccurate
 6. Legal Basis: Cite FCRA sections 611, 623, and relevant provisions
-7. Demands: DELETE unverifiable information, provide investigation documentation
+7. Requests: investigate the disputed information, correct inaccuracies, or remove data if unverifiable, and provide investigation documentation
 8. Deadline: 30 days per FCRA Section 611(a)(1)
-9. Warning: Statutory damages for willful non-compliance
+9. Keep the tone factual and avoid damages or threat language
 10. Signature block with enclosures list
 
 Generate a unique, professional dispute letter. Output plain text only - no markdown.`,
@@ -445,7 +445,7 @@ Generate a technically precise, professional dispute letter. Output plain text o
       tone: 'Assertive, demanding, legally sophisticated',
       reading_level: '12th grade',
       avoid: ['Being vague about requested information', 'Failing to cite specific FCRA sections'],
-      include: ['Reference to prior dispute', 'Specific demands for verification documentation', 'Challenge to e-OSCAR adequacy'],
+      include: ['Reference to prior dispute', 'Specific demands for verification documentation', 'Request for description of reinvestigation procedure'],
     },
     prompt_template: `You are writing a 611 METHOD OF VERIFICATION letter demanding disclosure of verification procedures.
 
@@ -511,17 +511,17 @@ Generate a demanding, legally sophisticated letter. Output plain text only.`,
 
 Generate a firm, legally precise debt validation letter. Output plain text only.`,
   },
-  consumer_law: {
-    methodology: 'consumer_law',
+  factual_escalation: {
+    methodology: 'factual_escalation',
     version: '1.0',
-    system_context: 'You are an expert credit repair specialist writing a CONSUMER LAW dispute letter leveraging federal consumer protection statutes.',
+    system_context: 'You are an expert credit repair specialist writing a factual escalation letter grounded in documented inaccuracies, prior dispute history, and allowed statutory references.',
     writing_guidelines: {
-      tone: 'Authoritative, legally sophisticated, firm',
+      tone: 'Authoritative, professional, evidence-grounded',
       reading_level: '12th grade',
-      avoid: ['Focusing on only one legal theory', 'Vague legal references'],
-      include: ['Multiple statutory citations', 'Specific violation descriptions', 'Reference to regulatory bodies'],
+      avoid: ['Threat language', 'Speculative legal claims', 'Vague legal references'],
+      include: ['Relevant statutory citations', 'Specific documented issues', 'Clear request for investigation or correction'],
     },
-    prompt_template: `You are writing a CONSUMER LAW dispute letter using federal consumer protection statutes.
+    prompt_template: `You are writing a FACTUAL ESCALATION dispute letter using only documented consumer protection issues.
 
 ## LEGAL FRAMEWORK TO CITE
 - FCRA Section 605(a): 7-year reporting limitation
@@ -537,10 +537,10 @@ Generate a firm, legally precise debt validation letter. Output plain text only.
 ## DISPUTED ACCOUNT(S)
 {account_details}
 
-## LEGAL VIOLATIONS IDENTIFIED
+## DOCUMENTED ISSUES
 {violation_descriptions}
 
-Generate a legally sophisticated dispute letter. Output plain text only.`,
+Generate an authoritative but factual dispute letter. Output plain text only.`,
   },
 };
 
@@ -578,7 +578,7 @@ function getPromptFileName(methodology: string): string {
   const fileMap: Record<string, string> = {
     factual: 'factual-dispute.yaml',
     metro2_compliance: 'metro2-compliance.yaml',
-    consumer_law: 'consumer-law.yaml',
+    factual_escalation: 'consumer-law.yaml',
     method_of_verification: 'method-of-verification.yaml',
     debt_validation: 'debt-validation.yaml',
     goodwill: 'goodwill.yaml',

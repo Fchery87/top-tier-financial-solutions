@@ -65,11 +65,12 @@ This repo uses a single-context domain documentation layout. See `docs/agents/do
 - Find database schema: `rg -n "pgTable" db/`
 - Find Python endpoints: `rg -n "@app\.(get|post|put|delete)" api/`
 - Find test files: `find src -name "*.test.{ts,tsx}"`
+- Find parser fixtures/routing tests: `rg -n "source-routing|detect-source|report-date|fixtures" src/lib/parsers/__tests__`
 
 ### Domain-Specific Searches
 - Credit dispute logic: `rg -n "dispute" src/lib/`
 - AI letter generation: `rg -n "ai.*letter|generate.*letter" src/lib/`
-- Credit report parsing: `rg -n "parse.*report|credit.*analysis" src/lib/parsers/`
+- Credit report parsing: `rg -n "parse.*report|credit.*analysis|parserReviewStatus|paymentHistoryGrid" src/lib/parsers/ src/lib/ src/app/api/admin/`
 - Authentication: `rg -n "auth|session" src/lib/auth.ts`
 
 ## Definition of Done

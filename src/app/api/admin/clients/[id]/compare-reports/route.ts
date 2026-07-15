@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { isSuperAdmin } from '@/lib/admin-auth';
 import { eq, desc } from 'drizzle-orm';
+import { compareApprovedCreditReportPulls } from '@/lib/credit-report-pull-comparison';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -112,6 +113,37 @@ export async function GET(
       .from(creditScoreHistory)
       .where(eq(creditScoreHistory.clientId, clientId))
       .orderBy(desc(creditScoreHistory.recordedAt));
+
+    const reviewGate = compareApprovedCreditReportPulls({
+      olderPull: { parserReviewStatus: olderReport?.parserReviewStatus },
+      newerPull: { parserReviewStatus: newerReport?.parserReviewStatus },
+      olderNegativeItems: olderNegativeItems.map((item) => ({
+        id: item.id,
+        creditorName: item.creditorName,
+        itemType: item.itemType,
+        bureau: item.bureau,
+        amount: item.amount,
+        status: item.experianStatus || item.equifaxStatus || item.transunionStatus,
+      })),
+      newerNegativeItems: newerNegativeItems.map((item) => ({
+        id: item.id,
+        creditorName: item.creditorName,
+        itemType: item.itemType,
+        bureau: item.bureau,
+        amount: item.amount,
+        status: item.experianStatus || item.equifaxStatus || item.transunionStatus,
+      })),
+    });
+
+    if (!reviewGate.approved) {
+      return NextResponse.json(
+        {
+          error: 'Both report pulls must be parser-approved before comparison.',
+          code: reviewGate.code,
+        },
+        { status: 409 }
+      );
+    }
 
     // Compare and find differences
     const comparison = compareReportData(

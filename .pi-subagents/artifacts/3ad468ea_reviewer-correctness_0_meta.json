@@ -1,0 +1,37 @@
+{
+  "runId": "3ad468ea",
+  "agent": "reviewer-correctness",
+  "task": "Review the Phase 3 changes for correctness regressions and contract mismatches. Focus on the changed files listed in /tmp/phase3_review.tmp, especially triage, auto-select, client payload shaping, methodology selection, CFPB recipient wiring, and the new detector module. Return only severity-ranked findings with file/line references and concise rationale.\n\n---\n**Output:**\nWrite your findings to exactly this path: /home/nochaserz/Documents/Coding Projects/top-tier-financial-solutions/.pi-subagents/artifacts/outputs/3ad468ea/inline\nThis path is authoritative for this run.\nIgnore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.",
+  "exitCode": 0,
+  "usage": {
+    "input": 104061,
+    "output": 33837,
+    "cacheRead": 1606144,
+    "cacheWrite": 0,
+    "cost": 2.3384869999999998,
+    "turns": 28
+  },
+  "model": "theclawbay/gpt-5.5",
+  "attemptedModels": [
+    "theclawbay/gpt-5.5"
+  ],
+  "modelAttempts": [
+    {
+      "model": "theclawbay/gpt-5.5",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 104061,
+        "output": 33837,
+        "cacheRead": 1606144,
+        "cacheWrite": 0,
+        "cost": 2.3384869999999998,
+        "turns": 28
+      }
+    }
+  ],
+  "durationMs": 849319,
+  "toolCount": 75,
+  "transcriptPath": "/home/nochaserz/Documents/Coding Projects/top-tier-financial-solutions/.pi-subagents/artifacts/3ad468ea_reviewer-correctness_0_transcript.jsonl",
+  "timestamp": 1784137894059
+}

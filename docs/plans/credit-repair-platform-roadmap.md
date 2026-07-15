@@ -177,6 +177,8 @@ Implement Operator Analytics for internal business operations. Include throughpu
 
 Delivered June 2026: per-creditor strategy success analytics (`src/lib/creditor-strategy-insights.ts`, the creditor-strategies insights endpoint, and historical methodology recommendations in the triage response). See `docs/SECONDARY-BUREAUS-AND-CREDITOR-ANALYTICS.md`. Recommendations are advisory only and never override deterministic policy.
 
+Delivered July 2026: Phase 3 differentiators for deterministic re-aging / duplicate-liability detection, medical-debt triage rules, historical methodology wiring into round-1 recommendation flows, and CFPB complaint-packet routing in the dispute wizard.
+
 Implement Client Outcome Analytics for client-visible outcomes. Include score movement, deletions, updates, verified outcomes, new negative items, progress by bureau, and client-visible milestones.
 
 Avoid numeric projected score increase claims by default. If Score Projections exist, keep them internal by default, label them as estimates, include disclaimers, and never present them as guaranteed outcomes.

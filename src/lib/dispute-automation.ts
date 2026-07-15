@@ -10,7 +10,7 @@ export interface EscalationPlan {
   nextRound: number;
   targetRecipient: 'bureau' | 'creditor' | 'cfpb';
   disputeType: 'method_of_verification' | 'direct_creditor' | 'fcra_violation_notice';
-  methodology: 'method_of_verification' | 'consumer_law';
+  methodology: 'method_of_verification' | 'factual';
   reasonCodes: string[];
   customReason: string;
 }
@@ -58,9 +58,9 @@ export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan 
         nextRound,
         targetRecipient: 'creditor',
         disputeType: 'direct_creditor',
-        methodology: 'consumer_law',
+        methodology: 'factual',
         reasonCodes: ['verification_required', 'metro2_violation'],
-        customReason: `Item remained verified after method-of-verification in Round ${input.currentRound}. Escalating to creditor directly.`,
+        customReason: `Item remained verified after method-of-verification in Round ${input.currentRound}. Escalating to creditor directly under FCRA Section 623(a)(8).`,
       };
     }
 
@@ -68,9 +68,9 @@ export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan 
       nextRound,
       targetRecipient: 'cfpb',
       disputeType: 'fcra_violation_notice',
-      methodology: 'consumer_law',
+      methodology: 'factual',
       reasonCodes: ['repeat_verification', 'fcra_non_compliance'],
-      customReason: `Repeated verification without sufficient documentation by Round ${input.currentRound}. Preparing regulatory escalation.`,
+      customReason: `Repeated verification without sufficient documentation by Round ${input.currentRound}. Preparing regulatory escalation for manual review.`,
     };
   }
 
@@ -90,9 +90,9 @@ export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan 
       nextRound,
       targetRecipient: 'creditor',
       disputeType: 'direct_creditor',
-      methodology: 'consumer_law',
+      methodology: 'factual',
       reasonCodes: ['no_response', 'verification_required'],
-      customReason: `No timely response after prior rounds. Escalating directly to the furnisher/creditor.`,
+      customReason: `No timely response after prior rounds. Escalating directly to the furnisher/creditor under FCRA Section 623(a)(8).`,
     };
   }
 
@@ -100,7 +100,7 @@ export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan 
     nextRound,
     targetRecipient: 'cfpb',
     disputeType: 'fcra_violation_notice',
-    methodology: 'consumer_law',
+    methodology: 'factual',
     reasonCodes: ['no_response', 'fcra_non_compliance'],
     customReason: 'No timely response after multiple rounds. Escalating to CFPB for compliance review.',
   };

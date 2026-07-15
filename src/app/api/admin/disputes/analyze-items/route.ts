@@ -10,6 +10,7 @@ import {
   getBestMethodologyForBatch,
   consolidateReasonCodes,
 } from '@/lib/ai-letter-generator';
+import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -36,7 +37,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { itemIds, round = 1, aggressiveness = 'balanced' } = body;
+    const { clientId, itemIds, round = 1, aggressiveness = 'balanced' } = body;
+
+    if (!clientId) {
+      return NextResponse.json({ error: 'clientId is required' }, { status: 400 });
+    }
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return NextResponse.json(
@@ -49,6 +54,14 @@ export async function POST(request: Request) {
     const validAggressiveness = ['conservative', 'balanced', 'aggressive'].includes(aggressiveness)
       ? aggressiveness
       : 'balanced';
+
+    const reportGate = await requireLatestApprovedReportForClient(clientId);
+    if (!reportGate.allowed) {
+      return NextResponse.json(
+        { error: reportGate.reason || 'The latest credit report must be approved before analysis.' },
+        { status: 409 }
+      );
+    }
 
     // Fetch the negative items from database with related credit account data for Metro 2 analysis
     const items = await db

@@ -1,6 +1,13 @@
 import * as React from 'react';
 import type { Client, GenerationMethod, InquiryItem, ItemDisputeInstruction, ItemTab, NegativeItem, PersonalInfoItem } from '../types';
 
+interface CreditReportSummary {
+  id: string;
+  file_name: string;
+  bureau: string | null;
+  uploaded_at: string;
+}
+
 interface UseDisputeItemsOptions {
   getGenerationMethod: () => GenerationMethod;
   setSelectedClient: React.Dispatch<React.SetStateAction<Client | null>>;
@@ -16,6 +23,8 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
   const [selectedInquiryItems, setSelectedInquiryItems] = React.useState<string[]>([]);
   const [activeTab, setActiveTab] = React.useState<ItemTab>('tradelines');
   const [loadingItems, setLoadingItems] = React.useState(false);
+  const [creditReports, setCreditReports] = React.useState<CreditReportSummary[]>([]);
+  const [selectedReportId, setSelectedReportId] = React.useState<string | null>(null);
 
   const fetchNegativeItems = React.useCallback(async (clientId: string) => {
     setLoadingItems(true);
@@ -29,6 +38,9 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
         setInquiryItems(data.inquiry_disputes || []);
         setSelectedPersonalItems([]);
         setSelectedInquiryItems([]);
+        const nextCreditReports: CreditReportSummary[] = data.credit_reports || [];
+        setCreditReports(nextCreditReports);
+        setSelectedReportId(prev => prev ?? nextCreditReports[0]?.id ?? null);
       }
     } catch (error) {
       console.error('Error fetching negative items:', error);
@@ -45,6 +57,8 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
     setNegativeItems([]);
     setPersonalInfoItems([]);
     setInquiryItems([]);
+    setCreditReports([]);
+    setSelectedReportId(null);
     setActiveTab('tradelines');
   }, [setSelectedClient]);
 
@@ -87,6 +101,10 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
     setActiveTab,
     loadingItems,
     setLoadingItems,
+    creditReports,
+    setCreditReports,
+    selectedReportId,
+    setSelectedReportId,
     fetchNegativeItems,
     handleSelectClient,
     handleToggleItem,

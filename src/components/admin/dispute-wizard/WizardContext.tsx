@@ -10,7 +10,7 @@ import { useAIAnalysis } from './hooks/useAIAnalysis';
 import { useDisputeAutoSelection } from './hooks/useDisputeAutoSelection';
 import { useDisputeItems } from './hooks/useDisputeItems';
 import { useDisputeMethodologies } from './hooks/useDisputeMethodologies';
-import { useDisputeIntelligence } from './hooks/useDisputeIntelligence';
+import { useDisputeIntelligence, type DiscrepancySummary } from './hooks/useDisputeIntelligence';
 import { useWizardClients } from './hooks/useWizardClients';
 import { useBulkDisputeSubmission } from './hooks/useBulkDisputeSubmission';
 import { useDisputeWizardOptions } from './hooks/useDisputeWizardOptions';
@@ -75,6 +75,10 @@ interface WizardContextValue {
   setActiveTab: React.Dispatch<React.SetStateAction<ItemTab>>;
   loadingItems: boolean;
   setLoadingItems: React.Dispatch<React.SetStateAction<boolean>>;
+  creditReports: { id: string; file_name: string; bureau: string | null; uploaded_at: string }[];
+  setCreditReports: React.Dispatch<React.SetStateAction<{ id: string; file_name: string; bureau: string | null; uploaded_at: string }[]>>;
+  selectedReportId: string | null;
+  setSelectedReportId: React.Dispatch<React.SetStateAction<string | null>>;
   itemDisputeInstructions: Map<string, ItemDisputeInstruction>;
   setItemDisputeInstructions: React.Dispatch<React.SetStateAction<Map<string, ItemDisputeInstruction>>>;
 
@@ -130,13 +134,14 @@ interface WizardContextValue {
   analysisPreferencesSaved: boolean;
   setAnalysisPreferencesSaved: React.Dispatch<React.SetStateAction<boolean>>;
 
-  discrepancySummary: { total: number; highSeverity: number } | null;
-  setDiscrepancySummary: React.Dispatch<React.SetStateAction<{ total: number; highSeverity: number } | null>>;
+  discrepancySummary: DiscrepancySummary | null;
+  setDiscrepancySummary: React.Dispatch<React.SetStateAction<DiscrepancySummary | null>>;
   loadingDiscrepancies: boolean;
   setLoadingDiscrepancies: React.Dispatch<React.SetStateAction<boolean>>;
 
   triageQuickActions: TriageQuickAction[];
   setTriageQuickActions: React.Dispatch<React.SetStateAction<TriageQuickAction[]>>;
+  historicalRecommendations: Record<string, string>;
 
   evidenceDocuments: EvidenceDocument[];
   setEvidenceDocuments: React.Dispatch<React.SetStateAction<EvidenceDocument[]>>;
@@ -190,7 +195,7 @@ interface WizardContextValue {
 
   fetchClients: () => void;
   fetchNegativeItems: (clientId: string) => Promise<void>;
-  fetchDiscrepancies: (clientId: string) => Promise<void>;
+  fetchDiscrepancies: (clientId: string, reportId?: string | null) => Promise<void>;
   fetchTriage: (clientId: string) => Promise<void>;
   fetchEvidence: (clientId: string) => Promise<void>;
   fetchMethodologies: () => Promise<void>;
@@ -298,6 +303,10 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setActiveTab,
     loadingItems,
     setLoadingItems,
+    creditReports,
+    setCreditReports,
+    selectedReportId,
+    setSelectedReportId,
     fetchNegativeItems,
     handleSelectClient,
     handleToggleItem,
@@ -315,6 +324,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setLoadingDiscrepancies,
     triageQuickActions,
     setTriageQuickActions,
+    historicalRecommendations,
     fetchDiscrepancies,
     fetchTriage,
   } = useDisputeIntelligence({ getDisputeRound: getDisputeRoundForIntelligence });
@@ -331,7 +341,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     reasonCodes,
     fetchReasonCodes,
     fetchMethodologies,
-  } = useDisputeMethodologies({ selectedItems, negativeItems, disputeRound });
+  } = useDisputeMethodologies({ selectedItems, negativeItems, disputeRound, historicalRecommendations });
 
   const {
     generatedLetters,
@@ -555,6 +565,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   useSelectedClientDataLoad({
     selectedClientId: selectedClient?.id,
+    selectedReportId,
     fetchNegativeItems,
     fetchDiscrepancies,
     fetchTriage,
@@ -568,7 +579,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     clients, setClients, selectedClient, setSelectedClient, clientSearch, setClientSearch, loadingClients, setLoadingClients,
     negativeItems, setNegativeItems, selectedItems, setSelectedItems, personalInfoItems, setPersonalInfoItems,
     selectedPersonalItems, setSelectedPersonalItems, inquiryItems, setInquiryItems, selectedInquiryItems, setSelectedInquiryItems,
-    activeTab, setActiveTab, loadingItems, setLoadingItems, itemDisputeInstructions, setItemDisputeInstructions,
+    activeTab, setActiveTab, loadingItems, setLoadingItems, creditReports, setCreditReports, selectedReportId, setSelectedReportId, itemDisputeInstructions, setItemDisputeInstructions,
     disputeRound, setDisputeRound, targetRecipient, setTargetRecipient, selectedBureaus, setSelectedBureaus,
     generationMethod, setGenerationMethod, combineItemsPerBureau, setCombineItemsPerBureau, requestManualReview, setRequestManualReview,
     methodologies, setMethodologies, selectedMethodology, setSelectedMethodology, recommendedMethodology, setRecommendedMethodology, loadingMethodologies, setLoadingMethodologies,
@@ -578,7 +589,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     showLowConfidenceItems, setShowLowConfidenceItems, failedAnalysisItems, setFailedAnalysisItems, analysisRetryCount, setAnalysisRetryCount,
     analysisAggressiveness, setAnalysisAggressiveness, analysisPreferencesSaved, setAnalysisPreferencesSaved,
     discrepancySummary, setDiscrepancySummary, loadingDiscrepancies, setLoadingDiscrepancies,
-    triageQuickActions, setTriageQuickActions,
+    triageQuickActions, setTriageQuickActions, historicalRecommendations,
     evidenceDocuments, setEvidenceDocuments, selectedEvidenceIds, setSelectedEvidenceIds, loadingEvidence, setLoadingEvidence,
     evidenceOverrideConfirmed, setEvidenceOverrideConfirmed, showEvidenceUploadModal, setShowEvidenceUploadModal,
     validationErrors, setValidationErrors, validationWarnings, setValidationWarnings,

@@ -10,6 +10,9 @@ import {
   consolidateReasonCodes,
   getBestMethodologyForBatch,
 } from '@/lib/ai-letter-generator';
+import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
+import { buildCreditorStrategyInsights, getRecommendedMethodologyForCreditor } from '@/lib/creditor-strategy-insights';
+import { disputeOutcomes } from '@/db/schema';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -36,6 +39,14 @@ export async function POST(request: Request) {
 
     if (!clientId) {
       return NextResponse.json({ error: 'clientId is required' }, { status: 400 });
+    }
+
+    const reportGate = await requireLatestApprovedReportForClient(clientId);
+    if (!reportGate.allowed) {
+      return NextResponse.json(
+        { error: reportGate.reason || 'The latest credit report must be approved before auto-select.' },
+        { status: 409 }
+      );
     }
 
     // Pull all negative items for the client with related account data to improve analysis quality
@@ -112,9 +123,31 @@ export async function POST(request: Request) {
 
     const recommendedItemIds = recommendedAnalyses.map((a) => a.itemId);
     const recommendedReasonCodes = consolidateReasonCodes(recommendedAnalyses);
-    const recommendedMethodology = getBestMethodologyForBatch(
+
+    let recommendedMethodology = getBestMethodologyForBatch(
       recommendedAnalyses.length > 0 ? recommendedAnalyses : analyses,
     );
+
+    try {
+      const outcomeRows = await db
+        .select({
+          creditorName: disputeOutcomes.creditorName,
+          methodology: disputeOutcomes.methodology,
+          itemType: disputeOutcomes.itemType,
+          outcome: disputeOutcomes.outcome,
+        })
+        .from(disputeOutcomes);
+      const insights = buildCreditorStrategyInsights(outcomeRows);
+      const prioritizedCreditor = items.find(item => recommendedItemIds.includes(item.id))?.creditorName ?? items[0]?.creditorName;
+      const historicalMethodology = prioritizedCreditor
+        ? getRecommendedMethodologyForCreditor(prioritizedCreditor, insights)
+        : null;
+      if (historicalMethodology && round === 1) {
+        recommendedMethodology = historicalMethodology;
+      }
+    } catch (historyError) {
+      console.error('Error loading historical methodology recommendations for auto-select:', historyError);
+    }
     const averageConfidence = analyses.reduce((sum, a) => sum + a.confidence, 0) / analyses.length;
 
     return NextResponse.json({
@@ -126,6 +159,8 @@ export async function POST(request: Request) {
         recommendedMethodology,
         recommendedReasonCodes,
         allReasonCodes: recommendedReasonCodes,
+        allMetro2Violations: recommendedAnalyses.flatMap((analysis) => analysis.metro2Violations),
+        allFcraIssues: recommendedAnalyses.flatMap((analysis) => analysis.fcraIssues),
         averageConfidence: Math.round(averageConfidence * 100) / 100,
       },
     });

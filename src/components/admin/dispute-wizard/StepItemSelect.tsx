@@ -135,7 +135,7 @@ function TradelinesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
             <span className="text-sm text-muted-foreground">{selectedItems.length} of {negativeItems.length} items selected</span>
             <div className="flex items-center gap-2 flex-wrap">
               {['transunion', 'experian', 'equifax'].map((bureau) => {
-                const bureauItems = negativeItems.filter(i => i.bureau === bureau || itemAppearsOnBureau(i, bureau));
+                const bureauItems = negativeItems.filter(i => itemAppearsOnBureau(i, bureau));
                 if (bureauItems.length === 0) return null;
                 const allSelected = bureauItems.every(i => selectedItems.includes(i.id));
                 return (

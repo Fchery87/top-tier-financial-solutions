@@ -10,6 +10,7 @@ import { decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
 import { getAdminSessionUser } from '@/lib/admin-session';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
 import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
+import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import {
   calculateDisputeDeadlines,
   getDisputeSlaDefinitionId,
@@ -107,6 +108,14 @@ async function postHandler(request: NextRequest) {
       ? reasonCodes
       : [disputeReason.includes('not mine') ? 'not_mine' : disputeReason.includes('never late') ? 'never_late' : disputeReason.includes('wrong') ? 'wrong_balance' : 'verification_required'];
 
+    const reportGate = await requireLatestApprovedReportForClient(clientId);
+    if (!reportGate.allowed) {
+      return NextResponse.json(
+        { error: reportGate.reason || 'The latest credit report must be approved before creating disputes.' },
+        { status: 409 }
+      );
+    }
+
     if (!policyDecision?.approved) {
       return NextResponse.json(
         { error: 'Approved policy decision is required before dispute letter generation' },
@@ -172,7 +181,7 @@ async function postHandler(request: NextRequest) {
       itemData: {
         creditorName: negativeItem?.creditorName || 'Unknown Creditor',
         originalCreditor: negativeItem?.originalCreditor || undefined,
-        accountNumber: negativeItem?.id?.slice(-8) || undefined,
+        accountNumber: negativeItem?.creditAccountId ? undefined : negativeItem?.id?.slice(-4) || undefined,
         itemType: negativeItem?.itemType || 'unknown',
         amount: negativeItem?.amount || undefined,
         dateReported: negativeItem?.dateReported?.toISOString() || undefined,
@@ -237,7 +246,7 @@ async function postHandler(request: NextRequest) {
       policyDecision: policyDecision ? JSON.stringify(policyDecision) : null,
       escalationPath: escalationPath || targetRecipient || 'bureau',
       creditorName: creditorNameValue,
-      accountNumber: negativeItem?.id?.slice(-8) || null,
+      accountNumber: negativeItem?.creditAccountId ? null : negativeItem?.id?.slice(-4) || null,
       analysisConfidence: normalizedConfidence,
       autoSelected: !!autoSelected,
       createdAt: now,

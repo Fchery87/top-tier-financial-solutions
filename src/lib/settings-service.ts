@@ -10,11 +10,27 @@ import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
+
+export const DEFAULT_LLM_MODELS = {
+  google: 'gemini-2.5-flash',
+  openai: 'gpt-5',
+  anthropic: 'claude-sonnet-5',
+  zhipu: 'glm-4-flash',
+  custom: 'gemini-2.5-flash',
+} as const;
 type CachedSetting = { value: SettingValue; expiresAt: number };
 
 // In-memory cache for settings (TTL: 5 minutes)
 const settingsCache = new Map<string, CachedSetting>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export const DEFAULT_LLM_PROVIDER: LLMConfig['provider'] = 'google';
+export const DEFAULT_LLM_TEMPERATURE = 0.7;
+export const DEFAULT_LLM_MAX_TOKENS = 4096;
+
+export function getDefaultLLMModel(provider: LLMConfig['provider']): string {
+  return DEFAULT_LLM_MODELS[provider] || DEFAULT_LLM_MODELS.google;
+}
 
 /**
  * Get a setting value by key
@@ -218,7 +234,7 @@ export async function getLLMConfig(): Promise<LLMConfig> {
   const provider = await getSettingWithDefault<string>('llm.provider', 'google') as LLMConfig['provider'];
   const model = await getSettingWithDefault<string>(
     'llm.model',
-    'gemini-2.5-flash' // Default to latest stable Gemini Flash tier
+    getDefaultLLMModel(provider)
   );
   const apiKeyFromDb = await getSetting('llm.api_key');
   const apiEndpoint = await getSetting('llm.api_endpoint');

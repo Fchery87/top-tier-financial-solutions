@@ -524,6 +524,7 @@ export const creditAccounts = pgTable('credit_accounts', {
   transunionBalance: integer('transunion_balance'), // Balance per bureau (may differ)
   experianBalance: integer('experian_balance'),
   equifaxBalance: integer('equifax_balance'),
+  paymentHistoryGrid: text('payment_history_grid'), // JSON map of bureau -> month->code grid
   isNegative: boolean('is_negative').default(false),
   riskLevel: text('risk_level'), // 'low' | 'medium' | 'high' | 'severe'
   completenessScore: integer('completeness_score'),
@@ -564,6 +565,7 @@ export const negativeItems = pgTable('negative_items', {
   scoreImpact: text('score_impact'), // estimated impact description
   recommendedAction: text('recommended_action'), // 'dispute' | 'pay_for_delete' | 'settle' | 'goodwill_letter' | 'wait' | 'none'
   disputeReason: text('dispute_reason'),
+  creditAccountMatchConfidence: integer('credit_account_match_confidence'),
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => [
@@ -632,6 +634,7 @@ export const inquiryDisputes = pgTable('inquiry_disputes', {
 export const bureauDiscrepancies = pgTable('bureau_discrepancies', {
   id: text('id').primaryKey(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  creditReportId: text('credit_report_id').references(() => creditReports.id, { onDelete: 'cascade' }),
   discrepancyType: text('discrepancy_type').notNull(), // 'pii_name' | 'pii_address' | 'account_status' | 'account_balance' | 'account_missing' | 'payment_history' | 'date_mismatch'
   field: text('field'), // The specific field with discrepancy
   creditorName: text('creditor_name'), // For account-related discrepancies
@@ -647,6 +650,7 @@ export const bureauDiscrepancies = pgTable('bureau_discrepancies', {
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => [
   index("bureau_discrepancies_clientId_idx").on(table.clientId),
+  index("bureau_discrepancies_creditReportId_idx").on(table.creditReportId),
   index("bureau_discrepancies_type_idx").on(table.discrepancyType),
 ]);
 

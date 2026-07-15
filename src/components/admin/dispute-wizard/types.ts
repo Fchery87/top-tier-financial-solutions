@@ -17,6 +17,7 @@ export interface NegativeItem {
   item_type: string;
   amount: number | null;
   date_reported: string | null;
+  date_of_first_delinquency?: string | null;
   bureau: string | null;
   bureaus?: string[];
   on_transunion?: boolean;
@@ -28,6 +29,8 @@ export interface NegativeItem {
   transunion_status?: string | null;
   experian_status?: string | null;
   equifax_status?: string | null;
+  account_type?: string | null;
+  payment_history_grid?: Record<string, Record<string, string>> | null;
   risk_severity: string;
   recommended_action: string | null;
 }
@@ -151,7 +154,7 @@ export interface GeneratedLetter {
 }
 
 export type ItemTab = 'tradelines' | 'personal' | 'inquiries';
-export type TargetRecipient = 'bureau' | 'creditor' | 'collector';
+export type TargetRecipient = 'bureau' | 'creditor' | 'collector' | 'cfpb';
 export type GenerationMethod = 'ai' | 'template';
 export type AnalysisAggressiveness = 'conservative' | 'balanced' | 'aggressive';
 
@@ -212,8 +215,7 @@ export function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean
   if (bureauLower === 'experian' && item.on_experian !== undefined) return item.on_experian;
   if (bureauLower === 'equifax' && item.on_equifax !== undefined) return item.on_equifax;
   if (item.bureaus && item.bureaus.length > 0) return item.bureaus.includes(bureauLower);
-  if (!item.bureau || item.bureau === 'combined') return true;
-  return item.bureau.toLowerCase() === bureauLower;
+  return item.bureau?.toLowerCase() === bureauLower;
 }
 
 export function formatPersonalInfoType(type: string) {

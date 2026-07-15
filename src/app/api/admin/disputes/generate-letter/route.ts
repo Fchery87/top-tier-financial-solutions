@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { clients, negativeItems, clientDocuments } from '@/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { generateUniqueDisputeLetter, generateMultiItemDisputeLetter, DISPUTE_REASON_CODES } from '@/lib/ai-letter-generator';
+import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/dispute-evidence';
 import { getAdminSessionUser } from '@/lib/admin-session';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
@@ -104,6 +105,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const reportGate = await requireLatestApprovedReportForClient(clientId);
+    if (!reportGate.allowed) {
+      return NextResponse.json(
+        { error: reportGate.reason || 'The latest credit report must be approved before letter generation.' },
+        { status: 409 }
+      );
+    }
+
     // Get client info
     const [client] = await db
       .select()
@@ -158,7 +167,7 @@ export async function POST(request: NextRequest) {
                 bureau: bureau,
                 creditorName: item.creditorName,
                 originalCreditor: item.originalCreditor,
-                accountNumber: item.id?.slice(-8),
+                accountNumber: item.id?.slice(-4),
                 itemType: item.itemType,
                 amount: item.amount,
                 dateReported: item.dateReported?.toISOString(),
@@ -226,7 +235,7 @@ export async function POST(request: NextRequest) {
           bureau: bureau,
           creditorName: item.creditorName,
           originalCreditor: item.originalCreditor,
-          accountNumber: item.id?.slice(-8),
+          accountNumber: item.id?.slice(-4),
           itemType: item.itemType,
           amount: item.amount,
           dateReported: item.dateReported?.toISOString(),

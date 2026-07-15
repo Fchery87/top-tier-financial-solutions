@@ -465,7 +465,7 @@ export async function PUT(
           itemData: {
             creditorName: negativeItem.creditorName,
             originalCreditor: negativeItem.originalCreditor || undefined,
-            accountNumber: negativeItem.id.slice(-8),
+            accountNumber: negativeItem.creditAccountId ? undefined : negativeItem.id.slice(-4),
             itemType: negativeItem.itemType,
             amount: negativeItem.amount || undefined,
             dateReported: negativeItem.dateReported?.toISOString(),
@@ -490,7 +490,7 @@ export async function PUT(
           escalationPath: escalationPlan.targetRecipient,
           letterContent,
           creditorName: negativeItem.creditorName,
-          accountNumber: negativeItem.id.slice(-8),
+          accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
           generatedByAi: true,
           methodology: escalationPlan.methodology,
           priorDisputeId: currentDispute.id,

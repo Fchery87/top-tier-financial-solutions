@@ -1,41 +1,40 @@
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import {
-  loadPromptConfig,
-  getMethodology,
-  getBureauConfig,
-  buildLegalCitationsString,
-  type PromptConfig,
-} from './dispute-config-loader';
 import { getObsolescenceClock } from './fcra-clock';
-import { getLLMConfig, type LLMConfig } from './settings-service';
+import { DEFAULT_LLM_MODELS, getLLMConfig, type LLMConfig } from './settings-service';
+import { lintGeneratedLetter } from './letter-lint';
 
 async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
   switch (config.provider) {
     case 'google': {
       const genAI = new GoogleGenAI({ apiKey: config.apiKey! });
       const response = await genAI.models.generateContent({
-        model: config.model,
+        model: config.model || DEFAULT_LLM_MODELS.google,
         contents: prompt,
-        config: { temperature: config.temperature || 0.1, maxOutputTokens: config.maxTokens || 4096 },
+        config: {
+          temperature: config.temperature || 0.1,
+          maxOutputTokens: config.maxTokens || 4096,
+          responseMimeType: 'application/json',
+        },
       });
       return typeof response.text === 'string' ? response.text : '';
     }
     case 'openai': {
       const openai = new OpenAI({ apiKey: config.apiKey });
       const response = await openai.chat.completions.create({
-        model: config.model || 'gpt-5',
+        model: config.model || DEFAULT_LLM_MODELS.openai,
         messages: [{ role: 'user', content: prompt }],
         temperature: config.temperature || 0.1,
         max_tokens: config.maxTokens || 4096,
+        response_format: { type: 'json_object' },
       });
       return response.choices[0]?.message?.content || '';
     }
     case 'anthropic': {
       const anthropic = new Anthropic({ apiKey: config.apiKey });
       const response = await anthropic.messages.create({
-        model: config.model || 'claude-sonnet-4-6',
+        model: config.model || DEFAULT_LLM_MODELS.anthropic,
         max_tokens: config.maxTokens || 4096,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -45,7 +44,7 @@ async function generateWithLLM(prompt: string, config: LLMConfig): Promise<strin
     case 'zhipu': {
       const openai = new OpenAI({ apiKey: config.apiKey, baseURL: config.apiEndpoint || 'https://api.z.ai/api/paas/v4' });
       const response = await openai.chat.completions.create({
-        model: config.model || 'glm-4-flash',
+        model: config.model || DEFAULT_LLM_MODELS.zhipu,
         messages: [{ role: 'user', content: prompt }],
         temperature: config.temperature || 0.1,
         max_tokens: config.maxTokens || 4096,
@@ -95,7 +94,6 @@ interface GenerateLetterParams {
   priorDisputeDate?: string;
   priorDisputeResult?: string;
   enclosures?: EvidenceEnclosure[];
-  requestManualReview?: boolean; // Flag to request manual review and bypass e-OSCAR
 }
 
 const BUREAU_ADDRESSES: Record<string, string> = {
@@ -196,297 +194,215 @@ export function getReasonDescriptions(reasonCodes: string[]): string {
     .join(' Additionally, ');
 }
 
-function buildEOscarBypassSection(includeBypass: boolean): string {
-  if (!includeBypass) return '';
-  return `
-E-OSCAR BYPASS LANGUAGE (CRITICAL):
-====================================
-YOU MUST include the following explicit language in the letter:
-"I specifically request that this dispute NOT be processed solely through your automated e-OSCAR or ACDV systems.
-This dispute requires review and investigation by a trained human investigator who can properly evaluate the evidence
-and documentation I am providing. An automated system cannot adequately address the specific compliance violations
-and inaccuracies identified in this letter."
-
-Additionally, include this FCRA citation:
-"Under FCRA Section 611(a)(6)(B)(iii), I am demanding that you provide a description of the investigation method used
-and verification of the steps taken to verify this account information."
-
-WHY THIS MATTERS: Credit bureaus use automated systems that convert detailed dispute letters into 2-3 digit codes
-and often ignore evidence entirely. This explicit language and FCRA citation forces manual review.`;
+function formatRecipientAddress(targetRecipient: GenerateLetterParams['targetRecipient'], bureau: string, creditorName: string): string {
+  if (targetRecipient === 'bureau') {
+    return BUREAU_ADDRESSES[bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion;
+  }
+  return `${creditorName}\nCredit Dispute Department`;
 }
 
-function buildComplianceContext(targetRecipient: string, round: number): string {
-  const fcraRights = `
-FAIR CREDIT REPORTING ACT (FCRA) VIOLATIONS:
-- Section 611 (15 U.S.C. § 1681i): You must conduct a reasonable investigation within 30 days
-- Section 623 (15 U.S.C. § 1681s-2): Furnishers must report accurate information
-- Section 609 (15 U.S.C. § 1681g): Consumer's right to disclosure of information
-- Section 605 (15 U.S.C. § 1681c): Obsolete information must not be reported after 7 years`;
-  const metro2Standards = `
-METRO 2 FORMAT COMPLIANCE VIOLATIONS:
-- Data furnishers must report complete and accurate information in Metro 2 format
-- Account status codes, payment ratings, and balance information must be verified
-- Failure to maintain Metro 2 compliance constitutes willful non-compliance`;
-  const crsaRights = `
-CREDIT REPAIR SERVICES ACT (CRSA) & CONSUMER PROTECTIONS:
-- Consumers have the right to dispute inaccurate information
-- Credit bureaus cannot report unverifiable information
-- Failure to delete unverifiable items constitutes a violation`;
-  let context = fcraRights;
-  if (targetRecipient === 'bureau') context += '\n' + metro2Standards;
-  if (round >= 2) {
-    context += '\n' + crsaRights;
-    context += `
-    
-ESCALATION NOTICE:
-This is Round ${round} of my dispute. Previous investigations have failed to properly verify this information.
-Continued reporting of unverifiable information may constitute willful non-compliance, exposing you to
-statutory damages of $100-$1,000 per violation, plus punitive damages under 15 U.S.C. § 1681n.`;
-  }
-  return context;
-}
-
-const AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter based on METRO 2 COMPLIANCE and FCRA VERIFICATION requirements.
-
-CRITICAL COMPLIANCE RULES - YOU MUST FOLLOW THESE:
-===============================================
-1. NEVER claim "this account does not belong to me" or "I never opened this account" - this is FRAUDULENT if untrue
-2. NEVER claim the consumer "never authorized" or "never used" the account unless explicitly stated in the reason
-3. NEVER claim identity theft or fraud unless the reason explicitly mentions identity theft
-4. Focus ONLY on: verification requirements, data accuracy, Metro 2 compliance violations
-5. The dispute is about DATA ACCURACY and VERIFICATION, not account ownership
-
-WHAT THIS LETTER MUST DO:
-========================
-- Request VERIFICATION of the account data under FCRA Section 611
-- Challenge the ACCURACY and COMPLETENESS of reported information
-- Cite Metro 2 format compliance requirements
-- Demand documented proof that information meets "maximum possible accuracy" standard
-- Request deletion of UNVERIFIED information (not "fraudulent" information)
-
-CRITICAL: CITE METRO 2 VIOLATIONS IN THE LETTER BODY
-=====================================================
-You MUST explicitly reference each Metro 2 violation provided below in the letter.
-DO NOT just list them - INTEGRATE them into your dispute explanation.
-For each violation, explain HOW it demonstrates inaccuracy or non-compliance.
-Example: "The account reports a balance of $XXX while showing a status of 'paid' - this data
-inconsistency violates Metro 2 reporting standards for Field 17 (Account Status) and Field 8 (Balance)."
-
-1. WRITING STYLE:
-- Write at a 12th grade reading level
-- Professional and assertive, like a knowledgeable consumer exercising legal rights
-- Avoid AI-generated patterns and repetitive phrases
-- Sound like a consumer demanding their legal rights to accurate credit reporting
-
-2. LEGAL FRAMEWORK:
-{compliance_context}
-
-3. KEY DISPUTE APPROACH (Metro 2 Compliance Based):
-- The consumer is DISPUTING THE ACCURACY of the reported information
-- The consumer is REQUESTING VERIFICATION with documented proof
-- The consumer is challenging whether data meets FCRA Section 607(b) "maximum possible accuracy"
-- The consumer demands deletion if information CANNOT BE VERIFIED with documentation
-- DO NOT claim the accounts are fraudulent or don't belong to the consumer
-
-4. LETTER DETAILS:
-- Target Recipient: {target_recipient}
-- Dispute Round: {round}
-- Client Name: {client_name}
-- Creditor/Account: {creditor_name}
-- Account Number: {account_number}
-- Item Type: {item_type}
-- Amount: {amount}
-- Bureau: {bureau}
-- Dispute Basis: {reason_description}
-{custom_reason}
-- Metro 2 Findings:
-{metro2_violations}
-
-5. REQUIRED STRUCTURE:
-- Current date and recipient address
-- Subject: "FCRA Section 611 Dispute - Request for Verification and Deletion"
-- Opening: State this is a formal dispute requesting verification under FCRA
-- Account Details: List the account(s) being disputed
-- Dispute Basis: Explain you are challenging accuracy/completeness, requesting verification
-- Metro 2 Requirements: Reference that furnishers must report in Metro 2 format with complete data
-- Legal Demands: Request verification, documentation of investigation method, deletion if unverified
-- 30-day deadline per FCRA Section 611(a)(1)
-- Warning about statutory damages for willful non-compliance
-- Signature block
-
-REMEMBER: This is a VERIFICATION dispute, NOT a fraud/identity theft dispute. The consumer is exercising their FCRA right to demand proof that reported information is accurate and complete.
-
-Generate the dispute letter now. Output plain text only - no markdown.`;
-
-export async function generateUniqueDisputeLetter(params: GenerateLetterParams): Promise<string> {
-  // Get LLM configuration from database (with fallback to env vars)
-  const llmConfig = await getLLMConfig();
-  
-  // If methodology is specified, use the new YAML-based system
-  if (params.methodology) {
-    return generateMethodologyBasedLetter(params);
-  }
-  
-  if (!llmConfig.apiKey) {
-    console.warn('No LLM API key configured, falling back to template-based letter');
-    return generateFallbackLetter(params);
-  }
-
-  try {
-    const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
-    const reasonDescription = getReasonDescriptions(params.reasonCodes);
-    const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
-    const eoscarBypassSection = buildEOscarBypassSection(params.requestManualReview || false);
-
-    const promptBase = eoscarBypassSection
-      ? AI_PROMPT_TEMPLATE.replace('CRITICAL COMPLIANCE RULES', eoscarBypassSection + '\n\nCRITICAL COMPLIANCE RULES')
-      : AI_PROMPT_TEMPLATE;
-
-    const prompt = promptBase
-      .replace('{compliance_context}', complianceContext)
-      .replace('{target_recipient}', params.targetRecipient.toUpperCase())
-      .replace('{round}', params.round.toString())
-      .replace('{client_name}', params.clientData.name)
-      .replace('{creditor_name}', params.itemData.creditorName)
-      .replace('{account_number}', params.itemData.accountNumber ? `****${params.itemData.accountNumber.slice(-4)}` : 'Not Available')
-      .replace('{item_type}', formatItemType(params.itemData.itemType))
-      .replace('{amount}', params.itemData.amount ? formatCurrency(params.itemData.amount) : 'Not Specified')
-      .replace('{bureau}', params.itemData.bureau.toUpperCase())
-      .replace('{reason_description}', reasonDescription)
-      .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
-      .replace('{metro2_violations}', metro2Section || 'IMPORTANT: No specific Metro 2 violations were provided by the AI analysis.\nRequest general verification of all Metro 2 data fields for accuracy and completeness.\nFocus on requesting documented proof of accuracy under FCRA Section 611.');
-
-    // Use multi-provider helper
-    const letterText = await generateWithLLM(prompt, llmConfig);
-
-    // Post-process to ensure proper formatting
-    return postProcessLetter(letterText, params);
-  } catch (error) {
-    console.error('AI letter generation failed:', error);
-    return generateFallbackLetter(params);
-  }
-}
-
-// NEW: Generate letter using YAML-based methodology configuration
-async function generateMethodologyBasedLetter(params: GenerateLetterParams): Promise<string> {
-  const llmConfig = await getLLMConfig();
-  const methodology = params.methodology || 'factual';
-  
-  // Load methodology-specific prompt config
-  const promptConfig = loadPromptConfig(methodology);
-  const methodologyConfig = getMethodology(methodology);
-  const bureauConfig = getBureauConfig(params.itemData.bureau);
-  
-  if (!llmConfig.apiKey) {
-    console.warn('No LLM API key configured, falling back to template-based letter');
-    return generateFallbackLetter(params);
-  }
-  
-  if (!promptConfig || !methodologyConfig) {
-    console.warn(`Config not found for methodology: ${methodology}, using default`);
-    return generateFallbackLetter(params);
-  }
-
-  try {
-    // Build the prompt using YAML configuration
-    const prompt = buildMethodologyPrompt(params, promptConfig, methodologyConfig, bureauConfig);
-
-    // Use multi-provider helper
-    const letterText = await generateWithLLM(prompt, llmConfig);
-
-    return postProcessLetter(letterText, params);
-  } catch (error) {
-    console.error('Methodology-based letter generation failed:', error);
-    return generateFallbackLetter(params);
-  }
-}
-
-// Build prompt using YAML configuration
-function buildMethodologyPrompt(
-  params: GenerateLetterParams,
-  promptConfig: PromptConfig,
-  methodologyConfig: ReturnType<typeof getMethodology>,
-  bureauConfig: ReturnType<typeof getBureauConfig>
-): string {
+function buildNeutralFallbackLetter(params: GenerateLetterParams): string {
+  const currentDate = formatDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
-  const legalCitations = buildLegalCitationsString(params.methodology || 'factual');
-  const metro2ViolationsSection = buildMetro2ViolationsSection(params.metro2Violations);
-  let roundContext = '';
-  if (promptConfig.round_variations && promptConfig.round_variations[`round_${params.round}`]) {
-    const variation = promptConfig.round_variations[`round_${params.round}`];
-    roundContext = variation.additional_context;
+  const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0
+    ? params.metro2Violations.filter(Boolean)
+    : [];
+  const recipientAddress = formatRecipientAddress(params.targetRecipient, params.itemData.bureau, params.itemData.creditorName);
+  const maskedAccountNumber = params.itemData.accountNumber
+    ? `****${params.itemData.accountNumber.slice(-4)}`
+    : '';
+  const actionRequest = params.round >= 3
+    ? 'Please review this dispute as a direct furnisher investigation request under FCRA Section 623(a)(8) and provide a written response with the results of your review.'
+    : params.round === 2
+      ? 'Please provide the method of verification used in the prior investigation, including how the disputed information was reviewed and with whom.'
+      : 'Please investigate the disputed information and confirm whether each reported detail is complete and accurate.';
+  let metro2ViolationsText = '';
+  if (metro2ViolationsRaw.length > 0) {
+    metro2ViolationsText = `\nSPECIFIC REPORTING CONCERNS IDENTIFIED:\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}`;
   }
-  let targetContext = '';
-  if (promptConfig.target_variations && promptConfig.target_variations[params.targetRecipient]) {
-    const variation = promptConfig.target_variations[params.targetRecipient];
-    targetContext = `Opening approach: ${variation.opening}\nLegal focus: ${variation.legal_focus.join(', ')}`;
-  }
-  const accountDetails = `
+
+  return `${currentDate}
+
+${recipientAddress}
+
+Re: FCRA Dispute - Request for Investigation and Verification
+Account: ${params.itemData.creditorName}
+${maskedAccountNumber ? `Account Number: ${maskedAccountNumber}` : ''}
+Dispute Round: ${params.round}
+
+To Whom It May Concern:
+
+I am writing to dispute the accuracy and completeness of the account information listed below and to request a reasonable investigation under the Fair Credit Reporting Act.
+
+DISPUTED ACCOUNT INFORMATION:
 Creditor Name: ${params.itemData.creditorName}
+${params.itemData.originalCreditor ? `Original Creditor: ${params.itemData.originalCreditor}` : ''}
+${maskedAccountNumber ? `Account Number: ${maskedAccountNumber}` : ''}
+Item Type: ${formatItemType(params.itemData.itemType)}
+${params.itemData.amount ? `Reported Amount: ${formatCurrency(params.itemData.amount)}` : ''}
+${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
+
+REASON FOR DISPUTE:
+${reasonDescription}
+
+${params.customReason ? `Additional Information: ${params.customReason}` : ''}
+${metro2ViolationsText}
+
+REQUEST FOR REVIEW:
+1. Investigate the disputed information with the furnisher or the records you maintain
+2. Verify that the reported account details are complete and accurate
+3. Provide a written response describing the results of your review
+4. Correct or remove any information that cannot be verified as accurate
+
+${actionRequest}
+
+Please respond within the time allowed by the Fair Credit Reporting Act.
+
+Sincerely,
+
+${params.clientData.name}
+${params.clientData.address ? params.clientData.address : ''}
+${params.clientData.city && params.clientData.state && params.clientData.zip ? `${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}` : ''}
+
+${buildEnclosuresSection(params.enclosures)}`;
+}
+
+function buildManualLetterPrompt(params: GenerateLetterParams): string {
+  const reasonDescription = getReasonDescriptions(params.reasonCodes);
+  const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
+  const recipientAddress = formatRecipientAddress(params.targetRecipient, params.itemData.bureau, params.itemData.creditorName);
+  const targetLabel = params.targetRecipient === 'bureau' ? params.itemData.bureau.toUpperCase() : params.itemData.creditorName;
+  const strategyInstruction = params.round >= 3
+    ? 'This is a direct furnisher escalation. Keep the tone factual and request investigation under FCRA Section 623(a)(8).'
+    : params.round === 2
+      ? 'This is a method-of-verification follow-up. Request the prior investigation method under FCRA Section 611(a)(6)(B)(iii).'
+      : 'This is an initial factual dispute. Request investigation and correction or removal if unverifiable.';
+
+  return `Write a factual credit dispute letter in plain text only.
+
+RULES
+- Do not threaten legal action, damages, or punishment.
+- Do not claim identity theft, fraud, or ownership denial unless the provided reasons explicitly support it.
+- Do not cite Metro 2 field numbers. Refer only to segment and field names when needed.
+- Keep the tone professional, specific, and factual.
+- Ask for investigation, verification, and correction or removal if the information cannot be verified.
+- If this is Round 2, include a request for the method of verification.
+- If this is Round 3 or later, keep the focus on a direct furnisher investigation request.
+
+LETTER CONTEXT
+Date: ${formatDate()}
+Recipient:
+${recipientAddress}
+Target: ${targetLabel}
+Round: ${params.round}
+Client Name: ${params.clientData.name}
+Account Name: ${params.itemData.creditorName}
 ${params.itemData.originalCreditor ? `Original Creditor: ${params.itemData.originalCreditor}` : ''}
 ${params.itemData.accountNumber ? `Account Number: ****${params.itemData.accountNumber.slice(-4)}` : ''}
 Item Type: ${formatItemType(params.itemData.itemType)}
-${params.itemData.amount ? `Amount: ${formatCurrency(params.itemData.amount)}` : ''}
-  ${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
-Bureau: ${params.itemData.bureau.toUpperCase()}
-`.trim();
-  let priorDisputeSection = '';
-  if (params.priorDisputeDate) {
-    priorDisputeSection = `
-## PRIOR DISPUTE DETAILS
-- Prior Dispute Date: ${params.priorDisputeDate}
-- Prior Result: ${params.priorDisputeResult || 'Verified without documentation'}
-`;
+${params.itemData.amount ? `Reported Amount: ${formatCurrency(params.itemData.amount)}` : ''}
+${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
+Reason Description: ${reasonDescription}
+${params.customReason ? `Additional Context: ${params.customReason}` : ''}
+${metro2Section || 'No specific Metro 2 issue list was provided. Request verification of the reported data for accuracy and completeness.'}
+
+ROUND STRATEGY
+${strategyInstruction}
+
+Return only the completed letter text.`;
+}
+
+function buildMultiItemPrompt(params: GenerateMultiItemLetterParams): string {
+  const reasonDescription = getReasonDescriptions(params.reasonCodes);
+  const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
+  const recipientAddress = params.targetRecipient === 'bureau'
+    ? (BUREAU_ADDRESSES[params.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion)
+    : 'Credit Dispute Department';
+  const itemsList = params.items.map((item, index) => {
+    const maskedAccountNumber = item.accountNumber ? `****${item.accountNumber.slice(-4)}` : '';
+    return `Account ${index + 1}:\n- Creditor: ${item.creditorName}\n${item.originalCreditor ? `- Original Creditor: ${item.originalCreditor}\n` : ''}${maskedAccountNumber ? `- Account Number: ${maskedAccountNumber}\n` : ''}- Type: ${formatItemType(item.itemType)}\n${item.amount ? `- Amount: ${formatCurrency(item.amount)}\n` : ''}${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`.trim();
+  }).join('\n\n');
+
+  return `Write one factual credit dispute letter in plain text only for multiple disputed accounts.
+
+RULES
+- Do not threaten legal action, damages, or punishment.
+- Do not claim identity theft, fraud, or ownership denial unless the provided reasons explicitly support it.
+- Do not demand deletion as the only outcome; request investigation and correction or removal if unverifiable.
+- Do not cite Metro 2 field numbers. Refer only to segment and field names when needed.
+- Keep the tone professional, specific, and factual.
+
+LETTER CONTEXT
+Date: ${formatDate()}
+Recipient:\n${recipientAddress}
+Bureau: ${params.bureau.toUpperCase()}
+Round: ${params.round}
+Client Name: ${params.clientData.name}
+Reason Description: ${reasonDescription}
+${params.customReason ? `Additional Context: ${params.customReason}` : ''}
+${metro2Section || 'No specific Metro 2 issue list was provided. Request verification of the reported data for accuracy and completeness.'}
+
+DISPUTED ACCOUNTS
+${itemsList}
+
+If this is Round 2, request the method of verification. If this is Round 3 or later, keep the focus on a direct furnisher investigation request where applicable.
+
+Return only the completed letter text.`;
+}
+
+function buildLetterLintContext(params: GenerateLetterParams) {
+  return {
+    reasonCodes: params.reasonCodes,
+    items: [{
+      creditorName: params.itemData.creditorName,
+      originalCreditor: params.itemData.originalCreditor,
+      accountNumber: params.itemData.accountNumber,
+      amount: params.itemData.amount,
+      bureau: params.itemData.bureau,
+    }],
+    allowThreatLanguage: false,
+    identityTheftFlag: params.reasonCodes.includes('identity_theft'),
+  };
+}
+
+function buildMultiItemLetterLintContext(params: GenerateMultiItemLetterParams) {
+  return {
+    reasonCodes: params.reasonCodes,
+    items: params.items.map(item => ({
+      creditorName: item.creditorName,
+      originalCreditor: item.originalCreditor,
+      accountNumber: item.accountNumber,
+      amount: item.amount,
+      bureau: params.bureau,
+    })),
+    allowThreatLanguage: false,
+    identityTheftFlag: params.reasonCodes.includes('identity_theft'),
+  };
+}
+
+function assertLetterLint(letter: string, context: ReturnType<typeof buildLetterLintContext> | ReturnType<typeof buildMultiItemLetterLintContext>): void {
+  const lintResult = lintGeneratedLetter(letter, context);
+  if (!lintResult.passed) {
+    throw new Error(`Letter lint failed: ${lintResult.reasons.join(' ')}`);
   }
-  const clientAddress = params.clientData.address 
-    ? `${params.clientData.address}\n${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}`
-    : 'Address on file';
-  const templateIncludesViolationSlot = promptConfig.prompt_template.includes('{metro2_violations}') 
-    || promptConfig.prompt_template.includes('{violation_descriptions}');
-  let promptTemplate = promptConfig.prompt_template
-    .replace('{legal_citations}', legalCitations)
-    .replace('{target_recipient}', params.targetRecipient.toUpperCase())
-    .replace('{bureau}', params.itemData.bureau.toUpperCase())
-    .replace('{bureau_or_creditor}', params.targetRecipient === 'bureau' ? params.itemData.bureau : params.itemData.creditorName)
-    .replace('{round}', params.round.toString())
-    .replace('{client_name}', params.clientData.name)
-    .replace('{client_address}', clientAddress)
-    .replace('{client_state}', params.clientData.state || 'State')
-    .replace('{account_details}', accountDetails)
-    .replace('{reason_descriptions}', reasonDescription)
-    .replace('{reason_description}', reasonDescription)
-    .replace('{violation_descriptions}', metro2ViolationsSection || 'See reason codes above')
-    .replace('{metro2_violations}', metro2ViolationsSection || 'See reason codes above')
-    .replace('{custom_reason}', params.customReason ? `Additional Context: ${params.customReason}` : '')
-    .replace('{prior_dispute_details}', priorDisputeSection)
-    .replace('{prior_dispute_date}', params.priorDisputeDate || 'Previous dispute')
-    .replace('{prior_result}', params.priorDisputeResult || 'Verified');
-  if (metro2ViolationsSection && !templateIncludesViolationSlot) {
-    promptTemplate += `\n\n!!! CRITICAL - CITE THESE VIOLATIONS IN YOUR LETTER !!!\n${metro2ViolationsSection}`;
+}
+
+function safeParseJsonObject<T>(raw: string): T | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fencedMatch?.[1]?.trim() || trimmed;
+  const objectStart = candidate.indexOf('{');
+  const objectEnd = candidate.lastIndexOf('}');
+  if (objectStart === -1 || objectEnd === -1 || objectEnd <= objectStart) return null;
+
+  const jsonSlice = candidate.slice(objectStart, objectEnd + 1);
+  try {
+    return JSON.parse(jsonSlice) as T;
+  } catch {
+    return null;
   }
-  const fullPrompt = `
-${promptConfig.system_context}
-
-## WRITING GUIDELINES
-Tone: ${promptConfig.writing_guidelines.tone}
-Reading Level: ${promptConfig.writing_guidelines.reading_level}
-Avoid: ${promptConfig.writing_guidelines.avoid.join(', ')}
-Include: ${promptConfig.writing_guidelines.include.join(', ')}
-
-${roundContext ? `## ROUND-SPECIFIC INSTRUCTIONS\n${roundContext}\n` : ''}
-${targetContext ? `## TARGET-SPECIFIC APPROACH\n${targetContext}\n` : ''}
-
-${promptTemplate}
-
-${bureauConfig ? `
-## BUREAU-SPECIFIC REQUIREMENTS FOR ${bureauConfig.name.toUpperCase()}
-Address: ${bureauConfig.address}
-Requirements: ${bureauConfig.specific_requirements.join('; ')}
-` : ''}
-
-Generate a unique, professional dispute letter now. Output plain text only - no markdown formatting.
-`.trim();
-  return fullPrompt;
 }
 
 function postProcessLetter(letter: string, params: GenerateLetterParams): string {
@@ -506,74 +422,28 @@ function postProcessLetter(letter: string, params: GenerateLetterParams): string
   return letter.trim();
 }
 
-function generateFallbackLetter(params: GenerateLetterParams): string {
-  const currentDate = formatDate();
-  const reasonDescription = getReasonDescriptions(params.reasonCodes);
-  const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
-  const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
-    ? params.metro2Violations.filter(Boolean) 
-    : [];
-  let recipientAddress = '';
-  if (params.targetRecipient === 'bureau') {
-    recipientAddress = BUREAU_ADDRESSES[params.itemData.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion;
-  } else {
-    recipientAddress = `${params.itemData.creditorName}\nCredit Dispute Department`;
+export async function generateUniqueDisputeLetter(params: GenerateLetterParams): Promise<string> {
+  const llmConfig = await getLLMConfig();
+
+  if (!llmConfig.apiKey) {
+    console.warn('No LLM API key configured, falling back to template-based letter');
+    const fallbackLetter = buildNeutralFallbackLetter(params);
+    assertLetterLint(fallbackLetter, buildLetterLintContext(params));
+    return fallbackLetter;
   }
-  let metro2ViolationsText = '';
-  if (metro2ViolationsRaw.length > 0) {
-    metro2ViolationsText = `\nSPECIFIC METRO 2 COMPLIANCE VIOLATIONS IDENTIFIED:\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}\n\nThese violations demonstrate that the reported information does not meet the "maximum possible accuracy" standard required under FCRA Section 607(b) and Metro 2 format requirements.`;
+
+  try {
+    const prompt = buildManualLetterPrompt(params);
+    const letterText = await generateWithLLM(prompt, llmConfig);
+    const processedLetter = postProcessLetter(letterText, params);
+    assertLetterLint(processedLetter, buildLetterLintContext(params));
+    return processedLetter;
+  } catch (error) {
+    console.error('AI letter generation failed:', error);
+    const fallbackLetter = buildNeutralFallbackLetter(params);
+    assertLetterLint(fallbackLetter, buildLetterLintContext(params));
+    return fallbackLetter;
   }
-  return `${currentDate}
-
-${recipientAddress}
-
-Re: FORMAL DISPUTE - DEMAND FOR DELETION
-Account: ${params.itemData.creditorName}
-${params.itemData.accountNumber ? `Account Number: ****${params.itemData.accountNumber.slice(-4)}` : ''}
-Dispute Round: ${params.round}
-
-To Whom It May Concern:
-
-I am writing to formally dispute the following account appearing on my credit report. After careful review of my credit file, I have identified information that is inaccurate, unverifiable, and in violation of federal reporting standards. I am demanding the COMPLETE DELETION of this account from my credit report.
-
-DISPUTED ACCOUNT INFORMATION:
-Creditor Name: ${params.itemData.creditorName}
-${params.itemData.originalCreditor ? `Original Creditor: ${params.itemData.originalCreditor}` : ''}
-${params.itemData.accountNumber ? `Account Number: ****${params.itemData.accountNumber.slice(-4)}` : ''}
-Item Type: ${formatItemType(params.itemData.itemType)}
-${params.itemData.amount ? `Reported Amount: ${formatCurrency(params.itemData.amount)}` : ''}
-${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
-
-REASON FOR DISPUTE:
-${reasonDescription}
-
-${params.customReason ? `Additional Information: ${params.customReason}` : ''}
-${metro2ViolationsText}
-
-LEGAL BASIS FOR DELETION:
-${complianceContext}
-
-DEMAND FOR ACTION:
-Pursuant to my rights under the Fair Credit Reporting Act, I am demanding that you:
-
-1. Conduct a thorough and reasonable investigation of this disputed information
-2. Contact the original data furnisher to verify the accuracy and completeness of this account
-3. Provide me with documentation of your investigation method and findings
-4. DELETE this account in its entirety if it cannot be fully verified with documentation
-
-I am NOT requesting a simple "correction" or "update" to this account. The information is fundamentally inaccurate and unverifiable, and I am demanding its complete removal from my credit file.
-
-You have 30 days from receipt of this letter to complete your investigation and respond in writing. Failure to investigate and respond within this timeframe, or continued reporting of unverifiable information, may result in legal action for willful non-compliance under 15 U.S.C. § 1681n, which provides for statutory damages of $100-$1,000 per violation plus punitive damages.
-
-I expect a written response detailing the results of your investigation and confirmation of deletion.
-
-Sincerely,
-
-${params.clientData.name}
-${params.clientData.address ? params.clientData.address : ''}
-${params.clientData.city && params.clientData.state && params.clientData.zip ? `${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}` : ''}
-
-${buildEnclosuresSection(params.enclosures)}`;
 }
 
 export const DISPUTE_REASON_CODES = [
@@ -620,128 +490,27 @@ interface GenerateMultiItemLetterParams {
   enclosures?: EvidenceEnclosure[];
 }
 
-const MULTI_ITEM_AI_PROMPT_TEMPLATE = `You are a credit repair specialist writing a formal dispute letter for MULTIPLE accounts based on METRO 2 COMPLIANCE and FCRA VERIFICATION requirements.
-
-CRITICAL COMPLIANCE RULES - YOU MUST FOLLOW THESE:
-===============================================
-1. NEVER claim "this account does not belong to me" or "I never opened this account" - this is FRAUDULENT if untrue
-2. NEVER claim the consumer "never authorized" or "never used" any account unless explicitly stated in the reason
-3. NEVER claim identity theft or fraud unless the reason explicitly mentions identity theft
-4. Focus ONLY on: verification requirements, data accuracy, Metro 2 compliance violations
-5. The dispute is about DATA ACCURACY and VERIFICATION, not account ownership
-6. Each account's dispute reason should focus on VERIFICATION, not ownership denial
-
-WHAT THIS LETTER MUST DO:
-========================
-- Request VERIFICATION of ALL account data under FCRA Section 611
-- Challenge the ACCURACY and COMPLETENESS of reported information for each account
-- Cite Metro 2 format compliance requirements
-- Demand documented proof that ALL information meets "maximum possible accuracy" standard
-- Request deletion of ANY information that CANNOT BE VERIFIED with documentation
-
-CRITICAL: CITE METRO 2 VIOLATIONS IN THE LETTER BODY
-=====================================================
-You MUST explicitly reference each Metro 2 violation provided below in the letter.
-DO NOT just list them in a separate section - INTEGRATE them into your dispute explanation.
-For EACH account, if specific violations are identified, explain HOW those violations demonstrate
-inaccuracy or non-compliance with Metro 2 reporting standards.
-Example: "Account #1 (XYZ Bank) reports a balance of $XXX while showing a 'closed' status, which
-violates Metro 2 Field 8 (Balance) reporting requirements - closed accounts must show $0 balance."
-
-1. WRITING STYLE:
-- Write at a 12th grade reading level
-- Professional and assertive, like a knowledgeable consumer exercising legal rights
-- Avoid AI-generated patterns and repetitive phrases
-- Sound like a consumer demanding their legal rights to accurate credit reporting
-
-2. LEGAL FRAMEWORK:
-{compliance_context}
-
-3. KEY DISPUTE APPROACH (Metro 2 Compliance Based):
-- The consumer is DISPUTING THE ACCURACY of the reported information
-- The consumer is REQUESTING VERIFICATION with documented proof for ALL accounts
-- The consumer is challenging whether data meets FCRA Section 607(b) "maximum possible accuracy"
-- The consumer demands deletion of ANY account that CANNOT BE VERIFIED with documentation
-- DO NOT claim any accounts are fraudulent or don't belong to the consumer
-
-4. LETTER DETAILS:
-- Target Recipient: {target_recipient}
-- Dispute Round: {round}
-- Client Name: {client_name}
-- Bureau: {bureau}
-- Number of Accounts to Dispute: {item_count}
-- Dispute Basis: {reason_description}
-{custom_reason}
-
-5. ACCOUNTS REQUIRING VERIFICATION:
-{items_list}
-
-Metro 2 violations from analysis (cite these explicitly in the letter):
-{metro2_violations}
-
-For EACH account listed above, the dispute basis is:
-- Requesting documented verification that data is accurate and complete
-- Challenging Metro 2 format compliance for this tradeline
-- Demanding proof that information meets FCRA "maximum possible accuracy" standard
-
-6. REQUIRED STRUCTURE:
-- Current date and recipient address
-- Subject: "FCRA Section 611 Dispute - Request for Verification of Multiple Accounts"
-- Opening: State this is a formal dispute requesting verification of {item_count} accounts under FCRA
-- Account List: List ALL accounts being disputed with their details
-- Dispute Basis: For EACH account, state you are challenging accuracy/completeness and requesting verification
-- Metro 2 Requirements: Reference that furnishers must report in Metro 2 format with complete, verified data
-- Legal Demands: Request verification, documentation of investigation method, deletion of ANY unverified accounts
-- 30-day deadline per FCRA Section 611(a)(1)
-- Warning about statutory damages for willful non-compliance
-- Signature block
-
-CRITICAL REMINDER: This is a VERIFICATION dispute, NOT a fraud/identity theft dispute. For EACH account, the consumer is demanding proof that the reported information is accurate and verifiable. DO NOT claim any account "does not belong" to the consumer.
-
-Generate the dispute letter now. Output plain text only - no markdown.`;
-
 export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLetterParams): Promise<string> {
   const llmConfig = await getLLMConfig();
-  
+
   if (!llmConfig.apiKey) {
     console.warn('No LLM API key configured, falling back to template-based letter');
-    return generateMultiItemFallbackLetter(params);
+    const fallbackLetter = generateMultiItemFallbackLetter(params);
+    assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
+    return fallbackLetter;
   }
 
   try {
-    const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
-    const reasonDescription = getReasonDescriptions(params.reasonCodes);
-    const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
-    
-    // Build items list for the prompt
-    const itemsList = params.items.map((item, index) => `
-Account ${index + 1}:
-- Creditor: ${item.creditorName}
-${item.originalCreditor ? `- Original Creditor: ${item.originalCreditor}` : ''}
-${item.accountNumber ? `- Account Number: ****${item.accountNumber.slice(-4)}` : ''}
-- Type: ${formatItemType(item.itemType)}
-${item.amount ? `- Amount: ${formatCurrency(item.amount)}` : ''}
-${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`).join('\n');
-
-    const prompt = MULTI_ITEM_AI_PROMPT_TEMPLATE
-      .replace('{compliance_context}', complianceContext)
-      .replace('{target_recipient}', params.targetRecipient.toUpperCase())
-      .replace('{round}', params.round.toString())
-      .replace('{client_name}', params.clientData.name)
-      .replace('{bureau}', params.bureau.toUpperCase())
-      .replace('{item_count}', params.items.length.toString())
-      .replace('{reason_description}', reasonDescription)
-      .replace('{metro2_violations}', metro2Section || 'IMPORTANT: No specific Metro 2 violations were provided by the AI analysis.\nFor each account, request general verification of all Metro 2 data fields for accuracy and completeness.\nFocus on requesting documented proof of accuracy under FCRA Section 611 for ALL disputed accounts.')
-      .replace('{custom_reason}', params.customReason ? `- Additional Context: ${params.customReason}` : '')
-      .replace('{items_list}', itemsList);
-
-    // Use multi-provider helper
+    const prompt = buildMultiItemPrompt(params);
     const letterText = await generateWithLLM(prompt, llmConfig);
-
-    return postProcessMultiItemLetter(letterText, params);
+    const processedLetter = postProcessMultiItemLetter(letterText, params);
+    assertLetterLint(processedLetter, buildMultiItemLetterLintContext(params));
+    return processedLetter;
   } catch (error) {
     console.error('AI multi-item letter generation failed:', error);
-    return generateMultiItemFallbackLetter(params);
+    const fallbackLetter = generateMultiItemFallbackLetter(params);
+    assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
+    return fallbackLetter;
   }
 }
 
@@ -765,7 +534,6 @@ function postProcessMultiItemLetter(letter: string, params: GenerateMultiItemLet
 function generateMultiItemFallbackLetter(params: GenerateMultiItemLetterParams): string {
   const currentDate = formatDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
-  const complianceContext = buildComplianceContext(params.targetRecipient, params.round);
   const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
     ? params.metro2Violations.filter(Boolean) 
     : [];
@@ -775,31 +543,34 @@ function generateMultiItemFallbackLetter(params: GenerateMultiItemLetterParams):
   } else {
     recipientAddress = `Credit Dispute Department`;
   }
-  const itemsSection = params.items.map((item, index) => `
+  const itemsSection = params.items.map((item, index) => {
+    const maskedAccountNumber = item.accountNumber ? `****${item.accountNumber.slice(-4)}` : '';
+    return `
 ACCOUNT ${index + 1}:
 Creditor Name: ${item.creditorName}
 ${item.originalCreditor ? `Original Creditor: ${item.originalCreditor}` : ''}
-${item.accountNumber ? `Account Number: ****${item.accountNumber.slice(-4)}` : ''}
+${maskedAccountNumber ? `Account Number: ${maskedAccountNumber}` : ''}
 Item Type: ${formatItemType(item.itemType)}
 ${item.amount ? `Reported Amount: ${formatCurrency(item.amount)}` : ''}
-${item.dateReported ? `Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`).join('\n');
+${item.dateReported ? `Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`;
+  }).join('\n');
   const creditorList = params.items.map(item => item.creditorName).join(', ');
   let metro2ViolationsText = '';
   if (metro2ViolationsRaw.length > 0) {
-    metro2ViolationsText = `\nSPECIFIC METRO 2 COMPLIANCE VIOLATIONS IDENTIFIED:\nThe following Metro 2 format violations apply to one or more of the disputed accounts:\n\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}\n\nThese violations demonstrate that the reported information does not meet the "maximum possible accuracy" standard required under FCRA Section 607(b) and Metro 2 format requirements.`;
+    metro2ViolationsText = `\nSPECIFIC REPORTING CONCERNS IDENTIFIED:\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}`;
   }
   return `${currentDate}
 
 ${recipientAddress}
 
-Re: FORMAL DISPUTE - DEMAND FOR DELETION OF MULTIPLE ACCOUNTS
+Re: FCRA Dispute - Request for Investigation and Verification of Multiple Accounts
 Disputed Accounts: ${creditorList}
 Number of Accounts: ${params.items.length}
 Dispute Round: ${params.round}
 
 To Whom It May Concern:
 
-I am writing to formally dispute the following ${params.items.length} account(s) appearing on my credit report. After careful review of my credit file, I have identified information that is inaccurate, unverifiable, and in violation of federal reporting standards. I am demanding the COMPLETE DELETION of ALL listed accounts from my credit report.
+I am writing to dispute the accuracy and completeness of the following account information and to request a reasonable investigation under the Fair Credit Reporting Act.
 
 DISPUTED ACCOUNTS:
 ${itemsSection}
@@ -810,22 +581,15 @@ ${reasonDescription}
 ${params.customReason ? `Additional Information: ${params.customReason}` : ''}
 ${metro2ViolationsText}
 
-LEGAL BASIS FOR DELETION:
-${complianceContext}
+REQUEST FOR REVIEW:
+1. Investigate each disputed account with the furnisher or the records you maintain
+2. Verify that the reported account details are complete and accurate
+3. Provide a written response describing the results of your review for each account
+4. Correct or remove any information that cannot be verified as accurate
 
-DEMAND FOR ACTION:
-Pursuant to my rights under the Fair Credit Reporting Act, I am demanding that you:
+If this letter follows a prior dispute, please also provide the method of verification used in the earlier investigation.
 
-1. Conduct a thorough and reasonable investigation of ALL ${params.items.length} disputed accounts
-2. Contact the original data furnishers to verify the accuracy and completeness of each account
-3. Provide me with documentation of your investigation method and findings for each account
-4. DELETE ALL accounts listed above in their entirety if they cannot be fully verified with documentation
-
-I am NOT requesting simple "corrections" or "updates" to these accounts. The information is fundamentally inaccurate and unverifiable, and I am demanding the complete removal of ALL ${params.items.length} accounts from my credit file.
-
-You have 30 days from receipt of this letter to complete your investigation and respond in writing regarding ALL disputed accounts. Failure to investigate and respond within this timeframe, or continued reporting of unverifiable information, may result in legal action for willful non-compliance under 15 U.S.C. § 1681n, which provides for statutory damages of $100-$1,000 PER VIOLATION plus punitive damages.
-
-I expect a written response detailing the results of your investigation and confirmation of deletion for each disputed account.
+Please respond within the time allowed by the Fair Credit Reporting Act.
 
 Sincerely,
 
@@ -871,7 +635,10 @@ interface AnalyzeItemParams {
   creditLimit?: number | null;
   highCredit?: number | null;
   pastDueAmount?: number | null;
+  chargeOffAmount?: number | null;
   paymentStatus?: string | null; // 'current' | '30_days_late' | '60_days_late' | etc.
+  paymentHistory?: Record<string, string> | null;
+  paymentHistoryGrid?: Record<string, string> | null;
   dateOpened?: string | null;
   remarks?: string | null;
 }
@@ -898,85 +665,94 @@ interface AnalyzeItemParams {
  * Does NOT fabricate or assume violations.
  */
 export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, aggressiveness: 'conservative' | 'balanced' | 'aggressive' = 'balanced'): ItemAnalysisResult {
-  const reasonCodes: string[] = [];
   const metro2Violations: string[] = [];
   const fcraIssues: string[] = [];
-  let methodology = 'factual';
-  let confidence = 0.4; // Lower baseline for more conservative start - increases with each provable issue
+  const reasonCodes: string[] = [];
   const notes: string[] = [];
-  const violationSeverities: number[] = []; // Track severity scores for confidence calculation
-
-  const itemType = item.itemType?.toLowerCase() || '';
-  const accountStatus = item.accountStatus?.toLowerCase() || '';
-  const paymentStatus = item.paymentStatus?.toLowerCase() || '';
+  let methodology = 'factual';
+  let confidence = 0.5;
+  
+  // P3.5: Track violation severity scores for enhanced confidence calculation
+  const violationSeverities: number[] = []; // 0.1 to 1.0 per violation
+  
+  const itemType = item.itemType.toLowerCase();
+  const accountStatus = item.accountStatus?.toLowerCase();
+  const paymentStatus = item.paymentStatus?.toLowerCase();
+  const amount = item.currentBalance ?? item.amount ?? 0;
+  const creditLimit = item.creditLimit ?? 0;
+  const pastDue = item.pastDueAmount ?? 0;
+  const paymentHistory = item.paymentHistory || item.paymentHistoryGrid || undefined;
   const now = new Date();
 
-  // METRO 2 ANALYSIS CHECKLIST
+  // ---- CHECK 1: Balance and Status Consistency ----
+  // Metro 2 Base Segment requires balance to align with status codes
   
-  const hasBalance = item.currentBalance !== null && item.currentBalance !== undefined && item.currentBalance > 0;
-  const amount = item.amount || item.currentBalance || 0;
-  
-  // Balance > $0 on account marked as paid, sold, or transferred
-  if (hasBalance && (accountStatus === 'paid' || accountStatus === 'sold' || accountStatus === 'transferred')) {
-    const balanceAmount = item.currentBalance! / 100; // Convert cents to dollars
-    metro2Violations.push(`Balance of $${balanceAmount.toFixed(2)} reported on account with status "${accountStatus}" - balance should be $0`);
-    reasonCodes.push('balance_discrepancy');
-    notes.push(`Account shows ${accountStatus} status but reports non-zero balance`);
-    violationSeverities.push(0.25); // High severity - clear data inconsistency
+  // 1A. Paid/closed accounts should not show balance
+  // EXCEPTION: Charge-offs can legitimately retain a balance after charge-off
+  // Only flag if status is paid/closed/transferred/etc, NOT charge_off or collection
+  if (amount > 0) {
+    const zeroBalanceStatuses = ['paid', 'closed', 'transferred', 'sold', 'included_in_bankruptcy'];
+    const shouldHaveZeroBalance = accountStatus && zeroBalanceStatuses.includes(accountStatus);
+    
+    if (shouldHaveZeroBalance) {
+      metro2Violations.push(`Account reports a balance of ${formatCurrency(amount)} while account status is "${accountStatus}" - current balance and account status are inconsistent`);
+      reasonCodes.push('balance_discrepancy');
+      notes.push(`Positive balance conflicts with status "${accountStatus}"`);
+      violationSeverities.push(0.8); // High severity - clear contradiction
+    }
   }
 
-  // Past due amount on current account
-  if (item.pastDueAmount && item.pastDueAmount > 0 && paymentStatus === 'current') {
-    const pastDue = item.pastDueAmount / 100;
-    metro2Violations.push(`Past due amount of $${pastDue.toFixed(2)} reported while payment status shows "current"`);
-    reasonCodes.push('status_inconsistency');
-    notes.push('Past due amount conflicts with current payment status');
-    violationSeverities.push(0.2); // High severity - contradictory data
+  // 1B. Balance exceeds credit limit (revolving accounts only)
+  // IMPORTANT: For installment/auto/mortgage loans, balance naturally exceeds or differs from any original amount.
+  // This check only applies to revolving credit where a limit exists and should bound utilization.
+  const normalizedAccountType = item.accountType?.toLowerCase() || '';
+  const isRevolvingAccount = [
+    'credit_card',
+    'revolving',
+    'line_of_credit',
+    'charge_card',
+    'store_card',
+  ].includes(normalizedAccountType);
+  if (isRevolvingAccount && creditLimit > 0 && amount > creditLimit * 1.1) { // 10% tolerance
+    metro2Violations.push(`Reported balance of ${formatCurrency(amount)} exceeds credit limit of ${formatCurrency(creditLimit)} - possible over-limit or reporting error`);
+    reasonCodes.push('wrong_balance');
+    notes.push(`Balance exceeds credit limit by ${formatCurrency(amount - creditLimit)}`);
+    violationSeverities.push(0.6); // Medium-high severity
   }
 
-  // P3.5: Credit limit vs balance check
-  if (item.creditLimit && item.currentBalance && item.currentBalance > item.creditLimit) {
-    const balance = item.currentBalance / 100;
-    const limit = item.creditLimit / 100;
-    metro2Violations.push(`Balance of $${balance.toFixed(2)} exceeds credit limit of $${limit.toFixed(2)} - violates Metro 2 field validation`);
-    reasonCodes.push('balance_discrepancy');
-    violationSeverities.push(0.22);
+  // P3.5: Additional balance checks
+  if (amount < 0) {
+    metro2Violations.push(`Account reports a negative balance (${formatCurrency(amount)}) - verify whether this is a credit balance or reporting error`);
+    reasonCodes.push('wrong_balance');
+    violationSeverities.push(0.4);
   }
 
-  // P3.5: High credit amount vs current balance consistency
-  if (item.highCredit && item.currentBalance && item.currentBalance > (item.highCredit * 1.1)) {
-    const balance = item.currentBalance / 100;
-    const highCredit = item.highCredit / 100;
-    metro2Violations.push(`Balance of $${balance.toFixed(2)} exceeds high credit of $${highCredit.toFixed(2)} by more than 10% - data accuracy issue`);
+  if (pastDue > amount && amount > 0) {
+    metro2Violations.push(`Past due amount (${formatCurrency(pastDue)}) exceeds total balance (${formatCurrency(amount)}) - amounts are internally inconsistent`);
     reasonCodes.push('balance_discrepancy');
-    violationSeverities.push(0.18);
+    violationSeverities.push(0.7); // High severity - impossible numbers
+  }
+
+  // 1C. Closed account with credit limit but no balance (might be okay, but note it)
+  if (accountStatus === 'closed' && creditLimit > 0 && amount === 0) {
+    notes.push('Account is closed with retained credit limit - may be normal depending on furnisher reporting practices');
   }
 
   // ---- CHECK 2: Status and Payment History Consistency ----
-  // Look for: status code doesn't match payment pattern
-
-  // Charge-off status but payment status shows current
-  if ((itemType === 'charge_off' || accountStatus === 'charge_off') && paymentStatus === 'current') {
-    metro2Violations.push('Account status shows "charge-off" but payment status indicates "current" - these statuses are inconsistent');
+  
+  // Current status but has past due amount
+  if ((accountStatus === 'current' || paymentStatus === 'current') && pastDue > 0) {
+    metro2Violations.push(`Account status shows current but past due amount is ${formatCurrency(pastDue)} - status and delinquency fields conflict`);
     reasonCodes.push('status_inconsistency');
-    notes.push('Charge-off status conflicts with current payment status');
-    violationSeverities.push(0.25); // High severity - fundamental status contradiction
+    notes.push('Current status conflicts with past due amount');
+    violationSeverities.push(0.75); // High severity
   }
 
-  // Collection status but account shows as open/current
-  if (itemType === 'collection' && accountStatus === 'open' && paymentStatus === 'current') {
-    metro2Violations.push('Item type is "collection" but account shows as open with current payment status - status codes are inconsistent');
-    reasonCodes.push('status_inconsistency');
-    notes.push('Collection item type conflicts with open/current account status');
-    violationSeverities.push(0.2); // High severity - collection items should be delinquent
-  }
-
-  // Late payment item type but payment status shows current (and no delinquency info)
-  if (itemType === 'late_payment' && paymentStatus === 'current' && !item.pastDueAmount) {
-    metro2Violations.push('Item flagged as "late payment" but payment status shows "current" with no past due amount');
-    reasonCodes.push('status_inconsistency');
-    notes.push('Late payment designation conflicts with current payment status');
-    violationSeverities.push(0.18); // Medium-high severity - status contradiction
+  // Charged off but no balance or charge-off amount
+  if (accountStatus === 'charge_off') {
+    if (amount === 0 && !item.chargeOffAmount) {
+      notes.push('Charged-off account reports no balance - verify whether debt was transferred or paid');
+    }
   }
 
   // P3.5: Paid status but recent payment status
@@ -984,6 +760,24 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     metro2Violations.push(`Account marked as "${accountStatus}" but payment status still shows late payments - status fields are contradictory`);
     reasonCodes.push('status_inconsistency');
     violationSeverities.push(0.2);
+  }
+
+  if (paymentHistory && Object.keys(paymentHistory).length > 0) {
+    const normalizedCodes = Object.values(paymentHistory).map((code) => String(code).toUpperCase());
+    const hasLateHistory = normalizedCodes.some((code) => ['30', '60', '90', '120', '150', '180', 'CO', 'COL'].includes(code));
+    const allHistoryCurrent = normalizedCodes.every((code) => code === 'OK' || code === 'UNK');
+
+    if (hasLateHistory && (accountStatus === 'current' || paymentStatus === 'current')) {
+      metro2Violations.push('Payment history grid shows late or derogatory codes while the current status remains current.');
+      reasonCodes.push('status_inconsistency');
+      violationSeverities.push(0.7);
+    }
+
+    if (allHistoryCurrent && ['charge_off', 'collection'].includes(accountStatus || '')) {
+      metro2Violations.push('Payment history grid shows only current/unknown codes while the account status is reported as charge-off or collection.');
+      reasonCodes.push('status_inconsistency');
+      violationSeverities.push(0.55);
+    }
   }
 
   const reportDate = item.dateReported ? new Date(item.dateReported) : null;
@@ -1033,7 +827,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   const isThirdPartyCollector = itemType === 'collection' && isLikelyCollectionAgency(item.creditorName);
   
   if (isThirdPartyCollector && !item.originalCreditor) {
-    metro2Violations.push(`Third-party collection agency "${item.creditorName}" is not reporting Original Creditor Name (Metro 2 Field 24) - required for debt validation`);
+    metro2Violations.push(`Third-party collection agency "${item.creditorName}" is not reporting Original Creditor Name in the K1 segment - required for debt validation`);
     fcraIssues.push('FCRA § 623(a)(2): Debt collectors must identify the original creditor upon request');
     reasonCodes.push('incomplete_data');
     notes.push('Collection agency account missing required original creditor information');
@@ -1107,7 +901,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
       }
   }
 
-  // ---- ROUND-BASED ESCALATION ----
+  // ---- ROUND-BASED STRATEGY SHIFT ----
   if (round >= 2) {
     methodology = 'method_of_verification';
     fcraIssues.push('FCRA § 611(a)(6)(B)(iii): Consumer entitled to description of method of verification');
@@ -1115,15 +909,14 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   }
 
   if (round >= 3) {
-    methodology = 'consumer_law';
-    fcraIssues.push('15 U.S.C. § 1681n: Potential willful non-compliance if adequate investigation not conducted');
-    notes.push('Round 3+: Prior investigations may have been inadequate');
-    violationSeverities.push(0.15); // Medium severity - possible willful non-compliance
+    methodology = 'factual';
+    fcraIssues.push('FCRA § 623(a)(8): Consumer may dispute directly with the furnisher');
+    notes.push('Round 3+: Escalating to direct furnisher investigation based on prior unresolved reporting concerns');
   }
 
   // ---- P3.5: ENHANCED CONFIDENCE CALCULATION ----
   // Uses violation severity scores instead of simple increments
-  // Factors: violation count, severity scores, aggressiveness level, round number
+  // Factors: violation count, severity scores, aggressiveness level
 
   const hasSpecificIssues = metro2Violations.length > 0;
 
@@ -1135,10 +928,6 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     // Scale: average severity * multiplier based on count
     const violationBoost = Math.min(avgSeverity * (violationSeverities.length * 0.15), 0.5);
     confidence = 0.4 + violationBoost;
-
-    // Round-based escalation bonus
-    if (round === 2) confidence += 0.05;
-    if (round >= 3) confidence += 0.1;
   } else {
     // No specific violations found - generic verification request
     confidence = 0.5 + (aggressiveness === 'conservative' ? 0 : aggressiveness === 'aggressive' ? 0.05 : 0.02);
@@ -1177,56 +966,55 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
  * - Credit card issuers
  * 
  * Collection agencies (third-party):
- * - Companies with "collection" in name
- * - Companies with "recovery" in name
- * - Known collection agencies (Midland, Portfolio, etc.)
  */
-function isLikelyCollectionAgency(creditorName: string): boolean {
-  if (!creditorName) return false;
-  
+export function isLikelyCollectionAgency(creditorName: string): boolean {
   const name = creditorName.toUpperCase();
   
-  // Known collection agency indicators
+  // Common collection agency indicators
   const collectionIndicators = [
     'COLLECTION',
-    'COLLECTIONS',
     'RECOVERY',
-    'RECOVERIES',
-    'DEBT',
-    'RECEIVABLES',
-    'ASSET ACCEPTANCE',
-    'MIDLAND',
+    'ACQUISITIONS',
+    'SERVICES',
     'PORTFOLIO',
-    'CONVERGENT',
+    'FINANCIAL RECOVERY',
+    'DEBT',
+    'RECEIVABLE',
+    'CREDENCE',
+    'MIDLAND',
+    'PRA',
+    'PORTFOLIO RECOVERY',
+    'LVNV',
+    'RESURGENT',
+    'CAVALRY',
+    'ENHANCED RECOVERY',
     'IC SYSTEM',
-    'NCO FINANCIAL',
-    'TRANSWORLD',
-    'ALLIED INTERSTATE',
     'AFNI',
+    'ALLIED INTERSTATE',
+    'CBCS',
+    'CONVERGENT',
+    'ERC',
+    'GC SERVICES',
+    'MEDICREDIT',
+    'JEFFERSON CAPITAL',
+    'SECOND ROUND',
+    'TRANSWORLD',
+    'NCO',
     'AMSHER',
     'CREDIT MANAGEMENT',
-    'CREDIT BUREAU',
-    'CBCS',
-    'ERC',
-    'ENHANCED RECOVERY',
-    'FMS',
-    'GC SERVICES',
-    'GLOBAL CREDIT',
-    'HALSTED FINANCIAL',
-    'HRS ACCOUNT',
-    'JEFFERSON CAPITAL',
-    'LVNV',
-    'MEDICREDIT',
-    'NATIONAL CREDIT',
-    'NATIONAL ENTERPRISE',
-    'NORTHLAND',
+    'HALSTED',
     'PENDRICK',
+    'WAKEFIELD',
+    'FMS',
     'PHOENIX FINANCIAL',
     'RADIUS GLOBAL',
-    'RESURGENT',
-    'SECOND ROUND',
+    'NORTHLAND',
+    'NATIONAL CREDIT',
+    'NATIONAL ENTERPRISE',
+    'GLOBAL CREDIT',
+    'HRS ACCOUNT',
     'SUNRISE CREDIT',
-    'WAKEFIELD',
+    'CREDIT BUREAU',
   ];
   
   for (const indicator of collectionIndicators) {
@@ -1284,7 +1072,6 @@ export function analyzeNegativeItems(items: AnalyzeItemParams[], round: number =
 export function getBestMethodologyForBatch(analyses: ItemAnalysisResult[]): string {
   // Priority order for methodologies
   const methodologyPriority: Record<string, number> = {
-    'consumer_law': 5,
     'method_of_verification': 4,
     'debt_validation': 3,
     'metro2_compliance': 2,
@@ -1327,7 +1114,7 @@ export interface Metro2NegativeItem {
   itemId: string;
   bureauName: string;
   furnisherName: string;
-  accountNumberMasked: string;
+  accountNumberMasked?: string;
   accountType: string; // revolving, installment, mortgage, collection
   ownershipType?: string; // individual, joint, authorized_user
   openDate?: string;
@@ -1341,6 +1128,7 @@ export interface Metro2NegativeItem {
   chargeOffAmount?: number;
   dateOfFirstDelinquency?: string;
   paymentHistory?: Record<string, string>; // { "2024-01": "OK", "2024-02": "30" }
+  paymentHistoryGrid?: Record<string, string>;
   specialComments?: string[];
   consumerInformationIndicator?: string;
   complianceConditionCode?: string;
@@ -1408,6 +1196,7 @@ CRITICAL COMPLIANCE RULES
 3. NEVER assume violations - only cite what you can SEE in the data
 4. ALWAYS frame disputes around DATA ACCURACY and VERIFICATION
 5. If no clear issue exists, state that and do NOT generate dispute language for that item
+6. Do not cite Metro 2 field numbers; use segment and field names only when needed
 
 ANALYSIS CHECKLIST
 -------------------
@@ -1421,7 +1210,7 @@ For EACH negative item, check:
 2) Status and payment history consistency:
    - Does account_status_code align with payment_history grid?
    - Is account marked late/charge-off while history shows OK?
-   - Are there conflicting statuses?
+   - Are conflicting statuses?
 
 3) Delinquency timing and obsolescence:
    - Is DOFD consistent with first delinquency in payment history?
@@ -1510,23 +1299,6 @@ export async function generateFactualMetro2DisputeLetter(params: {
   }
 
   try {
-    if (llmConfig.provider !== 'google') {
-      console.warn(`Provider "${llmConfig.provider}" not yet supported for Metro2 analysis`);
-      return {
-        analysisSummary: params.negativeItems.map(item => ({
-          itemId: item.itemId,
-          issueFound: false,
-          issueTypes: [],
-          issues: [],
-          explanation: 'AI analysis unavailable - provider not supported',
-        })),
-        disputeLetter: null,
-        itemsWithIssues: 0,
-        totalItems: params.negativeItems.length,
-      };
-    }
-
-    const genAI = new GoogleGenAI({ apiKey: llmConfig.apiKey });
     const generationConfig = {
       model: llmConfig.model,
       config: {
@@ -1586,21 +1358,23 @@ Return ONLY the JSON object, no markdown formatting.`;
 
     // Combine system prompt with user prompt
     const fullPrompt = METRO2_ANALYSIS_SYSTEM_PROMPT + '\n\n---\n\n' + userPrompt;
+    let responseText = '';
+
+    if (llmConfig.provider === 'google') {
+      const genAI = new GoogleGenAI({ apiKey: llmConfig.apiKey });
+      const response = await genAI.models.generateContent({
+        ...generationConfig,
+        contents: fullPrompt,
+      });
+      responseText = typeof response.text === 'string' ? response.text : '';
+    } else {
+      responseText = await generateWithLLM(fullPrompt, llmConfig);
+    }
     
-    const response = await genAI.models.generateContent({
-      ...generationConfig,
-      contents: fullPrompt,
-    });
-    let responseText = typeof response.text === 'string' ? response.text : '';
-    
-    // Clean up response - remove markdown code blocks if present
-    responseText = responseText
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
+    responseText = responseText.trim();
 
     // Parse the JSON response
-    let parsedResponse: {
+    const parsedResponse = safeParseJsonObject<{
       analysis_summary: Array<{
         item_id: string;
         issue_found: boolean;
@@ -1608,13 +1382,10 @@ Return ONLY the JSON object, no markdown formatting.`;
         explanation: string;
       }>;
       dispute_letter: string | null;
-    };
+    }>(responseText);
 
-    try {
-      parsedResponse = JSON.parse(responseText);
-    } catch {
-      console.error('Failed to parse AI response as JSON:', responseText);
-      // Return fallback
+    if (!parsedResponse || !Array.isArray(parsedResponse.analysis_summary)) {
+      console.error('Failed to parse AI response as structured JSON:', responseText);
       return {
         analysisSummary: params.negativeItems.map(item => ({
           itemId: item.itemId,
@@ -1659,6 +1430,24 @@ Return ONLY the JSON object, no markdown formatting.`;
         lines.splice(1, 0, '', bureauAddress);
         disputeLetter = lines.join('\n');
       }
+      const lintResult = lintGeneratedLetter(disputeLetter, {
+        reasonCodes: ['verification_required'],
+        items: params.negativeItems.map(item => ({
+          creditorName: item.furnisherName,
+          accountNumber: item.accountNumberMasked,
+          bureau: params.bureau,
+        })),
+        allowThreatLanguage: false,
+        identityTheftFlag: false,
+      });
+      if (!lintResult.passed) {
+        return {
+          analysisSummary,
+          disputeLetter: null,
+          itemsWithIssues,
+          totalItems: params.negativeItems.length,
+        };
+      }
     }
 
     return {
@@ -1702,6 +1491,8 @@ export function convertToMetro2Format(item: {
   bureau?: string | null;
   accountStatus?: string | null;
   paymentStatus?: string | null;
+  paymentHistory?: Record<string, string>;
+  paymentHistoryGrid?: Record<string, string>;
 }, bureau: string): Metro2NegativeItem {
   const obsolescenceClock = getObsolescenceClock({
     bureauStatedRemovalDate: item.bureauStatedRemovalDate,
@@ -1719,25 +1510,11 @@ export function convertToMetro2Format(item: {
     itemId: item.id,
     bureauName: bureau,
     furnisherName: item.creditorName,
-    accountNumberMasked: item.accountNumber || `****${item.id.slice(-4)}`,
-    accountType: mapItemTypeToAccountType(item.itemType),
+    accountNumberMasked: item.accountNumber || undefined,
+    accountType: item.itemType,
+    currentBalance: item.amount ?? undefined,
     accountStatusCode: item.accountStatus || item.paymentStatus || 'unknown',
-    currentBalance: item.amount || undefined,
     dateOfFirstDelinquency,
+    paymentHistory: item.paymentHistory || item.paymentHistoryGrid,
   };
-}
-
-function mapItemTypeToAccountType(itemType: string): string {
-  const mapping: Record<string, string> = {
-    collection: 'collection',
-    charge_off: 'charge_off',
-    late_payment: 'revolving',
-    repossession: 'installment',
-    foreclosure: 'mortgage',
-    bankruptcy: 'bankruptcy',
-    judgment: 'public_record',
-    tax_lien: 'public_record',
-    inquiry: 'inquiry',
-  };
-  return mapping[itemType.toLowerCase()] || 'unknown';
 }

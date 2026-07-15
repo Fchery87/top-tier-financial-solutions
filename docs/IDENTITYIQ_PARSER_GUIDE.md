@@ -20,6 +20,14 @@ This document explains how the IdentityIQ HTML credit report parser works, inclu
 
 ## Overview
 
+The parser should treat bureau-specific presence as evidence-driven. Combined or missing values should not be interpreted as present on all bureaus unless the source explicitly says so.
+
+Phase 2 additions also require parser outputs to support deterministic review gating and payment-history persistence. In practice that means:
+- source detection must be conservative enough to avoid false combined-report routing
+- date parsing must use deterministic shared helpers instead of parser-local `new Date(...)` guesses
+- when payment-history evidence is present, it should be persisted in a bureau-keyed grid shape suitable for downstream analysis
+- parser outputs may be accepted for downstream workflows only after `creditReports.parserReviewStatus === 'approved'`
+
 The IdentityIQ parser extracts structured credit data from HTML credit reports exported from IdentityIQ credit monitoring service. It produces:
 
 - **Credit Scores** - Per bureau (TransUnion, Experian, Equifax)

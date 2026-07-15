@@ -9,6 +9,7 @@ import {
   calculateRiskLevel,
   type StandardizedAccount,
 } from './metro2-mapping';
+import { parseReportDate } from './report-date';
 
 // AnnualCreditReport.com specific selectors
 const ACR_SELECTORS = {
@@ -442,9 +443,7 @@ function parseMoney(val: string | undefined | null): number | undefined {
 }
 
 function parseDate(str: string | undefined | null): Date | undefined {
-  if (!str) return undefined;
-  const d = new Date(str.replace(/-/g, '/'));
-  return isNaN(d.getTime()) ? undefined : d;
+  return parseReportDate(str);
 }
 
 function parseStatus(text: string): string {

@@ -7,6 +7,7 @@ import { disputes, negativeItems, clients } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
+import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -45,10 +46,18 @@ export async function POST(
       return NextResponse.json({ error: 'Client or negative item missing for escalation' }, { status: 400 });
     }
 
+    const reportGate = await requireLatestApprovedReportForClient(currentDispute.clientId);
+    if (!reportGate.allowed) {
+      return NextResponse.json(
+        { error: reportGate.reason || 'The latest credit report must be approved before creating a re-dispute.' },
+        { status: 409 }
+      );
+    }
+
     const nextRound = (currentDispute.round || 1) + 1;
     const targetRecipient = nextRound === 2 ? 'bureau' : 'creditor';
     const nextDisputeType = nextRound === 2 ? 'method_of_verification' : 'direct_creditor';
-    const methodology = nextRound === 2 ? 'method_of_verification' : 'consumer_law';
+    const methodology = nextRound === 2 ? 'method_of_verification' : 'factual';
     const reasonCodes = nextRound === 2
       ? ['previously_disputed', 'request_verification_method']
       : ['verification_required', 'metro2_violation'];
@@ -62,7 +71,7 @@ export async function POST(
       itemData: {
         creditorName: negativeItem.creditorName,
         originalCreditor: negativeItem.originalCreditor || undefined,
-        accountNumber: negativeItem.id.slice(-8),
+        accountNumber: negativeItem.creditAccountId ? undefined : negativeItem.id.slice(-4),
         itemType: negativeItem.itemType,
         amount: negativeItem.amount || undefined,
         dateReported: negativeItem.dateReported?.toISOString(),
@@ -87,7 +96,7 @@ export async function POST(
       escalationPath: targetRecipient,
       letterContent,
       creditorName: negativeItem.creditorName,
-      accountNumber: negativeItem.id.slice(-8),
+      accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
       generatedByAi: true,
       methodology,
       priorDisputeId: currentDispute.id,

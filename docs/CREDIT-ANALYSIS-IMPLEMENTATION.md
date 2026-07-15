@@ -96,6 +96,7 @@ clients
 - Item type, creditor, amount, bureau, date reported
 - Recommended action (dispute, pay for delete, goodwill letter)
 - **"Dispute" button** to create dispute from item
+- Discrepancy handling is report-scoped and persists report provenance for per-pull comparison.
 
 #### Disputes Section
 - List of all disputes with status
@@ -175,6 +176,25 @@ R2_BUCKET_NAME=credit-reports
 - `fcra_compliance_items.dofd_confidence` records which source produced the clock
 - Items computed from `dateReported` alone are treated as low-confidence estimates and do not get automatic `FCRA VIOLATION` wording
 - `convertToMetro2Format` no longer labels `dateReported` as DOFD in LLM payloads
+
+### Parser Review Gate
+- `credit_reports.parse_status` remains the processing lifecycle (`pending`, `processing`, `completed`, `failed`)
+- `credit_reports.parser_review_status` is the canonical Phase 2 review gate (`needs_review`, `approved`, `rejected`)
+- Reports are automatically marked for review when parser confidence is low, account count is implausible, or more than 40% of accounts have low completeness
+- Downstream workflows now block on unapproved reports, including:
+  - report-pull comparison
+  - dispute item analysis
+  - dispute auto-select
+  - dispute creation
+  - letter generation
+  - quick re-dispute escalation
+
+### Payment History Grid Persistence
+- `credit_accounts.payment_history_grid` stores per-bureau payment history as JSON
+- Shared parser types model payment history as bureau → month/code grids
+- IdentityIQ-backed parsing now persists payment-history evidence into account rows
+- Admin client detail responses include `payment_history_grid` and surface it in the reports/accounts UI
+- `analyzeNegativeItem` and factual Metro 2 payload generation can now consume payment-history grids for status/history consistency checks
 
 ### Revised Metro 2 Balance Rules
 - Removed the false generic rule that treated all `closed` accounts with balances as violations

@@ -30,6 +30,30 @@ import {
 } from './parsers/metro2-mapping';
 import { buildFcraComplianceStatus, getObsolescenceClock } from './fcra-clock';
 import { buildCreditAccountDerivedFields } from './credit-account-ingest';
+import { getAccountPresence } from './credit-account-bureau-presence';
+import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
+import { buildAccountBalanceDiscrepancies } from './credit-analysis-discrepancies';
+
+function determineParserReviewStatus(params: {
+  sourceConfidence?: string;
+  accountCompleteness: number[];
+  accountCount: number;
+}): { status: 'needs_review' | 'approved'; reason?: string } {
+  if (params.sourceConfidence === 'low') {
+    return { status: 'needs_review', reason: 'Low source detection confidence' };
+  }
+
+  if (params.accountCount === 0 || params.accountCount > 250) {
+    return { status: 'needs_review', reason: 'Implausible account count' };
+  }
+
+  const lowCompleteness = params.accountCompleteness.filter((score) => score < 50).length;
+  if (params.accountCompleteness.length > 0 && lowCompleteness / params.accountCompleteness.length > 0.4) {
+    return { status: 'needs_review', reason: 'More than 40% of accounts have low completeness' };
+  }
+
+  return { status: 'approved' };
+}
 
 // Helper function to check if parsed data has extended bureau info
 function isExtendedParsedData(data: ParsedCreditData): data is ExtendedParsedCreditData {
@@ -38,24 +62,35 @@ function isExtendedParsedData(data: ParsedCreditData): data is ExtendedParsedCre
 
 // Helper to find matching derogatory account by creditor name
 function findDerogatoryMatch(
-  creditorName: string, 
-  derogatoryAccounts: DerogatoryAccount[] | undefined
-): DerogatoryAccount | undefined {
-  if (!derogatoryAccounts) return undefined;
+  creditorName: string,
+  accountNumber: string | undefined,
+  amount: number | undefined,
+  derogatoryAccounts: DerogatoryAccount[] | undefined,
+): { match?: DerogatoryAccount; confidence: 'high' | 'medium' | 'low' } {
+  if (!derogatoryAccounts) return { confidence: 'low' };
   const normalizedName = creditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return derogatoryAccounts.find(da => {
-    const daNormalized = da.creditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return daNormalized === normalizedName || 
-           daNormalized.includes(normalizedName) || 
-           normalizedName.includes(daNormalized);
-  });
-}
+  const last4 = accountNumber?.replace(/\D/g, '').slice(-4);
 
-// Helper to parse date string from derogatory account
-function parseBureauDate(dateStr: string | undefined): Date | undefined {
-  if (!dateStr || dateStr === '-' || dateStr === '') return undefined;
-  const parsed = new Date(dateStr);
-  return isNaN(parsed.getTime()) ? undefined : parsed;
+  const scored = derogatoryAccounts.map((da) => {
+    const daNormalized = da.creditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const daLast4 = da.creditorName.replace(/\D/g, '').slice(-4);
+    let score = 0;
+
+    if (last4 && daLast4 && last4 === daLast4) score += 100;
+    if (daNormalized === normalizedName) score += 45;
+    else if (daNormalized.includes(normalizedName) || normalizedName.includes(daNormalized)) score += 20;
+
+    const itemAmount = amount ?? 0;
+    if (itemAmount > 0 && /collection|chargeoff|charge_off|late/i.test(da.uniqueStatus)) {
+      score += 5;
+    }
+
+    return { da, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const best = scored[0];
+  if (!best || best.score <= 0) return { confidence: 'low' };
+  return { match: best.da, confidence: best.score >= 100 ? 'high' : best.score >= 45 ? 'medium' : 'low' };
 }
 
 export async function analyzeCreditReport(reportId: string): Promise<void> {
@@ -114,6 +149,8 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       parsedData = parseHtmlCreditReport(`<pre>${textContent}</pre>`);
     }
 
+    const now = new Date();
+
     // Store consumer profile if available
     if (parsedData.consumerProfile) {
       await saveConsumerProfile(report.clientId, reportId, report.bureau, parsedData.consumerProfile);
@@ -122,6 +159,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     // Store parsed accounts with completeness scoring
     const storedAccountIds: string[] = [];
     const accountIdMap = new Map<string, string>(); // Map creditor+account# to accountId
+    const completenessScores: number[] = [];
     
     for (const account of parsedData.accounts) {
       const accountId = randomUUID();
@@ -149,6 +187,8 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         remarks: account.remarks,
       });
       
+      completenessScores.push(completenessScore);
+
       // Re-calculate negative status and risk using metro2 functions
       const isNegativeCalc = isAccountNegative({
         accountStatus,
@@ -161,38 +201,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         accountCategory,
       });
       
-      // Determine per-bureau presence for credit accounts
-      // For accounts, we use the single bureau field since accounts typically come per-bureau
-      let accountOnTransunion = false;
-      let accountOnExperian = false;
-      let accountOnEquifax = false;
-      
-      const specificBureaus = ['transunion', 'experian', 'equifax'];
-      const reportBureauLower = report.bureau?.toLowerCase();
-      
-      if (reportBureauLower && specificBureaus.includes(reportBureauLower)) {
-        // Single specific bureau report
-        accountOnTransunion = reportBureauLower === 'transunion';
-        accountOnExperian = reportBureauLower === 'experian';
-        accountOnEquifax = reportBureauLower === 'equifax';
-      } else if (account.bureau) {
-        const accountBureauLower = account.bureau.toLowerCase();
-        if (specificBureaus.includes(accountBureauLower)) {
-          accountOnTransunion = accountBureauLower === 'transunion';
-          accountOnExperian = accountBureauLower === 'experian';
-          accountOnEquifax = accountBureauLower === 'equifax';
-        } else {
-          // Account bureau is "combined" or unknown - mark all as true
-          accountOnTransunion = true;
-          accountOnExperian = true;
-          accountOnEquifax = true;
-        }
-      } else {
-        // Combined report - mark all as true (will be refined by derogatory match if available)
-        accountOnTransunion = true;
-        accountOnExperian = true;
-        accountOnEquifax = true;
-      }
+      const accountPresence = getAccountPresence(account, report.bureau);
       
       await db.insert(creditAccounts).values({
         id: accountId,
@@ -212,22 +221,50 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         dateReported: account.dateReported,
         bureau: report.bureau, // Legacy field for backward compatibility
         // Per-bureau presence fields
-        onTransunion: accountOnTransunion,
-        onExperian: accountOnExperian,
-        onEquifax: accountOnEquifax,
-        transunionDate: accountOnTransunion ? account.dateReported : undefined,
-        experianDate: accountOnExperian ? account.dateReported : undefined,
-        equifaxDate: accountOnEquifax ? account.dateReported : undefined,
-        transunionBalance: accountOnTransunion ? account.balance : undefined,
-        experianBalance: accountOnExperian ? account.balance : undefined,
-        equifaxBalance: accountOnEquifax ? account.balance : undefined,
+        onTransunion: accountPresence.onTransunion,
+        onExperian: accountPresence.onExperian,
+        onEquifax: accountPresence.onEquifax,
+        transunionDate: accountPresence.transunionDate,
+        experianDate: accountPresence.experianDate,
+        equifaxDate: accountPresence.equifaxDate,
+        transunionBalance: accountPresence.transunionBalance,
+        experianBalance: accountPresence.experianBalance,
+        equifaxBalance: accountPresence.equifaxBalance,
         isNegative: isNegativeCalc,
         riskLevel: riskLevelCalc,
         completenessScore,
         missingFields,
+        paymentHistoryGrid: account.paymentHistoryGrid ? JSON.stringify(account.paymentHistoryGrid) : null,
         remarks,
         createdAt: new Date(),
       });
+    }
+
+    const parserReview = determineParserReviewStatus({
+      sourceConfidence: parsedData.detectedSource?.confidence,
+      accountCompleteness: completenessScores,
+      accountCount: parsedData.accounts.length,
+    });
+
+    if (parserReview.status === 'needs_review') {
+      await db
+        .update(creditReports)
+        .set({
+          parseStatus: 'completed',
+          parserReviewStatus: 'needs_review',
+          parserConfidence: parsedData.detectedSource?.confidence === 'high' ? 90 : parsedData.detectedSource?.confidence === 'medium' ? 60 : 30,
+          parsedAt: now,
+          rawData: JSON.stringify({
+            scores: parsedData.scores,
+            summary: parsedData.summary,
+            accountCount: parsedData.accounts.length,
+            negativeItemCount: parsedData.negativeItems.length,
+            parserReviewReason: parserReview.reason,
+          }),
+        })
+        .where(eq(creditReports.id, reportId));
+
+      return;
     }
 
     // Store negative items and calculate FCRA compliance
@@ -298,51 +335,27 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       }
       
       // Find matching derogatory account for per-bureau data
-      const derogatoryMatch = findDerogatoryMatch(item.creditorName, derogatoryAccounts);
-      
-      // Determine per-bureau presence
-      // If we have derogatory match with per-bureau data, use it
-      // Otherwise, fall back to report.bureau (single bureau report) or mark all as true (combined)
-      let onTransunion = false;
-      let onExperian = false;
-      let onEquifax = false;
-      let transunionDate: Date | undefined;
-      let experianDate: Date | undefined;
-      let equifaxDate: Date | undefined;
-      let transunionStatus: string | undefined;
-      let experianStatus: string | undefined;
-      let equifaxStatus: string | undefined;
-      
-      const specificBureausForItem = ['transunion', 'experian', 'equifax'];
-      const reportBureauLowerForItem = report.bureau?.toLowerCase();
-      
-      if (derogatoryMatch) {
-        // Use per-bureau data from derogatory account
-        onTransunion = !!(derogatoryMatch.transunion?.accountDate && derogatoryMatch.transunion.accountDate !== '-');
-        onExperian = !!(derogatoryMatch.experian?.accountDate && derogatoryMatch.experian.accountDate !== '-');
-        onEquifax = !!(derogatoryMatch.equifax?.accountDate && derogatoryMatch.equifax.accountDate !== '-');
-        transunionDate = parseBureauDate(derogatoryMatch.transunion?.accountDate);
-        experianDate = parseBureauDate(derogatoryMatch.experian?.accountDate);
-        equifaxDate = parseBureauDate(derogatoryMatch.equifax?.accountDate);
-        transunionStatus = derogatoryMatch.transunion?.accountStatus || derogatoryMatch.transunion?.paymentStatus;
-        experianStatus = derogatoryMatch.experian?.accountStatus || derogatoryMatch.experian?.paymentStatus;
-        equifaxStatus = derogatoryMatch.equifax?.accountStatus || derogatoryMatch.equifax?.paymentStatus;
-      } else if (reportBureauLowerForItem && specificBureausForItem.includes(reportBureauLowerForItem)) {
-        // Single specific bureau report - mark only that bureau as present
-        onTransunion = reportBureauLowerForItem === 'transunion';
-        onExperian = reportBureauLowerForItem === 'experian';
-        onEquifax = reportBureauLowerForItem === 'equifax';
-        // Set date for the reporting bureau
-        if (onTransunion) transunionDate = item.dateReported || undefined;
-        if (onExperian) experianDate = item.dateReported || undefined;
-        if (onEquifax) equifaxDate = item.dateReported || undefined;
-      } else {
-        // Combined report or unknown bureau without derogatory match - conservatively mark all as true
-        // This ensures items aren't accidentally filtered out
-        onTransunion = true;
-        onExperian = true;
-        onEquifax = true;
-      }
+      const derogatoryMatchResult = findDerogatoryMatch(item.creditorName, item.accountNumber, item.amount, derogatoryAccounts);
+      const derogatoryMatch = derogatoryMatchResult.match;
+      const matchedAccount = matchedAccountId
+        ? parsedData.accounts.find(account => accountIdMap.get(`${account.creditorName}|${account.accountNumber || ''}`.toLowerCase()) === matchedAccountId)
+        : undefined;
+      const {
+        onTransunion,
+        onExperian,
+        onEquifax,
+        transunionDate,
+        experianDate,
+        equifaxDate,
+        transunionStatus,
+        experianStatus,
+        equifaxStatus,
+      } = getNegativeItemPresence({
+        item,
+        reportBureau: report.bureau,
+        derogatoryMatch,
+        matchedAccount,
+      });
 
       // Deduplication: key by creditor + bureau + itemType + accountNumber
       const buildDedupKey = (bureauKey: string) => `${(item.creditorName || '').toLowerCase()}|${bureauKey}|${item.itemType}|${item.accountNumber || ''}`;
@@ -385,6 +398,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         equifaxStatus,
         riskSeverity: item.riskSeverity,
         recommendedAction: getRecommendedAction(item),
+        notes: JSON.stringify({ matchConfidence: derogatoryMatchResult.confidence }),
         createdAt: new Date(),
       });
       
@@ -397,12 +411,11 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       );
     }
     
-    // Run cross-bureau discrepancy detection
-    await detectBureauDiscrepancies(report.clientId);
+    // Run cross-bureau discrepancy detection for this report pull only
+    await detectBureauDiscrepancies(report.clientId, reportId);
 
     // Create or update analysis
     const analysisId = randomUUID();
-    const now = new Date();
     
     await db.insert(creditAnalyses).values({
       id: analysisId,
@@ -463,6 +476,8 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       .update(creditReports)
       .set({
         parseStatus: 'completed',
+        parserReviewStatus: 'approved',
+        parserConfidence: parsedData.detectedSource?.confidence === 'high' ? 90 : parsedData.detectedSource?.confidence === 'medium' ? 60 : 30,
         parsedAt: now,
         rawData: JSON.stringify({
           scores: parsedData.scores,
@@ -709,121 +724,31 @@ async function saveFcraComplianceItem(
 // CROSS-BUREAU DISCREPANCY DETECTION
 // ============================================
 
-async function detectBureauDiscrepancies(clientId: string): Promise<void> {
-  // Get all accounts for this client grouped by creditor
+async function detectBureauDiscrepancies(clientId: string, creditReportId: string): Promise<void> {
   const allAccounts = await db
     .select()
     .from(creditAccounts)
-    .where(eq(creditAccounts.clientId, clientId));
-  
-  // Get all consumer profiles for comparison
+    .where(and(eq(creditAccounts.clientId, clientId), eq(creditAccounts.creditReportId, creditReportId)));
+
   const allProfiles = await db
     .select()
     .from(consumerProfiles)
-    .where(eq(consumerProfiles.clientId, clientId));
-  
-  // Clear existing discrepancies for this client
-  await db.delete(bureauDiscrepancies).where(eq(bureauDiscrepancies.clientId, clientId));
-  
-  // Group accounts by creditor name (normalized)
-  const accountsByCreditor = new Map<string, typeof allAccounts>();
-  for (const account of allAccounts) {
-    const normalizedName = account.creditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (!accountsByCreditor.has(normalizedName)) {
-      accountsByCreditor.set(normalizedName, []);
-    }
-    accountsByCreditor.get(normalizedName)!.push(account);
+    .where(and(eq(consumerProfiles.clientId, clientId), eq(consumerProfiles.creditReportId, creditReportId)));
+
+  // Clear existing discrepancies for this report before writing the latest pull snapshot.
+  await db.delete(bureauDiscrepancies).where(eq(bureauDiscrepancies.creditReportId, creditReportId));
+
+  const accountDiscrepancies = buildAccountBalanceDiscrepancies(clientId, creditReportId, allAccounts);
+  if (accountDiscrepancies.length > 0) {
+    await db.insert(bureauDiscrepancies).values(accountDiscrepancies);
   }
-  
-  // Check for account discrepancies
-  for (const [_creditorKey, accounts] of accountsByCreditor) {
-    if (accounts.length < 2) continue; // Need at least 2 bureaus to compare
-    
-    // Get values by bureau
-    const byBureau: Record<string, typeof accounts[0]> = {};
-    for (const acc of accounts) {
-      if (acc.bureau) byBureau[acc.bureau] = acc;
-    }
-    
-    const bureaus = Object.keys(byBureau);
-    if (bureaus.length < 2) continue;
-    
-    // Compare balances
-    const balances = bureaus.map(b => byBureau[b].balance).filter(b => b !== null);
-    if (balances.length > 1) {
-      const uniqueBalances = new Set(balances);
-      if (uniqueBalances.size > 1) {
-        await db.insert(bureauDiscrepancies).values({
-          id: randomUUID(),
-          clientId,
-          discrepancyType: 'account_balance',
-          field: 'balance',
-          creditorName: accounts[0].creditorName,
-          accountNumber: accounts[0].accountNumber,
-          valueTransunion: byBureau['transunion']?.balance?.toString() || null,
-          valueExperian: byBureau['experian']?.balance?.toString() || null,
-          valueEquifax: byBureau['equifax']?.balance?.toString() || null,
-          severity: 'medium',
-          isDisputable: true,
-          disputeRecommendation: 'Balance differs across bureaus. Request verification from all three bureaus.',
-          createdAt: new Date(),
-        });
-      }
-    }
-    
-    // Compare account status
-    const statuses = bureaus.map(b => byBureau[b].accountStatus).filter(s => s !== null);
-    if (statuses.length > 1) {
-      const uniqueStatuses = new Set(statuses);
-      if (uniqueStatuses.size > 1) {
-        await db.insert(bureauDiscrepancies).values({
-          id: randomUUID(),
-          clientId,
-          discrepancyType: 'account_status',
-          field: 'accountStatus',
-          creditorName: accounts[0].creditorName,
-          accountNumber: accounts[0].accountNumber,
-          valueTransunion: byBureau['transunion']?.accountStatus || null,
-          valueExperian: byBureau['experian']?.accountStatus || null,
-          valueEquifax: byBureau['equifax']?.accountStatus || null,
-          severity: 'high',
-          isDisputable: true,
-          disputeRecommendation: 'Account status differs across bureaus. This is a strong dispute basis under FCRA.',
-          createdAt: new Date(),
-        });
-      }
-    }
-    
-    // Compare payment status
-    const payStatuses = bureaus.map(b => byBureau[b].paymentStatus).filter(s => s !== null);
-    if (payStatuses.length > 1) {
-      const uniquePayStatuses = new Set(payStatuses);
-      if (uniquePayStatuses.size > 1) {
-        await db.insert(bureauDiscrepancies).values({
-          id: randomUUID(),
-          clientId,
-          discrepancyType: 'payment_history',
-          field: 'paymentStatus',
-          creditorName: accounts[0].creditorName,
-          accountNumber: accounts[0].accountNumber,
-          valueTransunion: byBureau['transunion']?.paymentStatus || null,
-          valueExperian: byBureau['experian']?.paymentStatus || null,
-          valueEquifax: byBureau['equifax']?.paymentStatus || null,
-          severity: 'high',
-          isDisputable: true,
-          disputeRecommendation: 'Payment history differs across bureaus. Request method of verification.',
-          createdAt: new Date(),
-        });
-      }
-    }
-  }
-  
-  // Check for PII discrepancies
-  await detectPiiDiscrepancies(clientId, allProfiles);
+
+  await detectPiiDiscrepancies(clientId, creditReportId, allProfiles);
 }
 
 async function detectPiiDiscrepancies(
-  clientId: string, 
+  clientId: string,
+  creditReportId: string,
   profiles: Array<{
     bureau: string | null;
     firstName: string | null;
@@ -880,6 +805,7 @@ async function detectPiiDiscrepancies(
       await db.insert(bureauDiscrepancies).values({
         id: randomUUID(),
         clientId,
+        creditReportId,
         discrepancyType: 'pii_name',
         field: 'name',
         valueTransunion: namesByBureau['transunion']?.has(name) ? name : null,
@@ -926,6 +852,7 @@ async function detectPiiDiscrepancies(
       await db.insert(bureauDiscrepancies).values({
         id: randomUUID(),
         clientId,
+        creditReportId,
         discrepancyType: 'pii_address',
         field: 'address',
         valueTransunion: addressesByBureau['transunion']?.has(addr) ? addr : null,

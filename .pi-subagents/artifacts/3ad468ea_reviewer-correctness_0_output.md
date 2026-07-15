@@ -1,0 +1,4 @@
+Findings:
+1. P1 — `src/app/api/admin/disputes/triage/route.ts:56` — Duplicate-liability detection is fed `accountNumber: null`, so unrelated tradelines from the same creditor collapse into false duplicate groups and can surface incorrect quick actions.
+2. P1 — `src/app/api/admin/disputes/auto-select/route.ts:87` — Auto-select rebuilds the AI summary with empty Metro-2/FCRA violation arrays, which strips the detected issues from downstream payload shaping and generated letters.
+3. P2 — `src/app/api/admin/clients/[id]/route.ts:351` — Negative-item payload always returns `account_number: null`, so downstream dispute generation loses the tradeline identifier even when the source data has it.

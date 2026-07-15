@@ -27,3 +27,5 @@ npx tsx scripts/response-clock.ts
 ### Operational Notes
 - Run after disputes are marked `sent` so `escalationReadyAt` is set.
 - Safe to re-run; already-escalated disputes are skipped because their status no longer matches `sent`/`in_progress`.
+- The 30-day SLA is now expected to start from recorded submission evidence (mailing/submission timestamp plus tracking metadata on the dispute row), not from ad-hoc manual bookkeeping.
+- CFPB complaint packets are operationally distinct from bureau letters: they still require submission tracking, but they should be treated as regulator complaint evidence rather than bureau reinvestigation correspondence.

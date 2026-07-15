@@ -225,6 +225,41 @@
       "when": 1778041699670,
       "tag": "0031_hesitant_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1784043546000,
+      "tag": "0032_credit_brain_clock_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1784044631000,
+      "tag": "0033_credit_account_completeness_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1784044632000,
+      "tag": "0034_bureau_discrepancies_credit_report_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1784139600000,
+      "tag": "0035_phase2_parser_quality_and_payment_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1784099113341,
+      "tag": "0036_lively_tempest",
+      "breakpoints": true
     }
   ]
 }

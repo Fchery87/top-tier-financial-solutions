@@ -3,13 +3,21 @@
 
 import * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
-import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry } from './pdf-parser';
+import type {
+  ParsedCreditData,
+  ParsedAccount,
+  ParsedAccountBureau,
+  ParsedAccountBureauEvidence,
+  ParsedNegativeItem,
+  ParsedInquiry,
+} from './pdf-parser';
 import {
   StandardizedConsumerProfile,
   isAccountNegative,
   calculateRiskLevel,
   type StandardizedAccount,
 } from './metro2-mapping';
+import { parseMonthYearDate, parseReportDate } from './report-date';
 
 // MyScoreIQ-specific CSS selectors
 const MSIQ_SELECTORS = {
@@ -163,12 +171,15 @@ function extractMSIQConsumerProfile($: cheerio.CheerioAPI, text: string): Standa
       if (nameText.length > 2 && nameText.length < 80) {
         const parts = nameText.split(/\s+/);
         if (parts.length >= 2) {
-          profile.names.push({
-            firstName: parts[0],
-            middleName: parts.length > 2 ? parts.slice(1, -1).join(' ') : undefined,
-            lastName: parts[parts.length - 1],
-            bureau: getBureauContext($, el),
-          });
+          const bureau = getBureauContext($, el);
+          if (bureau) {
+            profile.names.push({
+              firstName: parts[0],
+              middleName: parts.length > 2 ? parts.slice(1, -1).join(' ') : undefined,
+              lastName: parts[parts.length - 1],
+              bureau,
+            });
+          }
         }
       }
     });
@@ -178,7 +189,10 @@ function extractMSIQConsumerProfile($: cheerio.CheerioAPI, text: string): Standa
       const addrText = $(el).text().trim();
       const parsed = parseAddressString(addrText);
       if (parsed) {
-        profile.addresses.push({ ...parsed, bureau: getBureauContext($, el) });
+        const bureau = getBureauContext($, el);
+        if (bureau) {
+          profile.addresses.push({ ...parsed, bureau });
+        }
       }
     });
   });
@@ -276,16 +290,38 @@ function parseAccountEntry($: cheerio.CheerioAPI, el: Element): ParsedAccount | 
   const openedText = elQuery.find(MSIQ_SELECTORS.openedField).text();
   const reportedText = elQuery.find(MSIQ_SELECTORS.reportedField).text();
 
+  const balance = toMoney(balanceText);
+  const creditLimit = toMoney(limitText);
+  const dateOpened = toDate(openedText);
+  const dateReported = toDate(reportedText);
+  const bureau = getBureauContext($, el);
+
   const account: ParsedAccount = {
     creditorName,
     accountNumber: accountNumber || undefined,
     accountType: typeText || inferAccountType(elText),
     accountStatus: inferStatus(statusText),
-    balance: toMoney(balanceText),
-    creditLimit: toMoney(limitText),
+    balance,
+    creditLimit,
     paymentStatus: inferPaymentStatus(paymentText),
-    dateOpened: toDate(openedText),
-    dateReported: toDate(reportedText),
+    dateOpened,
+    dateReported,
+    bureau,
+    bureauEvidence: bureau
+      ? {
+          [bureau]: buildAccountBureauEvidence({
+            accountNumber: accountNumber || undefined,
+            accountType: typeText || inferAccountType(elText),
+            accountStatus: inferStatus(statusText),
+            balance,
+            creditLimit,
+            paymentStatus: inferPaymentStatus(paymentText),
+            dateOpened,
+            dateReported,
+            sourceText: elText,
+          }),
+        }
+      : undefined,
     isNegative: false,
     riskLevel: 'low',
   };
@@ -471,12 +507,18 @@ function assignScore(scores: ParsedCreditData['scores'], text: string, score: nu
   else if (t.includes('equifax') || t.includes(' eq')) scores.equifax = score;
 }
 
-function getBureauContext($: cheerio.CheerioAPI, el: Element): 'transunion' | 'experian' | 'equifax' {
+function getBureauContext($: cheerio.CheerioAPI, el: Element): ParsedAccountBureau | undefined {
   const ctx = $(el).closest('[data-bureau]').attr('data-bureau') || $(el).parents().slice(0, 5).text().toLowerCase();
   if (ctx.includes('transunion')) return 'transunion';
   if (ctx.includes('experian')) return 'experian';
   if (ctx.includes('equifax')) return 'equifax';
-  return 'transunion';
+  return undefined;
+}
+
+function buildAccountBureauEvidence(evidence: ParsedAccountBureauEvidence): ParsedAccountBureauEvidence {
+  return Object.fromEntries(
+    Object.entries(evidence).filter(([, value]) => value !== undefined)
+  ) as ParsedAccountBureauEvidence;
 }
 
 function makeKey(creditor: string, accountNum?: string): string {
@@ -495,9 +537,7 @@ function toMoney(val: string | undefined | null): number | undefined {
 }
 
 function toDate(str: string | undefined | null): Date | undefined {
-  if (!str) return undefined;
-  const d = new Date(str.replace(/-/g, '/'));
-  return isNaN(d.getTime()) ? undefined : d;
+  return parseReportDate(str);
 }
 
 function extractRemovalDateFromText(text: string | undefined | null): Date | undefined {
@@ -507,8 +547,7 @@ function extractRemovalDateFromText(text: string | undefined | null): Date | und
 
   const value = match[1];
   if (/^\d{1,2}[\/\-]\d{4}$/.test(value)) {
-    const [month, year] = value.split(/[\/\-]/);
-    return new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+    return parseMonthYearDate(value);
   }
 
   return toDate(value);

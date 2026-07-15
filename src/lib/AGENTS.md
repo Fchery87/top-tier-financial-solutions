@@ -96,6 +96,7 @@ try {
 - FCRA clock helpers: `fcra-clock.ts`
 - Credit account ingest helpers: `credit-account-ingest.ts`
 - AI letter generator: `ai-letter-generator.ts`
+- Output linting: `letter-lint.ts`
 - Email service: `email-service.ts`
 - Parsers: `parsers/` directory for credit report parsing
 

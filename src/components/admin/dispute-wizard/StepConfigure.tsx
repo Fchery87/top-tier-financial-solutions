@@ -21,6 +21,7 @@ export function StepConfigure() {
     loadingEvidence, evidenceOverrideConfirmed, setEvidenceOverrideConfirmed,
     setShowEvidenceUploadModal,
     selectedReasonCodes,
+    creditReports, selectedReportId, setSelectedReportId,
     discrepancySummary, loadingDiscrepancies,
     confidenceThreshold, setConfidenceThreshold,
     showLowConfidenceItems, setShowLowConfidenceItems,
@@ -46,6 +47,27 @@ export function StepConfigure() {
       <CardContent className="space-y-6">
         {renderValidationMessages()}
 
+        <div className="space-y-3">
+          <label className="text-sm font-medium">Report Scope</label>
+          {creditReports.length > 0 ? (
+            <select
+              value={selectedReportId ?? ''}
+              onChange={(e) => setSelectedReportId(e.target.value || null)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {creditReports.map((report) => (
+                <option key={report.id} value={report.id}>
+                  {report.file_name}{report.bureau ? ` • ${report.bureau}` : ''}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="p-3 rounded-lg bg-muted/40 border border-border/50 text-sm text-muted-foreground">
+              No credit reports available for this client.
+            </div>
+          )}
+        </div>
+
         {loadingDiscrepancies ? (
           <div className="p-3 rounded-lg bg-muted/40 border border-border/50 text-sm text-muted-foreground">Checking for bureau discrepancies...</div>
         ) : discrepancySummary?.highSeverity ? (
@@ -58,11 +80,15 @@ export function StepConfigure() {
           </div>
         ) : null}
 
-        {targetRecipient !== 'bureau' && (
+        {targetRecipient === 'cfpb' ? (
+          <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground">
+            CFPB complaint packet selected. Include a factual narrative, timeline, and attachments checklist; this is not a bureau letter.
+          </div>
+        ) : targetRecipient !== 'bureau' ? (
           <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground">
             Enhanced creditor/furnisher letters enabled. This escalation will cite prior verification attempts and request direct investigation from the data furnisher.
           </div>
-        )}
+        ) : null}
 
         {/* Round Selection */}
         <div className="space-y-3">
@@ -71,9 +97,9 @@ export function StepConfigure() {
             {[
               { round: 1, label: 'Round 1 - Bureau Disputes', desc: 'Initial dispute sent to credit bureaus' },
               { round: 2, label: 'Round 2 - Direct to Creditor/Furnisher', desc: 'Escalation after bureau verification' },
-              { round: 3, label: 'Round 3+ - Advanced Escalation', desc: 'Collector / CFPB Complaint / Legal' },
+              { round: 3, label: 'Round 3+ - CFPB / Direct Escalation', desc: 'CFPB complaint packet or direct furnisher follow-up' },
             ].map(({ round, label, desc }) => (
-              <div key={round} className={`p-4 rounded-lg border cursor-pointer transition-all ${disputeRound === round ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'}`} onClick={() => { setDisputeRound(round); if (round === 1) setTargetRecipient('bureau'); else if (round === 2) setTargetRecipient('creditor'); else setTargetRecipient('collector'); }}>
+              <div key={round} className={`p-4 rounded-lg border cursor-pointer transition-all ${disputeRound === round ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'}`} onClick={() => { setDisputeRound(round); if (round === 1) setTargetRecipient('bureau'); else if (round === 2) setTargetRecipient('creditor'); else setTargetRecipient('cfpb'); }}>
                 <div className="flex items-center gap-3">
                   <div className={`w-4 h-4 rounded-full border-2 ${disputeRound === round ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'}`} />
                   <div><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{desc}</p></div>
@@ -121,13 +147,13 @@ export function StepConfigure() {
           )}
         </div>
 
-        {/* e-OSCAR Bypass */}
+        {/* Manual review preference */}
         <div className="space-y-3 p-4 rounded-lg bg-secondary/10 border border-secondary/20">
           <div className="flex items-start gap-3">
             <input type="checkbox" id="requestManualReview" checked={requestManualReview} onChange={(e) => setRequestManualReview(e.target.checked)} className="mt-1 w-4 h-4 cursor-pointer" />
             <div className="flex-1">
-              <label htmlFor="requestManualReview" className="text-sm font-medium cursor-pointer">Request Manual Review (Bypass e-OSCAR)</label>
-              <p className="text-xs text-muted-foreground mt-1">Includes explicit language requesting that this dispute NOT be processed solely through automated e-OSCAR systems and demanding human investigator review.</p>
+              <label htmlFor="requestManualReview" className="text-sm font-medium cursor-pointer">Request Manual Review</label>
+              <p className="text-xs text-muted-foreground mt-1">Adds a factual request for individualized investigation and written verification details where appropriate, without making unsupported demands about bureau processing systems.</p>
               <p className="text-xs text-secondary mt-2"><strong>Recommended for:</strong> Cases with evidence, identity theft claims, or complex disputed facts</p>
             </div>
           </div>

@@ -110,9 +110,9 @@ const SOURCE_SIGNATURES: Record<CreditReportSource, RegExp[]> = {
 
 // Bureau detection patterns
 const BUREAU_PATTERNS = {
-  transunion: [/transunion/i, /trans\s*union/i, /\bTU\b/],
-  experian: [/experian/i, /\bEXP\b/, /\bEX\b/],
-  equifax: [/equifax/i, /\bEFX\b/, /\bEQ\b/],
+  transunion: [/\btransunion\b/i, /trans\s*union/i, /\btruevision\b/i],
+  experian: [/\bexperian\b/i, /\bexperian\s+member\b/i],
+  equifax: [/\bequifax\b/i, /\bmyequifax\b/i],
 };
 
 export function detectCreditReportSource(content: string): SourceDetectionResult {
@@ -160,26 +160,25 @@ export function detectCreditReportSource(content: string): SourceDetectionResult
 }
 
 export function detectBureau(content: string): 'transunion' | 'experian' | 'equifax' | 'combined' | undefined {
-  const bureausFound: string[] = [];
+  const normalized = content.toLowerCase();
+  const bureausFound: Array<'transunion' | 'experian' | 'equifax'> = [];
 
-  for (const [bureau, patterns] of Object.entries(BUREAU_PATTERNS)) {
-    for (const pattern of patterns) {
-      if (pattern.test(content)) {
-        bureausFound.push(bureau);
-        break;
-      }
+  for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
+    const patterns = BUREAU_PATTERNS[bureau];
+    if (patterns.some((pattern) => pattern.test(content))) {
+      bureausFound.push(bureau);
+      continue;
+    }
+
+    // Full bureau-name fallback only; avoids EX/EQ/TU token collisions.
+    if (normalized.includes(` ${bureau} `) || normalized.startsWith(`${bureau} `) || normalized.endsWith(` ${bureau}`)) {
+      bureausFound.push(bureau);
     }
   }
 
-  if (bureausFound.length === 0) {
-    return undefined;
-  } else if (bureausFound.length === 1) {
-    return bureausFound[0] as 'transunion' | 'experian' | 'equifax';
-  } else if (bureausFound.length >= 2) {
-    return 'combined';
-  }
-
-  return undefined;
+  if (bureausFound.length === 0) return undefined;
+  if (bureausFound.length === 1) return bureausFound[0];
+  return 'combined';
 }
 
 // HTML-specific detection with DOM analysis

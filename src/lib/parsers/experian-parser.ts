@@ -9,6 +9,7 @@ import {
   calculateRiskLevel,
   type StandardizedAccount,
 } from './metro2-mapping';
+import { parseMonthYearDate, parseReportDate } from './report-date';
 
 // Experian-specific CSS selectors
 const EX_SELECTORS = {
@@ -486,9 +487,7 @@ function parseMoney(val: string | undefined | null): number | undefined {
 }
 
 function parseDate(str: string | undefined | null): Date | undefined {
-  if (!str) return undefined;
-  const d = new Date(str.replace(/-/g, '/'));
-  return isNaN(d.getTime()) ? undefined : d;
+  return parseReportDate(str);
 }
 
 function parseFlexibleDate(str: string | undefined | null): Date | undefined {
@@ -500,8 +499,7 @@ function parseFlexibleDate(str: string | undefined | null): Date | undefined {
     return new Date(Date.UTC(year, Number(month) - 1, Number(day)));
   }
   if (/^\d{1,2}[-\/]\d{4}$/.test(trimmed)) {
-    const [month, year] = trimmed.split(/[-\/]/);
-    return new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+    return parseMonthYearDate(trimmed);
   }
   return parseDate(trimmed);
 }

@@ -3,13 +3,21 @@
 
 import * as cheerio from 'cheerio';
 import type { AnyNode, Element } from 'domhandler';
-import type { ParsedCreditData, ParsedAccount, ParsedNegativeItem, ParsedInquiry } from './pdf-parser';
+import type {
+  ParsedCreditData,
+  ParsedAccount,
+  ParsedAccountBureau,
+  ParsedAccountBureauEvidence,
+  ParsedNegativeItem,
+  ParsedInquiry,
+} from './pdf-parser';
 import {
   StandardizedConsumerProfile,
   isAccountNegative,
   calculateRiskLevel,
   type StandardizedAccount,
 } from './metro2-mapping';
+import { parseMonthYearDate, parseReportDate } from './report-date';
 
 // SmartCredit-specific CSS selectors
 const SC_SELECTORS = {
@@ -133,12 +141,15 @@ function extractSCConsumerProfile($: cheerio.CheerioAPI, text: string): Standard
       const nameText = $(el).text().trim();
       if (nameText.length > 2) {
         const parts = nameText.split(/\s+/);
-        profile.names.push({
-          firstName: parts[0] || '',
-          middleName: parts.length > 2 ? parts.slice(1, -1).join(' ') : undefined,
-          lastName: parts[parts.length - 1] || '',
-          bureau: getBureauFromContext($, el),
-        });
+        const bureau = getBureauFromContext($, el);
+        if (bureau) {
+          profile.names.push({
+            firstName: parts[0] || '',
+            middleName: parts.length > 2 ? parts.slice(1, -1).join(' ') : undefined,
+            lastName: parts[parts.length - 1] || '',
+            bureau,
+          });
+        }
       }
     });
 
@@ -147,10 +158,13 @@ function extractSCConsumerProfile($: cheerio.CheerioAPI, text: string): Standard
       const addressText = $(el).text().trim();
       const parsed = parseAddressText(addressText);
       if (parsed) {
-        profile.addresses.push({
-          ...parsed,
-          bureau: getBureauFromContext($, el),
-        });
+        const bureau = getBureauFromContext($, el);
+        if (bureau) {
+          profile.addresses.push({
+            ...parsed,
+            bureau,
+          });
+        }
       }
     });
   });
@@ -234,6 +248,10 @@ function parseAccountElement($: cheerio.CheerioAPI, el: Element): ParsedAccount 
   const dateOpenedText = getFieldText(elQuery, SC_SELECTORS.dateOpened);
   const dateReportedText = getFieldText(elQuery, SC_SELECTORS.dateReported);
 
+  const dateOpened = parseDate(dateOpenedText);
+  const dateReported = parseDate(dateReportedText);
+  const bureau = getBureauFromContext($, el);
+
   const account: ParsedAccount = {
     creditorName,
     accountNumber: accountNumber || undefined,
@@ -242,8 +260,24 @@ function parseAccountElement($: cheerio.CheerioAPI, el: Element): ParsedAccount 
     balance,
     creditLimit,
     paymentStatus: determinePaymentStatus(statusText),
-    dateOpened: parseDate(dateOpenedText),
-    dateReported: parseDate(dateReportedText),
+    dateOpened,
+    dateReported,
+    bureau,
+    bureauEvidence: bureau
+      ? {
+          [bureau]: buildAccountBureauEvidence({
+            accountNumber: accountNumber || undefined,
+            accountType: typeText || determineAccountType(elText),
+            accountStatus: determineStatus(statusText),
+            balance,
+            creditLimit,
+            paymentStatus: determinePaymentStatus(statusText),
+            dateOpened,
+            dateReported,
+            sourceText: elText,
+          }),
+        }
+      : undefined,
     isNegative: false,
     riskLevel: 'low',
   };
@@ -360,13 +394,19 @@ function assignScoreToBureau(scores: ParsedCreditData['scores'], bureauText: str
   else if (lower.includes('equifax') || lower.includes('eq')) scores.equifax = score;
 }
 
-function getBureauFromContext($: cheerio.CheerioAPI, el: Element): 'transunion' | 'experian' | 'equifax' {
-  const ctx = $(el).parents('[data-bureau]').first().attr('data-bureau') || 
+function getBureauFromContext($: cheerio.CheerioAPI, el: Element): ParsedAccountBureau | undefined {
+  const ctx = $(el).parents('[data-bureau]').first().attr('data-bureau') ||
     $(el).closest(SC_SELECTORS.bureauSection).text().toLowerCase();
   if (ctx.includes('transunion')) return 'transunion';
   if (ctx.includes('experian')) return 'experian';
   if (ctx.includes('equifax')) return 'equifax';
-  return 'transunion';
+  return undefined;
+}
+
+function buildAccountBureauEvidence(evidence: ParsedAccountBureauEvidence): ParsedAccountBureauEvidence {
+  return Object.fromEntries(
+    Object.entries(evidence).filter(([, value]) => value !== undefined)
+  ) as ParsedAccountBureauEvidence;
 }
 
 function getFieldText(el: cheerio.Cheerio<AnyNode>, selector: string): string {
@@ -384,9 +424,7 @@ function parseMoneyValue(val: string | undefined | null): number | undefined {
 }
 
 function parseDate(str: string | undefined | null): Date | undefined {
-  if (!str) return undefined;
-  const d = new Date(str.replace(/-/g, '/'));
-  return isNaN(d.getTime()) ? undefined : d;
+  return parseReportDate(str);
 }
 
 function extractRemovalDateFromText(text: string | undefined | null): Date | undefined {
@@ -396,8 +434,7 @@ function extractRemovalDateFromText(text: string | undefined | null): Date | und
 
   const value = match[1];
   if (/^\d{1,2}[\/\-]\d{4}$/.test(value)) {
-    const [month, year] = value.split(/[\/\-]/);
-    return new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+    return parseMonthYearDate(value);
   }
 
   return parseDate(value);

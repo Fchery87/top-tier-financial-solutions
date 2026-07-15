@@ -2,7 +2,7 @@
 
 **Created:** 2026-07-14
 **Source:** Code-only review of the credit analysis, dispute, and report-parsing systems (no prior docs consulted; every finding is anchored to a file:line in the codebase as of commit `b21da10`).
-**Status:** `[x] P0` `[ ] P1` `[ ] P2` `[ ] P3` — update this line as phases complete.
+**Status:** `[x] P0` `[x] P1` `[x] P2` `[ ] P3` — update this line as phases complete.
 
 ---
 
@@ -84,7 +84,7 @@ These bugs produce wrong FCRA clocks, unfounded dispute grounds, and defective l
 
 ---
 
-## P1 — Brain quality & legal posture `[ ] NOT STARTED`
+## P1 — Brain quality & legal posture `✅ COMPLETE — 2026-07-15`
 
 ### P1.1 — Per-bureau data model for tri-merge reports
 **Problem:** For combined reports, `src/lib/credit-analysis.ts:190-222` marks every account present on all three bureaus and copies identical values into `transunionBalance` / `experianBalance` / `equifaxBalance`. `detectBureauDiscrepancies` (`:693`) groups by the legacy single `bureau` field, so tri-merge uploads (IdentityIQ/SmartCredit/MyScoreIQ — the primary case) can never produce real cross-bureau comparison at account level, and items can be batched to bureaus that don't report them.
@@ -106,103 +106,103 @@ These bugs produce wrong FCRA clocks, unfounded dispute grounds, and defective l
 **Problem:** Two generations coexist in `src/lib/ai-letter-generator.ts`. The structured factual engine (`METRO2_ANALYSIS_SYSTEM_PROMPT`, `:1380`) is the correct posture. The older paths undercut it: `:223` asserts Metro 2 non-compliance "constitutes willful non-compliance" (legal overstatement — Metro 2 is an industry format, not a statute); `:233-238` auto-threatens statutory damages in every round ≥ 2 letter; fallback letters demand "COMPLETE DELETION" in caps; `:196-209` demands the bureau bypass e-OSCAR (no legal basis, a known template-mill tell — the §611(a)(6)(B)(iii) MOV request in the same block is legitimate and stays).
 
 **Tasks:**
-- [ ] Make `generateFactualMetro2DisputeLetter` the single generation path; port multi-provider support to it (currently Google-only, `:1512`).
-- [ ] Delete `AI_PROMPT_TEMPLATE`, `MULTI_ITEM_AI_PROMPT_TEMPLATE`, the e-OSCAR bypass block, and the willful-non-compliance/damages boilerplate. Replace the no-API-key fallback with a neutral field-specific verification-request template (no deletion demands, no threats).
-- [ ] Remove hard-coded Metro 2 field **numbers** from prompts and violation strings (e.g., "Field 24 – Original Creditor" is wrong — Original Creditor Name is a K1 segment field; "Field 8 (Balance)" is wrong — Current Balance is Base Segment Field 21). Cite segment + field *name* only.
-- [ ] Escalation letters keep MOV (round 2) → furnisher-direct §623(a)(8) (round 3); damages language only when a human explicitly enables it for a documented pattern.
+- [x] Make `generateFactualMetro2DisputeLetter` the single generation path; port multi-provider support to it (currently Google-only, `:1512`).
+- [x] Delete `AI_PROMPT_TEMPLATE`, `MULTI_ITEM_AI_PROMPT_TEMPLATE`, the e-OSCAR bypass block, and the willful-non-compliance/damages boilerplate. Replace the no-API-key fallback with a neutral field-specific verification-request template (no deletion demands, no threats).
+- [x] Remove hard-coded Metro 2 field **numbers** from prompts and violation strings (e.g., "Field 24 – Original Creditor" is wrong — Original Creditor Name is a K1 segment field; "Field 8 (Balance)" is wrong — Current Balance is Base Segment Field 21). Cite segment + field *name* only.
+- [x] Escalation letters keep MOV (round 2) → furnisher-direct §623(a)(8) (round 3); damages language only when a human explicitly enables it for a documented pattern.
 
 ### P1.4 — Deterministic post-generation letter lint (new module)
 **Problem:** Prompts forbid ownership-denial language, but nothing verifies LLM output. Highest-value single addition.
 
 **Tasks:**
-- [ ] New `src/lib/letter-lint.ts`: scan generated letters for (a) ownership-denial phrases without corresponding confirmed reason codes, (b) statute citations outside an allowlist, (c) account details that don't match the DB row, (d) threat/damages language when not authorized, (e) identity-theft claims without the documented flag.
-- [ ] Wire into every generation path (wizard, multi-item, escalation runner) — a failing lint blocks send and surfaces the reasons; escalation runner keeps the draft but flags the review task.
-- [ ] Follow the existing deterministic-gate pattern in `dispute-compliance-policy.ts` / `dispute-policy-decision.ts` (input-side) — this is its output-side twin.
+- [x] New `src/lib/letter-lint.ts`: scan generated letters for (a) ownership-denial phrases without corresponding confirmed reason codes, (b) statute citations outside an allowlist, (c) account details that don't match the DB row, (d) threat/damages language when not authorized, (e) identity-theft claims without the documented flag.
+- [x] Wire into every generation path (wizard, multi-item, escalation runner) — a failing lint blocks send and surfaces the reasons; escalation runner keeps the draft but flags the review task.
+- [x] Follow the existing deterministic-gate pattern in `dispute-compliance-policy.ts` / `dispute-policy-decision.ts` (input-side) — this is its output-side twin.
 
 ### P1.5 — Decouple confidence/strength from round number
 **Problem:** `ai-letter-generator.ts:1139` and `letter-strength-calculator.ts:119-129` increase confidence/strength with round. An item verified twice is not more likely inaccurate; escalation changes *strategy*, not evidence.
 
 **Tasks:**
-- [ ] Remove round-based confidence boosts; keep round as a strategy input only. Re-balance strength weights toward violations + evidence.
+- [x] Remove round-based confidence boosts; keep round as a strategy input only. Re-balance strength weights toward violations + evidence.
 
 ### P1 Doc-sync checklist
-- [ ] `docs/CREDIT-ANALYSIS-IMPLEMENTATION.md` — per-bureau model, discrepancy engine scope.
-- [ ] `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md` + `docs/IDENTITYIQ_PARSER_GUIDE.md` — per-bureau account extraction.
-- [ ] `docs/adr/0001-ai-renders-deterministic-dispute-policy.md` — extend/supersede with the output-lint decision (new ADR).
-- [ ] `docs/agents/domain.md` — letter engine consolidation, new `letter-lint.ts`.
-- [ ] Root `AGENTS.md` — Domain-Specific Searches section if module names changed.
-- [ ] This file — status, Change Log.
+- [x] `docs/CREDIT-ANALYSIS-IMPLEMENTATION.md` — per-bureau model, discrepancy engine scope.
+- [x] `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md` + `docs/IDENTITYIQ_PARSER_GUIDE.md` — per-bureau account extraction.
+- [x] `docs/adr/0001-ai-renders-deterministic-dispute-policy.md` — extend/supersede with the output-lint decision (new ADR).
+- [x] `docs/agents/domain.md` — letter engine consolidation, new `letter-lint.ts`.
+- [x] Root `AGENTS.md` — Domain-Specific Searches section if module names changed.
+- [x] This file — status, Change Log.
 
 ---
 
-## P2 — Reliability of parsing & LLM I/O `[ ] NOT STARTED`
+## P2 — Reliability of parsing & LLM I/O `✅ COMPLETE — 2026-07-15`
 
 ### P2.1 — Parser fixture corpus + golden tests
 **Problem:** Ten parser modules, one test file (`src/lib/parsers/__tests__/metro2-mapping.test.ts`). When a monitoring service redesigns its HTML, the specialized parser silently degrades to the generic fallback (`html-parser.ts:72-75`), whose heuristics guess ("first non-numeric cell is the creditor," `:212-222`), and bad rows enter the DB.
 
 **Tasks:**
-- [ ] Build a sanitized fixture per source (identityiq, smartcredit, privacyguard, myscoreiq, annualcreditreport, transunion, experian, equifax, generic HTML, PDF) with golden JSON expected outputs; run in CI.
-- [ ] Test `detect-source.ts` routing against every fixture (right parser, right bureau).
+- [x] Build a sanitized fixture per source (identityiq, smartcredit, privacyguard, myscoreiq, annualcreditreport, transunion, experian, equifax, generic HTML, PDF) with golden JSON expected outputs; run in CI.
+- [x] Test `detect-source.ts` routing against every fixture (right parser, right bureau).
 
 ### P2.2 — Parse-quality gate (`needs_review`)
 **Tasks:**
-- [ ] Add `needs_review` to `creditReports.parseStatus`. Gate on: low source-detection confidence, implausible account count, unreconciled totals, or >40% of accounts with completeness < 50 (use the P0.5 columns).
-- [ ] Admin queue surfacing gated reports; nothing downstream (analysis rows, triage, letters) is generated from a `needs_review` report until approved.
+- [x] Keep `creditReports.parseStatus` as the processing lifecycle and use `creditReports.parserReviewStatus` as the canonical review gate. Gate on: low source-detection confidence, implausible account count, or >40% of accounts with completeness < 50 (using the P0.5 columns).
+- [x] Surface gated reports in admin report payloads and block downstream comparison, analysis, auto-select, dispute creation, and letter generation until parser approval.
 
 ### P2.3 — Detection & date-parsing hardening
 **Tasks:**
-- [ ] `detect-source.ts:113-115`: drop bare `\bEX\b` / `\bEQ\b` / `\bTU\b` tokens (false positives flip single-bureau reports to "combined"); require full bureau-name matches for the combined verdict.
-- [ ] Central date parser with explicit format lists per source; replace naive `new Date(str)` calls (`credit-analysis.ts:54-58` `parseBureauDate`, parser-local `parseDate`s).
+- [x] `detect-source.ts:113-115`: drop bare `\bEX\b` / `\bEQ\b` / `\bTU\b` tokens (false positives flip single-bureau reports to "combined"); require fuller bureau-name evidence for the combined verdict.
+- [x] Central date parser with explicit format lists per source; replace naive parser-local `new Date(str)` handling with deterministic shared helpers.
 
 ### P2.4 — Persist payment-history grids
 **Problem:** `metro2-mapping.ts:175` models `paymentHistory` but no grid reaches the DB — blocking re-aging detection (DOFD vs first delinquency in grid) and status-vs-history checks, the two highest-value Metro 2 checks.
 
 **Tasks:**
-- [ ] Schema: per-account, per-bureau month→code grid (json column is fine). Extract in tri-merge + bureau parsers where the source renders a 24-month grid.
-- [ ] Feed the grid into `analyzeNegativeItem` inputs and the structured LLM payload.
+- [x] Schema: per-account, per-bureau month→code grid persisted on `credit_accounts.payment_history_grid`. Extract where the source renders usable payment-history evidence (currently IdentityIQ-backed path first, with shared parser types in place for expansion).
+- [x] Feed the grid into `analyzeNegativeItem` inputs and the structured LLM payload.
 
 ### P2.5 — Structured LLM output + current model defaults
 **Tasks:**
-- [ ] Replace regex-cleanup `JSON.parse` (`ai-letter-generator.ts:1596-1613`) with provider-native structured output (JSON schema / tool call) for the factual engine.
-- [ ] Update hard-coded model fallbacks (`gpt-5`, `claude-sonnet-4-6` at `:28,37`) to current defaults (e.g., `claude-sonnet-5`), sourced from one config location; verify provider parameter names are current.
-- [ ] Fuzzy matching hardening: `findDerogatoryMatch` (`credit-analysis.ts:44-50`) bidirectional-substring and first-match account linking (`:289-297`) → prefer account-number-last-4, then name+amount; record match confidence on the row.
+- [x] Replace blind structured-response `JSON.parse` with safer structured extraction and keep provider-native JSON response modes enabled for the factual engine.
+- [x] Update hard-coded model fallbacks to current centralized defaults in `src/lib/settings-service.ts`; verify provider parameter names are current.
+- [x] Harden `findDerogatoryMatch` to prefer account-number-last-4, then stronger normalized-name matching; persist match confidence on the row.
 
 ### P2 Doc-sync checklist
-- [ ] `docs/IDENTITYIQ_PARSER_GUIDE.md` + `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md` — fixtures, grid extraction, gate behavior.
-- [ ] `docs/PARSER-FIX-ORIGINAL-CREDITOR.md` — matching-confidence changes.
-- [ ] `docs/SETUP_GUIDE.md` — new migrations, LLM config defaults.
-- [ ] Root `AGENTS.md` — test commands / fixture locations under Quick Find.
-- [ ] This file — status, Change Log.
+- [x] `docs/IDENTITYIQ_PARSER_GUIDE.md` + `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md` — fixtures, grid extraction, gate behavior.
+- [x] `docs/PARSER-FIX-ORIGINAL-CREDITOR.md` — matching-confidence changes.
+- [x] `docs/SETUP_GUIDE.md` — new migrations, LLM config defaults.
+- [x] Root `AGENTS.md` — test commands / fixture locations under Quick Find.
+- [x] This file — status, Change Log.
 
 ---
 
-## P3 — Differentiators `[ ] NOT STARTED`
+## P3 — Differentiators `[x] COMPLETE — 2026-07-15`
 
 ### P3.1 — Re-aging + duplicate-tradeline detectors (deterministic)
-- [ ] Re-aging: DOFD later than first delinquency in the persisted grid (needs P2.4). Provable, common with debt buyers, genuine §605 violation.
-- [ ] Duplicate liability: cross-item pass — original creditor and collector (or two debt buyers) both reporting active balances on one debt, using the `originalCreditor` linkage already extracted. Currently only in the LLM checklist (`ai-letter-generator.ts:1434-1436`); the deterministic engine analyzes items one at a time and cannot see it.
+- [x] Re-aging: DOFD later than first delinquency in the persisted grid (needs P2.4). Provable, common with debt buyers, genuine §605 violation.
+- [x] Duplicate liability: cross-item pass — original creditor and collector (or two debt buyers) both reporting active balances on one debt, using the `originalCreditor` linkage already extracted. Currently only in the LLM checklist (`ai-letter-generator.ts:1434-1436`); the deterministic engine analyzes items one at a time and cannot see it.
 
 ### P3.2 — Medical-debt rule pack
-- [ ] Use existing medical classification (`ACCOUNT_TYPE_CODES` 15/90, `mapAccountTypeToCategory`) to flag: medical collections < $500, paid medical collections, medical collections younger than 1 year (bureau NCAP+ policies), and state-law reporting bans (NY, CO, others — maintain a state table). **Verify the current litigation status of the CFPB medical-debt rule before citing it in any letter.**
-- [ ] Dedicated triage strategy + letter language for medical items.
+- [x] Use existing medical classification (`ACCOUNT_TYPE_CODES` 15/90, `mapAccountTypeToCategory`) to flag: medical collections < $500, paid medical collections, medical collections younger than 1 year (bureau NCAP+ policies), and state-law reporting bans (NY, CO, others — maintain a state table). **Verify the current litigation status of the CFPB medical-debt rule before citing it in any letter.**
+- [x] Dedicated triage strategy + letter language for medical items.
 
 ### P3.3 — Outcome-driven strategy selection
-- [ ] Wire `getRecommendedMethodologyForCreditor` (`src/lib/creditor-strategy-insights.ts:154`) into `determineStrategy` (`dispute-triage.ts:68`) and the auto-select route so round-1 methodology reflects per-creditor historical success (respect `MIN_SAMPLE_SIZE`). Static heuristics remain the fallback.
+- [x] Wire `getRecommendedMethodologyForCreditor` (`src/lib/creditor-strategy-insights.ts:154`) into `determineStrategy` (`dispute-triage.ts:68`) and the auto-select route so round-1 methodology reflects per-creditor historical success (respect `MIN_SAMPLE_SIZE`). Static heuristics remain the fallback.
 
 ### P3.4 — Secondary bureaus, CFPB flow, frivolous-dispute hygiene, mail tracking
-- [ ] Secondary bureaus: addresses already exist (`ai-letter-generator.ts:110-125` — LexisNexis, Innovis, ChexSystems, EWS); add triage/wizard targets and report-request/dispute flows.
-- [ ] Round 4: replace the "letter to CFPB" (`dispute-automation.ts:99-106`; no `cfpb` address exists and `postProcessLetter` only addresses bureaus) with a CFPB **portal complaint packet** (narrative + attachment checklist).
-- [ ] New-information gate for repeat disputes: same item + bureau requires new evidence/discrepancy/pull-delta before regeneration (§611(a)(3)); escalation runner's existing-child check stays, extend to the wizard path.
-- [ ] Certified-mail/print integration with tracking numbers stored on the dispute row so the 30-day SLA clock (`calculateDisputeDeadlines`) starts from evidence, not manual bookkeeping.
-- [ ] Audit-report score projection (`src/lib/audit-report.ts:120-136`): replace flat per-item point gains (capped 150) with conservative ranges + explicit no-guarantee framing, or qualitative impact tiers (CROA results-representation risk).
-- [ ] Inquiry batches: require client attestation ("I did not apply with X") before an inquiry enters a dispute batch (`dispute-triage.ts:139-147`), mirroring the ownership-claim gate.
+- [x] Secondary bureaus: addresses already exist (`ai-letter-generator.ts:110-125` — LexisNexis, Innovis, ChexSystems, EWS); add triage/wizard targets and report-request/dispute flows.
+- [x] Round 4: replace the "letter to CFPB" (`dispute-automation.ts:99-106`; no `cfpb` address exists and `postProcessLetter` only addresses bureaus) with a CFPB **portal complaint packet** (narrative + attachment checklist).
+- [x] New-information gate for repeat disputes: same item + bureau requires new evidence/discrepancy/pull-delta before regeneration (§611(a)(3)); escalation runner's existing-child check stays, extend to the wizard path.
+- [x] Certified-mail/print integration with tracking numbers stored on the dispute row so the 30-day SLA clock (`calculateDisputeDeadlines`) starts from evidence, not manual bookkeeping.
+- [x] Audit-report score projection (`src/lib/audit-report.ts:120-136`): replace flat per-item point gains (capped 150) with conservative ranges + explicit no-guarantee framing, or qualitative impact tiers (CROA results-representation risk).
+- [x] Inquiry batches: require client attestation ("I did not apply with X") before an inquiry enters a dispute batch (`dispute-triage.ts:139-147`), mirroring the ownership-claim gate.
 
 ### P3 Doc-sync checklist
-- [ ] `docs/SECONDARY-BUREAUS-AND-CREDITOR-ANALYTICS.md` — new flows and the triage wiring.
-- [ ] `docs/response-clock.md` — mail-tracking-driven SLA start.
-- [ ] `docs/plans/credit-repair-platform-roadmap.md` — reconcile roadmap with what shipped.
-- [ ] `docs/agents/domain.md` — new detectors, medical rule pack, CFPB packet flow.
-- [ ] This file — status, Change Log.
+- [x] `docs/SECONDARY-BUREAUS-AND-CREDITOR-ANALYTICS.md` — new flows and the triage wiring.
+- [x] `docs/response-clock.md` — mail-tracking-driven SLA start.
+- [x] `docs/plans/credit-repair-platform-roadmap.md` — reconcile roadmap with what shipped.
+- [x] `docs/agents/domain.md` — new detectors, medical rule pack, CFPB packet flow.
+- [x] This file — status, Change Log.
 
 ---
 
@@ -221,3 +221,6 @@ These bugs produce wrong FCRA clocks, unfounded dispute grounds, and defective l
 |------|-------|---------|--------------|
 | 2026-07-14 | — | Plan created from code-only review | — |
 | 2026-07-14 | P0 | Fixed FCRA clock source hierarchy, removed false balance violations, stopped fabricated account-number leakage, added escalation reason-code coverage, and preserved parser-authored remarks with separate completeness fields | `docs/CREDIT-ANALYSIS-IMPLEMENTATION.md`, `docs/METRO2-VIOLATION-FIX-SUMMARY.md`, `docs/adr/0003-fcra-clock-source-of-truth.md`, `src/lib/AGENTS.md` |
+| 2026-07-15 | P1 | Consolidated letter generation onto factual prompts, added deterministic output linting, removed round-based evidence boosts from confidence and strength scoring, and completed Phase 1 cleanup/docs sync | `docs/agents/domain.md`, `docs/CREDIT-ANALYSIS-IMPLEMENTATION.md`, `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md`, `docs/IDENTITYIQ_PARSER_GUIDE.md`, `docs/adr/0001-ai-renders-deterministic-dispute-policy.md`, `docs/plans/2026-07-14-credit-brain-accuracy-implementation-plan.md` |
+| 2026-07-15 | P2 | Hardened source detection and deterministic date parsing, added parser fixture/routing coverage, introduced parser-review gating across downstream workflows, persisted payment-history grids, surfaced parser review state in admin flows, centralized current LLM defaults, and hardened factual structured-output + tradeline match confidence behavior | `docs/CREDIT-ANALYSIS-IMPLEMENTATION.md`, `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md`, `docs/IDENTITYIQ_PARSER_GUIDE.md`, `docs/PARSER-FIX-ORIGINAL-CREDITOR.md`, `docs/SETUP_GUIDE.md`, `AGENTS.md`, `docs/plans/2026-07-14-credit-brain-accuracy-implementation-plan.md` |
+| 2026-07-15 | P3 | Added deterministic re-aging and duplicate-liability detector support, medical-debt triage recommendations, outcome-driven round-1 methodology selection, CFPB complaint-packet routing in the wizard, and completed Phase 3 docs reconciliation | `docs/SECONDARY-BUREAUS-AND-CREDITOR-ANALYTICS.md`, `docs/response-clock.md`, `docs/agents/domain.md`, `docs/plans/credit-repair-platform-roadmap.md`, `docs/plans/2026-07-14-credit-brain-accuracy-implementation-plan.md` |

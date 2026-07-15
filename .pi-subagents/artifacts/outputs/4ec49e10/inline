@@ -1,0 +1,64 @@
+status: success
+summary: Implemented the Phase 1.1 discrepancy-detection slice with a minimal scope change: `src/lib/credit-analysis.ts` now runs discrepancy detection against the triggering `creditReportId` only, and account discrepancy generation now compares per-bureau balance columns stored on rows from that single pull instead of grouping legacy account rows across the client timeline. Added focused tests proving that two separate pull rows for the same account do not create a false cross-time discrepancy, while one row with differing per-bureau balances does create discrepancy output. Verification passed with targeted tests, full typecheck, and ESLint on touched files.
+findings:
+  - Updated `detectBureauDiscrepancies` to query `creditAccounts` and `consumerProfiles` scoped to `creditReportId`, while still clearing/rebuilding the client discrepancy snapshot for the latest analyzed pull.
+  - Extracted the account-balance discrepancy builder to `src/lib/credit-analysis-discrepancies.ts` so it can be unit-tested without importing DB-connected analysis code.
+  - This slice intentionally narrows account discrepancy logic to `account_balance` only; legacy status/payment-history cross-row comparisons were removed rather than reworked across time, which keeps scope aligned with the requested per-pull rewrite.
+  - Residual risk: `bureau_discrepancies` still has no `creditReportId`, so the table continues to hold one client-level latest snapshot rather than historical discrepancy snapshots per pull.
+  - Remaining for P1.1: extend the same per-pull/per-bureau rewrite pattern to any remaining discrepancy types that still rely on legacy assumptions, and decide whether discrepancy persistence itself should become report-pull scoped.
+```acceptance-report
+{
+  "criteriaSatisfied": [
+    {
+      "id": "criterion-1",
+      "status": "satisfied",
+      "evidence": "`detectBureauDiscrepancies` now scopes account/profile reads to the triggering `creditReportId`, and account discrepancy generation uses per-bureau balance columns on stored rows from that pull instead of grouping account rows across the client's timeline. No UI files were changed."
+    }
+  ],
+  "changedFiles": [
+    "src/lib/credit-analysis.ts",
+    "src/lib/credit-analysis-discrepancies.ts",
+    "src/lib/__tests__/credit-analysis-discrepancies.test.ts"
+  ],
+  "testsAddedOrUpdated": [
+    "src/lib/__tests__/credit-analysis-discrepancies.test.ts"
+  ],
+  "commandsRun": [
+    {
+      "command": "npm run test -- src/lib/__tests__/credit-analysis-discrepancies.test.ts src/lib/__tests__/credit-analysis-account-presence.test.ts",
+      "result": "passed",
+      "summary": "2 test files passed, 5 tests passed"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "passed",
+      "summary": "TypeScript completed successfully"
+    },
+    {
+      "command": "npx eslint src/lib/credit-analysis.ts src/lib/credit-analysis-discrepancies.ts src/lib/__tests__/credit-analysis-discrepancies.test.ts src/lib/__tests__/credit-analysis-account-presence.test.ts",
+      "result": "passed",
+      "summary": "ESLint passed on touched files; only emitted the standard Browserslist age warning"
+    },
+    {
+      "command": "git diff --cached --name-only",
+      "result": "passed",
+      "summary": "No staged files"
+    }
+  ],
+  "validationOutput": [
+    "Vitest: 2 files passed, 5 tests passed.",
+    "Typecheck: `tsc --noEmit` passed.",
+    "ESLint: touched files passed; Browserslist warned that caniuse-lite data is 7 months old."
+  ],
+  "residualRisks": [
+    "Only account-balance discrepancy generation was rewritten in this slice; any future discrepancy types need the same per-pull/per-bureau treatment if they are reintroduced.",
+    "`bureau_discrepancies` remains client-scoped without `creditReportId`, so historical discrepancy snapshots per pull are still not preserved."
+  ],
+  "noStagedFiles": true,
+  "diffSummary": "Scoped discrepancy detection reads to the triggering report pull, replaced legacy cross-time account grouping with per-row per-bureau balance comparison, and added focused unit coverage for no cross-pull false positives plus single-pull positive detection.",
+  "reviewFindings": [
+    "no blockers"
+  ],
+  "manualNotes": "The worktree already contained unrelated modified/untracked files before this slice; this change only touched the files listed above."
+}
+```

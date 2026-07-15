@@ -193,6 +193,18 @@ Letter: Shows violation ✓ CORRECT
 
 ---
 
+## **Phase 2 Follow-up: Match Confidence Hardening**
+
+The original creditor parsing fix remains foundational, but Phase 2 also tightened how parsed derogatory rows are linked back to tradelines during ingest:
+
+- matching now prefers exact account-number last-4 evidence when present
+- fallback confidence relies on stronger normalized creditor-name comparison instead of broad substring guessing
+- ingest persists match confidence on the negative-item row so downstream analysis can distinguish stronger and weaker links
+
+This keeps original-creditor extraction and downstream tradeline-link confidence aligned: cleaner parsed names now improve both factual matching quality and auditability.
+
+---
+
 ## **REGARDING GEMINI 2.0 FLASH**
 
 **Your Question:**

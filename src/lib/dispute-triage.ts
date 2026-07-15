@@ -1,6 +1,10 @@
 // Dispute Triage System - Auto-grouping and strategy recommendation
 
 import { getObsolescenceBaseDate as getSharedObsolescenceBaseDate } from './fcra-clock';
+import { detectDuplicateLiability, detectReaging } from './negative-item-detectors';
+import { getMedicalRuleRecommendation } from './medical-dispute-rules';
+import type { CreditorStrategySummary } from './creditor-strategy-insights';
+import { getRecommendedMethodologyForCreditor } from './creditor-strategy-insights';
 
 export interface NegativeItemForTriage {
   id: string;
@@ -8,6 +12,10 @@ export interface NegativeItemForTriage {
   itemType: string;
   amount: number | null;
   dateReported: string | null;
+  originalCreditor?: string | null;
+  accountNumber?: string | null;
+  accountType?: string | null;
+  paymentHistoryGrid?: Record<string, Record<string, string>> | null;
   // FCRA 7-year clock runs from Date of First Delinquency, not the report date.
   // dateOfLastActivity is the closest on-report proxy when DOFD is unavailable.
   dateOfFirstDelinquency?: string | null;
@@ -45,6 +53,7 @@ export interface TriageSummary {
   byType: Record<string, number>;
   byStrategy: Record<string, number>;
   quickActions: QuickAction[];
+  historicalRecommendations?: Record<string, string>;
 }
 
 export interface QuickAction {
@@ -66,7 +75,8 @@ export function getObsolescenceBaseDate(item: NegativeItemForTriage): Date | nul
 function determineStrategy(
   itemType: string,
   items: NegativeItemForTriage[],
-  round: number = 1
+  round: number = 1,
+  historicalSummary?: CreditorStrategySummary
 ): { strategy: TriagedBatch['strategy']; description: string; legalBasis: string[] } {
   const type = itemType.toLowerCase();
 
@@ -82,6 +92,36 @@ function determineStrategy(
     };
   }
 
+  const medicalRecommendation = getMedicalRuleRecommendation({
+    accountType: items[0]?.accountType,
+    itemType,
+    amount: items[0]?.amount,
+  });
+  if (medicalRecommendation) {
+    return {
+      strategy: 'factual',
+      description: medicalRecommendation.description,
+      legalBasis: [
+        'FCRA § 607(b) - Maximum possible accuracy',
+        'Medical debt reporting policies require factual verification before continued reporting',
+      ],
+    };
+  }
+
+  const historicalMethodology = historicalSummary && items[0]
+    ? getRecommendedMethodologyForCreditor(items[0].creditorName, historicalSummary)
+    : null;
+  if (historicalMethodology === 'debt_validation' || historicalMethodology === 'factual' || historicalMethodology === 'method_of_verification' || historicalMethodology === 'goodwill' || historicalMethodology === 'metro2_compliance') {
+    return {
+      strategy: historicalMethodology,
+      description: 'Recommended from historical creditor outcome data; static heuristics remain the fallback.',
+      legalBasis: [
+        'Historical outcome-driven recommendation (advisory only)',
+        'FCRA § 611 / § 607(b) factual dispute framework',
+      ],
+    };
+  }
+
   switch (type) {
     case 'collection':
       return {
@@ -90,7 +130,7 @@ function determineStrategy(
         legalBasis: [
           'FDCPA § 809(b) - Debt validation rights',
           'FCRA § 623(a)(2) - Furnisher accuracy requirements',
-          'Metro 2 Field 24 - Original creditor must be reported',
+          'Metro 2 K1 segment original creditor name should be reported',
         ],
       };
 
@@ -191,29 +231,28 @@ function determinePriority(items: NegativeItemForTriage[]): 'high' | 'medium' | 
 // Check which bureaus an item appears on
 function getItemBureaus(item: NegativeItemForTriage): string[] {
   const bureaus: string[] = [];
-  
+
   if (item.onTransunion === true) bureaus.push('transunion');
-  else if (item.onTransunion === undefined && (!item.bureau || item.bureau === 'combined' || item.bureau === 'transunion')) {
-    bureaus.push('transunion');
-  }
-  
   if (item.onExperian === true) bureaus.push('experian');
-  else if (item.onExperian === undefined && (!item.bureau || item.bureau === 'combined' || item.bureau === 'experian')) {
-    bureaus.push('experian');
-  }
-  
   if (item.onEquifax === true) bureaus.push('equifax');
-  else if (item.onEquifax === undefined && (!item.bureau || item.bureau === 'combined' || item.bureau === 'equifax')) {
-    bureaus.push('equifax');
+
+  if (bureaus.length > 0) {
+    return bureaus;
   }
-  
-  return bureaus;
+
+  const legacyBureau = item.bureau?.toLowerCase();
+  if (legacyBureau === 'transunion' || legacyBureau === 'experian' || legacyBureau === 'equifax') {
+    return [legacyBureau];
+  }
+
+  return [];
 }
 
 // Main triage function
 export function triageItems(
   items: NegativeItemForTriage[],
-  round: number = 1
+  round: number = 1,
+  historicalSummary?: CreditorStrategySummary
 ): TriageSummary {
   const batches: TriagedBatch[] = [];
   const batchMap = new Map<string, NegativeItemForTriage[]>();
@@ -236,7 +275,7 @@ export function triageItems(
   let batchIndex = 0;
   for (const [key, batchItems] of batchMap.entries()) {
     const [bureau, itemType] = key.split('|');
-    const { strategy, description, legalBasis } = determineStrategy(itemType, batchItems, round);
+    const { strategy, description, legalBasis } = determineStrategy(itemType, batchItems, round, historicalSummary);
     const priority = determinePriority(batchItems);
 
     const typeName = itemType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -309,6 +348,45 @@ export function triageItems(
     });
   }
 
+  const reagedItems = detectReaging(items.map(item => ({
+    id: item.id,
+    creditorName: item.creditorName,
+    originalCreditor: item.originalCreditor,
+    accountNumber: item.accountNumber,
+    itemType: item.itemType,
+    bureau: item.bureau,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency,
+    paymentHistoryGrid: item.paymentHistoryGrid?.[item.bureau || ''] || null,
+  })));
+  if (reagedItems.length > 0) {
+    quickActions.push({
+      id: 'reaged-items',
+      label: 'Potential Re-aged Items',
+      description: `${reagedItems.length} items have DOFD later than the first late month in payment history`,
+      itemIds: reagedItems.map(item => item.itemId),
+      count: reagedItems.length,
+    });
+  }
+
+  const duplicateLiabilities = detectDuplicateLiability(items.map(item => ({
+    id: item.id,
+    creditorName: item.creditorName,
+    originalCreditor: item.originalCreditor,
+    accountNumber: item.accountNumber,
+    itemType: item.itemType,
+    bureau: item.bureau,
+  })));
+  if (duplicateLiabilities.length > 0) {
+    const itemIds = [...new Set(duplicateLiabilities.flatMap(group => group.itemIds))];
+    quickActions.push({
+      id: 'duplicate-liability',
+      label: 'Potential Duplicate Liability',
+      description: `${itemIds.length} items may reflect the same debt reporting on multiple tradelines`,
+      itemIds,
+      count: itemIds.length,
+    });
+  }
+
   // Quick action: High severity items
   const severeItems = items.filter(i => i.riskSeverity === 'severe' || i.riskSeverity === 'high');
   if (severeItems.length > 0) {
@@ -336,6 +414,14 @@ export function triageItems(
     });
   }
 
+  const historicalRecommendations: Record<string, string> = {};
+  if (historicalSummary) {
+    for (const item of items) {
+      const recommended = getRecommendedMethodologyForCreditor(item.creditorName, historicalSummary);
+      if (recommended) historicalRecommendations[item.id] = recommended;
+    }
+  }
+
   return {
     batches,
     totalItems: items.length,
@@ -343,6 +429,7 @@ export function triageItems(
     byType,
     byStrategy,
     quickActions,
+    historicalRecommendations,
   };
 }
 

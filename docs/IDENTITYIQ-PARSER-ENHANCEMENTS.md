@@ -383,6 +383,26 @@ export interface ExtendedParsedCreditData extends ParsedCreditData {
 
 ## 7. Comprehensive Report Integration
 
+---
+
+## Phase 2 Follow-up Enhancements
+
+### Parser Review Gating
+- IdentityIQ-derived ingest now participates in the shared parser-review gate used by `creditReports.parserReviewStatus`
+- Low-confidence source detection, implausible account counts, and low account completeness can mark a parsed report as `needs_review`
+- Downstream comparison, analysis, auto-select, and dispute-generation workflows now require parser approval before using the report
+
+### Payment History Grid Persistence
+- IdentityIQ payment-history summaries are now also converted into persisted payment-history grids on `credit_accounts.payment_history_grid`
+- The stored shape is bureau-keyed JSON, allowing downstream logic to read `transunion` / `experian` / `equifax` history without reparsing source HTML
+- This unlocks deterministic status-vs-history checks and future re-aging comparisons without depending on prompt-only reasoning
+
+### Fixture / Routing Coverage
+- Phase 2 also added parser-level fixture and source-routing tests alongside IdentityIQ regressions so parser hardening is no longer limited to ad hoc manual verification
+
+### Bureau evidence contract
+IdentityIQ now emits per-bureau account evidence used by ingest and discrepancy comparison, instead of guessing combined/bureau presence from legacy fields.
+
 ### Updated `parseIdentityIQReport()` Return Object
 ```typescript
 export function parseIdentityIQReport(html: string): ExtendedParsedCreditData {

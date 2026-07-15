@@ -245,6 +245,7 @@ export async function GET(
         bureau: r.bureau,
         report_date: toISOStringSafe(r.reportDate),
         parse_status: r.parseStatus,
+        parser_review_status: r.parserReviewStatus,
         uploaded_at: toISOStringSafe(r.uploadedAt),
       })),
       latest_analysis: latestAnalysis ? {
@@ -277,6 +278,15 @@ export async function GET(
           creditorName: a.creditorName,
         });
 
+        let paymentHistoryGrid: Record<string, Record<string, string>> | null = null;
+        if (a.paymentHistoryGrid) {
+          try {
+            paymentHistoryGrid = JSON.parse(a.paymentHistoryGrid) as Record<string, Record<string, string>>;
+          } catch {
+            paymentHistoryGrid = null;
+          }
+        }
+
         return {
           id: a.id,
           creditor_name: decrypted.creditorName,
@@ -289,6 +299,7 @@ export async function GET(
           monthly_payment: a.monthlyPayment,
           past_due_amount: a.pastDueAmount,
           payment_status: a.paymentStatus,
+          payment_history_grid: paymentHistoryGrid,
           date_opened: toISOStringSafe(a.dateOpened),
           bureau: a.bureau, // Legacy field
           // Per-bureau presence data
@@ -318,13 +329,29 @@ export async function GET(
           creditorName: n.creditorName,
         });
 
+        let linkedPaymentHistoryGrid: Record<string, Record<string, string>> | null = null;
+        let linkedAccountType: string | null = null;
+        if (n.creditAccountId) {
+          const linkedAccount = accountsResult.find(account => account.id === n.creditAccountId);
+          linkedAccountType = linkedAccount?.accountType ?? null;
+          if (linkedAccount?.paymentHistoryGrid) {
+            try {
+              linkedPaymentHistoryGrid = JSON.parse(linkedAccount.paymentHistoryGrid) as Record<string, Record<string, string>>;
+            } catch {
+              linkedPaymentHistoryGrid = null;
+            }
+          }
+        }
+
         return {
           id: n.id,
           item_type: n.itemType,
           creditor_name: decrypted.creditorName,
           original_creditor: n.originalCreditor,
+          account_number: null,
           amount: n.amount,
           date_reported: toISOStringSafe(n.dateReported),
+          date_of_first_delinquency: toISOStringSafe(n.dateOfFirstDelinquency),
           bureau: n.bureau, // Legacy field
           // Per-bureau presence data
           bureaus, // Computed array of bureau names
@@ -337,6 +364,8 @@ export async function GET(
           transunion_status: n.transunionStatus,
           experian_status: n.experianStatus,
           equifax_status: n.equifaxStatus,
+          account_type: linkedAccountType,
+          payment_history_grid: linkedPaymentHistoryGrid,
           risk_severity: n.riskSeverity,
           recommended_action: n.recommendedAction,
           dispute_reason: n.disputeReason,

@@ -100,7 +100,15 @@ export function ReportsTab({
                           </p>
                         </div>
                       </div>
-                      <StatusBadge status={report.parse_status} variant={report.parse_status === 'completed' ? 'success' : report.parse_status === 'failed' ? 'danger' : 'warning'} />
+                      <div className="flex flex-col items-end gap-1">
+                        <StatusBadge status={report.parse_status} variant={report.parse_status === 'completed' ? 'success' : report.parse_status === 'failed' ? 'danger' : 'warning'} />
+                        {report.parse_status === 'completed' && report.parser_review_status && (
+                          <StatusBadge
+                            status={report.parser_review_status}
+                            variant={report.parser_review_status === 'approved' ? 'success' : report.parser_review_status === 'rejected' ? 'danger' : 'warning'}
+                          />
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 pl-8">
                       {(report.parse_status === 'pending' || report.parse_status === 'failed') && (
@@ -185,9 +193,18 @@ export function ReportsTab({
                         <td className="p-2 text-right">{account.balance ? formatCurrency(account.balance) : '—'}</td>
                         <td className="p-2 text-right">{account.credit_limit ? formatCurrency(account.credit_limit) : '—'}</td>
                         <td className="p-2">
-                          <span className={`px-2 py-1 rounded-full text-xs ${account.payment_status === 'current' ? 'bg-success/10 text-success' : account.is_negative ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
-                            {account.payment_status?.replace('_', ' ') || account.account_status || '—'}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2 py-1 rounded-full text-xs ${account.payment_status === 'current' ? 'bg-success/10 text-success' : account.is_negative ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                              {account.payment_status?.replace('_', ' ') || account.account_status || '—'}
+                            </span>
+                            {account.payment_history_grid && Object.keys(account.payment_history_grid).length > 0 && (
+                              <span className="text-[11px] text-muted-foreground">
+                                Payment history: {Object.entries(account.payment_history_grid)
+                                  .map(([bureau, history]) => `${bureau.toUpperCase()} ${Object.values(history).slice(0, 4).join(' ')}`)
+                                  .join(' • ')}
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

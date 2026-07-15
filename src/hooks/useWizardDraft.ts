@@ -15,7 +15,7 @@ export interface WizardDraftData {
 
   // Step 3: Configuration
   disputeRound?: number;
-  targetRecipient?: 'bureau' | 'creditor' | 'collector';
+  targetRecipient?: 'bureau' | 'creditor' | 'collector' | 'cfpb';
   selectedBureaus?: string[];
   generationMethod?: 'ai' | 'template';
   combineItemsPerBureau?: boolean;

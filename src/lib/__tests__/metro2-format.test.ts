@@ -5,7 +5,7 @@ let convertToMetro2Format: typeof import('@/lib/ai-letter-generator').convertToM
 beforeAll(async () => {
   process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://test:test@localhost:5432/test';
   ({ convertToMetro2Format } = await import('@/lib/ai-letter-generator'));
-});
+}, 30000);
 
 describe('convertToMetro2Format', () => {
   it('does not label date reported as DOFD in Metro2 payloads', () => {
@@ -21,6 +21,7 @@ describe('convertToMetro2Format', () => {
     );
 
     expect(withOnlyDateReported.dateOfFirstDelinquency).toBeUndefined();
+    expect(withOnlyDateReported.accountNumberMasked).toBeUndefined();
 
     const withLastActivity = convertToMetro2Format(
       {
@@ -35,5 +36,20 @@ describe('convertToMetro2Format', () => {
     );
 
     expect(withLastActivity.dateOfFirstDelinquency).toBe('2018-02-15');
+  });
+
+  it('preserves a real masked account number when present', () => {
+    const withAccountNumber = convertToMetro2Format(
+      {
+        id: 'neg-1234',
+        creditorName: 'Example Creditor',
+        itemType: 'charge_off',
+        amount: 120000,
+        accountNumber: '****4321',
+      },
+      'experian',
+    );
+
+    expect(withAccountNumber.accountNumberMasked).toBe('****4321');
   });
 });

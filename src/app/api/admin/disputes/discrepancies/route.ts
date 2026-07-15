@@ -25,6 +25,7 @@ async function validateAdmin() {
 
 export interface DiscrepancyWithRecommendation {
   id: string;
+  creditReportId: string | null;
   discrepancyType: string;
   field: string | null;
   creditorName: string | null;
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get('clientId');
+  const reportId = searchParams.get('reportId');
 
   if (!clientId) {
     return NextResponse.json(
@@ -59,15 +61,19 @@ export async function GET(request: NextRequest) {
 
   try {
     // Fetch all unresolved discrepancies for this client
+    const conditions = [
+      eq(bureauDiscrepancies.clientId, clientId),
+      isNull(bureauDiscrepancies.resolvedAt),
+    ];
+
+    if (reportId) {
+      conditions.push(eq(bureauDiscrepancies.creditReportId, reportId));
+    }
+
     const discrepancies = await db
       .select()
       .from(bureauDiscrepancies)
-      .where(
-        and(
-          eq(bureauDiscrepancies.clientId, clientId),
-          isNull(bureauDiscrepancies.resolvedAt)
-        )
-      );
+      .where(and(...conditions));
 
     // Enhance each discrepancy with dispute recommendations
     const enhancedDiscrepancies: DiscrepancyWithRecommendation[] = discrepancies.map(d => {
@@ -114,6 +120,7 @@ export async function GET(request: NextRequest) {
         field: d.field,
         creditorName: d.creditorName,
         accountNumber: d.accountNumber,
+        creditReportId: d.creditReportId,
         valueTransunion: d.valueTransunion,
         valueExperian: d.valueExperian,
         valueEquifax: d.valueEquifax,

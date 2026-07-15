@@ -1,0 +1,8 @@
+status: success
+summary: Implemented the Phase 1.1 discrepancy-detection slice with a minimal scope change: `src/lib/credit-analysis.ts` now runs discrepancy detection against the triggering `creditReportId` only, and account discrepancy generation now compares per-bureau balance columns stored on rows from that single pull instead of grouping legacy account rows across the client timeline. Added focused tests proving that two separate pull rows for the same account do not create a false cross-time discrepancy, while one row with differing per-bureau balances does create discrepancy output. Verification passed with targeted tests, full typecheck, and ESLint on touched files.
+findings:
+  - Updated `detectBureauDiscrepancies` to query `creditAccounts` and `consumerProfiles` scoped to `creditReportId`, while still clearing/rebuilding the client discrepancy snapshot for the latest analyzed pull.
+  - Extracted the account-balance discrepancy builder to `src/lib/credit-analysis-discrepancies.ts` so it can be unit-tested without importing DB-connected analysis code.
+  - This slice intentionally narrows account discrepancy logic to `account_balance` only; legacy status/payment-history cross-row comparisons were removed rather than reworked across time, which keeps scope aligned with the requested per-pull rewrite.
+  - Residual risk: `bureau_discrepancies` still has no `creditReportId`, so the table continues to hold one client-level latest snapshot rather than historical discrepancy snapshots per pull.
+  - Remaining for P1.1: extend the same per-pull/per-bureau rewrite pattern to any remaining discrepancy types that still rely on legacy assumptions, and decide whether discrepancy persistence itself should become report-pull scoped.

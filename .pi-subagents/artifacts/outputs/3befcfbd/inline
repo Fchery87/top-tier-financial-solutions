@@ -1,0 +1,96 @@
+{
+  "status": "success",
+  "summary": "Refined bureau fallback behavior in src/lib/dispute-triage.ts and src/lib/dispute-wizard-utils.ts so only explicit true bureau flags or an explicit single legacy bureau imply presence; combined/undefined legacy values no longer imply all bureaus. Added focused coverage in src/lib/__tests__/dispute-triage.test.ts and updated src/lib/__tests__/dispute-wizard-utils.test.ts to prove: all false flags => no bureaus, single true flag => single-bureau only, and combined/undefined legacy values without evidence flags => no implied bureau presence. Verification passed: `npx vitest run src/lib/__tests__/dispute-wizard-utils.test.ts src/lib/__tests__/dispute-triage.test.ts` (64 tests passed), `npm run typecheck` (passed), `npx eslint src/lib/dispute-triage.ts src/lib/dispute-wizard-utils.ts src/lib/__tests__/dispute-wizard-utils.test.ts src/lib/__tests__/dispute-triage.test.ts` (passed; emitted only the repo Browserslist staleness notice).",
+  "findings": [
+    {
+      "severity": "info",
+      "file": "src/lib/dispute-triage.ts",
+      "message": "getItemBureaus now returns only explicit true bureau flags, otherwise falls back only to explicit single-bureau legacy values; combined/undefined now resolve to no bureaus."
+    },
+    {
+      "severity": "info",
+      "file": "src/lib/dispute-wizard-utils.ts",
+      "message": "itemAppearsOnBureau no longer treats missing/combined legacy bureau values as present on all bureaus."
+    },
+    {
+      "severity": "info",
+      "file": "src/lib/__tests__/dispute-triage.test.ts",
+      "message": "Added targeted triage tests for no-bureau, single-bureau, and combined/undefined legacy fallback cases."
+    },
+    {
+      "severity": "info",
+      "file": "src/lib/__tests__/dispute-wizard-utils.test.ts",
+      "message": "Updated helper tests to align fallback expectations with explicit evidence-only bureau assignment."
+    },
+    {
+      "severity": "medium",
+      "file": "repository",
+      "message": "Worktree contains many unrelated modified/untracked files from other P1.1 slices; this change was validated in isolation and those files were left untouched."
+    },
+    {
+      "severity": "medium",
+      "file": "Phase 1.1",
+      "message": "Remaining P1.1 work likely includes auditing other bureau-presence/fallback call sites outside triage/helper utilities for the same combined/undefined legacy assumption."
+    },
+    {
+      "severity": "low",
+      "file": "tooling",
+      "message": "ESLint passes, but the command emits a non-blocking Browserslist caniuse-lite staleness notice."
+    }
+  ]
+}
+
+```acceptance-report
+{
+  "criteriaSatisfied": [
+    {
+      "id": "criterion-1",
+      "status": "satisfied",
+      "evidence": "Concrete findings include file-scoped notes for src/lib/dispute-triage.ts, src/lib/dispute-wizard-utils.ts, src/lib/__tests__/dispute-triage.test.ts, and src/lib/__tests__/dispute-wizard-utils.test.ts, plus residual risk callouts for remaining Phase 1.1 audit scope and unrelated dirty worktree state."
+    }
+  ],
+  "changedFiles": [
+    "src/lib/dispute-triage.ts",
+    "src/lib/dispute-wizard-utils.ts",
+    "src/lib/__tests__/dispute-wizard-utils.test.ts",
+    "src/lib/__tests__/dispute-triage.test.ts"
+  ],
+  "testsAddedOrUpdated": [
+    "src/lib/__tests__/dispute-triage.test.ts",
+    "src/lib/__tests__/dispute-wizard-utils.test.ts"
+  ],
+  "commandsRun": [
+    {
+      "command": "npx vitest run src/lib/__tests__/dispute-wizard-utils.test.ts src/lib/__tests__/dispute-triage.test.ts",
+      "result": "passed",
+      "summary": "2 test files passed; 64 tests passed."
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "passed",
+      "summary": "TypeScript completed with no errors."
+    },
+    {
+      "command": "npx eslint src/lib/dispute-triage.ts src/lib/dispute-wizard-utils.ts src/lib/__tests__/dispute-wizard-utils.test.ts src/lib/__tests__/dispute-triage.test.ts",
+      "result": "passed",
+      "summary": "Lint passed on touched files; only non-blocking Browserslist staleness notice emitted."
+    }
+  ],
+  "validationOutput": [
+    "Vitest: src/lib/__tests__/dispute-triage.test.ts and src/lib/__tests__/dispute-wizard-utils.test.ts passed.",
+    "Typecheck: tsc --noEmit passed.",
+    "ESLint: target files passed; Browserslist caniuse-lite age warning only."
+  ],
+  "residualRisks": [
+    "Other Phase 1.1 code paths outside triage/helper utilities may still rely on combined/undefined legacy bureau fallback and need separate audit/alignment.",
+    "Repository worktree is already dirty with unrelated changes, so care is still needed when composing the broader Phase 1.1 branch."
+  ],
+  "noStagedFiles": true,
+  "diffSummary": "Removed implicit all-bureau fallback for undefined/combined legacy bureau values in triage/helper utilities and added focused tests covering no-bureau, single-bureau, and legacy combined/undefined cases.",
+  "reviewFindings": [
+    "no blockers in touched files",
+    "medium: repository - unrelated modified/untracked files are present in the worktree and were not validated as part of this slice"
+  ],
+  "manualNotes": "No blocker encountered. I did not touch unrelated files already present in the worktree."
+}
+```

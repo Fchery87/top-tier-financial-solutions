@@ -29,6 +29,7 @@ import {
   isAccountNegative,
   calculateRiskLevel,
 } from './metro2-mapping';
+import { parseMonthYearDate, parseReportDate, parseYearDate } from './report-date';
 
 // IdentityIQ-specific CSS selectors (matching actual HTML structure)
 const IIQ_SELECTORS = {
@@ -98,6 +99,17 @@ const PAYMENT_HISTORY_CLASSES = {
   chargeOff: 'hstry-other',
   collection: 'hstry-co',
   ok: 'hstry-ok',
+};
+
+const IDENTITYIQ_PATTERNS = {
+  dofd: /(?:date\s*of\s*first\s*delinquency|first\s*delinquency|dofd)\s*:?[\s\n]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+  removalDate: /(?:on\s*record\s*until|will\s*be\s*removed\s*by|scheduled\s*to\s*continue\s*until)\s*:?[\s\n]*(\d{1,2}[\/\-]\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+};
+
+const BUREAU_LABELS: Record<'transunion' | 'experian' | 'equifax', string[]> = {
+  transunion: ['transunion', 'tu', 'tuc'],
+  experian: ['experian', 'exp'],
+  equifax: ['equifax', 'eq', 'eqf'],
 };
 
 function createEmptyPaymentHistory(): PaymentHistorySummary {
@@ -653,6 +665,7 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
     // Find tables with class "crPrint ng-scope"
     $history.find('table.crPrint.ng-scope, table.crPrint').each((_, accountTable) => {
       const $accountTable = $(accountTable);
+      const accountSourceText = $accountTable.text();
       
       // Get account/creditor name from header
       let creditorName = '';
@@ -755,18 +768,24 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
             accountDate: accountData.transunion.dateOpened,
             paymentStatus: accountData.transunion.paymentStatus,
             paymentHistory: paymentHistory.transunion,
+            dateOfFirstDelinquency: extractBureauDateFromText(accountSourceText, 'transunion', IDENTITYIQ_PATTERNS.dofd),
+            bureauStatedRemovalDate: extractBureauFlexibleDateFromText(accountSourceText, 'transunion', IDENTITYIQ_PATTERNS.removalDate),
           },
           experian: {
             accountStatus: accountData.experian.accountStatus,
             accountDate: accountData.experian.dateOpened,
             paymentStatus: accountData.experian.paymentStatus,
             paymentHistory: paymentHistory.experian,
+            dateOfFirstDelinquency: extractBureauDateFromText(accountSourceText, 'experian', IDENTITYIQ_PATTERNS.dofd),
+            bureauStatedRemovalDate: extractBureauFlexibleDateFromText(accountSourceText, 'experian', IDENTITYIQ_PATTERNS.removalDate),
           },
           equifax: {
             accountStatus: accountData.equifax.accountStatus,
             accountDate: accountData.equifax.dateOpened,
             paymentStatus: accountData.equifax.paymentStatus,
             paymentHistory: paymentHistory.equifax,
+            dateOfFirstDelinquency: extractBureauDateFromText(accountSourceText, 'equifax', IDENTITYIQ_PATTERNS.dofd),
+            bureauStatedRemovalDate: extractBureauFlexibleDateFromText(accountSourceText, 'equifax', IDENTITYIQ_PATTERNS.removalDate),
           },
         };
         derogatoryAccounts.push(derogatoryAccount);
@@ -779,7 +798,13 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
       for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
         const data = accountData[bureau];
         if (Object.keys(data).length > 0) {
-          const account = createParsedAccount(cleanCreditorName, data, bureau);
+          const account = createParsedAccount(cleanCreditorName, data, bureau, accountSourceText);
+          account.bureauEvidence = {
+            [bureau]: buildBureauEvidence(data, accountSourceText),
+          };
+          account.paymentHistoryGrid = {
+            [bureau]: paymentHistoryToGrid(paymentHistory[bureau]),
+          };
           // Store original creditor in remarks for now (could be added to ParsedAccount interface)
           if (originalCreditor && account.remarks) {
             account.remarks += ` | Original Creditor: ${originalCreditor}`;
@@ -832,10 +857,46 @@ function buildUniqueStatus(accountData: Record<string, Record<string, string>>):
   return Array.from(statuses).join(', ');
 }
 
+function paymentHistoryToGrid(history: PaymentHistorySummary): Record<string, string> {
+  const grid: Record<string, string> = {};
+  const entries: Array<[string, number]> = [
+    ['30', history.lateCount30],
+    ['60', history.lateCount60],
+    ['90', history.lateCount90],
+    ['120', history.lateCount120],
+    ['150', history.lateCount150],
+    ['180', history.lateCount180],
+    ['CO', history.chargeOffCount],
+    ['COL', history.collectionCount],
+  ];
+  entries.forEach(([code, count]) => {
+    if (count > 0) grid[code] = String(count);
+  });
+  if (Object.keys(grid).length === 0) grid.OK = '1';
+  return grid;
+}
+
+function buildBureauEvidence(data: Record<string, string>, sourceText?: string): NonNullable<ParsedAccount['bureauEvidence']>[keyof NonNullable<ParsedAccount['bureauEvidence']>] {
+  return {
+    accountNumber: data.accountNumber !== '-' ? data.accountNumber : undefined,
+    accountType: data.accountType ? cleanText(data.accountType) : undefined,
+    accountStatus: data.accountStatus ? cleanText(data.accountStatus) : undefined,
+    balance: parseMoneyValue(data.balance),
+    creditLimit: parseMoneyValue(data.creditLimit),
+    highCredit: parseMoneyValue(data.highCredit),
+    monthlyPayment: parseMoneyValue(data.monthlyPayment),
+    pastDueAmount: parseMoneyValue(data.pastDue),
+    paymentStatus: data.paymentStatus ? cleanText(data.paymentStatus) : undefined,
+    dateOpened: parseDate(data.dateOpened),
+    sourceText,
+  };
+}
+
 function createParsedAccount(
   creditorName: string,
   data: Record<string, string>,
-  bureau: string
+  bureau: string,
+  sourceText?: string
 ): ParsedAccount {
   const balance = parseMoneyValue(data.balance);
   const creditLimit = parseMoneyValue(data.creditLimit);
@@ -880,6 +941,7 @@ function createParsedAccount(
     bureau,
     isNegative: false,
     riskLevel: 'low',
+    sourceText,
   };
 
   // Calculate negative status and risk
@@ -1199,6 +1261,8 @@ function buildNegativeItems(
         creditorName,
         originalCreditor,
         bureau,
+        dateOfFirstDelinquency: derog[bureau].dateOfFirstDelinquency,
+        bureauStatedRemovalDate: derog[bureau].bureauStatedRemovalDate,
         riskSeverity,
       });
     }
@@ -1432,27 +1496,80 @@ function parseMoneyValue(value: string | undefined | null): number | undefined {
 
 function parseDate(dateStr: string | undefined | null): Date | undefined {
   if (!dateStr || dateStr === '-') return undefined;
-  
-  // Clean the string and extract date pattern
   const cleaned = dateStr.replace(/\s+/g, ' ').trim();
-  
-  // Try to extract a date pattern (MM/DD/YYYY, M/D/YYYY, YYYY, etc.)
-  const dateMatch = cleaned.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
-  if (dateMatch) {
-    const date = new Date(dateMatch[1]);
-    if (!isNaN(date.getTime())) return date;
+  const embeddedDateMatch = cleaned.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+  if (embeddedDateMatch) {
+    return parseReportDate(embeddedDateMatch[1]);
   }
-  
-  // Try year-only format
-  const yearMatch = cleaned.match(/^(\d{4})$/);
-  if (yearMatch) {
-    const date = new Date(`${yearMatch[1]}-01-01`);
-    if (!isNaN(date.getTime())) return date;
+  return parseYearDate(cleaned) || parseReportDate(cleaned);
+}
+
+function parseFlexibleDate(dateStr: string | undefined | null): Date | undefined {
+  if (!dateStr || dateStr === '-') return undefined;
+  const trimmed = dateStr.trim();
+
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(trimmed)) {
+    const [month, day, yearRaw] = trimmed.split(/[\/\-]/);
+    const year = yearRaw.length === 2 ? Number(`20${yearRaw}`) : Number(yearRaw);
+    return new Date(Date.UTC(year, Number(month) - 1, Number(day)));
   }
-  
-  // Fallback to direct parsing
-  const date = new Date(cleaned);
-  return isNaN(date.getTime()) ? undefined : date;
+
+  if (/^\d{1,2}[\/\-]\d{4}$/.test(trimmed)) {
+    return parseMonthYearDate(trimmed);
+  }
+
+  return parseDate(trimmed);
+}
+
+function extractBureauSegment(text: string, bureau: 'transunion' | 'experian' | 'equifax'): string {
+  const normalized = text.replace(/\s+/g, ' ');
+  const labels = BUREAU_LABELS[bureau];
+  const allLabels = Object.values(BUREAU_LABELS).flat();
+
+  let startIndex = -1;
+  let matchedLabel = '';
+
+  for (const label of labels) {
+    const match = new RegExp(`\\b${label}\\b`, 'i').exec(normalized);
+    if (match) {
+      startIndex = match.index;
+      matchedLabel = match[0];
+      break;
+    }
+  }
+
+  if (startIndex === -1) {
+    return normalized;
+  }
+
+  const afterLabel = normalized.slice(startIndex + matchedLabel.length);
+  let endIndex = afterLabel.length;
+
+  for (const label of allLabels) {
+    if (labels.includes(label)) continue;
+    const match = new RegExp(`\\b${label}\\b`, 'i').exec(afterLabel);
+    if (match && match.index < endIndex) {
+      endIndex = match.index;
+    }
+  }
+
+  return afterLabel.slice(0, endIndex);
+}
+
+function extractBureauDateFromText(
+  text: string,
+  bureau: 'transunion' | 'experian' | 'equifax',
+  pattern: RegExp,
+): Date | undefined {
+  return parseDate(extractBureauSegment(text, bureau).match(pattern)?.[1]);
+}
+
+function extractBureauFlexibleDateFromText(
+  text: string,
+  bureau: 'transunion' | 'experian' | 'equifax',
+  pattern: RegExp,
+): Date | undefined {
+  return parseFlexibleDate(extractBureauSegment(text, bureau).match(pattern)?.[1]);
 }
 
 function cleanText(text: string): string | undefined {

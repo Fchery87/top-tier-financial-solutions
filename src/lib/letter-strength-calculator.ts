@@ -34,7 +34,7 @@ export interface LetterStrengthScore {
  * - FCRA citations (0-2 points)
  * - Evidence documents attached (0-1.5 points)
  * - Analysis confidence (0-1.5 points)
- * - Dispute round/escalation (0-1 point)
+ * - Evidence-backed escalation posture (0-1 point)
  * - Methodology strength (0-1 point)
  */
 export function calculateLetterStrength(
@@ -117,33 +117,23 @@ export function calculateLetterStrength(
   }
 
   // ---- ESCALATION SCORE (0-1 point) ----
-  if (disputeRound === 1) {
-    escalationScore = 0;
-    suggestions.push('First dispute round - subsequent disputes can strengthen case');
-  } else if (disputeRound === 2) {
-    escalationScore = 0.5;
-    suggestions.push('Round 2 dispute - demanding method of verification');
-  } else {
-    escalationScore = 1;
-    suggestions.push('Round 3+ dispute - maximum escalation under FCRA');
+  const hasDocumentedIssues = totalViolations > 0 || totalCitations > 0;
+  escalationScore = hasDocumentedIssues ? 0.5 : 0;
+
+  if (disputeRound >= 2) {
+    suggestions.push('Round affects strategy only - strengthen escalation with documented violations or evidence, not time alone');
   }
 
   // ---- METHODOLOGY SCORE (0-1 point) ----
   // Strictly-factual approaches score highest, consistent with the deterministic
-  // dispute policy: factual and Metro 2 claims are evidence-grounded and low-risk,
-  // while consumer_law claims carry higher risk and need documented willfulness.
+  // dispute policy: factual and Metro 2 claims are evidence-grounded and low-risk.
   const methodologyScores: Record<string, number> = {
     'factual': 1.0,
     'metro2_compliance': 1.0,
     'method_of_verification': 0.9,
     'debt_validation': 0.8,
-    'consumer_law': 0.6,
   };
   methodologyScore = methodologyScores[methodology] || 0.5;
-
-  if (methodology === 'consumer_law') {
-    suggestions.push('Consumer law approach carries higher risk - ensure willful non-compliance is documented before relying on it');
-  }
 
   // ---- CALCULATE OVERALL SCORE ----
   const overallScore = Math.min(

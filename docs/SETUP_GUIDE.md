@@ -58,6 +58,8 @@ npm run db:migrate     # Apply migrations
 npm run db:studio      # View database (optional)
 ```
 
+Recent parser/accuracy migrations include Phase 2 additions such as persisted payment-history grids on `credit_accounts` and stored tradeline match-confidence on `negative_items`. If you are restoring an older local database, make sure the latest Drizzle journal and migrations are applied before testing parser-review gating or dispute analysis flows.
+
 If `npm run db:migrate` fails with `relation "account" already exists`, your DB schema is ahead of Drizzle's migration journal. Repair the journal baseline, then rerun migrations:
 
 ```bash
@@ -152,6 +154,8 @@ Next.js 16 (React 19)
 **AI Features Not Working:**
 - Verify `GOOGLE_AI_API_KEY` is valid
 - Check API quota in Google Cloud Console
+- Current centralized LLM defaults are managed in `src/lib/settings-service.ts`
+- If no custom DB-backed model is configured, provider defaults are used (for example `gemini-2.5-flash`, `gpt-5`, `claude-sonnet-5`)
 
 ## Database Schema
 

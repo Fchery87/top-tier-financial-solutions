@@ -5,12 +5,14 @@ interface UseDisputeMethodologiesOptions {
   selectedItems?: string[];
   negativeItems?: NegativeItem[];
   disputeRound?: number;
+  historicalRecommendations?: Record<string, string>;
 }
 
 export function useDisputeMethodologies({
   selectedItems = [],
   negativeItems = [],
   disputeRound = 1,
+  historicalRecommendations = {},
 }: UseDisputeMethodologiesOptions = {}) {
   const [methodologies, setMethodologies] = React.useState<Methodology[]>([]);
   const [selectedMethodology, setSelectedMethodology] = React.useState<string>('factual');
@@ -52,14 +54,26 @@ export function useDisputeMethodologies({
   const getRecommendedMethodologyForItems = React.useCallback(() => {
     if (selectedItems.length === 0) return null;
 
-    const hasCollection = negativeItems
-      .filter(item => selectedItems.includes(item.id))
-      .some(item => item.item_type === 'collection');
+    const recommendedFromHistory = selectedItems
+      .map(itemId => historicalRecommendations[itemId])
+      .find(Boolean);
+    if (recommendedFromHistory && disputeRound === 1) {
+      return recommendedFromHistory;
+    }
+
+    const selectedNegativeItems = negativeItems.filter(item => selectedItems.includes(item.id));
+    const hasMedical = selectedNegativeItems.some(item => {
+      const type = `${item.item_type || ''} ${item.account_type || ''}`.toLowerCase();
+      return type.includes('medical') || type.includes('hospital') || type.includes('healthcare');
+    });
+    if (hasMedical) return 'factual';
+
+    const hasCollection = selectedNegativeItems.some(item => item.item_type === 'collection');
 
     if (hasCollection && disputeRound === 1) return 'debt_validation';
     if (disputeRound >= 2) return 'method_of_verification';
     return 'factual';
-  }, [selectedItems, negativeItems, disputeRound]);
+  }, [selectedItems, negativeItems, disputeRound, historicalRecommendations]);
 
   React.useEffect(() => {
     setRecommendedMethodology(getRecommendedMethodologyForItems());

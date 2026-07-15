@@ -88,7 +88,7 @@ function buildPerItemInstructions(input: LetterGenerationBuilderInput): Record<s
 
 function itemAppliesToBureau(input: LetterGenerationBuilderInput, entry: SelectedDisputeItemEntry, bureau: string): boolean {
   if (entry.kind === 'tradeline') return input.itemAppearsOnBureau(entry.raw as NegativeItem, bureau);
-  return !entry.payload.bureau || entry.payload.bureau.toLowerCase() === bureau.toLowerCase();
+  return entry.payload.bureau?.toLowerCase() === bureau.toLowerCase();
 }
 
 function evidenceDocumentIds(input: LetterGenerationBuilderInput): string[] | undefined {

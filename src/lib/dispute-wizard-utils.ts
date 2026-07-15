@@ -68,7 +68,7 @@ export const PRESET_DISPUTE_INSTRUCTIONS: PresetDisputeInstruction[] = [
 
 /**
  * Check if a negative item appears on a specific bureau
- * Uses the new per-bureau boolean fields, with fallback to legacy bureau field
+ * Uses the new per-bureau boolean fields, with fallback to explicit legacy bureau data only
  */
 export function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean {
   const bureauLower = bureau.toLowerCase();
@@ -89,14 +89,8 @@ export function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean
     return item.bureaus.includes(bureauLower);
   }
 
-  // Fallback to legacy bureau field logic
-  // If no specific bureau, assume it appears on all bureaus (conservative)
-  if (!item.bureau || item.bureau === 'combined') {
-    return true;
-  }
-
-  // Otherwise, check if legacy bureau matches
-  return item.bureau.toLowerCase() === bureauLower;
+  // Fallback to explicit legacy bureau field only
+  return item.bureau?.toLowerCase() === bureauLower;
 }
 
 /**

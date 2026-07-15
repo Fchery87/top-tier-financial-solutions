@@ -9,6 +9,8 @@
 
 This release closes two competitive gaps identified in the June 2026 market audit — secondary consumer reporting agency disputes and per-creditor strategy success learning — and fixes four accuracy issues in the dispute, triage, scoring, and re-analysis paths.
 
+> **Update (2026-07-15):** The Phase 3 implementation now also adds deterministic re-aging / duplicate-liability detection, medical-debt rule wiring, CFPB packet routing, and report-aware triage/auto-select recommendation flows.
+
 ---
 
 ## 1. Secondary Bureau Dispute Support
@@ -37,6 +39,14 @@ Note the Innovis and ChexSystems addresses differ from the older Pittsburgh/Wood
 
 Negative items are tracked per big-3 bureau (`onTransunion` / `onExperian` / `onEquifax`). Secondary CRAs aggregate from furnishers rather than mirroring big-3 tradelines, so `itemAppearsOnBureau()` treats every selected item as in scope for a secondary-agency letter. The intended use is sending verification/suppression disputes after big-3 deletions so removed data does not resurface through LexisNexis, Innovis, or the banking-history agencies.
 
+### Phase 3 detector and medical-rule additions
+
+- `src/lib/negative-item-detectors.ts` adds deterministic re-aging detection (reported DOFD later than the first late month in persisted payment history) and duplicate-liability grouping across related tradelines.
+- `src/lib/dispute-triage.ts` now surfaces Phase 3 quick actions for potential re-aged items and duplicate liability alongside the existing discrepancy and obsolescence actions.
+- `src/lib/medical-dispute-rules.ts` provides medical-debt-specific recommendation logic, including under-$500 medical debt, paid medical collections, younger-than-one-year medical debt, and state-law restriction notes.
+- Triage methodology selection remains deterministic: historical creditor methodology is advisory-only and falls back to standard factual / debt-validation / MOV heuristics.
+- CFPB routing is now exposed in the dispute wizard as a complaint-packet flow rather than a bureau-style letter destination.
+
 ---
 
 ## 2. Per-Creditor Strategy Success Analytics
@@ -57,6 +67,7 @@ The platform now learns which dispute methodology historically works against eac
 
 - `GET /api/admin/disputes/insights/creditor-strategies` — full per-creditor breakdown plus a `recommendationsByCreditor` lookup map. Super-admin only.
 - `POST /api/admin/disputes/triage` — response now includes `historicalRecommendations`, a map of negative-item ID to the historically best methodology for that item's creditor. Loading the history is best-effort; triage succeeds without it.
+- `POST /api/admin/disputes/auto-select` — round-1 recommended methodology now prefers historically successful creditor methodology when enough samples exist; static batch heuristics remain fallback.
 
 ### Tests
 
@@ -72,7 +83,7 @@ The FCRA 7-year reporting clock runs from the Date of First Delinquency. `src/li
 
 ### Letter strength scoring favors strictly-factual methodologies
 
-`src/lib/letter-strength-calculator.ts` methodology weights were inverted to match the platform's strictly-factual policy stance: `factual` and `metro2_compliance` score 1.0, `method_of_verification` 0.9, `debt_validation` 0.8, `consumer_law` 0.6. The consumer_law suggestion now warns that willful non-compliance must be documented.
+`src/lib/letter-strength-calculator.ts` keeps methodology scoring factual-first: `factual` and `metro2_compliance` score 1.0, `method_of_verification` 0.9, and `debt_validation` 0.8.
 
 ### Re-analysis no longer wipes other reports' compliance items
 
