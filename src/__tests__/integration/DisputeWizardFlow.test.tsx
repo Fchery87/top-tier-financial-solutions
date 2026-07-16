@@ -414,17 +414,25 @@ describe('DisputeWizard Integration - Letter Strength Calculation', () => {
       expect(withEvidence.overallScore).toBeGreaterThan(withoutEvidence.overallScore);
     });
 
-    it('should award escalation points for higher rounds', () => {
-      const analyses = [{
+    it('should base escalation score on documented issues, not round number', () => {
+      const documented = [{
         metro2Violations: ['Violation 1'],
         fcraIssues: ['Issue 1'],
         confidence: 0.8,
       }];
+      const undocumented = [{
+        metro2Violations: [],
+        fcraIssues: [],
+        confidence: 0.8,
+      }];
 
-      const round1 = calculateLetterStrength(analyses, true, 1, 1, 'factual');
-      const round3 = calculateLetterStrength(analyses, true, 1, 3, 'factual');
+      const round1 = calculateLetterStrength(documented, true, 1, 1, 'factual');
+      const round3 = calculateLetterStrength(documented, true, 1, 3, 'factual');
+      const noIssues = calculateLetterStrength(undocumented, true, 1, 3, 'factual');
 
-      expect(round3.escalationScore).toBeGreaterThan(round1.escalationScore);
+      expect(round3.escalationScore).toBe(round1.escalationScore);
+      expect(round3.escalationScore).toBeGreaterThan(noIssues.escalationScore);
+      expect(noIssues.escalationScore).toBe(0);
     });
 
     it('should score different methodologies appropriately', () => {

@@ -28,8 +28,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scripts"]
+  // Next.js re-adds ".next/dev/types/**/*.ts" to `include` on dev/build (writeConfigurationDefaults) — expected & harmless, `exclude` below still wins. Don't edit `exclude` to "fix" that diff.
+  "exclude": ["node_modules", "scripts", ".next/dev"]
 }
