@@ -57,5 +57,5 @@ describe('GET /api/admin/service-engagements/[id]/compliance-gate', () => {
         passed: false,
       }),
     ]));
-  }, 10000);
+  });
 });
