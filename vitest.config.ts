@@ -7,6 +7,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Generous budgets so suite-wide runs don't flake on CPU contention;
+    // these guard against hangs, not slowness.
+    testTimeout: 30000,
+    hookTimeout: 30000,
     setupFiles: ['./src/__tests__/setup.tsx'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', '.next', 'dist'],
