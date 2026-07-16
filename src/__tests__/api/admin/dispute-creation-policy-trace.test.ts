@@ -8,9 +8,14 @@ const dbMock = vi.hoisted(() => ({
 
 const adminSessionMock = vi.hoisted(() => vi.fn());
 const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
+const requireLatestApprovedReportForClientMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
+}));
+
+vi.mock('@/lib/parser-review-gate', () => ({
+  requireLatestApprovedReportForClient: requireLatestApprovedReportForClientMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
@@ -39,6 +44,12 @@ describe('POST /api/admin/disputes policy traceability', () => {
     vi.resetAllMocks();
     adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
     generateUniqueDisputeLetterMock.mockResolvedValue('Generated approved dispute letter');
+    requireLatestApprovedReportForClientMock.mockResolvedValue({
+      allowed: true,
+      reportId: 'report-1',
+      parseStatus: 'completed',
+      parserReviewStatus: 'approved',
+    });
   });
 
   it('persists approved policy decision inputs with generated letter content', async () => {
