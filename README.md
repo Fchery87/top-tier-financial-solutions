@@ -109,8 +109,9 @@ The interface runs on one design language — **"Midnight & Brass"** — across 
 - **Palette**: warm stone/paper neutrals, near-black warm ink, a single brass accent. Green and red are reserved for data signals (deltas, credit-score bands) and risk states — never decoration.
 - **Typography**: `Instrument Serif` for editorial headlines (`.font-editorial`), self-hosted `Satoshi` for UI and body, `Geist Mono` for numbers, labels, and eyebrows.
 - **Tokens**: defined in `src/app/globals.css` (`:root` light, `.dark` dark) and exposed to Tailwind v4 via `@theme inline`. Use semantic utilities (`bg-secondary`, `text-muted-foreground`, `border-border`) — never hardcoded hex.
-- **Shared components**: `AdminPageHeader` and `StatGrid` standardize admin page headers and stat strips; `MetricTile`, `ScoreBadge`, `StatusBadge`, and `DataTable` cover dense data display.
-- **Motion**: crisp, custom ease-out, under ~300ms, interruptible. No infinite-loop decoration.
+- **Admin shell**: the console is a "paper sheet on an ink desk" — a locked full-viewport ink surface carrying a flat, single-level sidebar, with the workspace as a raised, rounded paper sheet that owns its own scroll region. Admin page titles use the editorial serif, tying the product to the marketing voice.
+- **Shared components**: `AdminPageHeader` and `StatGrid` standardize admin page headers and stat strips; `MetricTile`, `ScoreBadge`, `StatusBadge`, and `DataTable` cover dense data display. Card titles are compact (`text-sm font-semibold`); numbers are always mono tabular.
+- **Motion**: crisp, custom ease-out, under ~300ms, interruptible. No infinite-loop decoration; Framer Motion is reserved for modal/drawer enter-exit.
 
 See [`docs/DESIGN-SYSTEM.md`](./docs/DESIGN-SYSTEM.md) for the full token table, component reference, and usage rules, and [`brand-spec.md`](./brand-spec.md) for the brand summary.
 
@@ -191,8 +192,8 @@ npm run test           # Run the Vitest test suite
 npm run test:e2e       # Run Playwright end-to-end tests
 npm run validate       # Run lint, typecheck, tests, and build
 npm run db:generate    # Generate Drizzle migrations from schema changes
-npm run db:migrate     # Apply Drizzle migrations
-npm run db:push        # Push schema changes directly
+npm run db:migrate     # Apply Drizzle migrations (the only supported path — see docs/DATABASE.md)
+npm run db:push        # DO NOT USE: would drop the FastAPI admin_users table (see docs/DATABASE.md)
 npm run db:studio      # Open Drizzle Studio
 ```
 
@@ -223,6 +224,7 @@ specs/            Project specifications and supporting product documents
 - Keep billing tied to Services Rendered and compliance gates.
 - Keep PII encrypted or minimized unless a workflow explicitly requires decrypted values.
 - Prefer small schema changes and generated migrations over broad rewrites.
+- Change the database only through `db:generate` + `db:migrate` — never `db:push`, and never hand-applied SQL without bookkeeping (see [docs/DATABASE.md](./docs/DATABASE.md)).
 - Run focused tests for the touched area before broad validation.
 
 ## Verification
@@ -243,9 +245,10 @@ Current production-readiness notes are tracked in the production readiness block
 
 ## Documentation Index
 
-- [Setup Guide](./SETUP_GUIDE.md) - detailed local setup and environment guidance.
-- [Design System](./docs/DESIGN-SYSTEM.md) - "Midnight & Brass" tokens, shared components, typography, and motion rules.
+- [Setup Guide](./docs/SETUP_GUIDE.md) - detailed local setup and environment guidance.
+- [Design System](./docs/DESIGN-SYSTEM.md) - "Midnight & Brass" tokens, shared components, admin shell pattern, typography, and motion rules.
 - [Brand Spec](./brand-spec.md) - logo, palette, and brand summary.
+- [Database & Migrations](./docs/DATABASE.md) - Drizzle workflow, migration-history notes, and why `db:push` is forbidden.
 - [Domain Context](./CONTEXT.md) - canonical project glossary and workflow language.
 - [Credit Repair Platform Roadmap](./docs/plans/credit-repair-platform-roadmap.md) - implementation sequence and acceptance criteria.
 - [Production Readiness Blockers](./docs/plans/production-readiness-blockers.md) - current release blockers, warnings, and audit status.

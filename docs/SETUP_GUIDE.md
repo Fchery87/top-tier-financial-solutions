@@ -58,6 +58,8 @@ npm run db:migrate     # Apply migrations
 npm run db:studio      # View database (optional)
 ```
 
+> Migration workflow, history notes, and why `db:push` must never be used are documented in [DATABASE.md](./DATABASE.md).
+
 Recent parser/accuracy migrations include Phase 2 additions such as persisted payment-history grids on `credit_accounts` and stored tradeline match-confidence on `negative_items`. If you are restoring an older local database, make sure the latest Drizzle journal and migrations are applied before testing parser-review gating or dispute analysis flows.
 
 If `npm run db:migrate` fails with `relation "account" already exists`, your DB schema is ahead of Drizzle's migration journal. Repair the journal baseline, then rerun migrations:
@@ -220,7 +222,7 @@ npm run lint         # ESLint
 npm run db:generate  # Generate migrations
 npm run db:migrate   # Apply migrations
 npm run db:repair-migrations -- --through=0014_wealthy_kree  # Repair migration journal baseline
-npm run db:push      # Push schema changes
+npm run db:push      # DO NOT USE — drops the FastAPI admin_users table (see DATABASE.md)
 npm run db:studio    # Database viewer
 npm run fastapi-dev  # Legacy Python backend (optional)
 ```
