@@ -65,8 +65,8 @@ export function GoalTracker() {
     return (
       <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-sans flex items-center gap-2">
-            <Target className="w-5 h-5 text-secondary" />
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Target className="h-4 w-4 text-secondary" />
             Goals
           </CardTitle>
         </CardHeader>
@@ -84,8 +84,8 @@ export function GoalTracker() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg font-sans flex items-center gap-2">
-              <Target className="w-5 h-5 text-secondary" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Target className="h-4 w-4 text-secondary" />
               {month} Goals
             </CardTitle>
             <CardDescription>
@@ -125,10 +125,10 @@ export function GoalTracker() {
                   <motion.div
                     className={`h-full rounded-full ${
                       isComplete
-                        ? 'bg-gradient-to-r from-success to-success'
+                        ? 'bg-success'
                         : percentage >= 75
-                          ? 'bg-gradient-to-r from-warning to-warning'
-                          : 'bg-gradient-to-r from-secondary to-secondary/70'
+                          ? 'bg-warning'
+                          : 'bg-secondary'
                     }`}
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}

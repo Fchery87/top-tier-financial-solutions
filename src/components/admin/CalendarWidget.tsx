@@ -2,17 +2,16 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { 
-  Calendar, 
-  Clock, 
-  AlertCircle, 
-  FileSignature, 
+import {
+  Calendar,
+  Clock,
+  FileSignature,
   ListTodo,
   Loader2,
-  ChevronRight
+  ArrowUpRight,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { cn } from '@/lib/utils';
 
 interface CalendarEvent {
   id: string;
@@ -35,30 +34,10 @@ interface CalendarData {
 }
 
 const TYPE_CONFIG = {
-  deadline: {
-    icon: Clock,
-    color: 'text-destructive',
-    bgColor: 'bg-destructive/10',
-    label: 'Response Deadline'
-  },
-  task: {
-    icon: ListTodo,
-    color: 'text-warning',
-    bgColor: 'bg-warning/10',
-    label: 'Task'
-  },
-  agreement: {
-    icon: FileSignature,
-    color: 'text-secondary',
-    bgColor: 'bg-secondary/10',
-    label: 'Agreement'
-  },
-  followup: {
-    icon: Calendar,
-    color: 'text-secondary',
-    bgColor: 'bg-secondary/10',
-    label: 'Follow-up'
-  },
+  deadline: { icon: Clock, color: 'text-destructive', label: 'Response Deadline' },
+  task: { icon: ListTodo, color: 'text-warning', label: 'Task' },
+  agreement: { icon: FileSignature, color: 'text-secondary', label: 'Agreement' },
+  followup: { icon: Calendar, color: 'text-secondary', label: 'Follow-up' },
 };
 
 function formatDate(dateStr: string): string {
@@ -66,19 +45,34 @@ function formatDate(dateStr: string): string {
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   const isToday = date.toDateString() === now.toDateString();
   const isTomorrow = date.toDateString() === tomorrow.toDateString();
   const isPast = date < now;
-  
+
   if (isToday) return isPast ? 'Today (Overdue)' : 'Today';
   if (isTomorrow) return 'Tomorrow';
-  
+
   const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`;
   if (diffDays <= 7) return `In ${diffDays}d`;
-  
+
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function WidgetTitle({ overdue }: { overdue: number }) {
+  return (
+    <div className="flex items-center justify-between">
+      <CardTitle className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        Upcoming · Next 2 weeks
+      </CardTitle>
+      {overdue > 0 && (
+        <span className="rounded bg-destructive/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-destructive">
+          {overdue} overdue
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function CalendarWidget() {
@@ -104,121 +98,94 @@ export function CalendarWidget() {
 
   if (loading) {
     return (
-      <Card className="bg-card border border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-sans flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-secondary" />
-            Upcoming
-          </CardTitle>
+      <Card>
+        <CardHeader className="border-b pb-4">
+          <WidgetTitle overdue={0} />
         </CardHeader>
         <CardContent>
           <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  const hasOverdue = (data?.counts.overdue || 0) > 0;
+  const overdue = data?.counts.overdue || 0;
 
   return (
-    <Card className={`bg-card shadow-sm ${hasOverdue ? 'border-t-4 border-t-red-500' : ''}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg font-sans flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-secondary" />
-              Upcoming
-            </CardTitle>
-            <CardDescription>
-              Next 2 weeks
-            </CardDescription>
-          </div>
-          {hasOverdue && (
-            <span className="px-2 py-1 text-xs font-medium rounded-full bg-destructive/10 text-destructive flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              {data?.counts.overdue} overdue
-            </span>
-          )}
-        </div>
+    <Card>
+      <CardHeader className="border-b pb-4">
+        <WidgetTitle overdue={overdue} />
       </CardHeader>
-      <CardContent>
-        {/* Quick stats */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="text-center p-2 rounded-lg bg-destructive/10">
-            <p className="text-lg font-bold text-destructive">{data?.counts.deadlines || 0}</p>
-            <p className="text-[10px] text-muted-foreground">Deadlines</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-warning/10">
-            <p className="text-lg font-bold text-warning">{data?.counts.tasks || 0}</p>
-            <p className="text-[10px] text-muted-foreground">Tasks</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-secondary/10">
-            <p className="text-lg font-bold text-secondary">{data?.counts.agreements || 0}</p>
-            <p className="text-[10px] text-muted-foreground">Agreements</p>
-          </div>
+      <CardContent className="px-0 pb-0">
+        {/* Quick counts — hairline-joined strip */}
+        <div className="grid grid-cols-3 gap-px border-b border-border/70 bg-border/70">
+          {(
+            [
+              { label: 'Deadlines', value: data?.counts.deadlines || 0, tone: 'text-destructive' },
+              { label: 'Tasks', value: data?.counts.tasks || 0, tone: 'text-warning' },
+              { label: 'Agreements', value: data?.counts.agreements || 0, tone: 'text-secondary' },
+            ] as const
+          ).map((stat) => (
+            <div key={stat.label} className="bg-card px-3 py-2.5 text-center">
+              <p className={cn('font-mono text-lg font-semibold leading-none tabular-nums', stat.tone)}>{stat.value}</p>
+              <p className="mt-1 font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                {stat.label}
+              </p>
+            </div>
+          ))}
         </div>
 
         {/* Event list */}
-        <div className="space-y-2">
-          {data?.events.slice(0, 5).map((event, index) => {
-            const config = TYPE_CONFIG[event.type];
-            const Icon = config.icon;
-            const isPast = new Date(event.date) < new Date();
-            
-            return (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                {event.clientId ? (
-                  <Link
-                    href={`/admin/clients/${event.clientId}`}
-                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group ${isPast ? 'bg-destructive/5' : ''}`}
-                  >
-                    <div className={`p-1.5 rounded-md ${config.bgColor}`}>
-                      <Icon className={`w-3.5 h-3.5 ${config.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{event.title}</p>
-                      {event.clientName && (
-                        <p className="text-xs text-muted-foreground truncate">{event.clientName}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className={`text-xs ${isPast ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                        {formatDate(event.date)}
-                      </span>
-                      <ChevronRight className="w-3 h-3 text-muted-foreground/50 group-hover:text-secondary" />
-                    </div>
-                  </Link>
-                ) : (
-                  <div className={`flex items-center gap-3 p-2 rounded-lg ${isPast ? 'bg-destructive/5' : ''}`}>
-                    <div className={`p-1.5 rounded-md ${config.bgColor}`}>
-                      <Icon className={`w-3.5 h-3.5 ${config.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{event.title}</p>
-                    </div>
-                    <span className={`text-xs ${isPast ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                      {formatDate(event.date)}
-                    </span>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
+        {data?.events && data.events.length > 0 ? (
+          <div className="divide-y divide-border/70">
+            {data.events.slice(0, 5).map((event) => {
+              const config = TYPE_CONFIG[event.type];
+              const Icon = config.icon;
+              const isPast = new Date(event.date) < new Date();
 
-        {/* Empty state */}
-        {(!data?.events || data.events.length === 0) && (
-          <div className="text-center py-6 text-muted-foreground">
-            <Calendar className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              const row = (
+                <>
+                  <Icon className={cn('h-4 w-4 shrink-0', config.color)} strokeWidth={1.75} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium">{event.title}</p>
+                    {event.clientName && (
+                      <p className="truncate text-xs text-muted-foreground">{event.clientName}</p>
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      'whitespace-nowrap font-mono text-[10px] tabular-nums',
+                      isPast ? 'font-semibold text-destructive' : 'text-muted-foreground',
+                    )}
+                  >
+                    {formatDate(event.date)}
+                  </span>
+                </>
+              );
+
+              return event.clientId ? (
+                <Link
+                  key={event.id}
+                  href={`/admin/clients/${event.clientId}`}
+                  className="group flex items-center gap-3 px-4 py-2.5 transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-muted/40"
+                >
+                  {row}
+                  <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground/40 transition-colors duration-[120ms] group-hover:text-secondary" strokeWidth={1.75} />
+                </Link>
+              ) : (
+                <div key={event.id} className="flex items-center gap-3 px-4 py-2.5">
+                  {row}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-muted-foreground">
+            <Calendar className="mx-auto mb-2 h-8 w-8 opacity-40" strokeWidth={1.5} />
             <p className="text-sm">No upcoming events</p>
-            <p className="text-xs mt-1">All clear for the next 2 weeks!</p>
+            <p className="mt-1 text-xs">All clear for the next 2 weeks.</p>
           </div>
         )}
 
@@ -226,7 +193,7 @@ export function CalendarWidget() {
         {data?.events && data.events.length > 5 && (
           <Link
             href="/admin/tasks"
-            className="block text-center text-xs text-muted-foreground hover:text-secondary mt-3 pt-3 border-t border-border/50"
+            className="block border-t border-border/70 px-4 py-2.5 text-center font-mono text-[11px] text-muted-foreground transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-secondary"
           >
             View all {data.events.length} events →
           </Link>

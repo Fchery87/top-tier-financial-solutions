@@ -140,41 +140,41 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-4 gap-4"
       >
-        <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+        <Card>
           <CardContent className="p-4 text-center">
-            <Trophy className="w-6 h-6 mx-auto mb-2 text-success" />
-            <p className="text-3xl font-bold text-success">{totalWins}</p>
-            <p className="text-xs text-muted-foreground">Items Deleted</p>
+            <Trophy className="w-5 h-5 mx-auto mb-2 text-success" strokeWidth={1.75} />
+            <p className="font-mono text-2xl font-semibold tabular-nums text-success">{totalWins}</p>
+            <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Items Deleted</p>
           </CardContent>
         </Card>
 
-        <Card className={`bg-gradient-to-br ${scoreChange >= 0 ? 'from-secondary/10 to-secondary/5 border-secondary/20' : 'from-destructive/10 to-warning/5 border-destructive/20'}`}>
+        <Card>
           <CardContent className="p-4 text-center">
             {scoreChange >= 0 ? (
-              <TrendingUp className="w-6 h-6 mx-auto mb-2 text-secondary" />
+              <TrendingUp className="w-5 h-5 mx-auto mb-2 text-secondary" strokeWidth={1.75} />
             ) : (
-              <TrendingDown className="w-6 h-6 mx-auto mb-2 text-destructive" />
+              <TrendingDown className="w-5 h-5 mx-auto mb-2 text-destructive" strokeWidth={1.75} />
             )}
-            <p className={`text-3xl font-bold ${scoreChange >= 0 ? 'text-secondary' : 'text-destructive'}`}>
+            <p className={`font-mono text-2xl font-semibold tabular-nums ${scoreChange >= 0 ? 'text-secondary' : 'text-destructive'}`}>
               {scoreChange >= 0 ? '+' : ''}{scoreChange}
             </p>
-            <p className="text-xs text-muted-foreground">Score Change</p>
+            <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Score Change</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card shadow-sm">
           <CardContent className="p-4 text-center">
-            <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-secondary" />
-            <p className="text-3xl font-bold">{disputes.filter(d => d.status === 'sent').length}</p>
-            <p className="text-xs text-muted-foreground">Active Disputes</p>
+            <CheckCircle2 className="w-5 h-5 mx-auto mb-2 text-secondary" strokeWidth={1.75} />
+            <p className="font-mono text-2xl font-semibold tabular-nums">{disputes.filter(d => d.status === 'sent').length}</p>
+            <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Active Disputes</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card shadow-sm">
           <CardContent className="p-4 text-center">
-            <GitCompare className="w-6 h-6 mx-auto mb-2 text-warning" />
-            <p className="text-3xl font-bold">{creditReports.length}</p>
-            <p className="text-xs text-muted-foreground">Reports Analyzed</p>
+            <GitCompare className="w-5 h-5 mx-auto mb-2 text-warning" strokeWidth={1.75} />
+            <p className="font-mono text-2xl font-semibold tabular-nums">{creditReports.length}</p>
+            <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Reports Analyzed</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -188,8 +188,8 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
         >
           <Card className="bg-gradient-to-r from-success/5 via-success/5 to-success/5 border-success/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-warning" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Trophy className="h-4 w-4 text-warning" />
                 Wins & Deletions
               </CardTitle>
               <CardDescription>Items successfully removed from credit reports</CardDescription>
@@ -231,8 +231,8 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
           <Card className="bg-card border border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <GitCompare className="w-5 h-5 text-secondary" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <GitCompare className="h-4 w-4 text-secondary" />
                   Report Comparison
                 </CardTitle>
                 <CardDescription>Compare changes between credit reports</CardDescription>
@@ -435,8 +435,8 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
         >
           <Card className="bg-card border border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-secondary" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <TrendingUp className="h-4 w-4 text-secondary" />
                 Score History
               </CardTitle>
               <CardDescription>Credit score progression over time</CardDescription>

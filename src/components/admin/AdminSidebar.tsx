@@ -13,9 +13,8 @@ import {
   Users,
   Calendar,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
   BookOpen,
   Mail,
   Briefcase,
@@ -27,8 +26,6 @@ import {
   MessageCircle,
   CreditCard,
   ShieldCheck,
-  FolderKanban,
-  Megaphone,
   Trophy,
   Settings,
   MailOpen,
@@ -40,26 +37,27 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.ElementType;
+  /** Match nested routes too (default true for non-root items). */
+  exact?: boolean;
 }
 
 interface NavSection {
   id: string;
   name: string;
-  icon: React.ElementType;
   items: NavItem[];
 }
 
-const dashboardLink: NavItem = { 
-  name: 'Dashboard', 
-  href: '/admin', 
-  icon: LayoutDashboard 
+const dashboardLink: NavItem = {
+  name: 'Dashboard',
+  href: '/admin',
+  icon: LayoutDashboard,
+  exact: true,
 };
 
 const navSections: NavSection[] = [
   {
     id: 'case-management',
     name: 'Case Management',
-    icon: FolderKanban,
     items: [
       { name: 'Clients', href: '/admin/clients', icon: UserCheck },
       { name: 'Agreements', href: '/admin/agreements', icon: FileSignature },
@@ -70,7 +68,6 @@ const navSections: NavSection[] = [
   {
     id: 'disputes',
     name: 'Disputes',
-    icon: Scale,
     items: [
       { name: 'All Disputes', href: '/admin/disputes', icon: Scale },
       { name: 'Results & Wins', href: '/admin/results', icon: Trophy },
@@ -82,7 +79,6 @@ const navSections: NavSection[] = [
   {
     id: 'operations',
     name: 'Operations',
-    icon: CheckSquare,
     items: [
       { name: 'Tasks', href: '/admin/tasks', icon: CheckSquare },
       { name: 'Contact Leads', href: '/admin/leads', icon: Users },
@@ -92,7 +88,6 @@ const navSections: NavSection[] = [
   {
     id: 'content',
     name: 'Content',
-    icon: Megaphone,
     items: [
       { name: 'Pages', href: '/admin/content', icon: FileText },
       { name: 'Blog Posts', href: '/admin/blog', icon: BookOpen },
@@ -113,24 +108,51 @@ interface AdminSidebarProps {
   onMobileClose?: () => void;
 }
 
+function NavRow({
+  item,
+  active,
+  collapsed,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'group relative flex h-8 items-center gap-2.5 rounded-md text-[13px] transition-colors duration-[120ms] ease-[var(--ease-out)]',
+        collapsed ? 'justify-center px-0' : 'px-2.5',
+        active
+          ? 'bg-white/[0.08] font-medium text-white'
+          : 'text-sidebar-foreground hover:bg-white/[0.04] hover:text-white',
+      )}
+    >
+      <item.icon
+        className={cn('h-[15px] w-[15px] shrink-0', active ? 'text-sidebar-active' : 'text-current opacity-80')}
+        strokeWidth={1.75}
+      />
+      {!collapsed && <span className="truncate">{item.name}</span>}
+      {collapsed && (
+        <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-md border border-ink-border bg-ink-raised px-2 py-1 text-xs text-ink-foreground opacity-0 shadow-lg transition-opacity duration-[120ms] group-hover:opacity-100">
+          {item.name}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/**
+ * Flat, single-level nav on the ink desk. Sections are quiet mono labels —
+ * no accordions, no chevrons — so every destination is one glance and one
+ * click away. Active rows get a raised ink fill with a brass icon.
+ */
 export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [expandedSections, setExpandedSections] = React.useState<Set<string>>(() => {
-    const active = new Set<string>();
-    navSections.forEach(section => {
-      if (section.items.some(item => 
-        pathname === item.href || 
-        (item.href !== '/admin' && pathname.startsWith(item.href))
-      )) {
-        active.add(section.id);
-      }
-    });
-    if (active.size === 0) {
-      active.add('case-management');
-      active.add('disputes');
-    }
-    return active;
-  });
 
   React.useEffect(() => {
     if (mobileOpen) {
@@ -141,253 +163,116 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
-  const toggleSection = (sectionId: string) => {
-    setExpandedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionId)) {
-        newSet.delete(sectionId);
-      } else {
-        newSet.add(sectionId);
-      }
-      return newSet;
-    });
-  };
-
-  const isItemActive = (href: string) => {
-    return pathname === href || (href !== '/admin' && pathname.startsWith(href));
-  };
-
-  const isSectionActive = (section: NavSection) => {
-    return section.items.some(item => isItemActive(item.href));
+  const isItemActive = (item: NavItem) => {
+    if (item.exact) return pathname === item.href;
+    // "All Disputes" should not light up while the wizard is open.
+    const nestedMatch = navSections
+      .flatMap((s) => s.items)
+      .some((other) => other.href !== item.href && other.href.startsWith(item.href) && pathname.startsWith(other.href));
+    return pathname === item.href || (!nestedMatch && pathname.startsWith(`${item.href}/`));
   };
 
   const handleNavClick = () => {
-    if (mobileOpen && onMobileClose) {
-      onMobileClose();
-    }
+    if (mobileOpen && onMobileClose) onMobileClose();
   };
 
-  const sidebarContent = (
-    <>
-      {/* Logo - hidden on mobile (shown in top bar instead) */}
-      <div className="hidden md:flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
-        <Link href="/admin" className="flex items-center gap-3">
-          <AscendantMark className="w-8 h-8 flex-shrink-0" />
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col"
-            >
-              <span className="font-display text-[15px] font-semibold leading-none tracking-tight text-white">
-                Top Tier
-              </span>
-              <span className="mt-1 font-mono text-[9px] font-medium uppercase tracking-[0.24em] text-sidebar-active">
-                Operations
-              </span>
-            </motion.span>
-          )}
-        </Link>
-        <button
-          onClick={onToggle}
-          className="p-2 rounded-md text-sidebar-muted transition-colors hover:bg-white/[0.06] hover:text-white"
-        >
-          {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-        </button>
-      </div>
+  const renderNav = (isCollapsed: boolean) => (
+    <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
+      <NavRow item={dashboardLink} active={pathname === '/admin'} collapsed={isCollapsed} onNavigate={handleNavClick} />
 
-      {/* Mobile logo */}
-      <div className="md:hidden h-14 flex items-center px-4 border-b border-sidebar-border">
-        <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2">
-          <AscendantMark className="w-8 h-8 flex-shrink-0" />
-          <span className="font-display text-base font-semibold tracking-tight text-white">Top Tier</span>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {/* Dashboard Link */}
-        <Link
-          href={dashboardLink.href}
-          onClick={handleNavClick}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
-            pathname === dashboardLink.href
-              ? "bg-white/[0.07] text-white font-medium shadow-[inset_2px_0_0_hsl(var(--sidebar-active))]"
-              : "text-sidebar-foreground hover:bg-white/[0.05] hover:text-white"
-          )}
-        >
-          <dashboardLink.icon className={cn(
-            "w-5 h-5 flex-shrink-0",
-            pathname === dashboardLink.href ? "text-sidebar-active" : "text-current"
-          )} />
-          {(!collapsed || mobileOpen) && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-sm font-medium"
-            >
-              {dashboardLink.name}
-            </motion.span>
-          )}
-          {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-              {dashboardLink.name}
+      {navSections.map((section) => (
+        <div key={section.id}>
+          {isCollapsed ? (
+            <div className="py-2.5">
+              <div className="mx-auto h-px w-6 bg-sidebar-border" />
             </div>
+          ) : (
+            <p className="px-2.5 pb-1.5 pt-5 font-mono text-[9px] font-medium uppercase tracking-[0.22em] text-sidebar-muted">
+              {section.name}
+            </p>
           )}
-        </Link>
-
-        {/* Sections */}
-        <div className="pt-2 space-y-1">
-          {navSections.map((section) => {
-            const isExpanded = expandedSections.has(section.id);
-            const sectionActive = isSectionActive(section);
-
-            return (
-              <div key={section.id}>
-                {/* Section Header */}
-                {(!collapsed || mobileOpen) ? (
-                  <button
-                    onClick={() => toggleSection(section.id)}
-                    className={cn(
-                       "w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors duration-150",
-                      sectionActive
-                        ? "text-sidebar-active"
-                        : "text-sidebar-muted hover:text-sidebar-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <section.icon className="w-4 h-4" />
-                      <span className="text-xs font-semibold uppercase tracking-wider">
-                        {section.name}
-                      </span>
-                    </div>
-                    <ChevronDown className={cn(
-                      "w-4 h-4 transition-transform duration-200",
-                      isExpanded ? "rotate-180" : ""
-                    )} />
-                  </button>
-                ) : (
-                  <div className="py-2">
-                    <div className="w-8 h-px bg-sidebar-border mx-auto" />
-                  </div>
-                )}
-
-                {/* Section Items */}
-                <AnimatePresence initial={false}>
-                  {(isExpanded || collapsed) && (!collapsed || mobileOpen || collapsed) && (
-                    <motion.div
-                      initial={collapsed && !mobileOpen ? false : { height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={collapsed && !mobileOpen ? undefined : { height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={cn("overflow-hidden", !collapsed && "pl-2")}
-                    >
-                      {section.items.map((item) => {
-                        const isActive = isItemActive(item.href);
-
-                        return (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            onClick={handleNavClick}
-                            className={cn(
-                              "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
-                              isActive
-                                ? "bg-white/[0.07] text-white font-medium shadow-[inset_2px_0_0_hsl(var(--sidebar-active))]"
-                                : "text-sidebar-foreground hover:bg-white/[0.05] hover:text-white"
-                            )}
-                          >
-                            <item.icon className={cn(
-                              "w-4 h-4 flex-shrink-0",
-                              isActive ? "text-sidebar-active" : "text-current"
-                            )} />
-                            {(!collapsed || mobileOpen) && (
-                              <motion.span
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="text-sm"
-                              >
-                                {item.name}
-                              </motion.span>
-                            )}
-                            {collapsed && !mobileOpen && (
-                              <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                                {item.name}
-                              </div>
-                            )}
-                          </Link>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
+          <div className="space-y-px">
+            {section.items.map((item) => (
+              <NavRow
+                key={item.href}
+                item={item}
+                active={isItemActive(item)}
+                collapsed={isCollapsed}
+                onNavigate={handleNavClick}
+              />
+            ))}
+          </div>
         </div>
-      </nav>
+      ))}
+    </nav>
+  );
 
-      {/* Footer */}
-      <div className="p-3 border-t border-sidebar-border space-y-1">
-        <Link
-          href="/admin/settings"
-          onClick={handleNavClick}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 group relative",
-            pathname === '/admin/settings'
-              ? "bg-white/[0.07] text-white font-medium shadow-[inset_2px_0_0_hsl(var(--sidebar-active))]"
-              : "text-sidebar-foreground hover:bg-white/[0.05] hover:text-white"
-          )}
-        >
-          <Settings className={cn(
-            "w-5 h-5 flex-shrink-0",
-            pathname === '/admin/settings' ? "text-sidebar-active" : "text-current"
-          )} />
-          {(!collapsed || mobileOpen) && (
-            <span className="text-sm font-medium">Settings</span>
-          )}
-          {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-              Settings
-            </div>
-          )}
-        </Link>
-        <Link
-          href="/"
-          onClick={handleNavClick}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground hover:bg-white/[0.05] hover:text-white transition-colors duration-150 group relative"
-        >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          {(!collapsed || mobileOpen) && (
-            <span className="text-sm font-medium">Back to Site</span>
-          )}
-          {collapsed && !mobileOpen && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-foreground rounded-md text-background text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-              Back to Site
-            </div>
-          )}
-        </Link>
-      </div>
-    </>
+  const renderFooter = (isCollapsed: boolean) => (
+    <div className="shrink-0 space-y-px border-t border-sidebar-border px-3 py-3">
+      <NavRow
+        item={{ name: 'Settings', href: '/admin/settings', icon: Settings }}
+        active={pathname.startsWith('/admin/settings')}
+        collapsed={isCollapsed}
+        onNavigate={handleNavClick}
+      />
+      <NavRow
+        item={{ name: 'Back to Site', href: '/', icon: LogOut, exact: true }}
+        active={false}
+        collapsed={isCollapsed}
+        onNavigate={handleNavClick}
+      />
+    </div>
   );
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{ width: collapsed ? 80 : 264 }}
-        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="hidden md:flex fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border flex-col"
+      {/* Desktop sidebar — a flex child on the ink desk, CSS width transition */}
+      <aside
+        className={cn(
+          'hidden h-full shrink-0 flex-col overflow-hidden transition-[width] duration-200 ease-[var(--ease-out)] md:flex',
+          collapsed ? 'w-[60px]' : 'w-[232px]',
+        )}
       >
-        {sidebarContent}
-      </motion.aside>
+        <div className={cn('flex h-14 shrink-0 items-center', collapsed ? 'justify-center px-0' : 'justify-between pl-4 pr-2')}>
+          <Link href="/admin" className="flex min-w-0 items-center gap-2.5">
+            <AscendantMark className="h-7 w-7 shrink-0" />
+            {!collapsed && (
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-display text-[13px] font-semibold leading-none tracking-tight text-white">
+                  Top Tier
+                </span>
+                <span className="mt-1 truncate font-mono text-[8px] font-medium uppercase tracking-[0.24em] text-sidebar-active">
+                  Operations
+                </span>
+              </span>
+            )}
+          </Link>
+          {!collapsed && (
+            <button
+              onClick={onToggle}
+              className="rounded-md p-1.5 text-sidebar-muted transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-white/[0.06] hover:text-white"
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+          )}
+        </div>
+        {collapsed && (
+          <div className="flex shrink-0 justify-center pb-1">
+            <button
+              onClick={onToggle}
+              className="rounded-md p-1.5 text-sidebar-muted transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-white/[0.06] hover:text-white"
+              aria-label="Expand sidebar"
+            >
+              <PanelLeftOpen className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+          </div>
+        )}
+        {renderNav(collapsed)}
+        {renderFooter(collapsed)}
+      </aside>
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -396,17 +281,24 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
               onClick={onMobileClose}
             />
             <motion.aside
-              initial={{ x: -264 }}
+              initial={{ x: -260 }}
               animate={{ x: 0 }}
-              exit={{ x: -264 }}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="md:hidden fixed left-0 top-0 z-50 h-screen w-[264px] bg-sidebar border-r border-sidebar-border flex flex-col"
+              exit={{ x: -260 }}
+              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+              className="fixed left-0 top-0 z-50 flex h-dvh w-[260px] flex-col border-r border-sidebar-border bg-sidebar md:hidden"
             >
-              {sidebarContent}
+              <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+                <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2.5">
+                  <AscendantMark className="h-7 w-7 shrink-0" />
+                  <span className="font-display text-sm font-semibold tracking-tight text-white">Top Tier</span>
+                </Link>
+              </div>
+              {renderNav(false)}
+              {renderFooter(false)}
             </motion.aside>
           </>
         )}

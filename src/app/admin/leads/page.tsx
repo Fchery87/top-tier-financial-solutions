@@ -269,7 +269,7 @@ export default function LeadsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-primary font-bold text-lg">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-muted font-mono text-sm font-semibold text-foreground">
                       {getSafeInitials(selectedLead.first_name, selectedLead.last_name)}
                       </div>
                       <div>

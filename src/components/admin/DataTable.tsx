@@ -140,8 +140,9 @@ export function DataTable<T extends { id: string }>({
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+          <p className="text-[13px] text-muted-foreground">
+            Page <span className="font-mono tabular-nums text-foreground">{page}</span> of{' '}
+            <span className="font-mono tabular-nums text-foreground">{totalPages}</span>
           </p>
           <div className="flex items-center gap-2">
             <Button

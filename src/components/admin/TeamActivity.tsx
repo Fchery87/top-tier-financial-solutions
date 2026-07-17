@@ -68,8 +68,8 @@ export function TeamActivity() {
     return (
       <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-sans flex items-center gap-2">
-            <Users className="w-5 h-5 text-secondary" />
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Users className="h-4 w-4 text-secondary" />
             Team Activity
           </CardTitle>
         </CardHeader>
@@ -87,8 +87,8 @@ export function TeamActivity() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg font-sans flex items-center gap-2">
-              <Users className="w-5 h-5 text-secondary" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Users className="h-4 w-4 text-secondary" />
               Team Activity
             </CardTitle>
             <CardDescription>

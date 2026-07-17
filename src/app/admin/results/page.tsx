@@ -227,7 +227,7 @@ export default function ResultsPage() {
                     <PartyPopper className="w-10 h-10 text-secondary" />
                     <div>
                       <p className="text-sm text-muted-foreground">Total Debt Removed from Reports</p>
-                      <p className="text-3xl font-bold text-secondary">
+                      <p className="font-mono text-3xl font-semibold tabular-nums text-secondary">
                         {formatCurrency(stats.total_amount_removed)}
                       </p>
                     </div>
@@ -248,8 +248,8 @@ export default function ResultsPage() {
             >
               <Card className="bg-card border border-border h-full">
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Award className="w-5 h-5 text-warning" />
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                    <Award className="h-4 w-4 text-warning" />
                     Recent Wins
                   </CardTitle>
                   <CardDescription>Latest successful deletions</CardDescription>

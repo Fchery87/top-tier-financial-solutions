@@ -222,7 +222,7 @@ export default function DisputesPage() {
       <div>
         <Card className="bg-card border border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Disputes ({disputes.length})</CardTitle>
+            <CardTitle className="text-sm font-semibold">Disputes ({disputes.length})</CardTitle>
             <CardDescription>Click on a dispute to log response or view details</CardDescription>
           </CardHeader>
           <CardContent>

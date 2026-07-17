@@ -184,8 +184,8 @@ export function ScoreTrendChart() {
     return (
       <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-sans flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-secondary" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <TrendingUp className="h-4 w-4 text-secondary" />
             Credit Score Trends
           </CardTitle>
         </CardHeader>
@@ -203,8 +203,8 @@ export function ScoreTrendChart() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-                <CardTitle className="text-lg font-sans flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-secondary" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <TrendingUp className="h-4 w-4 text-secondary" />
               Credit Score Trends
             </CardTitle>
             <CardDescription>
@@ -213,7 +213,7 @@ export function ScoreTrendChart() {
           </div>
           {data?.stats.averageScore && (
             <div className="text-right">
-              <p className="text-2xl font-bold text-foreground">{data.stats.averageScore}</p>
+              <p className="font-mono text-2xl font-semibold tabular-nums text-foreground">{data.stats.averageScore}</p>
               <p className="text-xs text-muted-foreground">Current Avg</p>
             </div>
           )}

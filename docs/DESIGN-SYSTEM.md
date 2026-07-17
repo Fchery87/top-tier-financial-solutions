@@ -12,7 +12,7 @@ This document is the engineering reference. For the high-level brand story, see 
 ## Principles
 
 1. **Spend color deliberately.** Brass is the only decorative accent. Green and red are reserved for data signals (deltas, score bands) and destructive/risk states — never for decoration.
-2. **Ink bookends, paper body.** Marketing header + footer are always dark ink; the body is warm paper. Heroes and closing CTAs are ink panels. The admin sidebar is ink.
+2. **Ink bookends, paper body.** Marketing header + footer are always dark ink; the body is warm paper. Heroes and closing CTAs are ink panels. The admin shell is an ink "desk": the sidebar sits directly on it and the workspace is a raised paper sheet (rounded, hairline-bordered) with its own scroll region.
 3. **Editorial voice, product precision.** Serif (`Instrument Serif`) headlines for marketing; tight sans (`Satoshi`) for product UI; mono (`Geist Mono`) for numbers, labels, and eyebrows.
 4. **Motion serves comprehension.** Custom ease-out, under ~300ms, interruptible. No infinite-loop decoration. Keyboard-driven repeats are never animated. Modal enter/exit and one-shot reveals are fine.
 5. **One pattern, one place.** Shared components (`AdminPageHeader`, `StatGrid`, `MetricTile`, `ScoreBadge`, `StatusBadge`) drive consistency. Don't re-roll bespoke headers or stat cards per page.
@@ -89,13 +89,17 @@ Conventions:
 - `Header` / `Footer` — ink surfaces with the Apex mark, brass accents, and the editorial footer close.
 
 ### Admin (the SaaS console)
-- **`AdminPageHeader`** (`src/components/admin/AdminPageHeader.tsx`) — the header on every admin page: mono `eyebrow`, display `title`, optional `description`, and an `actions` slot. Use this instead of hand-rolling `<h1>`s.
+- **`AdminPageHeader`** (`src/components/admin/AdminPageHeader.tsx`) — the header on every admin page: mono `eyebrow`, **editorial serif title** (`.font-editorial`, the marketing display voice carried into the product), optional `description`, an `actions` slot, and a framing hairline underneath. Use this instead of hand-rolling `<h1>`s.
 - **`StatGrid`** + `StatItem` (`src/components/admin/StatGrid.tsx`) — hairline-joined stat tiles (mono numbers, de-boxed icons). Each tile can `href`-link, `onClick`-toggle a filter (`active` prop draws a brass ring), or just display. Tones: `default | brass | up | down | warning`. Use `columns={2|3|4|5|6}`. This is the canonical stat-card pattern; the per-feature wrappers (`DisputeStatsCards`, `TaskStatsCards`, `BillingStatsCards`, `ComplianceStatsGrid`) all feed it.
 - **`MetricTile`** (`src/components/ui/MetricTile.tsx`) — richer dashboard metric (label, big number, delta chip, sparkline).
 - **`DataTable`** (`src/components/admin/DataTable.tsx`) — sortable table with mono uppercase headers, hairline rows, loading/empty states, pagination.
 - **`StatusBadge`** (`src/components/admin/StatusBadge.tsx`) — squared chip with a colored band dot (`success | warning | danger | info | default`), matching `ScoreBadge`.
 - **`ScoreBadge`** (`src/components/ui/ScoreBadge.tsx`) — credit-score chip colored by FICO band; `pill | plain | gauge` variants.
 - **`DashboardTabs`** — underline tabs with a brass active marker.
+
+### The admin shell ("paper sheet on the ink desk")
+
+`src/app/admin/layout.tsx` locks the viewport (`h-dvh overflow-hidden`) on an ink canvas. The sidebar (`AdminSidebar`) is a **flat, single-level nav** directly on the ink — quiet mono section labels, no accordions, 32px rows, brass icons on the active row. The workspace is a rounded, hairline-bordered paper sheet containing the topbar (breadcrumbs, ⌘K search, actions) and an internal scroll region. Card titles across admin are compact (`text-sm font-semibold`, 16px icons); dashboard summary cards use mono uppercase labels instead.
 
 ### Conventions for new admin pages
 

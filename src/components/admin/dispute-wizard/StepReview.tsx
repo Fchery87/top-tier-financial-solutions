@@ -32,8 +32,8 @@ export function StepReview() {
       {generationMethod === 'ai' && aiAnalysisSummary && (
         <Card className="bg-card border border-border border-t-4 border-t-success">
           <CardHeader className="pb-3">
-            <CardTitle className="font-display text-lg flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-success" />AI Analysis Summary
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Sparkles className="h-4 w-4 text-success" />AI Analysis Summary
             </CardTitle>
             <CardDescription>
               <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
@@ -111,7 +111,7 @@ export function StepReview() {
       {/* Bulk Actions */}
       <Card className="bg-card border border-border border-t-4 border-t-secondary">
         <CardHeader className="pb-3">
-          <CardTitle className="font-display text-lg">Mark Disputes as Sent</CardTitle>
+          <CardTitle className="text-sm font-semibold">Mark Disputes as Sent</CardTitle>
           <CardDescription>After mailing your letters, enter tracking info to start the 30-day response deadline</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -240,7 +240,7 @@ function LetterStrengthCard({ strength }: { strength: import('@/lib/letter-stren
   return (
     <Card className="bg-card border border-border border-t-4 border-t-secondary">
       <CardHeader className="pb-3">
-        <CardTitle className="font-display text-lg flex items-center gap-2"><Sparkles className="w-5 h-5 text-secondary" />Letter Strength Score</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-secondary" />Letter Strength Score</CardTitle>
         <CardDescription>Overall quality assessment of the dispute letters</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

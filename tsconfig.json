@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,8 +23,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/db/*": ["./db/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/db/*": [
+        "./db/*"
+      ]
     }
   },
   "include": [
@@ -28,8 +36,13 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next/dev/types/**/*.ts"
   ],
   // Next.js re-adds ".next/dev/types/**/*.ts" to `include` on dev/build (writeConfigurationDefaults) — expected & harmless, `exclude` below still wins. Don't edit `exclude` to "fix" that diff.
-  "exclude": ["node_modules", "scripts", ".next/dev"]
+  "exclude": [
+    "node_modules",
+    "scripts",
+    ".next/dev"
+  ]
 }

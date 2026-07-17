@@ -242,7 +242,7 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-6rem)]">
+    <div className="h-[calc(100dvh-9.5rem)]">
       <AdminPageHeader
         className="mb-6"
         eyebrow="Case Management"
@@ -269,7 +269,7 @@ export default function MessagesPage() {
         {/* Thread List */}
         <Card className="bg-card border border-border overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Conversations</CardTitle>
+            <CardTitle className="text-sm font-semibold">Conversations</CardTitle>
             <CardDescription>{threads.length} thread(s)</CardDescription>
           </CardHeader>
           <CardContent className="p-0 overflow-y-auto h-[calc(100%-5rem)]">
@@ -336,7 +336,7 @@ export default function MessagesPage() {
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{selectedThread.subject}</CardTitle>
+                    <CardTitle className="text-sm font-semibold">{selectedThread.subject}</CardTitle>
                     <CardDescription>
                       {selectedThread.client_name} &bull; {selectedThread.client_email}
                     </CardDescription>

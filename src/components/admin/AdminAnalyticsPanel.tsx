@@ -71,8 +71,8 @@ export function AdminAnalyticsPanel() {
     <section className="grid grid-cols-1 xl:grid-cols-2 gap-6" aria-label="Admin analytics">
       <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
-          <CardTitle role="heading" aria-level={3} className="text-lg font-sans flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-secondary" />
+          <CardTitle role="heading" aria-level={3} className="flex items-center gap-2 text-sm font-semibold">
+            <BarChart3 className="h-4 w-4 text-secondary" />
             Operator Analytics
           </CardTitle>
           <CardDescription>Internal workflow health and readiness metrics</CardDescription>
@@ -97,8 +97,8 @@ export function AdminAnalyticsPanel() {
 
       <Card className="bg-card border border-border">
         <CardHeader className="pb-3">
-          <CardTitle role="heading" aria-level={3} className="text-lg font-sans flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-secondary" />
+          <CardTitle role="heading" aria-level={3} className="flex items-center gap-2 text-sm font-semibold">
+            <BarChart3 className="h-4 w-4 text-secondary" />
             Client Outcome Analytics
           </CardTitle>
           <CardDescription>Client-visible outcomes tracked separately from operations</CardDescription>

@@ -6,7 +6,7 @@ import {
   Users,
   Scale,
   CheckCircle2,
-  ArrowRight,
+  ArrowUpRight,
   FileText,
   FileWarning,
   FileSignature,
@@ -17,12 +17,14 @@ import {
   Target,
   Clock,
   Loader2,
+  type LucideIcon,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { CalendarWidget } from '@/components/admin/CalendarWidget';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MetricTile } from '@/components/ui/MetricTile';
 import { ScoreBadge } from '@/components/ui/ScoreBadge';
+import { cn } from '@/lib/utils';
 
 interface DashboardStats {
   activeClients: number;
@@ -69,6 +71,70 @@ interface OverviewTabProps {
   formatTimeAgo: (timestamp: string) => string;
   metricCardPadding: string;
   metricGridGap: string;
+}
+
+interface QueueRow {
+  key: keyof DashboardStats['attentionNeeded'];
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  href: string;
+  /** 'urgent' rows read in brick red; 'warm' in the warning tone. */
+  severity?: 'default' | 'warm' | 'urgent';
+}
+
+const queueRows: QueueRow[] = [
+  {
+    key: 'overdueResponses',
+    icon: AlertCircle,
+    title: 'Overdue Responses',
+    description: 'Bureaus past the 30-day deadline',
+    href: '/admin/disputes?overdue=true',
+    severity: 'urgent',
+  },
+  {
+    key: 'responseDueSoon',
+    icon: Clock,
+    title: 'Response Due Soon',
+    description: 'Bureau responses due within 7 days',
+    href: '/admin/disputes?awaiting_response=true',
+    severity: 'warm',
+  },
+  {
+    key: 'overdueTasks',
+    icon: ListTodo,
+    title: 'Overdue Tasks',
+    description: 'Tasks past their due date',
+    href: '/admin/tasks',
+    severity: 'urgent',
+  },
+  {
+    key: 'pendingReports',
+    icon: FileText,
+    title: 'Reports to Analyze',
+    description: 'Credit reports pending analysis',
+    href: '/admin/clients',
+  },
+  {
+    key: 'pendingAgreements',
+    icon: FileSignature,
+    title: 'Pending Agreements',
+    description: 'Awaiting client signature',
+    href: '/admin/agreements',
+  },
+];
+
+function CardLabel({ children, count }: { children: React.ReactNode; count?: number }) {
+  return (
+    <CardTitle className="flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+      {children}
+      {count != null && count > 0 && (
+        <span className="rounded bg-warning/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums tracking-normal text-warning">
+          {count}
+        </span>
+      )}
+    </CardTitle>
+  );
 }
 
 export function OverviewTab({
@@ -141,119 +207,74 @@ export function OverviewTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className={`bg-card shadow-sm ${totalAttention > 0 ? 'border-t-2 border-t-warning' : ''}`}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-display flex items-center gap-2">
-                <AlertCircle className={`w-5 h-5 ${totalAttention > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
-                Today&apos;s Work
-                {totalAttention > 0 && (
-                  <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-warning/10 text-warning">
-                    {totalAttention}
-                  </span>
-                )}
-              </CardTitle>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader className="border-b pb-4">
+              <CardLabel count={totalAttention}>Today&apos;s Work</CardLabel>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 pb-0">
               {loading ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : totalAttention === 0 ? (
                 <EmptyState
                   icon={CheckCircle2}
                   title="All caught up!"
                   description="No items need attention."
-                  className="py-6"
+                  className="py-8"
                 />
               ) : (
-                <div className="space-y-3">
-                  {(stats?.attentionNeeded?.pendingReports ?? 0) > 0 && (
-                    <Link href="/admin/clients" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center">
-                          <FileText className="h-[18px] w-[18px] text-muted-foreground" />
+                <div className="divide-y divide-border/70">
+                  {queueRows.map((row) => {
+                    const count = stats?.attentionNeeded?.[row.key] ?? 0;
+                    if (count <= 0) return null;
+                    const Icon = row.icon;
+                    return (
+                      <Link
+                        key={row.key}
+                        href={row.href}
+                        className="group flex items-center justify-between gap-4 px-4 py-3 transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-muted/40"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Icon
+                            className={cn(
+                              'h-4 w-4 shrink-0',
+                              row.severity === 'urgent'
+                                ? 'text-destructive'
+                                : row.severity === 'warm'
+                                  ? 'text-warning'
+                                  : 'text-muted-foreground',
+                            )}
+                            strokeWidth={1.75}
+                          />
+                          <div className="min-w-0">
+                            <p
+                              className={cn(
+                                'truncate text-[13px] font-medium',
+                                row.severity === 'urgent' ? 'text-destructive' : 'text-foreground',
+                              )}
+                            >
+                              {row.title}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">{row.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">Reports to Analyze</p>
-                          <p className="text-xs text-muted-foreground">Credit reports pending analysis</p>
+                        <div className="flex shrink-0 items-center gap-2.5">
+                          <span
+                            className={cn(
+                              'font-mono text-lg font-semibold tabular-nums',
+                              row.severity === 'urgent' ? 'text-destructive' : 'text-foreground',
+                            )}
+                          >
+                            {count}
+                          </span>
+                          <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors duration-[120ms] group-hover:text-secondary" strokeWidth={1.75} />
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.pendingReports}</span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
-                      </div>
-                    </Link>
-                  )}
-                  {(stats?.attentionNeeded?.pendingAgreements ?? 0) > 0 && (
-                    <Link href="/admin/agreements" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center">
-                          <FileSignature className="h-[18px] w-[18px] text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Pending Agreements</p>
-                          <p className="text-xs text-muted-foreground">Awaiting client signature</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.pendingAgreements}</span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
-                      </div>
-                    </Link>
-                  )}
-                  {(stats?.attentionNeeded?.overdueTasks ?? 0) > 0 && (
-                    <Link href="/admin/tasks" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center">
-                          <ListTodo className="h-[18px] w-[18px] text-destructive" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Overdue Tasks</p>
-                          <p className="text-xs text-muted-foreground">Tasks past due date</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.overdueTasks}</span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
-                      </div>
-                    </Link>
-                  )}
-                  {(stats?.attentionNeeded?.responseDueSoon ?? 0) > 0 && (
-                    <Link href="/admin/disputes?awaiting_response=true" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center">
-                          <Clock className="h-[18px] w-[18px] text-warning" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Response Due Soon</p>
-                          <p className="text-xs text-muted-foreground">Bureau responses due within 7 days</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xl font-semibold tabular-nums">{stats?.attentionNeeded?.responseDueSoon}</span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
-                      </div>
-                    </Link>
-                  )}
-                  {(stats?.attentionNeeded?.overdueResponses ?? 0) > 0 && (
-                    <Link href="/admin/disputes?overdue=true" className="flex items-center justify-between p-3 rounded-lg bg-destructive/[0.04] hover:bg-destructive/[0.08] transition-colors group border border-destructive/30">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center">
-                          <AlertCircle className="h-[18px] w-[18px] text-destructive" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-destructive">Overdue Responses</p>
-                          <p className="text-xs text-muted-foreground">Bureaus past 30-day deadline</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xl font-semibold tabular-nums text-destructive">{stats?.attentionNeeded?.overdueResponses}</span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors" />
-                      </div>
-                    </Link>
-                  )}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -263,18 +284,14 @@ export function OverviewTab({
         <div className="space-y-6">
           <CalendarWidget />
 
-          <Card className="bg-card border border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-display flex items-center gap-2">
-                <Activity className="w-5 h-5 text-secondary" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>Latest updates across all clients</CardDescription>
+          <Card>
+            <CardHeader className="border-b pb-4">
+              <CardLabel>Recent Activity</CardLabel>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 pb-0">
               {loading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : !stats?.recentActivity || stats.recentActivity.length === 0 ? (
                 <EmptyState
@@ -285,24 +302,24 @@ export function OverviewTab({
                   action={{ label: 'Upload Report', href: '/admin/clients' }}
                 />
               ) : (
-                <div className="space-y-1">
+                <div className="divide-y divide-border/70">
                   {stats.recentActivity.map((item) => (
-                    <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="mt-0.5 flex h-7 w-7 items-center justify-center">
+                    <div key={`${item.type}-${item.id}`} className="flex items-start gap-3 px-4 py-2.5 transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-muted/40">
+                      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
                         {item.type === 'dispute' ? (
-                          <Scale className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Scale className="h-3 w-3 text-muted-foreground" strokeWidth={1.75} />
                         ) : (
-                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                          <FileText className="h-3 w-3 text-muted-foreground" strokeWidth={1.75} />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.clientName}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium">{item.clientName}</p>
                         <p className="text-xs text-muted-foreground">
                           {item.action}
                           {item.detail && <span className="ml-1 text-secondary">{item.detail}</span>}
                         </p>
                       </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="whitespace-nowrap font-mono text-[10px] tabular-nums text-muted-foreground">
                         {item.timestamp ? formatTimeAgo(item.timestamp) : ''}
                       </span>
                     </div>

@@ -83,8 +83,8 @@ export function DisputesTab({
         {negativeItems.length > 0 && (
           <Card className="bg-card border border-border">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-destructive" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
                 Negative Items
               </CardTitle>
               <CardDescription>{negativeItems.length} item(s) affecting credit</CardDescription>
@@ -123,7 +123,7 @@ export function DisputesTab({
         <Card className="bg-card border border-border">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Disputes</CardTitle>
+              <CardTitle className="text-sm font-semibold">Disputes</CardTitle>
               <CardDescription>{disputes.length} dispute(s)</CardDescription>
             </div>
             <Button variant="secondary" size="sm" onClick={() => router.push('/admin/disputes/wizard')}>

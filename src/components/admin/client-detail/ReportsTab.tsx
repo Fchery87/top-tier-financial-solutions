@@ -73,7 +73,7 @@ export function ReportsTab({
       <div className="space-y-6">
         <Card className="bg-card border border-border">
           <CardHeader>
-            <CardTitle className="text-lg">Credit Reports</CardTitle>
+            <CardTitle className="text-sm font-semibold">Credit Reports</CardTitle>
             <CardDescription>{creditReports.length} report(s) uploaded</CardDescription>
           </CardHeader>
           <CardContent>
@@ -138,7 +138,7 @@ export function ReportsTab({
         {creditAccounts.length > 0 && (
           <Card className="bg-card border border-border">
             <CardHeader>
-              <CardTitle className="font-display text-lg">Credit Accounts</CardTitle>
+              <CardTitle className="text-sm font-semibold">Credit Accounts</CardTitle>
               <CardDescription>{creditAccounts.length} account(s) on file (all tradelines)</CardDescription>
             </CardHeader>
             <CardContent>

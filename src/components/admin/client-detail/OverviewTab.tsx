@@ -165,7 +165,7 @@ export function OverviewTab({
       <div className="space-y-6">
         <Card className="bg-card border border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg">Contact Information</CardTitle>
+            <CardTitle className="text-sm font-semibold">Contact Information</CardTitle>
             {!editMode ? (
               <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>Edit</Button>
             ) : (
@@ -232,8 +232,8 @@ export function OverviewTab({
         {readiness && (
           <Card className="bg-card border border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="w-5 h-5 text-secondary" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Clock className="h-4 w-4 text-secondary" />
                 Onboarding & Readiness
               </CardTitle>
               <CardDescription>
@@ -312,7 +312,7 @@ export function OverviewTab({
       <div className="lg:col-span-2 space-y-6">
         <Card className="bg-card border border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="font-display text-lg">Credit Scores</CardTitle>
+            <CardTitle className="text-sm font-semibold">Credit Scores</CardTitle>
             <CardDescription>
               {latestAnalysis ? `Last updated ${new Date(latestAnalysis.created_at).toLocaleDateString()}` : 'No analysis available'}
             </CardDescription>
@@ -380,7 +380,7 @@ export function OverviewTab({
 
         <Card className="bg-card border border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Activity Timeline</CardTitle>
+            <CardTitle className="text-sm font-semibold">Activity Timeline</CardTitle>
             <CardDescription>Recent activity for this client</CardDescription>
           </CardHeader>
           <CardContent>
@@ -410,8 +410,8 @@ export function OverviewTab({
         {latestAnalysis?.recommendations && latestAnalysis.recommendations.length > 0 && (
           <Card className="bg-card border border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="font-display text-lg flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-secondary" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Lightbulb className="h-4 w-4 text-secondary" />
                 Recommendations
               </CardTitle>
             </CardHeader>
@@ -431,8 +431,8 @@ export function OverviewTab({
         {scoreHistory.length > 0 && (
           <Card className="bg-card border border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="font-display text-lg flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-success" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <TrendingUp className="h-4 w-4 text-success" />
                 Score Progress
               </CardTitle>
               <CardDescription>Credit score changes over time</CardDescription>

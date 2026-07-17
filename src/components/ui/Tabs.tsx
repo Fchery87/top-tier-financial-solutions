@@ -12,8 +12,8 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
   return (
-    <div className={cn("border-b border-border/50", className)}>
-      <div className="flex gap-1 overflow-x-auto">
+    <div className={cn("border-b border-border", className)}>
+      <div className="flex gap-5 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -21,16 +21,16 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap",
+                "relative flex items-center gap-1.5 whitespace-nowrap pb-2.5 pt-1 text-[13px] font-medium transition-colors duration-[120ms] ease-[var(--ease-out)]",
                 isActive
-                  ? "text-secondary"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tab.icon && <tab.icon className="w-4 h-4" />}
+              {tab.icon && <tab.icon className={cn("h-3.5 w-3.5", isActive ? "text-secondary" : "text-current")} strokeWidth={1.75} />}
               <span>{tab.label}</span>
               {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary" />
+                <span className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-secondary" />
               )}
             </button>
           );

@@ -86,10 +86,10 @@ export function AdminGuard({ children }: AdminGuardProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center mx-auto">
-            <ShieldX className="w-10 h-10 text-secondary" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted">
+            <ShieldX className="h-7 w-7 text-secondary" strokeWidth={1.5} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Authentication Required</h1>
+          <h1 className="font-editorial text-3xl text-foreground">Authentication required</h1>
           <p className="text-muted-foreground">
             You need to sign in to access the admin panel.
           </p>
@@ -111,10 +111,10 @@ export function AdminGuard({ children }: AdminGuardProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-            <ShieldX className="w-10 h-10 text-destructive" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted">
+            <ShieldX className="h-7 w-7 text-destructive" strokeWidth={1.5} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Access Denied</h1>
+          <h1 className="font-editorial text-3xl text-foreground">Access denied</h1>
           <p className="text-muted-foreground">
             You don&apos;t have permission to access the admin panel. 
             Only users with <span className="font-semibold text-secondary">super_admin</span> access can view this area.

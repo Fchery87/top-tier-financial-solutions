@@ -62,9 +62,10 @@ export function Pagination({
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="flex items-center gap-4 text-[13px] text-muted-foreground">
         <span>
-          Showing {startItem} to {endItem} of {totalItems} results
+          Showing <span className="font-mono tabular-nums text-foreground">{startItem}–{endItem}</span> of{' '}
+          <span className="font-mono tabular-nums text-foreground">{totalItems}</span>
         </span>
         {onItemsPerPageChange && (
           <div className="flex items-center gap-2">
@@ -72,7 +73,7 @@ export function Pagination({
             <select
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="h-8 w-16 rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-16 rounded-md border border-input bg-card px-2 font-mono text-[13px] tabular-nums shadow-[0_1px_2px_hsl(24_10%_10%/0.03)] transition-[border-color] duration-[120ms] ease-[var(--ease-out)] hover:border-foreground/25"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>

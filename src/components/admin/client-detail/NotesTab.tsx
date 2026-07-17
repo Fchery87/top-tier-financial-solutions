@@ -59,8 +59,8 @@ export function NotesTab({ clientId, notes, onNotesChanged }: NotesTabProps) {
     <>
       <Card className="bg-card border border-border">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-success" />
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <MessageSquare className="h-4 w-4 text-success" />
             Notes
           </CardTitle>
           <CardDescription>Activity and notes for this client</CardDescription>

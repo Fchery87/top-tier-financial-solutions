@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Clock, ShieldCheck, Users, Zap } from 'lucide-react';
+import { Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAdminRole } from '@/contexts/AdminContext';
 import { DashboardTabs, type DashboardTab } from '@/components/admin/dashboard/DashboardTabs';
@@ -13,7 +13,6 @@ import { OperationsTab } from '@/components/admin/dashboard/OperationsTab';
 import { useDashboardStats } from '@/hooks/useAdminQueries';
 import { formatTimeAgo } from '@/lib/format';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatGrid, type StatItem } from '@/components/admin/StatGrid';
 
 const TAB_STORAGE_KEY = 'admin-dashboard-tab';
 
@@ -100,27 +99,6 @@ export default function AdminDashboard() {
     fetchDashboardPreferences();
   }, [role, hasLocalDensity]);
 
-  const attentionStats: StatItem[] = [
-    {
-      icon: AlertTriangle,
-      tone: totalAttention > 0 ? 'warning' : 'default',
-      value: loading ? '—' : totalAttention,
-      label: 'Needs attention',
-    },
-    {
-      icon: Clock,
-      tone: 'brass',
-      value: loading ? '—' : stats?.attentionNeeded?.responseDueSoon ?? 0,
-      label: 'Responses due',
-    },
-    {
-      icon: ShieldCheck,
-      tone: 'up',
-      value: loading ? '—' : stats?.attentionNeeded?.pendingAgreements ?? 0,
-      label: 'Agreement gates',
-    },
-  ];
-
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -129,36 +107,13 @@ export default function AdminDashboard() {
         description="Live view of clients, disputes, and the work that needs attention today."
         actions={
           <>
-            <div className="hidden md:flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-0.5 text-[11px] text-muted-foreground">
-              <span className="px-1.5">Density</span>
-              <button
-                type="button"
-                onClick={() => handleSetDensity('comfortable')}
-                className={
-                  `rounded-md px-2 py-1 transition-colors duration-[160ms] ease-[var(--ease-out)] ` +
-                  (isCompact ? 'text-muted-foreground hover:text-foreground' : 'bg-card text-foreground shadow-sm')
-                }
-              >
-                Comfort
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetDensity('compact')}
-                className={
-                  `rounded-md px-2 py-1 transition-colors duration-[160ms] ease-[var(--ease-out)] ` +
-                  (isCompact ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')
-                }
-              >
-                Compact
-              </button>
-            </div>
             <Button variant="outline" size="sm" asChild>
               <Link href="/admin/clients">
                 <Users className="mr-1.5 h-4 w-4" />
                 Clients
               </Link>
             </Button>
-            <Button variant="secondary" size="sm" asChild>
+            <Button variant="primary" size="sm" asChild>
               <Link href="/admin/disputes/wizard">
                 <Zap className="mr-1.5 h-4 w-4" />
                 New Dispute
@@ -168,9 +123,34 @@ export default function AdminDashboard() {
         }
       />
 
-      <StatGrid items={attentionStats} columns={3} className="sm:max-w-2xl" />
-
-      <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <DashboardTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        actions={
+          <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/50 p-0.5 text-[11px]">
+            <button
+              type="button"
+              onClick={() => handleSetDensity('comfortable')}
+              className={
+                `rounded px-2 py-0.5 transition-colors duration-[120ms] ease-[var(--ease-out)] ` +
+                (isCompact ? 'text-muted-foreground hover:text-foreground' : 'bg-card text-foreground shadow-sm')
+              }
+            >
+              Comfort
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetDensity('compact')}
+              className={
+                `rounded px-2 py-0.5 transition-colors duration-[120ms] ease-[var(--ease-out)] ` +
+                (isCompact ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')
+              }
+            >
+              Compact
+            </button>
+          </div>
+        }
+      />
 
       {activeTab === 'overview' && (
         <OverviewTab

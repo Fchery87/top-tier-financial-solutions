@@ -40,6 +40,7 @@ The system pairs a **warm paper canvas** with **ink "bookends"** (dark header + 
 - **Ink bookends**: marketing header + footer are always dark ink; the page body is warm paper, so the frame reads as one continuous surface.
 - **Editorial close**: ink panels (`surface-ink`) carry a `brass-glow` radial + `rule-grid-ink` hairline texture for heroes and closing CTAs.
 - **Hairline grids**: stat tiles and pillar cards are joined by a single hairline (`gap-px` over a border background) rather than individual boxes.
+- **Paper sheet on the ink desk**: the admin shell is a full-viewport ink surface (the sidebar sits directly on it) with the workspace as a raised, rounded paper sheet — the product mirror of the marketing ink bookends. Admin page titles use the editorial serif.
 
 ### Product Tone
 - Premium financial operations; secure and compliance-aware.

@@ -226,7 +226,7 @@ export default function CompliancePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border border-border">
           <CardHeader>
-            <CardTitle className="text-lg">CROA Requirements</CardTitle>
+            <CardTitle className="text-sm font-semibold">CROA Requirements</CardTitle>
             <CardDescription>Credit Repair Organizations Act compliance checklist</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -263,7 +263,7 @@ export default function CompliancePage() {
 
         <Card className="bg-card border border-border">
           <CardHeader>
-            <CardTitle className="text-lg">TSR Requirements</CardTitle>
+            <CardTitle className="text-sm font-semibold">TSR Requirements</CardTitle>
             <CardDescription>Telemarketing Sales Rule compliance checklist</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

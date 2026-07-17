@@ -84,8 +84,8 @@ export function DisputeCalendar({ disputes }: Props) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CalendarDays className="w-5 h-5 text-secondary" /> Deadline Calendar
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <CalendarDays className="h-4 w-4 text-secondary" /> Deadline Calendar
             </CardTitle>
             <CardDescription>Response clocks for this month</CardDescription>
           </div>

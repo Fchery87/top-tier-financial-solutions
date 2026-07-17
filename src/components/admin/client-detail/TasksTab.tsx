@@ -90,8 +90,8 @@ export function TasksTab({ clientId, tasks, onTasksChanged }: TasksTabProps) {
       <Card className="bg-card border border-border">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-secondary" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <CheckSquare className="h-4 w-4 text-secondary" />
               Tasks
             </CardTitle>
             <CardDescription>{tasks.length} task(s) for this client</CardDescription>

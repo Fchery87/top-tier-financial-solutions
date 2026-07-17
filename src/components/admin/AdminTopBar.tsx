@@ -76,20 +76,20 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
     role === 'super_admin' ? 'Owner' : role === 'admin' ? 'Admin' : 'Staff';
 
   return (
-    <header className="sticky top-0 z-30 hidden h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md md:flex lg:px-6">
+    <header className="hidden h-12 shrink-0 items-center gap-3 border-b border-border/80 bg-background px-4 md:flex lg:px-5">
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px]">
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;
           return (
             <React.Fragment key={crumb.href}>
-              {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />}
+              {i > 0 && <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />}
               {isLast ? (
                 <span className="truncate font-medium text-foreground">{crumb.label}</span>
               ) : (
                 <Link
                   href={crumb.href}
-                  className="truncate text-muted-foreground transition-colors hover:text-foreground"
+                  className="truncate text-muted-foreground transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-foreground"
                 >
                   {crumb.label}
                 </Link>
@@ -104,51 +104,55 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
         type="button"
         onClick={openPalette}
         className={cn(
-          'group ml-auto hidden h-9 w-full max-w-xs items-center gap-2 rounded-md border border-border bg-muted/50 px-3 text-sm text-muted-foreground',
-          'transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex',
+          'group ml-auto hidden h-8 w-full max-w-[280px] items-center gap-2 rounded-md border border-transparent bg-muted/70 px-2.5 text-[13px] text-muted-foreground',
+          'transition-colors duration-[120ms] ease-[var(--ease-out)] hover:border-border hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex',
         )}
         aria-label="Search (open command palette)"
       >
-        <Search className="h-4 w-4 shrink-0" />
+        <Search className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
         <span className="truncate">Search clients, disputes…</span>
-        <kbd className="ml-auto inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+        <kbd className="ml-auto inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 py-px font-mono text-[10px] font-medium text-muted-foreground">
           ⌘K
         </kbd>
       </button>
 
       {/* Actions */}
-      <div className="ml-auto flex items-center gap-1.5 lg:ml-3">
+      <div className="ml-auto flex items-center gap-1 lg:ml-3">
         <button
           type="button"
           onClick={openPalette}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-muted hover:text-foreground lg:hidden"
           aria-label="Search"
         >
-          <Search className="h-[1.15rem] w-[1.15rem]" />
+          <Search className="h-4 w-4" strokeWidth={1.75} />
         </button>
-
-        <Button variant="secondary" size="sm" asChild className="hidden sm:inline-flex">
-          <Link href="/admin/disputes/wizard">
-            <Zap className="mr-1.5 h-4 w-4" />
-            New Dispute
-          </Link>
-        </Button>
 
         <button
           type="button"
-          className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-muted hover:text-foreground"
           aria-label="Notifications"
         >
-          <Bell className="h-[1.15rem] w-[1.15rem]" />
+          <Bell className="h-4 w-4" strokeWidth={1.75} />
         </button>
 
         <ThemeToggle />
 
-        <div className="ml-1 flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
+        <div className="mx-1.5 hidden h-4 w-px bg-border sm:block" aria-hidden />
+
+        <Button variant="primary" size="sm" asChild className="hidden sm:inline-flex">
+          <Link href="/admin/disputes/wizard">
+            <Zap className="mr-1.5 h-3.5 w-3.5" />
+            New Dispute
+          </Link>
+        </Button>
+
+        <div className="ml-1.5 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted font-mono text-[10px] font-semibold text-foreground">
             TT
           </span>
-          <span className="hidden text-xs font-medium text-muted-foreground xl:inline">{roleLabel}</span>
+          <span className="hidden font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground xl:inline">
+            {roleLabel}
+          </span>
         </div>
       </div>
 
@@ -157,7 +161,7 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
