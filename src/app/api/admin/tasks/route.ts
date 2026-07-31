@@ -3,25 +3,26 @@ import { db } from '@/db/client';
 import { tasks, clients, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { getUserRole, roleHasPermission, type AdminPermission } from '@/lib/admin-auth';
+import { getUserRole } from '@/lib/admin-auth';
+import { can, type Capability } from '@/lib/capabilities';
 import { desc, asc, count, eq, or, ilike, and, gte, lte, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { triggerAutomation } from '@/lib/email-service';
 
-async function validateAdmin(permission: AdminPermission) {
+async function validateAdmin(capability: Capability) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  
+
   if (!session?.user?.email) {
     return { error: 'Unauthorized' as const };
   }
-  
+
   const role = await getUserRole(session.user.email);
-  if (!role || !roleHasPermission(role, permission)) {
+  if (!can(role, capability)) {
     return { error: 'Forbidden' as const };
   }
-  
+
   return { user: { ...session.user, role } };
 }
 
@@ -159,7 +160,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const adminUser = await validateAdmin('tasks:create');
+  const adminUser = await validateAdmin('tasks:write');
   if ('error' in adminUser) {
     return NextResponse.json({ error: adminUser.error }, { status: adminUser.error === 'Unauthorized' ? 401 : 403 });
   }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { can, ROLE_CAPABILITIES, type Capability } from '@/lib/capabilities';
+import { can, ROLE_CAPABILITIES } from '@/lib/capabilities';
 
 describe('can', () => {
   it('lets staff work a case', () => {

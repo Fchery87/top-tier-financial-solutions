@@ -13,7 +13,6 @@ const authMock = vi.hoisted(() => ({
 
 const adminAuthMock = vi.hoisted(() => ({
   getUserRole: vi.fn(),
-  roleHasPermission: vi.fn((role: string) => role === 'admin' || role === 'super_admin'),
 }));
 
 vi.mock('@/db/client', () => ({
