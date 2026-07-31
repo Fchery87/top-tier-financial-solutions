@@ -5,9 +5,7 @@ import { WorkQueue } from '../WorkQueue';
 
 const mockAdminContext = (userId: string | null) => ({
   role: null,
-  isSuperAdmin: false,
-  isAdmin: false,
-  isStaff: false,
+  can: () => false,
   userId,
   userEmail: userId ? `${userId}@example.com` : null,
 });

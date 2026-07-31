@@ -8,11 +8,10 @@ import { GoalTracker } from '@/components/admin/GoalTracker';
 import { OnboardingProgress } from '@/components/admin/OnboardingProgress';
 
 interface AnalyticsTabProps {
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
+  isAdminTier: boolean;
 }
 
-export function AnalyticsTab({ isSuperAdmin, isAdmin }: AnalyticsTabProps) {
+export function AnalyticsTab({ isAdminTier }: AnalyticsTabProps) {
   return (
     <div className="space-y-6">
       <AdminAnalyticsPanel />
@@ -24,7 +23,7 @@ export function AnalyticsTab({ isSuperAdmin, isAdmin }: AnalyticsTabProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <OnboardingProgress />
-        {(isSuperAdmin || isAdmin) && <GoalTracker />}
+        {isAdminTier && <GoalTracker />}
       </div>
     </div>
   );

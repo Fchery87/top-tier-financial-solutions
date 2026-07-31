@@ -59,11 +59,10 @@ interface DashboardStats {
 interface OperationsTabProps {
   stats: DashboardStats | null;
   showWorkQueue: boolean;
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
+  isAdminTier: boolean;
 }
 
-export function OperationsTab({ stats, showWorkQueue, isSuperAdmin, isAdmin }: OperationsTabProps) {
+export function OperationsTab({ stats, showWorkQueue, isAdminTier }: OperationsTabProps) {
   return (
     <div className="space-y-6">
       <Card className="bg-card border border-border">
@@ -112,11 +111,11 @@ export function OperationsTab({ stats, showWorkQueue, isSuperAdmin, isAdmin }: O
       {showWorkQueue && <WorkQueue />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {(isSuperAdmin || isAdmin) && <TeamActivity />}
+        {isAdminTier && <TeamActivity />}
         <AutomationStatus />
       </div>
 
-      {(stats?.newLeads ?? 0) > 0 && (isSuperAdmin || isAdmin) && (
+      {(stats?.newLeads ?? 0) > 0 && isAdminTier && (
         <Link href="/admin/leads">
           <Card className="bg-gradient-to-r from-secondary/5 to-transparent border-secondary/20 hover:border-secondary/40 transition-all cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">

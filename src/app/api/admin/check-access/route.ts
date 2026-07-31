@@ -1,18 +1,27 @@
 import { NextResponse } from 'next/server';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
+import { getUserRole } from '@/lib/admin-auth';
+import { isTeamRole, ROLE_CAPABILITIES } from '@/lib/capabilities';
 
 export async function POST() {
   try {
-    const user = await getAdminSessionUser('super_admin');
-    if (!user) {
-      return NextResponse.json({ authorized: false, role: null }, { status: 401 });
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user?.email) {
+      return NextResponse.json({ authorized: false, role: null, capabilities: [] }, { status: 401 });
+    }
+
+    const role = await getUserRole(session.user.email);
+    if (!isTeamRole(role)) {
+      return NextResponse.json({ authorized: false, role: null, capabilities: [] }, { status: 403 });
     }
 
     return NextResponse.json({
       authorized: true,
-      role: user.role,
-      user_id: user.id,
-      user_email: user.email,
+      role,
+      capabilities: ROLE_CAPABILITIES[role],
+      user_id: session.user.id,
+      user_email: session.user.email,
     });
   } catch (error) {
     console.error('Error checking admin access:', error);

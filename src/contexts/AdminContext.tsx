@@ -1,23 +1,20 @@
 'use client';
 
 import * as React from 'react';
+import { can as canCapability, type Capability, type TeamRole } from '@/lib/capabilities';
 
-type AdminRole = 'super_admin' | 'admin' | 'staff' | null;
+type AdminRole = TeamRole | null;
 
 interface AdminContextValue {
   role: AdminRole;
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
-  isStaff: boolean;
+  can: (capability: Capability) => boolean;
   userId: string | null;
   userEmail: string | null;
 }
 
 const AdminContext = React.createContext<AdminContextValue>({
   role: null,
-  isSuperAdmin: false,
-  isAdmin: false,
-  isStaff: false,
+  can: () => false,
   userId: null,
   userEmail: null,
 });
@@ -40,9 +37,7 @@ interface AdminProviderProps {
 export function AdminProvider({ children, role, userId, userEmail }: AdminProviderProps) {
   const value: AdminContextValue = {
     role,
-    isSuperAdmin: role === 'super_admin',
-    isAdmin: role === 'super_admin' || role === 'admin',
-    isStaff: role === 'staff',
+    can: (capability: Capability) => canCapability(role, capability),
     userId,
     userEmail,
   };

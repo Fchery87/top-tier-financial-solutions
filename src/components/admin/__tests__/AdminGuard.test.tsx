@@ -427,6 +427,9 @@ describe('AdminGuard', () => {
       expect(adminProvider).toHaveAttribute('data-role', 'admin');
     });
 
+    // Prior to the capability model, 'staff' could never actually come back
+    // from check-access (it required super_admin), so this scenario was
+    // unreachable. It's real now.
     it('should render children for authorized staff role', async () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: '123', name: 'Test User', email: 'admin@example.com' },

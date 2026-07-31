@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AdminProvider } from '@/contexts/AdminContext';
+import type { TeamRole } from '@/lib/capabilities';
 
-type AdminRole = 'super_admin' | 'admin' | 'staff' | null;
+type AdminRole = TeamRole | null;
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -116,8 +117,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
           </div>
           <h1 className="font-editorial text-3xl text-foreground">Access denied</h1>
           <p className="text-muted-foreground">
-            You don&apos;t have permission to access the admin panel. 
-            Only users with <span className="font-semibold text-secondary">super_admin</span> access can view this area.
+            Your account doesn&apos;t have access to this area. If you think that&apos;s wrong, ask your administrator.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button variant="outline" asChild>

@@ -17,7 +17,8 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 const TAB_STORAGE_KEY = 'admin-dashboard-tab';
 
 export default function AdminDashboard() {
-  const { role, isSuperAdmin, isAdmin } = useAdminRole();
+  const { role } = useAdminRole();
+  const isAdminTier = role === 'admin' || role === 'super_admin';
   const { data: stats, isLoading: loading } = useDashboardStats();
   const [density, setDensity] = React.useState<'comfortable' | 'compact'>(() => {
     if (typeof window === 'undefined') return 'comfortable';
@@ -166,14 +167,13 @@ export default function AdminDashboard() {
         <PipelineTab stats={stats} loading={loading} />
       )}
       {activeTab === 'analytics' && (
-        <AnalyticsTab isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} />
+        <AnalyticsTab isAdminTier={isAdminTier} />
       )}
       {activeTab === 'operations' && (
         <OperationsTab
           stats={stats}
           showWorkQueue={showWorkQueue}
-          isSuperAdmin={isSuperAdmin}
-          isAdmin={isAdmin}
+          isAdminTier={isAdminTier}
         />
       )}
     </div>
