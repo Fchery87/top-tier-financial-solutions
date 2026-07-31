@@ -13,6 +13,7 @@ const authMock = vi.hoisted(() => ({
 
 const adminAuthMock = vi.hoisted(() => ({
   isSuperAdmin: vi.fn(),
+  getUserRole: vi.fn(),
 }));
 
 const drizzleOrmMock = vi.hoisted(() => ({
@@ -55,6 +56,7 @@ describe('GET /api/admin/disputes/discrepancies', () => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
     adminAuthMock.isSuperAdmin.mockResolvedValue(true);
+    adminAuthMock.getUserRole.mockResolvedValue('super_admin');
   });
 
   it('keeps clientId-only behavior while allowing optional reportId filtering', async () => {
@@ -106,6 +108,7 @@ describe('GET /api/admin/disputes/discrepancies', () => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
     adminAuthMock.isSuperAdmin.mockResolvedValue(true);
+    adminAuthMock.getUserRole.mockResolvedValue('super_admin');
 
     mockDiscrepancyQuery([
       {

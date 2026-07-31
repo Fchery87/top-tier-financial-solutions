@@ -1,35 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { pages } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
-
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await validateAdmin();
+  const user = await requireCapability('content:write');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { id } = await params;
@@ -82,9 +63,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await validateAdmin();
+  const user = await requireCapability('content:write');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { id } = await params;

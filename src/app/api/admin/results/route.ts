@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { disputes, clients, negativeItems, creditScoreHistory } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { eq, and, gte, desc } from 'drizzle-orm';
 
 function toISOStringSafe(value: unknown): string | null {
@@ -13,27 +11,10 @@ function toISOStringSafe(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
-
 export async function GET(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('content:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

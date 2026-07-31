@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user, personalInfoDisputes, inquiryDisputes, clientAgreements, tasks, clientCases } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { eq, desc, asc } from 'drizzle-orm';
 import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData } from '@/lib/db-encryption';
 
@@ -14,30 +12,13 @@ function toISOStringSafe(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { id } = await params;
@@ -438,9 +419,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { id } = await params;
@@ -514,9 +495,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { id } = await params;

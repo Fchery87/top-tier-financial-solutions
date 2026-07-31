@@ -1,34 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { creditReports, clients } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
 
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
-
 export async function POST(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {

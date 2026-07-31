@@ -1,33 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { testimonials } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { eq, desc, count } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
-
 export async function GET(request: NextRequest) {
-  const user = await validateAdmin();
+  const user = await requireCapability('content:read');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const searchParams = request.nextUrl.searchParams;
@@ -63,9 +44,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const user = await validateAdmin();
+  const user = await requireCapability('content:write');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {

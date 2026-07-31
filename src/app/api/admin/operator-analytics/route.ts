@@ -1,36 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, count, eq, isNull, lt, lte, or } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { auth } from '@/lib/auth';
 import { creditReports, disputeCycles, disputes, servicesRenderedEvents, tasks } from '@/db/schema';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
-
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user?.email) {
-    return null;
-  }
-
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-
-  return session.user;
-}
+import { requireCapability } from '@/lib/admin-session';
 
 function firstCount(rows: { count: number }[]) {
   return Number(rows[0]?.count ?? 0);
 }
 
 export async function GET(_request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {

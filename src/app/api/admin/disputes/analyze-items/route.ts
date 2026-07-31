@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
 import { negativeItems, creditAccounts } from '@/db/schema';
 import { eq, inArray } from 'drizzle-orm';
@@ -12,27 +10,10 @@ import {
 } from '@/lib/ai-letter-generator';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
-
 export async function POST(request: Request) {
-  const user = await validateAdmin();
+  const user = await requireCapability('disputes:write');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, creditAnalyses, user } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin, isAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { eq, desc, sql } from 'drizzle-orm';
 
 interface PipelineClient {
@@ -40,33 +38,10 @@ interface PipelineData {
   };
 }
 
-async function validateAdminAccess() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return { authorized: false, user: null, role: null };
-  }
-  
-  const isSuperAdminUser = await isSuperAdmin(session.user.email);
-  const isAdminUser = await isAdmin(session.user.email);
-  
-  if (!isSuperAdminUser && !isAdminUser) {
-    return { authorized: false, user: null, role: null };
-  }
-  
-  return { 
-    authorized: true, 
-    user: session.user,
-    role: isSuperAdminUser ? 'super_admin' : 'admin'
-  };
-}
-
 export async function GET(_request: NextRequest) {
-  const { authorized } = await validateAdminAccess();
-  if (!authorized) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminUser = await requireCapability('clients:read');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {
@@ -171,9 +146,9 @@ export async function GET(_request: NextRequest) {
 
 // Update client stage (drag-drop)
 export async function PATCH(request: NextRequest) {
-  const { authorized } = await validateAdminAccess();
-  if (!authorized) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminUser = await requireCapability('clients:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {

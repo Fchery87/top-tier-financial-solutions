@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, creditAnalyses, negativeItems, creditAccounts, auditReports, creditReports } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateAuditReportHTML, calculateProjectedScoreIncrease, type AuditReportData } from '@/lib/audit-report';
@@ -12,32 +10,15 @@ import { parseIdentityIQReport } from '@/lib/parsers/identityiq-parser';
 import { getFileFromR2 } from '@/lib/r2-storage';
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
 
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
-
 // GET - Generate and return report HTML (preview)
 // Query params: ?type=comprehensive (default) | simple
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { id: clientId } = await params;
@@ -234,9 +215,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { id: clientId } = await params;

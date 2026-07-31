@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
 import { bureauDiscrepancies } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
-}
 
 export interface DiscrepancyWithRecommendation {
   id: string;
@@ -43,9 +24,9 @@ export interface DiscrepancyWithRecommendation {
 
 // GET /api/admin/disputes/discrepancies?clientId=xxx
 export async function GET(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -162,9 +143,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin/disputes/discrepancies/resolve
 export async function POST(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {

@@ -13,6 +13,7 @@ const authMock = vi.hoisted(() => ({
 
 const adminAuthMock = vi.hoisted(() => ({
   isSuperAdmin: vi.fn(),
+  getUserRole: vi.fn(),
 }));
 
 vi.mock('@/db/client', () => ({
@@ -34,6 +35,7 @@ describe('GET /api/admin/operator-analytics', () => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
     adminAuthMock.isSuperAdmin.mockResolvedValue(true);
+    adminAuthMock.getUserRole.mockResolvedValue('super_admin');
   });
 
   it('returns internal operator metrics without client outcome claims', async () => {

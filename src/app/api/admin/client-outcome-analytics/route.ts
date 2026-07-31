@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { auth } from '@/lib/auth';
 import { creditReports, disputeOutcomes } from '@/db/schema';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 
 const bureauKeys = ['experian', 'transunion', 'equifax'] as const;
 
@@ -18,27 +16,10 @@ function emptyBureauProgress() {
   };
 }
 
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user?.email) {
-    return null;
-  }
-
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-
-  return session.user;
-}
-
 export async function GET(_request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {

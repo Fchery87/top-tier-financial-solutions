@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isSuperAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
 import { disputes, disputeOutcomes } from '@/db/schema';
 import { and, gte } from 'drizzle-orm';
-
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user?.email) {
-    return null;
-  }
-
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-
-  return session.user;
-}
 
 function isMissingColumnError(error: unknown): boolean {
   const code = (error as { code?: string })?.code || (error as { cause?: { code?: string } })?.cause?.code;
@@ -36,9 +17,9 @@ function isMissingRelationError(error: unknown): boolean {
 }
 
 export async function GET(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
