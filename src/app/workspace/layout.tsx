@@ -13,6 +13,10 @@ export default async function WorkspaceLayout({
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.email) redirect('/sign-in?next=/workspace');
 
+  // Re-query the role from the database rather than trust session.user.role:
+  // the session's cookieCache (see auth.ts) can serve a role for up to 5
+  // minutes without hitting the DB, which would let a role that was just
+  // revoked (demotion/ban) stay effective past that window if trusted here.
   const role = await getUserRole(session.user.email);
   if (!isTeamRole(role)) redirect('/portal');
 
