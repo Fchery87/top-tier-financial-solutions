@@ -237,7 +237,7 @@ export function ScoreTrendChart() {
                 {data.topImprovers.slice(0, 3).map((improver, index) => (
                   <Link
                     key={improver.clientId}
-                    href={`/admin/clients/${improver.clientId}`}
+                    href={`/workspace/clients/${improver.clientId}`}
                     className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors group"
                   >
                     <div className="flex items-center gap-2">

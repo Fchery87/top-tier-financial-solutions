@@ -284,7 +284,7 @@ export default function ResultsPage() {
                           </div>
                           <div className="text-right">
                             <Link
-                              href={`/admin/clients/${win.client_id}`}
+                              href={`/workspace/clients/${win.client_id}`}
                               className="text-sm font-medium text-secondary hover:underline"
                             >
                               {win.client_name}
@@ -361,7 +361,7 @@ export default function ResultsPage() {
                         {stats.top_performers.slice(0, 5).map((performer, index) => (
                           <Link
                             key={performer.client_id}
-                            href={`/admin/clients/${performer.client_id}`}
+                            href={`/workspace/clients/${performer.client_id}`}
                             className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors"
                           >
                             <div className="flex items-center gap-2">

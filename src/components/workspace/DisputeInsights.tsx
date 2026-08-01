@@ -175,7 +175,7 @@ export function DisputeInsights() {
                 {methodologies.map((m) => (
                   <Link
                     key={m.methodology}
-                    href={`/admin/disputes?methodology=${encodeURIComponent(
+                    href={`/workspace/disputes?methodology=${encodeURIComponent(
                       m.methodology
                     )}&outcome=deleted`}
                     className="block rounded-md hover:bg-muted/60 transition-colors"
@@ -227,7 +227,7 @@ export function DisputeInsights() {
                     return (
                       <Link
                         key={bureau}
-                        href={`/admin/disputes?bureau=${bureau}&outcome=deleted`}
+                        href={`/workspace/disputes?bureau=${bureau}&outcome=deleted`}
                         className="block rounded-md hover:bg-muted/60 transition-colors"
                       >
                         <motion.div
