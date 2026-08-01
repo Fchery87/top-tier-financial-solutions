@@ -5,10 +5,10 @@ import { motion } from 'framer-motion';
 import { Plus, Scale, Check, X, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { DataTable } from '@/components/admin/DataTable';
-import { StatusBadge } from '@/components/admin/StatusBadge';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatGrid } from '@/components/admin/StatGrid';
+import { DataTable } from '@/components/workspace/DataTable';
+import { StatusBadge } from '@/components/workspace/StatusBadge';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatGrid } from '@/components/workspace/StatGrid';
 import type { Disclaimer } from '@/lib/admin-api';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 

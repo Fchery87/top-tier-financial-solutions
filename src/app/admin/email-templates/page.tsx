@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AdminGuard } from '@/components/admin/AdminGuard';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatGrid } from '@/components/admin/StatGrid';
+import { AdminGuard } from '@/components/workspace/AdminGuard';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatGrid } from '@/components/workspace/StatGrid';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {

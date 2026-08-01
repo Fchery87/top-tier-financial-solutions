@@ -5,9 +5,9 @@ import { motion } from 'framer-motion';
 import { Plus, Briefcase, Pencil, Trash2, Loader2, GripVertical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { DataTable } from '@/components/admin/DataTable';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatGrid } from '@/components/admin/StatGrid';
+import { DataTable } from '@/components/workspace/DataTable';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatGrid } from '@/components/workspace/StatGrid';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Service {

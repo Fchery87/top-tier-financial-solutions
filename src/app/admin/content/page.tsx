@@ -5,9 +5,9 @@ import { motion } from 'framer-motion';
 import { Plus, FileText, Eye, EyeOff, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { DataTable } from '@/components/admin/DataTable';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatusBadge } from '@/components/admin/StatusBadge';
+import { DataTable } from '@/components/workspace/DataTable';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatusBadge } from '@/components/workspace/StatusBadge';
 import type { Page } from '@/lib/admin-api';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 

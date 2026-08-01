@@ -1,13 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatGrid, type StatItem } from '@/components/admin/StatGrid';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatGrid, type StatItem } from '@/components/workspace/StatGrid';
 import { Mail, Users, UserMinus, TrendingUp, Loader2, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { DataTable } from '@/components/admin/DataTable';
-import { StatusBadge } from '@/components/admin/StatusBadge';
+import { DataTable } from '@/components/workspace/DataTable';
+import { StatusBadge } from '@/components/workspace/StatusBadge';
 
 interface Subscriber {
   id: string;

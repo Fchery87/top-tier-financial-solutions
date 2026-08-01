@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatGrid } from '@/components/admin/StatGrid';
-import { LLMConfigSection } from '@/components/admin/settings/LLMConfigSection';
-import { DashboardPrefsSection } from '@/components/admin/settings/DashboardPrefsSection';
-import { SystemSettingsSection } from '@/components/admin/settings/SystemSettingsSection';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatGrid } from '@/components/workspace/StatGrid';
+import { LLMConfigSection } from '@/components/workspace/settings/LLMConfigSection';
+import { DashboardPrefsSection } from '@/components/workspace/settings/DashboardPrefsSection';
+import { SystemSettingsSection } from '@/components/workspace/settings/SystemSettingsSection';
 
 interface LLMConfig {
   provider: string;

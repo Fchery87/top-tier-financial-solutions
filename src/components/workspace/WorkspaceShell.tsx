@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { AdminTopBar } from '@/components/admin/AdminTopBar';
-import { CommandPalette } from '@/components/admin/CommandPalette';
+import { AdminSidebar } from '@/components/workspace/AdminSidebar';
+import { AdminTopBar } from '@/components/workspace/AdminTopBar';
+import { CommandPalette } from '@/components/workspace/CommandPalette';
 import { AscendantMark } from '@/components/brand/AscendantMark';
 import { AdminProvider } from '@/contexts/AdminContext';
 import type { TeamRole } from '@/lib/capabilities';
@@ -45,7 +45,7 @@ export function WorkspaceShell({ children, role, userId, userEmail }: WorkspaceS
 
         {/* Mobile top bar — sits on the ink desk */}
         <div className="flex h-14 shrink-0 items-center justify-between px-4 md:hidden">
-          <Link href="/admin" className="flex items-center gap-2">
+          <Link href="/workspace" className="flex items-center gap-2">
             <AscendantMark className="h-7 w-7" />
             <span className="font-display text-sm font-semibold tracking-tight text-ink-foreground">Top Tier</span>
           </Link>

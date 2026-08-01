@@ -20,8 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/Input';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatGrid } from '@/components/admin/StatGrid';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatGrid } from '@/components/workspace/StatGrid';
 
 interface Template {
   id: string;

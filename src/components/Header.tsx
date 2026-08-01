@@ -119,16 +119,16 @@ export function Header() {
                   role="menu"
                   className="ui-popover surface-panel absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-lg shadow-[0_8px_24px_-8px_hsl(24_10%_10%/0.18)]"
                 >
-                  {(user.role === 'super_admin' || user.role === 'admin') && (
+                  {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'staff') && (
                     <>
                       <Link
-                        href="/admin"
+                        href="/workspace"
                         role="menuitem"
                         onClick={() => setUserMenuOpen(false)}
                         className={cn(menuItemClass, 'font-medium text-foreground hover:bg-muted')}
                       >
                         <LayoutDashboard className="h-4 w-4 text-secondary" />
-                        Admin Dashboard
+                        Workspace
                       </Link>
                       <div className="border-t border-border" />
                     </>
@@ -230,13 +230,13 @@ export function Header() {
                       <p className="text-sm text-ink-muted">Signed in</p>
                     </div>
                   </div>
-                  {(user.role === 'super_admin' || user.role === 'admin') && (
+                  {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'staff') && (
                     <Link
-                      href="/admin"
+                      href="/workspace"
                       className="flex items-center gap-2 rounded-lg px-4 py-3 font-medium text-ink-foreground transition-[background-color] duration-[160ms] ease-[var(--ease-out)] hover:bg-white/[0.05]"
                     >
                       <LayoutDashboard className="h-5 w-5 text-brass" />
-                      Admin Dashboard
+                      Workspace
                     </Link>
                   )}
                   <Link

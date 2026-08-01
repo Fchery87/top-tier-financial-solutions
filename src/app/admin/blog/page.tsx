@@ -7,9 +7,9 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { DataTable } from '@/components/admin/DataTable';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { StatusBadge } from '@/components/admin/StatusBadge';
+import { DataTable } from '@/components/workspace/DataTable';
+import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
+import { StatusBadge } from '@/components/workspace/StatusBadge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface BlogPost {

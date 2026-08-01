@@ -6,7 +6,7 @@ import { Footer } from '@/components/Footer';
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdminRoute = pathname?.startsWith('/admin');
+  const isAdminRoute = pathname?.startsWith('/admin') || pathname?.startsWith('/workspace');
   const isAuthRoute = pathname?.startsWith('/sign-in') || pathname?.startsWith('/sign-up');
 
   if (isAdminRoute || isAuthRoute) {
