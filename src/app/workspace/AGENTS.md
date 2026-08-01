@@ -1,7 +1,7 @@
 # Workspace (Casework) - Agent Development Guide
 
 ## Package Identity
-Staff casework workspace for credit repair management: client tracking, dispute generation, billing, tasks, and messaging. Built with Next.js App Router, TypeScript, and Tailwind CSS. Lives at `/workspace` (staff+ access); the separate `/admin` surface (`src/app/admin/`) holds site-configuration routes (content, blog, templates, settings) and is admin+ only — see that tree's own docs, not this one.
+Staff casework workspace for credit repair management: client tracking, dispute generation, billing, tasks, and messaging. Built with Next.js App Router, TypeScript, and Tailwind CSS. Lives at `/workspace`, gated staff+ by the server-side `src/app/workspace/layout.tsx`. The separate `/admin` surface (`src/app/admin/`) holds site-configuration routes (content, blog, templates, settings) and is *intended* to be admin+ only once a server-side layout for that tree lands (tracked as a follow-up task) — as of this writing `/admin` has no page-level or layout-level guard of its own, so don't assume it's currently enforced. See that tree's own docs, not this one, once it has one.
 
 ## Setup & Run
 ```bash
@@ -25,26 +25,35 @@ npm run lint                  # ESLint validation
 - API routes: Follow REST conventions in `route.ts` files
 
 ### Authentication Pattern
-All admin routes must use the `validateAdmin()` pattern:
+API routes under `src/app/api/admin/` are capability-gated (via `can()` / `Capability` from `@/lib/capabilities`), not gated by a blanket "is this user an admin" boolean. Two equivalent shapes currently coexist in the codebase — match whichever your target file already uses rather than introducing a third:
 ```typescript
-// ✅ DO: Copy from src/app/api/admin/clients/route.ts
-async function validateAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return null;
+// Shape A — shared helper. ✅ DO: Copy from src/app/api/admin/clients/route.ts
+import { requireCapability } from '@/lib/admin-session';
+
+async function getHandler(request: NextRequest) {
+  const adminUser = await requireCapability('clients:read');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
-  
-  const isAdmin = await isSuperAdmin(session.user.email);
-  if (!isAdmin) {
-    return null;
-  }
-  
-  return session.user;
+  // ...
 }
 ```
+```typescript
+// Shape B — local per-file helper. ✅ DO: Copy from src/app/api/admin/tasks/route.ts
+import { getUserRole } from '@/lib/admin-auth';
+import { can, type Capability } from '@/lib/capabilities';
+
+async function validateAdmin(capability: Capability) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.email) return { error: 'Unauthorized' as const };
+  const role = await getUserRole(session.user.email);
+  if (!can(role, capability)) return { error: 'Forbidden' as const };
+  return { user: { ...session.user, role } };
+}
+```
+`isSuperAdmin()` (`@/lib/admin-auth`) still exists but is now narrow — use it only where a check must specifically require the `super_admin` role, not as the general admin-route gate.
+
+This is a per-request API guard, separate from the page-level auth described in Common Gotchas below (`/workspace` pages are gated once by `src/app/workspace/layout.tsx`; `/admin` pages currently have no equivalent).
 
 ### Database Query Pattern
 Use Drizzle ORM with consistent error handling:
@@ -99,8 +108,9 @@ export const adminClient = {
 - Find auth guards: `rg -n "AdminGuard|validateAdmin" src/`
 
 ## Common Gotchas
-- All admin pages must be wrapped in `AdminGuard` component
-- Use `isSuperAdmin()` for role-based access control
+- `/workspace` pages do NOT wrap themselves in `AdminGuard` — auth is handled once, server-side, in `src/app/workspace/layout.tsx`, before any page under this tree renders. `AdminGuard` is legacy: its only remaining consumer in the whole codebase is `src/app/admin/email-templates/page.tsx` (a config route, not a workspace route). Don't add new `AdminGuard` wraps under `/workspace` — it would be redundant with the layout guard.
+- `/admin` config routes currently have no equivalent guard at all (page-level or layout-level) — don't assume they're protected just because `/workspace` is.
+- Use capability checks (`can()` / `requireCapability()`) for role-based access control in API routes, not `isSuperAdmin()` (see Authentication Pattern above — `isSuperAdmin()` is narrow, super_admin-only)
 - Server actions require proper session validation via headers
 - Email automation uses `triggerAutomation()` - pass client data as second argument
 - Client data includes new PII fields: `streetAddress`, `city`, `state`, `zipCode`, `dateOfBirth`, `ssnLast4`
