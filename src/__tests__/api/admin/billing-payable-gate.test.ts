@@ -8,14 +8,14 @@ const dbMock = vi.hoisted(() => ({
 }));
 
 const headersMock = vi.hoisted(() => vi.fn());
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 vi.mock('next/headers', () => ({
@@ -25,7 +25,7 @@ vi.mock('next/headers', () => ({
 describe('POST /api/admin/billing payable invoice gate', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
     headersMock.mockResolvedValue(new Headers({ 'x-forwarded-for': '127.0.0.1' }));
   });
 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
+import { isTeamRole } from '@/lib/capabilities';
 import { useAuth } from '@/components/AuthProvider';
 import { signOut } from '@/lib/auth-client';
 
@@ -119,7 +120,7 @@ export function Header() {
                   role="menu"
                   className="ui-popover surface-panel absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-lg shadow-[0_8px_24px_-8px_hsl(24_10%_10%/0.18)]"
                 >
-                  {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'staff') && (
+                  {isTeamRole(user.role) && (
                     <>
                       <Link
                         href="/workspace"
@@ -132,6 +133,17 @@ export function Header() {
                       </Link>
                       <div className="border-t border-border" />
                     </>
+                  )}
+                  {!isTeamRole(user.role) && (
+                    <Link
+                      href="/portal"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className={cn(menuItemClass, 'font-medium text-foreground hover:bg-muted')}
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-secondary" />
+                      My Portal
+                    </Link>
                   )}
                   <Link
                     href="/profile"
@@ -230,13 +242,22 @@ export function Header() {
                       <p className="text-sm text-ink-muted">Signed in</p>
                     </div>
                   </div>
-                  {(user.role === 'super_admin' || user.role === 'admin' || user.role === 'staff') && (
+                  {isTeamRole(user.role) && (
                     <Link
                       href="/workspace"
                       className="flex items-center gap-2 rounded-lg px-4 py-3 font-medium text-ink-foreground transition-[background-color] duration-[160ms] ease-[var(--ease-out)] hover:bg-white/[0.05]"
                     >
                       <LayoutDashboard className="h-5 w-5 text-brass" />
                       Workspace
+                    </Link>
+                  )}
+                  {!isTeamRole(user.role) && (
+                    <Link
+                      href="/portal"
+                      className="flex items-center gap-2 rounded-lg px-4 py-3 font-medium text-ink-foreground transition-[background-color] duration-[160ms] ease-[var(--ease-out)] hover:bg-white/[0.05]"
+                    >
+                      <LayoutDashboard className="h-5 w-5 text-brass" />
+                      My Portal
                     </Link>
                   )}
                   <Link

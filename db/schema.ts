@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, serial, text, timestamp, boolean, integer, index } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, serial, text, timestamp, boolean, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from "drizzle-orm";
 
 // Enums
@@ -104,6 +104,20 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+// Administration mutation audit trail. Metadata must never contain secrets or PII.
+export const adminActivityLog = pgTable('admin_activity_log', {
+  id: text('id').primaryKey(),
+  actorUserId: text('actor_user_id').references(() => user.id, { onDelete: 'set null' }),
+  action: text('action').notNull(),
+  subjectType: text('subject_type').notNull(),
+  subjectId: text('subject_id'),
+  metadata: text('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('admin_activity_log_actor_idx').on(table.actorUserId),
+  index('admin_activity_log_createdAt_idx').on(table.createdAt),
+]);
 
 // Consultation requests (contact/lead form submissions)
 export const consultationRequests = pgTable('consultation_requests', {
@@ -783,7 +797,10 @@ export const disputes = pgTable('disputes', {
   policyDecision: text('policy_decision'), // JSON deterministic policy decision used before letter rendering
   escalationPath: text('escalation_path'), // 'bureau' | 'creditor' | 'furnisher' | 'collector' | 'cfpb'
   letterContent: text('letter_content'),
-  letterTemplateId: text('letter_template_id'),
+  letterContextSnapshot: text('letter_context_snapshot'),
+  // Attribution points to the strategy row that informed generation. Rows are
+  // deactivated rather than deleted, but set null keeps legacy data safe.
+  letterTemplateId: text('letter_template_id').references(() => disputeLetterLibrary.id, { onDelete: 'set null' }),
   generatedByAi: boolean('generated_by_ai').default(false),
   analysisConfidence: integer('analysis_confidence'), // 0-100 confidence score from AI analysis
   autoSelected: boolean('auto_selected').default(false), // Flag if the item was auto-selected as disputable
@@ -824,6 +841,25 @@ export const disputes = pgTable('disputes', {
   index("disputes_responseDeadline_idx").on(table.responseDeadline),
   index("disputes_methodology_idx").on(table.methodology),
   index("disputes_escalationReadyAt_idx").on(table.escalationReadyAt),
+]);
+
+export const disputeLetterRevisions = pgTable('dispute_letter_revisions', {
+  id: text('id').primaryKey(),
+  disputeId: text('dispute_id').notNull().references(() => disputes.id, { onDelete: 'cascade' }),
+  revision: integer('revision').notNull(),
+  content: text('content').notNull(),
+  source: text('source').notNull(), // generated | manual | ai_rewrite | ai_tone | revert
+  toneLabel: text('tone_label'),
+  promptUsed: text('prompt_used'),
+  lintFindings: text('lint_findings'),
+  warningsAcknowledged: boolean('warnings_acknowledged').default(false),
+  acknowledgedBy: text('acknowledged_by').references(() => user.id, { onDelete: 'set null' }),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+  generationMetadata: text('generation_metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('dispute_letter_revisions_disputeId_idx').on(table.disputeId),
+  uniqueIndex('dispute_letter_revisions_dispute_revision_uidx').on(table.disputeId, table.revision),
 ]);
 
 // Dispute outcomes (normalized response tracking for analytics)
@@ -891,7 +927,8 @@ export const evidencePackets = pgTable('evidence_packets', {
   index('evidence_packets_disputeId_idx').on(table.disputeId),
 ]);
 
-// Dispute letter templates
+// Deprecated placeholder table. Use disputeLetterLibrary for generation
+// strategies; retained for legacy data and migration compatibility.
 export const disputeLetterTemplates = pgTable('dispute_letter_templates', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),

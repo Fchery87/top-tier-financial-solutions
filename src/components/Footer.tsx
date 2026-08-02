@@ -9,6 +9,7 @@ const footerLinks = {
     { name: 'Services', href: '/services' },
     { name: 'How It Works', href: '/how-it-works' },
     { name: 'Contact', href: '/contact' },
+    { name: 'My Portal', href: '/portal' },
   ],
   legal: [
     { name: 'Compliance & Rights', href: '/compliance' },

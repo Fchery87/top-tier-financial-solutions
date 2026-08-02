@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { disputes, tasks, clientAgreements, clients } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
-import { isAdmin } from '@/lib/admin-auth';
+import { requireCapability } from '@/lib/admin-session';
 import { and, gte, lte, eq, isNull, or } from 'drizzle-orm';
 
 interface CalendarEvent {
@@ -17,21 +15,13 @@ interface CalendarEvent {
 }
 
 async function validateAdminAccess() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  
-  if (!session?.user?.email) {
-    return false;
-  }
-  
-  return await isAdmin(session.user.email);
+  return Boolean(await requireCapability('clients:read'));
 }
 
 export async function GET(_request: NextRequest) {
   const authorized = await validateAdminAccess();
   if (!authorized) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
+import { recordAdminActivity } from '@/lib/admin-activity';
+import { db } from '@/db/client';
 import {
   runDisputeEscalationAutomation,
   writeDisputeEscalationFailure,
 } from '@/lib/dispute-escalation-runner';
 
 export async function POST(request: NextRequest) {
-  const adminUser = await getAdminSessionUser('super_admin');
+  const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -16,6 +18,14 @@ export async function POST(request: NextRequest) {
     const dryRun = !!body.dryRun;
 
     const result = await runDisputeEscalationAutomation({ dryRun });
+    await db.transaction(async (tx) => {
+      await recordAdminActivity(tx, {
+        actorUserId: adminUser.id,
+        action: 'automation.dispute_escalations.run',
+        subjectType: 'automation',
+        metadata: { dryRun },
+      });
+    });
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error running manual dispute escalation automation:', error);

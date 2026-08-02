@@ -2,15 +2,12 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/components/AuthProvider';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
-  Loader2, FileText, Sparkles, Shield, Calendar, FileSignature,
+  Loader2, FileText, Sparkles, Shield, Calendar, FileSignature, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import PortalHeader from '@/components/portal/PortalHeader';
-import PortalNav from '@/components/portal/PortalNav';
 import PortalCaseStatus from '@/components/portal/PortalCaseStatus';
 import PortalDisputes from '@/components/portal/PortalDisputes';
 import PortalScoreHistory from '@/components/portal/PortalScoreHistory';
@@ -27,7 +24,6 @@ import type {
 } from '@/components/portal/types';
 
 export default function PortalPage() {
-  const { user, isLoading: authLoading } = useAuth();
   const [cases, setCases] = React.useState<ClientCase[]>([]);
   const [documents, setDocuments] = React.useState<Document[]>([]);
   const [auditReport, setAuditReport] = React.useState<AuditReportStatus | null>(null);
@@ -51,7 +47,7 @@ export default function PortalPage() {
     () => letters.filter((l) => l.status === 'pending'), [letters],
   );
 
-  React.useEffect(() => { if (user) fetchData(); }, [user]);
+  React.useEffect(() => { void fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -116,34 +112,10 @@ export default function PortalPage() {
     finally { setSubmittingFeedback(false); }
   };
 
-  if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>;
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8">
-        <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
-          <CardHeader className="text-center">
-            <CardTitle className="font-display text-2xl">Client Portal</CardTitle>
-            <CardDescription>Please sign in to access your client portal.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Button asChild className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90"><Link href="/sign-in">Sign In</Link></Button>
-            <Button asChild variant="outline" className="w-full"><Link href="/sign-up">Create Account</Link></Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const activeCase = cases.find((c) => c.status === 'active') || cases[0];
 
   return (
     <div className="portal-shell flex flex-col min-h-screen">
-      <PortalHeader userName={user.name?.split(' ')[0] || 'Client'} />
-      <PortalNav />
-
       <section className="bg-background/80 py-8 md:py-12">
         <div className="container mx-auto px-4 md:px-6">
           {loading ? (
@@ -164,6 +136,20 @@ export default function PortalPage() {
               </div>
             </Card>
           ) : (
+            <>
+            {pendingLetters.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedLetter(pendingLetters[0] || null)}
+                className="mb-6 flex w-full items-start gap-3 border border-warning/40 bg-warning/10 p-4 text-left transition-colors hover:bg-warning/15"
+              >
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+                <span>
+                  <span className="block text-sm font-semibold text-foreground">{pendingLetters.length} letter{pendingLetters.length === 1 ? '' : 's'} need your approval</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">Review the proposed dispute letters before they are submitted.</span>
+                </span>
+              </button>
+            )}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
               <PortalCaseStatus activeCase={activeCase} />
 
@@ -208,6 +194,7 @@ export default function PortalPage() {
                 <PortalScoreHistory scoreHistory={scoreHistory} scoreSummary={scoreSummary} />
               </div>
             </div>
+            </>
           )}
         </div>
       </section>

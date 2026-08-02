@@ -12,6 +12,7 @@ import {
   type GeneratedLetter,
   type GenerationMethod,
   type ItemDisputeInstruction,
+  type TargetRecipient,
   WIZARD_STEPS,
 } from '../types';
 
@@ -30,6 +31,8 @@ interface UseWizardValidationOptions {
   itemDisputeInstructions: Map<string, ItemDisputeInstruction>;
   selectedBureaus: string[];
   disputeRound: number;
+  targetRecipient: TargetRecipient;
+  priorDisputeId: string;
   discrepancySummary: DiscrepancySummary | null;
   generatedLetters: GeneratedLetter[];
 }
@@ -44,6 +47,8 @@ export function useWizardValidation({
   itemDisputeInstructions,
   selectedBureaus,
   disputeRound,
+  targetRecipient,
+  priorDisputeId,
   discrepancySummary,
   generatedLetters,
 }: UseWizardValidationOptions) {
@@ -58,24 +63,33 @@ export function useWizardValidation({
     switch (step) {
       case 1: validationResult = validateStep1(selectedClient?.id ?? null); break;
       case 2: {
-        validationResult = validateStep2(selectedItems, {});
         const totalSelected = selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length;
-        if (totalSelected === 0) errors.push('Please select at least one item to dispute');
-        if (generationMethod === 'template') {
-          const missingInstructions = selectedItems.filter(itemId => {
+        if (totalSelected === 0) {
+          errors.push('Please select at least one item to dispute');
+        }
+
+        if (generationMethod === 'template' && selectedItems.length > 0) {
+          const itemReasonCodes = Object.fromEntries(selectedItems.map(itemId => {
             const instruction = itemDisputeInstructions.get(itemId);
-            if (!instruction) return true;
-            if (instruction.instructionType === 'preset' && instruction.presetCode && instruction.presetCode !== 'custom') return false;
-            if (instruction.instructionType === 'custom' && instruction.customText && instruction.customText.trim().length > 0) return false;
-            return true;
-          });
-          if (missingInstructions.length > 0) errors.push(`${missingInstructions.length} item(s) missing dispute instructions`);
+            if (!instruction) return [itemId, []];
+            if (instruction.instructionType === 'preset' && instruction.presetCode) return [itemId, [instruction.presetCode]];
+            if (instruction.instructionType === 'custom' && instruction.customText?.trim()) return [itemId, [instruction.customText]];
+            return [itemId, []];
+          }));
+          const templateValidation = validateStep2(selectedItems, itemReasonCodes);
+          errors.push(...templateValidation.errors);
+          warnings.push(...templateValidation.warnings);
         }
         break;
       }
       case 3:
         validationResult = validateStep3(selectedBureaus, disputeRound);
         if (discrepancySummary?.highSeverity && discrepancySummary.highSeverity > 0) errors.push('Unable to proceed with high-severity discrepancies detected');
+        if (targetRecipient === 'cfpb') {
+          const totalSelected = selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length;
+          if (totalSelected !== 1) errors.push('CFPB generation requires exactly one dispute item with one attributable CRA predecessor');
+          if (!priorDisputeId.trim()) errors.push('A prior CRA dispute is required before CFPB generation');
+        }
         break;
       case 4: validationResult = validateStep4(generatedLetters); break;
     }
@@ -88,11 +102,13 @@ export function useWizardValidation({
     generatedLetters,
     generationMethod,
     itemDisputeInstructions,
+    priorDisputeId,
     selectedBureaus,
     selectedClient,
     selectedInquiryItems.length,
     selectedItems,
     selectedPersonalItems.length,
+    targetRecipient,
   ]);
 
   const validateCurrentStep = React.useCallback((): boolean => {

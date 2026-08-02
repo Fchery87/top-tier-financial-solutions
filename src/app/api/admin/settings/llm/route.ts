@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { auth } from '@/lib/auth';
 import { getLLMConfig, updateLLMConfig, clearSettingsCache, type LLMConfig } from '@/lib/settings-service';
+import { db } from '@/db/client';
+import { requireCapability } from '@/lib/admin-session';
+import { recordAdminActivity } from '@/lib/admin-activity';
 
-// Check if user is super admin
-async function checkSuperAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user) {
-    return { authorized: false, error: 'Unauthorized' };
-  }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-  const userRole = (session.user as { role?: string }).role;
-  if (userRole !== 'super_admin') {
-    return { authorized: false, error: 'Super admin access required' };
-  }
-
-  return { authorized: true, userId: session.user.id };
+function isLLMProvider(value: unknown): value is LLMConfig['provider'] {
+  return value === 'google' || value === 'openai' || value === 'anthropic' || value === 'zhipu' || value === 'custom';
 }
 
 /**
@@ -25,9 +17,9 @@ async function checkSuperAdmin() {
  * Get current LLM configuration
  */
 export async function GET(_request: NextRequest) {
-  const authCheck = await checkSuperAdmin();
-  if (!authCheck.authorized) {
-    return NextResponse.json({ error: authCheck.error }, { status: 403 });
+  const adminUser = await requireCapability('settings:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -54,24 +46,51 @@ export async function GET(_request: NextRequest) {
  * Update LLM configuration
  */
 export async function PUT(request: NextRequest) {
-  const authCheck = await checkSuperAdmin();
-  if (!authCheck.authorized) {
-    return NextResponse.json({ error: authCheck.error }, { status: 403 });
+  const adminUser = await requireCapability('settings:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
-    const body: Partial<LLMConfig> = await request.json();
-    const { provider, model, apiKey, apiEndpoint, temperature, maxTokens } = body;
-
+    const rawBody: unknown = await request.json();
+    if (!isRecord(rawBody)) return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
     const updates: Partial<LLMConfig> = {};
-    if (provider !== undefined) updates.provider = provider;
-    if (model !== undefined) updates.model = model;
-    if (apiKey !== undefined && apiKey !== '') updates.apiKey = apiKey;
-    if (apiEndpoint !== undefined) updates.apiEndpoint = apiEndpoint;
-    if (temperature !== undefined) updates.temperature = temperature;
-    if (maxTokens !== undefined) updates.maxTokens = maxTokens;
+    if (rawBody.provider !== undefined) {
+      if (!isLLMProvider(rawBody.provider)) return NextResponse.json({ error: 'Invalid LLM provider' }, { status: 400 });
+      updates.provider = rawBody.provider;
+    }
+    if (rawBody.model !== undefined) {
+      if (typeof rawBody.model !== 'string') return NextResponse.json({ error: 'Invalid LLM model' }, { status: 400 });
+      updates.model = rawBody.model;
+    }
+    if (rawBody.apiKey !== undefined && rawBody.apiKey !== '') {
+      if (typeof rawBody.apiKey !== 'string') return NextResponse.json({ error: 'Invalid LLM API key' }, { status: 400 });
+      updates.apiKey = rawBody.apiKey;
+    }
+    if (rawBody.apiEndpoint !== undefined) {
+      if (typeof rawBody.apiEndpoint !== 'string') return NextResponse.json({ error: 'Invalid LLM endpoint' }, { status: 400 });
+      updates.apiEndpoint = rawBody.apiEndpoint;
+    }
+    if (rawBody.temperature !== undefined) {
+      if (typeof rawBody.temperature !== 'number') return NextResponse.json({ error: 'Invalid LLM temperature' }, { status: 400 });
+      updates.temperature = rawBody.temperature;
+    }
+    if (rawBody.maxTokens !== undefined) {
+      if (typeof rawBody.maxTokens !== 'number') return NextResponse.json({ error: 'Invalid LLM maximum tokens' }, { status: 400 });
+      updates.maxTokens = rawBody.maxTokens;
+    }
 
-    await updateLLMConfig(updates, authCheck.userId);
+    const changedFields = Object.keys(updates).sort();
+    await db.transaction(async (tx) => {
+      await updateLLMConfig(updates, adminUser.id, tx);
+      await recordAdminActivity(tx, {
+        actorUserId: adminUser.id,
+        action: 'settings.llm.updated',
+        subjectType: 'settings',
+        subjectId: 'llm',
+        metadata: { changedFields },
+      });
+    });
 
     // Clear cache to ensure changes take effect immediately
     clearSettingsCache();
@@ -86,5 +105,4 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update LLM configuration' }, { status: 500 });
   }
 }
-
 

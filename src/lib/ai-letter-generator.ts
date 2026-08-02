@@ -4,8 +4,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getObsolescenceClock } from './fcra-clock';
 import { DEFAULT_LLM_MODELS, getLLMConfig, type LLMConfig } from './settings-service';
 import { lintGeneratedLetter } from './letter-lint';
+import type { Selection } from './letter-library-selector';
 
-async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
+export async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
   switch (config.provider) {
     case 'google': {
       const genAI = new GoogleGenAI({ apiKey: config.apiKey! });
@@ -94,6 +95,16 @@ interface GenerateLetterParams {
   priorDisputeDate?: string;
   priorDisputeResult?: string;
   enclosures?: EvidenceEnclosure[];
+  librarySelection?: Selection;
+}
+
+async function recordLibraryUsage(selection?: Selection): Promise<void> {
+  const libraryId = selection?.chosen?.id;
+  if (!libraryId) return;
+
+  await import('./letter-library-repo')
+    .then(({ incrementLibraryUsage }) => incrementLibraryUsage(libraryId))
+    .catch(error => console.error('Failed to record letter library usage:', error));
 }
 
 const BUREAU_ADDRESSES: Record<string, string> = {
@@ -267,7 +278,7 @@ ${params.clientData.city && params.clientData.state && params.clientData.zip ? `
 ${buildEnclosuresSection(params.enclosures)}`;
 }
 
-function buildManualLetterPrompt(params: GenerateLetterParams): string {
+export function buildManualLetterPrompt(params: GenerateLetterParams): string {
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
   const recipientAddress = formatRecipientAddress(params.targetRecipient, params.itemData.bureau, params.itemData.creditorName);
@@ -277,6 +288,11 @@ function buildManualLetterPrompt(params: GenerateLetterParams): string {
     : params.round === 2
       ? 'This is a method-of-verification follow-up. Request the prior investigation method under FCRA Section 611(a)(6)(B)(iii).'
       : 'This is an initial factual dispute. Request investigation and correction or removal if unverifiable.';
+  const libraryStrategy = params.librarySelection?.chosen?.promptContext ?? strategyInstruction;
+  const legalCitations = params.librarySelection?.chosen?.legalCitations?.filter(Boolean).slice(0, 2) || [];
+  const libraryAuthority = legalCitations.length > 0
+    ? `\nRELEVANT AUTHORITY\nGround the request in: ${legalCitations.join(', ')}.\nCite at most two, in plain language. Do not stack citations.\n`
+    : '';
 
   return `Write a factual credit dispute letter in plain text only.
 
@@ -307,7 +323,8 @@ ${params.customReason ? `Additional Context: ${params.customReason}` : ''}
 ${metro2Section || 'No specific Metro 2 issue list was provided. Request verification of the reported data for accuracy and completeness.'}
 
 ROUND STRATEGY
-${strategyInstruction}
+${libraryStrategy}
+${libraryAuthority}
 
 Return only the completed letter text.`;
 }
@@ -322,6 +339,13 @@ function buildMultiItemPrompt(params: GenerateMultiItemLetterParams): string {
     const maskedAccountNumber = item.accountNumber ? `****${item.accountNumber.slice(-4)}` : '';
     return `Account ${index + 1}:\n- Creditor: ${item.creditorName}\n${item.originalCreditor ? `- Original Creditor: ${item.originalCreditor}\n` : ''}${maskedAccountNumber ? `- Account Number: ${maskedAccountNumber}\n` : ''}- Type: ${formatItemType(item.itemType)}\n${item.amount ? `- Amount: ${formatCurrency(item.amount)}\n` : ''}${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`.trim();
   }).join('\n\n');
+  const defaultStrategy = params.round >= 3
+    ? 'This is a direct furnisher escalation. Keep the tone factual and request investigation under FCRA Section 623(a)(8).'
+    : params.round === 2
+      ? 'This is a method-of-verification follow-up. Request the prior investigation method under FCRA Section 611(a)(6)(B)(iii).'
+      : 'This is an initial factual dispute. Request investigation and correction or removal if unverifiable.';
+  const strategy = params.librarySelection?.chosen?.promptContext || defaultStrategy;
+  const legalCitations = params.librarySelection?.chosen?.legalCitations?.filter(Boolean).slice(0, 2) || [];
 
   return `Write one factual credit dispute letter in plain text only for multiple disputed accounts.
 
@@ -347,6 +371,12 @@ ${itemsList}
 
 If this is Round 2, request the method of verification. If this is Round 3 or later, keep the focus on a direct furnisher investigation request where applicable.
 
+ROUND STRATEGY
+${strategy}
+${legalCitations.length > 0
+    ? `RELEVANT AUTHORITY\nGround the request in: ${legalCitations.join(', ')}.\nCite at most two, in plain language. Do not stack citations.`
+    : ''}
+
 Return only the completed letter text.`;
 }
 
@@ -360,7 +390,6 @@ function buildLetterLintContext(params: GenerateLetterParams) {
       amount: params.itemData.amount,
       bureau: params.itemData.bureau,
     }],
-    allowThreatLanguage: false,
     identityTheftFlag: params.reasonCodes.includes('identity_theft'),
   };
 }
@@ -375,19 +404,18 @@ function buildMultiItemLetterLintContext(params: GenerateMultiItemLetterParams) 
       amount: item.amount,
       bureau: params.bureau,
     })),
-    allowThreatLanguage: false,
     identityTheftFlag: params.reasonCodes.includes('identity_theft'),
   };
 }
 
 function assertLetterLint(letter: string, context: ReturnType<typeof buildLetterLintContext> | ReturnType<typeof buildMultiItemLetterLintContext>): void {
   const lintResult = lintGeneratedLetter(letter, context);
-  if (!lintResult.passed) {
-    throw new Error(`Letter lint failed: ${lintResult.reasons.join(' ')}`);
+  if (lintResult.blocked) {
+    throw new Error(`Letter lint failed: ${lintResult.findings.filter(finding => finding.severity === 'block').map(finding => finding.message).join(' ')}`);
   }
 }
 
-function safeParseJsonObject<T>(raw: string): T | null {
+export function safeParseJsonObject<T>(raw: string): T | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
@@ -429,6 +457,7 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
     console.warn('No LLM API key configured, falling back to template-based letter');
     const fallbackLetter = buildNeutralFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildLetterLintContext(params));
+    await recordLibraryUsage(params.librarySelection);
     return fallbackLetter;
   }
 
@@ -437,11 +466,13 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
     const letterText = await generateWithLLM(prompt, llmConfig);
     const processedLetter = postProcessLetter(letterText, params);
     assertLetterLint(processedLetter, buildLetterLintContext(params));
+    await recordLibraryUsage(params.librarySelection);
     return processedLetter;
   } catch (error) {
     console.error('AI letter generation failed:', error);
     const fallbackLetter = buildNeutralFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildLetterLintContext(params));
+    await recordLibraryUsage(params.librarySelection);
     return fallbackLetter;
   }
 }
@@ -488,6 +519,7 @@ interface GenerateMultiItemLetterParams {
   methodology?: string;
   metro2Violations?: string[];
   enclosures?: EvidenceEnclosure[];
+  librarySelection?: Selection;
 }
 
 export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLetterParams): Promise<string> {
@@ -497,6 +529,7 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
     console.warn('No LLM API key configured, falling back to template-based letter');
     const fallbackLetter = generateMultiItemFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
+    await recordLibraryUsage(params.librarySelection);
     return fallbackLetter;
   }
 
@@ -505,11 +538,13 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
     const letterText = await generateWithLLM(prompt, llmConfig);
     const processedLetter = postProcessMultiItemLetter(letterText, params);
     assertLetterLint(processedLetter, buildMultiItemLetterLintContext(params));
+    await recordLibraryUsage(params.librarySelection);
     return processedLetter;
   } catch (error) {
     console.error('AI multi-item letter generation failed:', error);
     const fallbackLetter = generateMultiItemFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
+    await recordLibraryUsage(params.librarySelection);
     return fallbackLetter;
   }
 }
@@ -1437,10 +1472,9 @@ Return ONLY the JSON object, no markdown formatting.`;
           accountNumber: item.accountNumberMasked,
           bureau: params.bureau,
         })),
-        allowThreatLanguage: false,
         identityTheftFlag: false,
       });
-      if (!lintResult.passed) {
+      if (lintResult.blocked) {
         return {
           analysisSummary,
           disputeLetter: null,

@@ -7,14 +7,14 @@ const dbMock = vi.hoisted(() => ({
   update: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 function createRequest(body: unknown) {
@@ -28,7 +28,7 @@ function createRequest(body: unknown) {
 describe('POST /api/admin/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('creates a credit restoration engagement for a client', async () => {
@@ -57,6 +57,7 @@ describe('POST /api/admin/service-engagements', () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('agreements:write');
     expect(body).toMatchObject({
       id: 'engagement-1',
       client_id: 'client-1',
@@ -84,7 +85,7 @@ describe('POST /api/admin/service-engagements', () => {
 describe('GET /api/admin/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('lists engagements for a client', async () => {
@@ -108,6 +109,7 @@ describe('GET /api/admin/service-engagements', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('agreements:read');
     expect(body.items).toEqual([
       expect.objectContaining({
         id: 'engagement-1',
@@ -122,7 +124,7 @@ describe('GET /api/admin/service-engagements', () => {
 describe('PATCH /api/admin/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('blocks ready_for_first_work when compliance gate checks are incomplete', async () => {

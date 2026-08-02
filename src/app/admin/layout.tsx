@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { getUserRole } from '@/lib/admin-auth';
 import { isTeamRole, can } from '@/lib/capabilities';
+import { WorkspaceShell } from '@/components/workspace/WorkspaceShell';
 
 export default async function AdminLayout({
   children,
@@ -20,5 +21,9 @@ export default async function AdminLayout({
   if (!isTeamRole(role)) redirect('/portal');
   if (!can(role, 'content:write')) redirect('/workspace');
 
-  return <div className="mx-auto max-w-[1600px] p-4 md:p-6 lg:p-8">{children}</div>;
+  return (
+    <WorkspaceShell role={role} userId={session.user.id} userEmail={session.user.email}>
+      {children}
+    </WorkspaceShell>
+  );
 }

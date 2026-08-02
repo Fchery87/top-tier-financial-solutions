@@ -260,6 +260,34 @@
       "when": 1784099113341,
       "tag": "0036_lively_tempest",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1785652715012,
+      "tag": "0037_dapper_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1785653071226,
+      "tag": "0038_worried_the_renegades",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1785657636212,
+      "tag": "0039_curly_silver_fox",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1785660250505,
+      "tag": "0040_sour_stellaris",
+      "breakpoints": true
     }
   ]
 }

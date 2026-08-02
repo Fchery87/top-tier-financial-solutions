@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clients, complianceGateChecks, serviceEngagements } from '@/db/schema';
 import { getBlockingComplianceGateChecks } from '@/lib/compliance-gate';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
 
 const allowedServiceTypes = new Set(['credit_audit', 'credit_restoration']);
 
@@ -23,14 +23,10 @@ function formatEngagement(engagement: typeof serviceEngagements.$inferSelect) {
   };
 }
 
-async function validateAdmin() {
-  return getAdminSessionUser('super_admin');
-}
-
 export async function GET(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('agreements:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const clientId = request.nextUrl.searchParams.get('client_id');
@@ -52,9 +48,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('agreements:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -117,9 +113,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('agreements:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {

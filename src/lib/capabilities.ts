@@ -56,6 +56,6 @@ export function can(role: AnyRole, capability: Capability): boolean {
 }
 
 /** True for any role that belongs inside /workspace. */
-export function isTeamRole(role: AnyRole): role is TeamRole {
+export function isTeamRole(role: unknown): role is TeamRole {
   return role === 'staff' || role === 'admin' || role === 'super_admin';
 }

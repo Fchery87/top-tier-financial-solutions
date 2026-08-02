@@ -17,8 +17,8 @@ import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
 const TAB_STORAGE_KEY = 'admin-dashboard-tab';
 
 export default function AdminDashboard() {
-  const { role } = useAdminRole();
-  const isAdminTier = role === 'admin' || role === 'super_admin';
+  const { role, can } = useAdminRole();
+  const isAdminTier = can('content:write');
   const { data: stats, isLoading: loading } = useDashboardStats();
   const [density, setDensity] = React.useState<'comfortable' | 'compact'>(() => {
     if (typeof window === 'undefined') return 'comfortable';

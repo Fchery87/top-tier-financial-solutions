@@ -4,13 +4,22 @@ import * as React from 'react';
 import { Check, Loader2, Sparkles, FileText, Paperclip, Upload, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useWizardContext } from './WizardContext';
 import { BUREAUS, SECONDARY_BUREAUS } from './types';
+
+interface CfpbEligibilityPreview {
+  eligible: boolean;
+  reason: string;
+  eligibleAt: string | null;
+  message: string;
+}
 
 export function StepConfigure() {
   const ctx = useWizardContext();
   const {
-    selectedBureaus, disputeRound, setDisputeRound, targetRecipient, setTargetRecipient,
+    selectedClient,
+    selectedBureaus, disputeRound, setDisputeRound, targetRecipient, setTargetRecipient, priorDisputeId, setPriorDisputeId,
     selectedMethodology, setSelectedMethodology, recommendedMethodology,
     methodologies, loadingMethodologies,
     generationMethod, setGenerationMethod, combineItemsPerBureau, setCombineItemsPerBureau,
@@ -31,6 +40,74 @@ export function StepConfigure() {
   } = ctx;
 
   const totalSelected = selectedItems.length + selectedPersonalItems.length + selectedInquiryItems.length;
+  const selectedCfpbItemIds = React.useMemo(
+    () => [...selectedItems, ...selectedPersonalItems, ...selectedInquiryItems],
+    [selectedInquiryItems, selectedItems, selectedPersonalItems],
+  );
+  const [cfpbEligibility, setCfpbEligibility] = React.useState<CfpbEligibilityPreview | null>(null);
+  const [loadingCfpbEligibility, setLoadingCfpbEligibility] = React.useState(false);
+
+  React.useEffect(() => {
+    if (targetRecipient !== 'cfpb') {
+      setCfpbEligibility(null);
+      setLoadingCfpbEligibility(false);
+      return;
+    }
+
+    const disputeId = priorDisputeId.trim();
+    if (!disputeId) {
+      setCfpbEligibility(null);
+      setLoadingCfpbEligibility(false);
+      return;
+    }
+
+    if (!selectedClient?.id || selectedCfpbItemIds.length !== 1) {
+      setCfpbEligibility({
+        eligible: false,
+        reason: 'one_item_required',
+        eligibleAt: null,
+        message: 'Select exactly one dispute item so the CRA predecessor can be matched before CFPB generation.',
+      });
+      setLoadingCfpbEligibility(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoadingCfpbEligibility(true);
+    setCfpbEligibility(null);
+    const query = new URLSearchParams({
+      clientId: selectedClient.id,
+      negativeItemId: selectedCfpbItemIds[0],
+    });
+
+    void fetch(`/api/admin/disputes/${encodeURIComponent(disputeId)}/cfpb-eligibility?${query.toString()}`, { signal: controller.signal })
+      .then(async response => {
+        const value: unknown = await response.json().catch(() => ({}));
+        const preview = parseCfpbEligibilityPreview(value);
+        if (!preview) {
+          throw new Error('CFPB eligibility response was invalid');
+        }
+        setCfpbEligibility(preview);
+      })
+      .catch(error => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setCfpbEligibility({
+          eligible: false,
+          reason: 'unavailable',
+          eligibleAt: null,
+          message: 'The prior CRA dispute could not be verified. Generation will be rechecked by the server.',
+        });
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingCfpbEligibility(false);
+      });
+
+    return () => controller.abort();
+  }, [priorDisputeId, selectedCfpbItemIds, selectedClient?.id, targetRecipient]);
+
+  React.useEffect(() => {
+    if (targetRecipient === 'cfpb' && combineItemsPerBureau) setCombineItemsPerBureau(false);
+  }, [combineItemsPerBureau, setCombineItemsPerBureau, targetRecipient]);
 
   return (
     <Card className="bg-card border border-border">
@@ -81,12 +158,23 @@ export function StepConfigure() {
         ) : null}
 
         {targetRecipient === 'cfpb' ? (
-          <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground">
-            CFPB complaint packet selected. Include a factual narrative, timeline, and attachments checklist; this is not a bureau letter.
+          <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground space-y-3">
+            <p>CFPB complaint packet selected. A prior CRA dispute for the same client and item must be submitted and either receive a response or reach its eligibility date before generation.</p>
+            <Input aria-label="Prior CRA dispute ID" placeholder="Prior CRA dispute ID" value={priorDisputeId} onChange={event => setPriorDisputeId(event.target.value)} />
+            {loadingCfpbEligibility && <p className="text-xs text-muted-foreground" aria-live="polite">Checking the prior CRA dispute eligibility…</p>}
+            {!loadingCfpbEligibility && cfpbEligibility && (
+              <div data-testid="cfpb-eligibility-preview" className={cfpbEligibility.eligible ? 'rounded-md bg-success/10 p-3 text-success' : 'rounded-md bg-warning/10 p-3 text-warning'}>
+                <p className="font-medium">{cfpbEligibility.eligible ? 'Eligible for CFPB escalation' : `Not eligible yet: ${formatCfpbReason(cfpbEligibility.reason)}`}</p>
+                <p className="mt-1 text-xs">{cfpbEligibility.message}</p>
+                {cfpbEligibility.eligibleAt && <p className="mt-1 text-xs">Eligible after {formatEligibilityDate(cfpbEligibility.eligibleAt)}.</p>}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">The server rechecks ownership, submission state, and the eligible date. CFPB packets are generated individually so each item has one attributable CRA predecessor.</p>
           </div>
         ) : targetRecipient !== 'bureau' ? (
-          <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground">
+          <div data-testid="direct-dispute-advisory" className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground">
             Enhanced creditor/furnisher letters enabled. This escalation will cite prior verification attempts and request direct investigation from the data furnisher.
+            <p className="mt-2 text-xs text-muted-foreground">Under Regulation V, a furnisher may decline the direct-dispute investigation process when it reasonably believes a credit repair organization prepared or supplied the dispute. This is advisory; you can continue.</p>
           </div>
         ) : null}
 
@@ -321,4 +409,25 @@ export function StepConfigure() {
       </CardContent>
     </Card>
   );
+}
+
+function parseCfpbEligibilityPreview(value: unknown): CfpbEligibilityPreview | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  const eligible = candidate.eligible;
+  const reason = candidate.reason;
+  const eligibleAt = candidate.eligible_at;
+  const message = candidate.message;
+  if (typeof eligible !== 'boolean' || typeof reason !== 'string' || typeof message !== 'string') return null;
+  if (eligibleAt !== null && typeof eligibleAt !== 'string') return null;
+  return { eligible, reason, eligibleAt, message };
+}
+
+function formatCfpbReason(reason: string): string {
+  return reason.replaceAll('_', ' ');
+}
+
+function formatEligibilityDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 }

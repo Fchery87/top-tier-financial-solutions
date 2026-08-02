@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { complianceGateChecks, disputes, servicesRenderedEvents } from '@/db/schema';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
 import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
 
 function formatEvent(event: typeof servicesRenderedEvents.$inferSelect) {
@@ -20,14 +20,10 @@ function formatEvent(event: typeof servicesRenderedEvents.$inferSelect) {
   };
 }
 
-async function validateAdmin() {
-  return getAdminSessionUser('super_admin');
-}
-
 export async function POST(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('billing:client');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {

@@ -5,20 +5,20 @@ const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 describe('GET /api/admin/service-engagements/[id]/compliance-gate', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('returns every required compliance gate check with pass/fail status', async () => {
@@ -38,6 +38,7 @@ describe('GET /api/admin/service-engagements/[id]/compliance-gate', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('agreements:read');
     expect(body.engagement_id).toBe('engagement-1');
     expect(body.is_ready_for_first_work).toBe(false);
     expect(body.checks).toEqual(expect.arrayContaining([

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clientDocuments, clients, evidencePackets } from '@/db/schema';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
 import { verifyEvidencePacket } from '@/lib/dispute-evidence';
 
 function parseJsonArray(value: string | null) {
@@ -29,14 +29,10 @@ function formatPacket(packet: typeof evidencePackets.$inferSelect) {
   };
 }
 
-async function validateAdmin() {
-  return getAdminSessionUser('super_admin');
-}
-
 export async function POST(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {

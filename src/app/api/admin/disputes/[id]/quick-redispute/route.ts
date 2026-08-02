@@ -3,9 +3,12 @@ import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
 import { disputes, negativeItems, clients } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
+import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
+import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
+import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
+import { buildEscalationPlan } from '@/lib/dispute-automation';
 
 export async function POST(
   _request: NextRequest,
@@ -46,12 +49,32 @@ export async function POST(
     }
 
     const nextRound = (currentDispute.round || 1) + 1;
-    const targetRecipient = nextRound === 2 ? 'bureau' : 'creditor';
-    const nextDisputeType = nextRound === 2 ? 'method_of_verification' : 'direct_creditor';
+    const targetRecipient = nextRound >= 4 ? 'cfpb' : nextRound === 2 ? 'bureau' : 'creditor';
+    const nextDisputeType = nextRound >= 4 ? 'fcra_violation_notice' : nextRound === 2 ? 'method_of_verification' : 'direct_creditor';
     const methodology = nextRound === 2 ? 'method_of_verification' : 'factual';
-    const reasonCodes = nextRound === 2
+    const reasonCodes = nextRound >= 4
+      ? ['repeat_verification', 'fcra_non_compliance']
+      : nextRound === 2
       ? ['previously_disputed', 'request_verification_method']
       : ['verification_required', 'metro2_violation'];
+
+    if (targetRecipient === 'cfpb') {
+      const decision = decideEscalation({
+        plan: buildEscalationPlan({ currentRound: currentDispute.round || 1, trigger: 'verified', currentBureau: currentDispute.bureau }),
+        history: await loadDisputeChain(currentDispute.id),
+      });
+      if (decision.kind === 'blocked') {
+        return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
+      }
+    }
+    const librarySelection = await selectLibraryForGeneration({
+      round: nextRound,
+      targetRecipient,
+      bureau: currentDispute.bureau,
+      itemType: negativeItem.itemType,
+      reasonCodes,
+      methodology,
+    });
 
     const letterContent = await generateUniqueDisputeLetter({
       disputeType: nextDisputeType,
@@ -70,35 +93,40 @@ export async function POST(
       },
       reasonCodes,
       customReason: `Escalation after verification in Round ${currentDispute.round || 1}`,
+      librarySelection,
     });
 
-    const now = new Date();
-    const nextDisputeId = randomUUID();
-
-    await db.insert(disputes).values({
-      id: nextDisputeId,
+    const persistedDraft = await persistGeneratedDisputeDraft({
       clientId: currentDispute.clientId,
       negativeItemId: currentDispute.negativeItemId,
       bureau: currentDispute.bureau,
       disputeReason: `Escalation after verification in Round ${currentDispute.round || 1}`,
       disputeType: nextDisputeType,
-      status: 'draft',
       round: nextRound,
       escalationPath: targetRecipient,
       letterContent,
       creditorName: negativeItem.creditorName,
       accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
-      generatedByAi: true,
       methodology,
+      reasonCodes,
       priorDisputeId: currentDispute.id,
-      reasonCodes: JSON.stringify(reasonCodes),
       analysisConfidence: currentDispute.analysisConfidence,
-      autoSelected: currentDispute.autoSelected,
-      createdAt: now,
-      updatedAt: now,
+      autoSelected: currentDispute.autoSelected ?? false,
+      items: [{
+        kind: 'tradeline',
+        bureau: currentDispute.bureau,
+        creditorName: negativeItem.creditorName,
+        originalCreditor: negativeItem.originalCreditor,
+        accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
+        itemType: negativeItem.itemType,
+        amount: negativeItem.amount,
+        dateReported: negativeItem.dateReported?.toISOString(),
+      }],
+      selection: librarySelection,
+      actorUserId: adminUser.id,
     });
 
-    const [created] = await db.select().from(disputes).where(eq(disputes.id, nextDisputeId)).limit(1);
+    const [created] = await db.select().from(disputes).where(eq(disputes.id, persistedDraft.disputeId)).limit(1);
 
     return NextResponse.json({
       message: 'Escalation dispute created',

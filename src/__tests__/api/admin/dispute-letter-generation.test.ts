@@ -5,7 +5,7 @@ const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const generateMultiItemDisputeLetterMock = vi.hoisted(() => vi.fn());
 
@@ -14,7 +14,7 @@ vi.mock('@/db/client', () => ({
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 vi.mock('@/lib/ai-letter-generator', () => ({
@@ -26,7 +26,7 @@ vi.mock('@/lib/ai-letter-generator', () => ({
 describe('POST /api/admin/disputes/generate-letter', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
   });
 
   it('fails closed when approved policy inputs are missing', async () => {

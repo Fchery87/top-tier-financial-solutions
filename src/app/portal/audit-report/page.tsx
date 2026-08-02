@@ -3,13 +3,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/components/AuthProvider';
-import { ArrowLeft, Download, Printer, FileText, Loader2, RefreshCw, Shield } from 'lucide-react';
+import { ArrowLeft, Download, Printer, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export default function PortalAuditReportPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
   const [loading, setLoading] = useState(true);
@@ -43,14 +41,12 @@ export default function PortalAuditReportPage() {
       }
     };
 
-    if (!authLoading && user) {
-      void checkReportStatus();
-    }
+    void checkReportStatus();
 
     return () => {
       isMounted = false;
     };
-  }, [authLoading, user]);
+  }, []);
 
   const handleIframeLoad = () => {
     setLoading(false);
@@ -83,29 +79,6 @@ export default function PortalAuditReportPage() {
       iframeRef.current.src = `/api/portal/audit-report/view?type=${newType}`;
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-secondary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-background">
-        <div className="max-w-md w-full text-center">
-          <Shield className="w-16 h-16 text-secondary mx-auto mb-6" />
-          <h1 className="font-display text-2xl font-light mb-4 text-foreground">Sign In Required</h1>
-          <p className="text-muted-foreground mb-6">Please sign in to view your credit analysis report.</p>
-          <Button asChild className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-            <Link href="/sign-in">Sign In</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="portal-shell min-h-screen bg-background">

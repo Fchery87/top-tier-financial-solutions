@@ -10,31 +10,58 @@ describe('lintGeneratedLetter', () => {
       accountNumber: '****4321',
       bureau: 'experian',
     }],
-    allowThreatLanguage: false,
     identityTheftFlag: false,
   };
 
-  it('fails ownership-denial language without an approved reason code', () => {
+  it('warns on ownership-denial language without an approved reason code', () => {
     const result = lintGeneratedLetter('This account does not belong to me.', baseContext);
-    expect(result.passed).toBe(false);
-    expect(result.reasons[0]).toContain('ownership-denial');
+    expect(result.blocked).toBe(false);
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'ownership_denial',
+      severity: 'warn',
+    }));
   });
 
-  it('fails threat language when not authorized', () => {
+  it('warns on threat language without blocking', () => {
     const result = lintGeneratedLetter('I will seek statutory damages for willful non-compliance.', baseContext);
-    expect(result.passed).toBe(false);
-    expect(result.reasons[0]).toContain('threat or damages');
+    expect(result.blocked).toBe(false);
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'threat_language',
+      severity: 'warn',
+    }));
   });
 
-  it('fails statute citations outside the allowlist', () => {
+  it('warns on statute citations outside the allowlist', () => {
     const result = lintGeneratedLetter('This violates FCRA Section 999.', baseContext);
-    expect(result.passed).toBe(false);
-    expect(result.reasons[0]).toContain('allowlist');
+    expect(result.blocked).toBe(false);
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'statute_not_allowlisted',
+      severity: 'warn',
+    }));
   });
 
-  it('fails mismatched account details', () => {
+  it('blocks mismatched account details', () => {
     const result = lintGeneratedLetter('Creditor Name: Wrong Creditor\nAccount Number: ****9999', baseContext);
-    expect(result.passed).toBe(false);
-    expect(result.reasons.join(' ')).toContain('source data');
+    expect(result.blocked).toBe(true);
+    expect(result.findings.every(finding => finding.severity === 'block')).toBe(true);
+  });
+
+  it('blocks undocumented identity-theft claims', () => {
+    const result = lintGeneratedLetter('This is identity theft.', baseContext);
+    expect(result.blocked).toBe(true);
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'undocumented_identity_theft',
+      severity: 'block',
+    }));
+  });
+
+  it('allows cross-referencing another bureau', () => {
+    const result = lintGeneratedLetter('I have also filed this dispute with Equifax and TransUnion.', baseContext);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it('allows the alternate FCRA statute names', () => {
+    const result = lintGeneratedLetter('Under 15 U.S.C. § 1681e(b) and § 1681b, please investigate.', baseContext);
+    expect(result.findings).toHaveLength(0);
   });
 });

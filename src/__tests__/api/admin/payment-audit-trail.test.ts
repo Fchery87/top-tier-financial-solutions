@@ -7,14 +7,14 @@ const dbMock = vi.hoisted(() => ({
   insert: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 vi.mock('next/headers', () => ({
@@ -24,7 +24,7 @@ vi.mock('next/headers', () => ({
 describe('POST /api/admin/billing payment audit trail', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
   });
 
   it('logs why an invoice became payable from the qualifying services rendered event', async () => {

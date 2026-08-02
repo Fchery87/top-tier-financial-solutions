@@ -6,20 +6,20 @@ const dbMock = vi.hoisted(() => ({
   insert: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 describe('POST /api/admin/dispute-cycles', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('creates a canonical dispute cycle record for an engagement', async () => {
@@ -50,6 +50,7 @@ describe('POST /api/admin/dispute-cycles', () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('disputes:write');
     expect(body).toMatchObject({
       id: 'cycle-1',
       client_id: 'client-1',

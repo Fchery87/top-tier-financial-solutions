@@ -86,6 +86,8 @@ interface WizardContextValue {
   setDisputeRound: React.Dispatch<React.SetStateAction<number>>;
   targetRecipient: TargetRecipient;
   setTargetRecipient: React.Dispatch<React.SetStateAction<TargetRecipient>>;
+  priorDisputeId: string;
+  setPriorDisputeId: React.Dispatch<React.SetStateAction<string>>;
   selectedBureaus: string[];
   setSelectedBureaus: React.Dispatch<React.SetStateAction<string[]>>;
   generationMethod: GenerationMethod;
@@ -267,6 +269,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setDisputeRound,
     targetRecipient,
     setTargetRecipient,
+    priorDisputeId,
+    setPriorDisputeId,
     selectedBureaus,
     setSelectedBureaus,
     generationMethod,
@@ -469,13 +473,6 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   const getSelectedClientForSubmission = React.useCallback(() => selectedClient, [selectedClient]);
   const getGeneratedLettersForSubmission = React.useCallback(() => generatedLetters, [generatedLetters]);
-  const getNegativeItemsForSubmission = React.useCallback(() => negativeItems, [negativeItems]);
-  const getSelectedReasonCodesForSubmission = React.useCallback(() => selectedReasonCodes, [selectedReasonCodes]);
-  const getSelectedDisputeTypeForSubmission = React.useCallback(() => selectedDisputeType, [selectedDisputeType]);
-  const getDisputeRoundForSubmission = React.useCallback(() => disputeRound, [disputeRound]);
-  const getGenerationMethodForSubmission = React.useCallback(() => generationMethod, [generationMethod]);
-  const getAiAnalysisSummaryForSubmission = React.useCallback(() => aiAnalysisSummary, [aiAnalysisSummary]);
-  const getAutoSelectSummaryForSubmission = React.useCallback(() => autoSelectSummary, [autoSelectSummary]);
   const getTargetRecipientForSubmission = React.useCallback(() => targetRecipient, [targetRecipient]);
   const {
     bulkTrackingNumber,
@@ -490,13 +487,6 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   } = useBulkDisputeSubmission({
     getSelectedClient: getSelectedClientForSubmission,
     getGeneratedLetters: getGeneratedLettersForSubmission,
-    getNegativeItems: getNegativeItemsForSubmission,
-    getSelectedReasonCodes: getSelectedReasonCodesForSubmission,
-    getSelectedDisputeType: getSelectedDisputeTypeForSubmission,
-    getDisputeRound: getDisputeRoundForSubmission,
-    getGenerationMethod: getGenerationMethodForSubmission,
-    getAiAnalysisSummary: getAiAnalysisSummaryForSubmission,
-    getAutoSelectSummary: getAutoSelectSummaryForSubmission,
     getTargetRecipient: getTargetRecipientForSubmission,
   });
 
@@ -521,6 +511,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     selectedMethodology,
     selectedBureaus,
     targetRecipient,
+    priorDisputeId,
     selectedDisputeType,
     disputeRound,
     customReason,
@@ -557,6 +548,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     itemDisputeInstructions,
     selectedBureaus,
     disputeRound,
+    targetRecipient,
+    priorDisputeId,
     discrepancySummary,
     generatedLetters,
   });
@@ -580,7 +573,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     negativeItems, setNegativeItems, selectedItems, setSelectedItems, personalInfoItems, setPersonalInfoItems,
     selectedPersonalItems, setSelectedPersonalItems, inquiryItems, setInquiryItems, selectedInquiryItems, setSelectedInquiryItems,
     activeTab, setActiveTab, loadingItems, setLoadingItems, creditReports, setCreditReports, selectedReportId, setSelectedReportId, itemDisputeInstructions, setItemDisputeInstructions,
-    disputeRound, setDisputeRound, targetRecipient, setTargetRecipient, selectedBureaus, setSelectedBureaus,
+    disputeRound, setDisputeRound, targetRecipient, setTargetRecipient, priorDisputeId, setPriorDisputeId, selectedBureaus, setSelectedBureaus,
     generationMethod, setGenerationMethod, combineItemsPerBureau, setCombineItemsPerBureau, requestManualReview, setRequestManualReview,
     methodologies, setMethodologies, selectedMethodology, setSelectedMethodology, recommendedMethodology, setRecommendedMethodology, loadingMethodologies, setLoadingMethodologies,
     aiAnalysisResults, setAiAnalysisResults, aiAnalysisSummary, setAiAnalysisSummary, analyzingItems, setAnalyzingItems,

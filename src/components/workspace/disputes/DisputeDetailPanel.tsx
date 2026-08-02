@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { toast } from 'sonner';
+import { LetterStudio } from '@/components/workspace/disputes/LetterStudio';
 
 interface Dispute {
   id: string;
@@ -19,6 +20,7 @@ interface Dispute {
   dispute_reason: string;
   status: string;
   round: number;
+  letter_content: string | null;
   response_deadline: string | null;
   response_received_at: string | null;
   outcome: string | null;
@@ -120,7 +122,7 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg"
+            className="w-full max-w-4xl"
           >
             <Card className="bg-card border-border shadow-2xl">
               <CardHeader>
@@ -130,6 +132,10 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <LetterStudio
+                  disputeId={dispute.id}
+                  initialLetter={dispute.letter_content}
+                />
                 {dispute.creditor_name && (
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-sm font-medium">{dispute.creditor_name}</p>

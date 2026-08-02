@@ -28,25 +28,33 @@ export function useLetterGeneration() {
 
     for (const request of requests) {
       try {
-        const response = await fetch('/api/admin/disputes/generate-letter', {
+        const response = await fetch('/api/admin/disputes/drafts/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(request.body),
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          letters.push({
-            id: request.combined ? `letter-${request.bureau}-${request.items.map(item => item.id).join('-')}` : `letter-${request.bureau}-${request.itemId}`,
-            bureau: request.bureau,
-            itemId: request.itemId,
-            itemIds: request.itemIds,
-            itemKind: request.itemKind,
-            items: request.items,
-            content: data.letter_content,
-            combined: request.combined,
-          });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(typeof data.error === 'string' ? data.error : 'Failed to generate dispute draft');
         }
+
+        if (typeof data.dispute_id !== 'string' || typeof data.letter_content !== 'string') {
+          throw new Error('Generated draft response was incomplete');
+        }
+
+        letters.push({
+          id: data.dispute_id,
+          bureau: request.bureau,
+          itemId: request.itemId,
+          itemIds: request.itemIds,
+          itemKind: request.itemKind,
+          items: request.items,
+          content: data.letter_content,
+          combined: request.combined,
+          revision: typeof data.revision === 'number' ? data.revision : undefined,
+          librarySelection: data.library_selection,
+        });
       } catch (error) {
         options.onError?.(error, request);
       }

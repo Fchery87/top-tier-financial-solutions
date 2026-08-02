@@ -31,6 +31,7 @@ export interface LetterGenerationBuilderInput {
   selectedMethodology: string;
   selectedBureaus: string[];
   targetRecipient: TargetRecipient;
+  priorDisputeId?: string;
   selectedDisputeType: string;
   disputeRound: number;
   customReason: string;
@@ -49,6 +50,7 @@ export interface LetterGenerationRequestBody {
   disputeType: string;
   round: number;
   targetRecipient: TargetRecipient;
+  priorDisputeId?: string;
   reasonCodes: string[];
   customReason?: string;
   combineItems?: boolean;

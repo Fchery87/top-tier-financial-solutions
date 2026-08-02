@@ -111,7 +111,8 @@ await db.insert(clients).values({
 - **Clients**: Core entity with PII fields (`firstName`, `lastName`, `email`, `phone`, `streetAddress`, `city`, `state`, `zipCode`, `dateOfBirth`, `ssnLast4`)
 - **Credit Reports**: Multi-bureau reports with raw data and parsed analysis
 - **Disputes**: Credit dispute management with templates, letters, and tracking
-- **Users**: Better Auth integration with role-based access (`user`, `admin`, `super_admin`)
+- **Users**: Better Auth integration with role-based access (`user`, `staff`, `admin`, `super_admin`)
+- **Letter provenance**: `disputes.letterContextSnapshot` and `dispute_letter_revisions.generationMetadata` preserve masked lint context and library attribution.
 
 ## Pre-PR Checks
 ```bash

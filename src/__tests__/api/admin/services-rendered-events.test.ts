@@ -7,7 +7,7 @@ const dbMock = vi.hoisted(() => ({
   insert: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 const passingGateRecords = COMPLIANCE_GATE_CHECKS.map((check) => ({
   checkKey: check.key,
@@ -21,13 +21,13 @@ vi.mock('@/db/client', () => ({
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 describe('POST /api/admin/services-rendered-events', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('records First Dispute Package Submitted from a submitted dispute package', async () => {
@@ -78,6 +78,7 @@ describe('POST /api/admin/services-rendered-events', () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('billing:client');
     expect(body).toMatchObject({
       id: 'event-1',
       client_id: 'client-1',

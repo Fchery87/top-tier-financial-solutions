@@ -3,20 +3,16 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { complianceGateChecks, serviceEngagements } from '@/db/schema';
 import { buildComplianceGateStatus } from '@/lib/compliance-gate';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-async function validateAdmin() {
-  return getAdminSessionUser('super_admin');
-}
-
 export async function GET(_request: NextRequest, context: RouteContext) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('agreements:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { id } = await context.params;

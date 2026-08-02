@@ -93,9 +93,9 @@ export function OperationsTab({ stats, showWorkQueue, isAdminTier }: OperationsT
               </Link>
             </Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>
-              <Link href="/admin/dispute-templates">
+              <Link href="/admin/letter-library">
                 <FileText className="w-5 h-5" />
-                <span className="text-xs">Templates</span>
+                <span className="text-xs">Letter Library</span>
               </Link>
             </Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2" asChild>

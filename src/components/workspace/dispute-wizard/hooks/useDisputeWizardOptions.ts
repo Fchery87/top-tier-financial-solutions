@@ -4,6 +4,7 @@ import type { GenerationMethod, TargetRecipient } from '../types';
 export function useDisputeWizardOptions() {
   const [disputeRound, setDisputeRound] = React.useState(1);
   const [targetRecipient, setTargetRecipient] = React.useState<TargetRecipient>('bureau');
+  const [priorDisputeId, setPriorDisputeId] = React.useState('');
   const [selectedBureaus, setSelectedBureaus] = React.useState<string[]>(['transunion', 'experian', 'equifax']);
   const [generationMethod, setGenerationMethod] = React.useState<GenerationMethod>('ai');
   const [combineItemsPerBureau, setCombineItemsPerBureau] = React.useState(true);
@@ -21,6 +22,8 @@ export function useDisputeWizardOptions() {
     setDisputeRound,
     targetRecipient,
     setTargetRecipient,
+    priorDisputeId,
+    setPriorDisputeId,
     selectedBureaus,
     setSelectedBureaus,
     generationMethod,

@@ -4,11 +4,20 @@ import { NextRequest } from 'next/server';
 const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
   insert: vi.fn(),
+  update: vi.fn(),
+  transaction: vi.fn(),
+}));
+
+const txMock = vi.hoisted(() => ({
+  insert: vi.fn(),
+  select: vi.fn(),
+  update: vi.fn(),
 }));
 
 const adminSessionMock = vi.hoisted(() => vi.fn());
 const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const requireLatestApprovedReportForClientMock = vi.hoisted(() => vi.fn());
+const selectLibraryForGenerationMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
@@ -19,11 +28,15 @@ vi.mock('@/lib/parser-review-gate', () => ({
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: adminSessionMock,
 }));
 
 vi.mock('@/lib/ai-letter-generator', () => ({
   generateUniqueDisputeLetter: generateUniqueDisputeLetterMock,
+}));
+
+vi.mock('@/lib/letter-generation-library', () => ({
+  selectLibraryForGeneration: selectLibraryForGenerationMock,
 }));
 
 vi.mock('@/lib/rate-limit-middleware', () => ({
@@ -50,6 +63,8 @@ describe('POST /api/admin/disputes policy traceability', () => {
       parseStatus: 'completed',
       parserReviewStatus: 'approved',
     });
+    selectLibraryForGenerationMock.mockResolvedValue({ chosen: null, score: 0, rationale: [], runnersUp: [] });
+    dbMock.transaction.mockImplementation(async (callback: (tx: typeof txMock) => Promise<unknown>) => callback(txMock));
   });
 
   it('persists approved policy decision inputs with generated letter content', async () => {
@@ -85,7 +100,8 @@ describe('POST /api/admin/disputes policy traceability', () => {
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', firstName: 'Jane', lastName: 'Client' }]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([createdDispute]) }) }) });
-    dbMock.insert.mockReturnValue({ values: vi.fn((values) => { insertedValues.push(values); return Promise.resolve(); }) });
+    txMock.insert.mockReturnValue({ values: vi.fn((values) => { insertedValues.push(values); return Promise.resolve(); }) });
+    dbMock.update.mockReturnValue({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })) });
 
     const policyDecision = {
       approved: true,
@@ -113,6 +129,11 @@ describe('POST /api/admin/disputes policy traceability', () => {
       letterContent: 'Generated approved dispute letter',
       reasonCodes: JSON.stringify(['verification_required']),
       policyDecision: JSON.stringify(policyDecision),
+    });
+    expect(insertedValues[1]).toMatchObject({
+      disputeId: insertedValues[0]?.id,
+      revision: 1,
+      source: 'generated',
     });
     expect(body).toMatchObject({
       id: 'dispute-1',

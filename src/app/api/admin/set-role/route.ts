@@ -1,81 +1,124 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { sql } from 'drizzle-orm';
+
 import { db } from '@/db/client';
-import { user } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/admin-session';
+import { changeUserRole } from '@/lib/team-role-management';
 
-// This endpoint allows setting user roles
+interface RoleRequest {
+  email: string;
+  role: string;
+}
+
+interface RoleTarget {
+  id: string;
+  email: string;
+}
+
+function isRoleRequest(value: unknown): value is RoleRequest {
+  return typeof value === 'object'
+    && value !== null
+    && 'email' in value
+    && 'role' in value
+    && typeof value.email === 'string'
+    && value.email.length > 0
+    && typeof value.role === 'string';
+}
+
+function parseCount(rows: readonly unknown[]): number | null {
+  const first = rows[0];
+  if (typeof first !== 'object' || first === null || !('count' in first)) return null;
+  if (typeof first.count === 'number' && Number.isInteger(first.count) && first.count >= 0) return first.count;
+  if (typeof first.count === 'string' && /^\d+$/.test(first.count)) return Number(first.count);
+  return null;
+}
+
+function parseRoleTarget(rows: readonly unknown[]): RoleTarget | null {
+  const first = rows[0];
+  if (typeof first !== 'object' || first === null) return null;
+  if (!('id' in first) || !('email' in first)) return null;
+  if (typeof first.id !== 'string' || typeof first.email !== 'string') return null;
+  return { id: first.id, email: first.email };
+}
+
+function roleChangeResponse(result: Awaited<ReturnType<typeof changeUserRole>>) {
+  if (result.ok) {
+    return NextResponse.json({ success: true, user: result });
+  }
+
+  const status = {
+    invalid_role: 400,
+    not_found: 404,
+    last_super_admin: 409,
+  }[result.code];
+  return NextResponse.json({ success: false, error: result.code }, { status });
+}
+
+// Backward-compatible endpoint. New role changes belong to /api/admin/team.
 export async function POST(request: NextRequest) {
+  let body: unknown;
   try {
-    const { email, role } = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
+  }
 
-    // Count existing super_admins
-    const superAdminCount = await db
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.role, 'super_admin'));
+  if (!isRoleRequest(body)) {
+    return NextResponse.json({ success: false, error: 'Email and role are required' }, { status: 400 });
+  }
 
-    const requester = await getAdminSessionUser('super_admin');
-    const isFirstSuperAdmin = superAdminCount.length === 0;
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id || !session.user.email) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
 
-    if (!requester && !isFirstSuperAdmin) {
-      return NextResponse.json(
-        { success: false, error: 'Only super_admin can modify roles' },
-        { status: 401 }
-      );
-    }
+  const superAdminResult = await db.execute(sql`SELECT COUNT(*) AS count FROM "user" WHERE role = 'super_admin'`);
+  const superAdminCount = parseCount(superAdminResult.rows);
+  if (superAdminCount === null) {
+    return NextResponse.json({ success: false, error: 'Unable to verify super-admin state' }, { status: 500 });
+  }
 
-    if (!email || !role) {
-      return NextResponse.json(
-        { success: false, error: 'Email and role are required' },
-        { status: 400 }
-      );
-    }
+  const normalizedEmail = body.email.trim().toLowerCase();
+  const normalizedSessionEmail = session.user.email.trim().toLowerCase();
+  const isBootstrap = superAdminCount === 0;
 
-    // Validate role
-    const validRoles = ['user', 'admin', 'super_admin'];
-    if (!validRoles.includes(role)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid role. Must be: user, admin, or super_admin' },
-        { status: 400 }
-      );
-    }
-
-    // Bootstrap rule: when no super admin exists, requester can only set their own role to super_admin.
-    if (
-      isFirstSuperAdmin &&
-      (!requester || requester.email.toLowerCase() !== String(email).toLowerCase() || role !== 'super_admin')
-    ) {
-      return NextResponse.json(
-        { success: false, error: 'First super_admin bootstrap requires signed-in user promoting own account' },
-        { status: 403 }
-      );
-    }
-
-    // Update user role
-    const result = await db
-      .update(user)
-      .set({ role })
-      .where(eq(user.email, email))
-      .returning({ email: user.email, role: user.role });
-
-    if (result.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'User not found. Role can only be assigned to existing users.' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Role updated successfully',
-      user: result[0],
-    });
-  } catch (error) {
-    console.error('Error setting user role:', error);
+  if (isBootstrap && (body.role !== 'super_admin' || normalizedEmail !== normalizedSessionEmail)) {
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { success: false, error: 'First super_admin bootstrap requires signed-in user promoting own account' },
+      { status: 403 },
     );
   }
+
+  if (!isBootstrap) {
+    const adminUser = await requireCapability('team:manage');
+    if (!adminUser) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+  }
+
+  const targetResult = await db.execute(sql`
+    SELECT id, email
+    FROM "user"
+    WHERE LOWER(email) = ${normalizedEmail}
+    LIMIT 1
+  `);
+  const target = parseRoleTarget(targetResult.rows);
+  if (!target) {
+    return NextResponse.json({ success: false, error: 'User not found. Role can only be assigned to existing users.' }, { status: 404 });
+  }
+
+  if (isBootstrap && target.id !== session.user.id) {
+    return NextResponse.json(
+      { success: false, error: 'First super_admin bootstrap requires signed-in user promoting own account' },
+      { status: 403 },
+    );
+  }
+
+  return roleChangeResponse(await changeUserRole({
+    actorUserId: session.user.id,
+    targetUserId: target.id,
+    role: body.role,
+  }));
 }

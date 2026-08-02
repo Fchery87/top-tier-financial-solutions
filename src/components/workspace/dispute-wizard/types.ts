@@ -151,6 +151,8 @@ export interface GeneratedLetter {
   itemKind?: DisputeItemKind;
   content: string;
   combined: boolean;
+  revision?: number;
+  librarySelection?: unknown;
 }
 
 export type ItemTab = 'tradelines' | 'personal' | 'inquiries';
@@ -221,5 +223,4 @@ export function itemAppearsOnBureau(item: NegativeItem, bureau: string): boolean
 export function formatPersonalInfoType(type: string) {
   return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
-
 

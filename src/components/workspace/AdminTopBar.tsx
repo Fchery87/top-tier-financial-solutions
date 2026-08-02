@@ -16,7 +16,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   clients: 'Clients',
   disputes: 'Disputes',
   wizard: 'New Dispute',
-  'dispute-templates': 'Letter Templates',
+  'letter-library': 'Letter Library',
   results: 'Results & Wins',
   compliance: 'Compliance',
   tasks: 'Tasks',
@@ -49,13 +49,14 @@ interface Crumb {
 function buildCrumbs(pathname: string): Crumb[] {
   const segments = pathname.split('/').filter(Boolean); // ['admin', 'clients', '123']
   const crumbs: Crumb[] = [];
+  const rootHref = segments[0] === 'admin' ? '/admin' : '/workspace';
   let href = '';
   segments.forEach((segment, i) => {
     href += `/${segment}`;
     // Skip raw dynamic ids (numeric or uuid-ish) — show a generic label instead.
     const isId = /^[0-9]+$/.test(segment) || /^[0-9a-f]{8}-/.test(segment);
     const label = isId ? 'Detail' : SEGMENT_LABELS[segment] ?? titleCase(segment);
-    crumbs.push({ label, href: i === 0 ? '/workspace' : href });
+    crumbs.push({ label, href: i === 0 ? rootHref : href });
   });
   return crumbs;
 }

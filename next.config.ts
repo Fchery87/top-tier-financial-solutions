@@ -1,6 +1,17 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
+// Routes moved from /admin/* to /workspace/* in a prior restructuring task.
+// This list is closed and short by design: enumerate explicitly rather than
+// using a /admin/:path* catch-all, which would incorrectly redirect config
+// routes (e.g. /admin/settings) that legitimately
+// stay at /admin.
+const MOVED_TO_WORKSPACE = [
+  'clients', 'agreements', 'messages', 'billing',
+  'disputes', 'results', 'compliance',
+  'tasks', 'leads', 'bookings',
+];
+
 const nextConfig: NextConfig = {
   // Image Optimization
   images: {
@@ -62,6 +73,19 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+    ];
+  },
+
+  // Redirects so /admin bookmarks for routes that moved to /workspace still
+  // resolve. Config routes that legitimately stay at /admin (e.g. settings)
+  // are intentionally absent from MOVED_TO_WORKSPACE and
+  // therefore fall through untouched.
+  redirects: async () => {
+    return [
+      ...MOVED_TO_WORKSPACE.flatMap((s) => [
+        { source: `/admin/${s}`, destination: `/workspace/${s}`, permanent: true },
+        { source: `/admin/${s}/:path*`, destination: `/workspace/${s}/:path*`, permanent: true },
+      ]),
     ];
   },
 };

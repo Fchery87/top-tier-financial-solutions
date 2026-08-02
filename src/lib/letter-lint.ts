@@ -9,12 +9,23 @@ export interface LetterLintItemContext {
 export interface LetterLintContext {
   reasonCodes: string[];
   items: LetterLintItemContext[];
-  allowThreatLanguage?: boolean;
   identityTheftFlag?: boolean;
 }
 
+export type LintSeverity = 'block' | 'warn';
+
+export interface LetterLintFinding {
+  code: string;
+  severity: LintSeverity;
+  message: string;
+}
+
 export interface LetterLintResult {
+  blocked: boolean;
+  findings: LetterLintFinding[];
+  /** @deprecated Use `blocked` instead. */
   passed: boolean;
+  /** @deprecated Use `findings` instead. */
   reasons: string[];
 }
 
@@ -24,7 +35,6 @@ const THREAT_LANGUAGE_PATTERN = /\b(statutory damages|punitive damages|legal act
 const ACCOUNT_NUMBER_PATTERN = /\*{2,}\d{4}/g;
 const CREDITOR_LINE_PATTERN = /^Creditor Name:\s*(.+)$/gim;
 const ORIGINAL_CREDITOR_LINE_PATTERN = /^Original Creditor:\s*(.+)$/gim;
-const BUREAU_PATTERN = /\b(experian|equifax|transunion)\b/gi;
 const STATUTE_PATTERNS = [
   /15\s+U\.S\.C\.\s*§+\s*([\dA-Za-z\-]+(?:\([a-z0-9]+\))*)/gi,
   /FCRA\s*(?:Section|§)\s*([\dA-Za-z\-]+(?:\([a-z0-9]+\))*)/gi,
@@ -35,6 +45,12 @@ const ALLOWED_STATUTE_TOKENS = new Set([
   '1681i',
   '1681g',
   '1681c',
+  '1681c-2',
+  '1681b',
+  '1681e',
+  '1681e(b)',
+  '1681n',
+  '1681o',
   '1681s-2',
   '1681s-2(a)(8)',
   '611',
@@ -50,6 +66,8 @@ const ALLOWED_STATUTE_TOKENS = new Set([
   '623(a)(2)',
   '623(a)(8)',
   '604',
+  '1692e',
+  '1692f',
   '1692g',
   '809',
   '809(b)',
@@ -71,7 +89,7 @@ function extractMatches(pattern: RegExp, text: string): string[] {
 }
 
 export function lintGeneratedLetter(letter: string, context: LetterLintContext): LetterLintResult {
-  const reasons: string[] = [];
+  const findings: LetterLintFinding[] = [];
   const normalizedReasonCodes = new Set(context.reasonCodes);
 
   if (OWNERSHIP_DENIAL_PATTERN.test(letter)) {
@@ -79,22 +97,38 @@ export function lintGeneratedLetter(letter: string, context: LetterLintContext):
       || normalizedReasonCodes.has('mixed_file')
       || normalizedReasonCodes.has('identity_theft');
     if (!allowed) {
-      reasons.push('Letter includes ownership-denial language without an approved ownership-related reason code.');
+      findings.push({
+        code: 'ownership_denial',
+        severity: 'warn',
+        message: 'Letter includes ownership-denial language without an approved ownership-related reason code.',
+      });
     }
   }
 
   if (IDENTITY_THEFT_PATTERN.test(letter) && !context.identityTheftFlag && !normalizedReasonCodes.has('identity_theft')) {
-    reasons.push('Letter references identity theft or fraud without a documented identity-theft flag.');
+    findings.push({
+      code: 'undocumented_identity_theft',
+      severity: 'block',
+      message: 'Letter references identity theft or fraud without a documented identity-theft flag.',
+    });
   }
 
-  if (THREAT_LANGUAGE_PATTERN.test(letter) && !context.allowThreatLanguage) {
-    reasons.push('Letter includes threat or damages language without authorization.');
+  if (THREAT_LANGUAGE_PATTERN.test(letter)) {
+    findings.push({
+      code: 'threat_language',
+      severity: 'warn',
+      message: 'Letter includes threat or damages language. Review whether that language is appropriate for this dispute.',
+    });
   }
 
   const citedTokens = STATUTE_PATTERNS.flatMap(pattern => extractMatches(pattern, letter));
   const invalidTokens = citedTokens.filter(token => !ALLOWED_STATUTE_TOKENS.has(normalizeToken(token)));
   if (invalidTokens.length > 0) {
-    reasons.push(`Letter cites statutes outside the allowlist: ${[...new Set(invalidTokens)].join(', ')}`);
+    findings.push({
+      code: 'statute_not_allowlisted',
+      severity: 'warn',
+      message: `Letter cites statutes outside the allowlist: ${[...new Set(invalidTokens)].join(', ')}`,
+    });
   }
 
   const allowedAccountNumbers = new Set(
@@ -108,7 +142,11 @@ export function lintGeneratedLetter(letter: string, context: LetterLintContext):
     value => allowedAccountNumbers.size > 0 && !allowedAccountNumbers.has(value)
   );
   if (unexpectedAccountNumbers.length > 0) {
-    reasons.push(`Letter references account numbers that do not match the source data: ${[...new Set(unexpectedAccountNumbers)].join(', ')}`);
+    findings.push({
+      code: 'unknown_account_number',
+      severity: 'block',
+      message: `Letter references account numbers that do not match the source data: ${[...new Set(unexpectedAccountNumbers)].join(', ')}`,
+    });
   }
 
   const allowedCreditorNames = new Set(
@@ -125,24 +163,18 @@ export function lintGeneratedLetter(letter: string, context: LetterLintContext):
     value => allowedCreditorNames.size > 0 && !allowedCreditorNames.has(value)
   );
   if (unexpectedCreditorNames.length > 0) {
-    reasons.push(`Letter references creditor details that do not match the source data: ${[...new Set(unexpectedCreditorNames)].join(', ')}`);
+    findings.push({
+      code: 'unknown_creditor',
+      severity: 'block',
+      message: `Letter references creditor details that do not match the source data: ${[...new Set(unexpectedCreditorNames)].join(', ')}`,
+    });
   }
 
-  const allowedBureaus = new Set(
-    context.items
-      .map(item => item.bureau?.trim().toLowerCase())
-      .filter((value): value is string => Boolean(value))
-  );
-  const mentionedBureaus = (letter.match(BUREAU_PATTERN) || []).map(value => value.toLowerCase());
-  const unexpectedBureaus = mentionedBureaus.filter(
-    value => allowedBureaus.size > 0 && !allowedBureaus.has(value)
-  );
-  if (unexpectedBureaus.length > 0) {
-    reasons.push(`Letter references bureaus that do not match the source data: ${[...new Set(unexpectedBureaus)].join(', ')}`);
-  }
-
+  const blocked = findings.some(finding => finding.severity === 'block');
   return {
-    passed: reasons.length === 0,
-    reasons,
+    blocked,
+    findings,
+    passed: !blocked,
+    reasons: findings.map(finding => finding.message),
   };
 }

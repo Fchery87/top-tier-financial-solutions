@@ -2,23 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { disputes, clients, negativeItems, slaDefinitions, slaInstances } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
+import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
 import { decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
+import type { Capability } from '@/lib/capabilities';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
 import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
+import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
+import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import {
   calculateDisputeDeadlines,
   getDisputeSlaDefinitionId,
   getDisputeSlaInstanceId,
 } from '@/lib/dispute-automation';
 
-async function validateAdmin() {
-  return getAdminSessionUser('super_admin');
+async function validateAdmin(capability: Capability) {
+  return requireCapability(capability);
 }
 
 function isMissingColumnError(error: unknown): boolean {
@@ -62,9 +65,9 @@ function safeDecryptCreditorName(creditorName: string | null): string | null {
 }
 
 async function postHandler(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await validateAdmin('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -95,6 +98,7 @@ async function postHandler(request: NextRequest) {
       autoSelected,
       clientConfirmedOwnershipClaims,
       policyDecision,
+      priorDisputeId,
     } = body;
 
     if (!clientId || !bureau || !disputeReason) {
@@ -170,7 +174,51 @@ async function postHandler(request: NextRequest) {
       negativeItem = item;
     }
 
+    if (targetRecipient === 'cfpb') {
+      if (typeof negativeItemId !== 'string' || !negativeItemId.trim()) {
+        return NextResponse.json({ error: 'CFPB generation requires exactly one item per eligible CRA predecessor', reason: 'one_item_required' }, { status: 409 });
+      }
+      if (typeof priorDisputeId !== 'string' || !priorDisputeId.trim()) {
+        return NextResponse.json({ error: 'A prior CRA dispute is required before CFPB generation', reason: 'missing_cra_dispute' }, { status: 409 });
+      }
+      const history = await loadDisputeChain(priorDisputeId);
+      const decision = decideEscalation({
+        history,
+        plan: {
+          nextRound: round || 1,
+          targetRecipient: 'cfpb',
+          disputeType: 'fcra_violation_notice',
+          methodology: 'factual',
+          reasonCodes: normalizedReasonCodes,
+          customReason: disputeReason,
+        },
+      });
+      if (decision.kind === 'blocked') {
+        return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
+      }
+      const craDispute = history.find(entry => entry.targetRecipient === 'bureau' && entry.sentAt !== null);
+      if (
+        !craDispute
+        || history[0]?.clientId !== clientId
+        || craDispute?.clientId !== clientId
+        || craDispute.negativeItemId !== negativeItemId
+      ) {
+        return NextResponse.json({ error: 'The prior CRA dispute does not match this client and item' }, { status: 409 });
+      }
+    }
+
     // Generate dispute letter using AI generator with FCRA/CRSA/Metro2 compliance (unless caller provided content)
+    const generationSelection = letterContent
+      ? { chosen: null, score: 0, rationale: [], runnersUp: [] }
+      : await selectLibraryForGeneration({
+        round: round || 1,
+        targetRecipient: targetRecipient || 'bureau',
+        bureau,
+        itemType: negativeItem?.itemType || 'unknown',
+        reasonCodes: normalizedReasonCodes,
+        methodology: methodology || undefined,
+      });
+
     const generatedLetterContent = letterContent || await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
       round: round || 1,
@@ -191,14 +239,14 @@ async function postHandler(request: NextRequest) {
         ? reasonCodes
         : normalizedReasonCodes,
       customReason: disputeReason,
+      librarySelection: generationSelection,
     });
 
     const normalizedConfidence = analysisConfidence !== undefined && analysisConfidence !== null
       ? Math.round(analysisConfidence)
       : null;
 
-    // Create dispute record with admin audit trail
-    const id = randomUUID();
+    // Persist the dispute and its first revision through the shared generation seam.
     const now = new Date();
     
     // Build escalation history with admin info for audit trail
@@ -220,18 +268,42 @@ async function postHandler(request: NextRequest) {
     // Encrypt creditor name (already encrypted if from negativeItem, so use as-is)
     const creditorNameValue = negativeItem?.creditorName || null;
 
-    await db.insert(disputes).values({
-      id,
+    const persistedDraft = await persistGeneratedDisputeDraft({
       clientId,
-      serviceEngagementId: serviceEngagementId || null,
-      negativeItemId: negativeItemId || null,
+      serviceEngagementId,
+      negativeItemId,
       bureau,
       disputeReason,
       disputeType: disputeType || 'standard',
-      status: status || 'draft',
       round: round || 1,
+      reasonCodes: normalizedReasonCodes,
+      policyDecision,
+      escalationPath: escalationPath || targetRecipient || 'bureau',
+      methodology,
       letterContent: generatedLetterContent,
-      methodology: methodology || null,
+      generatedByAi: !letterContent,
+      status: status || 'draft',
+      revisionSource: letterContent ? 'manual' : 'generated',
+      creditorName: creditorNameValue,
+      accountNumber: negativeItem?.creditAccountId ? null : negativeItem?.id?.slice(-4) || null,
+      items: [{
+        kind: 'tradeline',
+        bureau,
+        creditorName: negativeItem?.creditorName || null,
+        originalCreditor: negativeItem?.originalCreditor || null,
+        accountNumber: negativeItem?.creditAccountId ? null : negativeItem?.id?.slice(-4) || null,
+        itemType: negativeItem?.itemType || 'unknown',
+        amount: negativeItem?.amount || null,
+        dateReported: negativeItem?.dateReported?.toISOString() || null,
+      }],
+      actorUserId: adminUser.id,
+      priorDisputeId,
+      analysisConfidence: normalizedConfidence,
+      autoSelected: !!autoSelected,
+    });
+    const id = persistedDraft.disputeId;
+
+    await db.update(disputes).set({
       fcraSections: fcraSections ? JSON.stringify(fcraSections) : null,
       disputedFields: disputedFields ? JSON.stringify(disputedFields) : null,
       evidenceDocumentIds: evidenceDocumentIds ? JSON.stringify(evidenceDocumentIds) : null,
@@ -242,16 +314,8 @@ async function postHandler(request: NextRequest) {
       escalationReadyAt: computedDeadlines?.escalationReadyAt || null,
       responseChannel: responseChannel || null,
       scoreImpact: scoreImpact ?? null,
-      reasonCodes: JSON.stringify(normalizedReasonCodes),
-      policyDecision: policyDecision ? JSON.stringify(policyDecision) : null,
-      escalationPath: escalationPath || targetRecipient || 'bureau',
-      creditorName: creditorNameValue,
-      accountNumber: negativeItem?.creditAccountId ? null : negativeItem?.id?.slice(-4) || null,
-      analysisConfidence: normalizedConfidence,
-      autoSelected: !!autoSelected,
-      createdAt: now,
       updatedAt: now,
-    });
+    }).where(eq(disputes.id, id));
     
     console.log(`[AUDIT] Dispute ${id} created by admin ${adminUser.email} for client ${clientId}`);
 
@@ -333,9 +397,9 @@ async function postHandler(request: NextRequest) {
 }
 
 async function getHandler(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await validateAdmin('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

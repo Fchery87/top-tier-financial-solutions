@@ -5,20 +5,20 @@ const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 describe('GET /api/admin/credit-report-pulls', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('returns credit report pulls for an engagement chronologically', async () => {
@@ -54,6 +54,7 @@ describe('GET /api/admin/credit-report-pulls', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('disputes:read');
     expect(body.items).toEqual([
       {
         id: 'report-1',

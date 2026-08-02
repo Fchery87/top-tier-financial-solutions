@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { asc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { creditReports } from '@/db/schema';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
 
 function formatPull(report: typeof creditReports.$inferSelect) {
   return {
@@ -18,14 +18,10 @@ function formatPull(report: typeof creditReports.$inferSelect) {
   };
 }
 
-async function validateAdmin() {
-  return getAdminSessionUser('super_admin');
-}
-
 export async function GET(request: NextRequest) {
-  const adminUser = await validateAdmin();
+  const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const serviceEngagementId = request.nextUrl.searchParams.get('service_engagement_id');

@@ -1,4 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { authState } from './fixtures/auth';
+import { e2eClient, e2eNegativeItem, installWizardApiFixtures } from './fixtures/routes';
+
+test.use({ storageState: authState('admin') });
 
 /**
  * End-to-End tests for Dispute Wizard
@@ -12,8 +16,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Dispute Wizard E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
+    await installWizardApiFixtures(page);
     // Navigate to the wizard page
-    await page.goto('/admin/disputes/wizard');
+    await page.goto('/workspace/disputes/wizard');
   });
 
   test('should display the wizard with 4 steps', async ({ page }) => {
@@ -44,36 +49,29 @@ test.describe('Dispute Wizard E2E Flow', () => {
   test('should allow searching for clients', async ({ page }) => {
     // Type in search input
     const searchInput = page.getByPlaceholder(/search/i);
-    await searchInput.fill('john');
+    await searchInput.fill('fixture');
 
     // Wait for search results
     await page.waitForTimeout(500); // Debounce delay
 
     // Should show filtered results
-    await expect(page.getByText(/john/i)).toBeVisible();
+    await expect(page.getByText(`${e2eClient.first_name} ${e2eClient.last_name}`)).toBeVisible();
   });
 
   test('should allow selecting a client and proceeding to step 2', async ({ page }) => {
-    // Wait for clients to load
-    await page.waitForSelector('[data-testid="client-card"]', { timeout: 5000 }).catch(() => {
-      console.log('Client cards not found - may need authentication');
-    });
+    const firstClient = page.getByText(`${e2eClient.first_name} ${e2eClient.last_name}`);
+    await expect(firstClient).toBeVisible();
+    await firstClient.click();
 
-    // Select first client (if available)
-    const firstClient = page.locator('[data-testid="client-card"]').first();
-    if (await firstClient.isVisible()) {
-      await firstClient.click();
+    // Next button should be enabled
+    const nextButton = page.getByRole('button', { name: /next/i });
+    await expect(nextButton).toBeEnabled();
 
-      // Next button should be enabled
-      const nextButton = page.getByRole('button', { name: /next/i });
-      await expect(nextButton).toBeEnabled();
+    // Click Next to proceed to step 2
+    await nextButton.click();
 
-      // Click Next to proceed to step 2
-      await nextButton.click();
-
-      // Should be on step 2 now
-      await expect(page.getByText(/Select Items/i)).toBeVisible();
-    }
+    // Should be on step 2 now
+    await expect(page.getByText(/Select Items/i)).toBeVisible();
   });
 
   test('should navigate back to previous step', async ({ page }) => {
@@ -84,40 +82,87 @@ test.describe('Dispute Wizard E2E Flow', () => {
     // Back button should exist (even if disabled on step 1)
     await expect(backButton).toBeVisible();
   });
-});
 
-test.describe('Dispute Wizard - Complete Flow (Authenticated)', () => {
-  test.skip('should complete full wizard flow from client selection to review', async ({ page }) => {
-    // This test requires authentication setup
-    // TODO: Add authentication helpers and complete this test
+  test('persists a generated draft before review and never posts a duplicate dispute', async ({ page }) => {
+    const fixtureState = await installWizardApiFixtures(page);
+    const directDisputePosts: string[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && request.url().endsWith('/api/admin/disputes')) directDisputePosts.push(request.url());
+    });
 
-    // 1. Navigate to wizard
-    await page.goto('/admin/disputes/wizard');
+    await page.getByText(`${e2eClient.first_name} ${e2eClient.last_name}`).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
+    await page.getByText(e2eNegativeItem.creditor_name).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
 
-    // 2. Select client
-    // await selectClient(page, 'John Doe');
+    // Keep this journey to one request so the persisted draft ID is unambiguous.
+    await page.getByRole('button', { name: /^Experian/ }).click();
+    await page.getByRole('button', { name: /^Equifax/ }).click();
+    await page.locator('[data-generate-button]').click();
 
-    // 3. Select items to dispute
-    // await selectItems(page, ['item-1', 'item-2']);
+    await expect(page.getByText('Letter Studio').first()).toBeVisible({ timeout: 10000 });
+    expect(fixtureState.generateRequests).toHaveLength(1);
+    expect(fixtureState.generateRequests[0]).toMatchObject({ clientId: e2eClient.id });
+    expect(directDisputePosts).toEqual([]);
+  });
 
-    // 4. Configure dispute (bureaus, methodology, etc.)
-    // await configureDis pute(page, {
-    //   bureaus: ['transunion'],
-    //   methodology: 'factual',
-    //   round: 1,
-    // });
+  test('shows the direct-dispute advisory without disabling generation', async ({ page }) => {
+    await page.getByText(`${e2eClient.first_name} ${e2eClient.last_name}`).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
+    await page.getByText(e2eNegativeItem.creditor_name).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
 
-    // 5. Review and submit
-    // await reviewAndSubmit(page);
+    await page.getByText('Round 2 - Direct to Creditor/Furnisher').click();
+    await expect(page.getByTestId('direct-dispute-advisory')).toBeVisible();
+    await expect(page.locator('[data-generate-button]')).toBeEnabled();
+  });
 
-    // 6. Verify success
-    // await expect(page.getByText(/successfully created/i)).toBeVisible();
+  test('surfaces the prior-dispute requirement before CFPB generation', async ({ page }) => {
+    await page.getByText(`${e2eClient.first_name} ${e2eClient.last_name}`).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
+    await page.getByText(e2eNegativeItem.creditor_name).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
+
+    await page.getByText('Round 3+ - CFPB / Direct Escalation').click();
+    const priorDisputeInput = page.getByLabel('Prior CRA dispute ID');
+    await expect(priorDisputeInput).toBeVisible();
+    await priorDisputeInput.fill('e2e-prior-dispute');
+    await expect(page.getByTestId('cfpb-eligibility-preview')).toContainText('still pending');
+    await expect(page.getByTestId('cfpb-eligibility-preview')).toContainText('August 15, 2026');
+    await expect(page.getByText(/prior CRA dispute.*submitted/i)).toBeVisible();
+  });
+
+  test('allows CFPB generation when the CRA predecessor has a received response', async ({ page }) => {
+    await page.route('**/api/admin/disputes/*/cfpb-eligibility**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          eligible: true,
+          reason: 'eligible',
+          eligible_at: null,
+          message: 'The prior CRA dispute has a received response, so CFPB escalation is eligible.',
+        }),
+      });
+    });
+
+    await page.getByText(`${e2eClient.first_name} ${e2eClient.last_name}`).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
+    await page.getByText(e2eNegativeItem.creditor_name).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
+
+    await page.getByText('Round 3+ - CFPB / Direct Escalation').click();
+    await page.getByLabel('Prior CRA dispute ID').fill('e2e-prior-dispute');
+
+    await expect(page.getByTestId('cfpb-eligibility-preview')).toContainText('Eligible for CFPB escalation');
+    await expect(page.getByTestId('cfpb-eligibility-preview')).toContainText('received response');
+    await expect(page.getByTestId('cfpb-eligibility-preview')).not.toContainText('Eligible after');
   });
 });
 
 test.describe('Dispute Wizard - Validation', () => {
   test('should show validation errors when required fields are missing', async ({ page }) => {
-    await page.goto('/admin/disputes/wizard');
+    await page.goto('/workspace/disputes/wizard');
 
     // Try to proceed without selecting a client
     const nextButton = page.getByRole('button', { name: /next/i });
@@ -126,16 +171,11 @@ test.describe('Dispute Wizard - Validation', () => {
     await expect(nextButton).toBeDisabled();
   });
 
-  test('should display evidence requirements for high-risk codes', async () => {
-    // This requires progressing through the wizard
-    // TODO: Implement after authentication is set up
-    test.skip();
-  });
 });
 
 test.describe('Dispute Wizard - Accessibility', () => {
   test('should support keyboard navigation', async ({ page }) => {
-    await page.goto('/admin/disputes/wizard');
+    await page.goto('/workspace/disputes/wizard');
 
     // Tab through interactive elements
     await page.keyboard.press('Tab');
@@ -146,7 +186,7 @@ test.describe('Dispute Wizard - Accessibility', () => {
   });
 
   test('should have proper ARIA labels', async ({ page }) => {
-    await page.goto('/admin/disputes/wizard');
+    await page.goto('/workspace/disputes/wizard');
 
     // Check for accessible step indicators
     const steps = page.getByRole('button').filter({ hasText: /Client|Items|Configure|Review/ });
@@ -166,7 +206,7 @@ test.describe('Dispute Wizard - Error Handling', () => {
       });
     });
 
-    await page.goto('/admin/disputes/wizard');
+    await page.goto('/workspace/disputes/wizard');
 
     // Should show error message
     await expect(page.getByText(/error|failed/i)).toBeVisible({ timeout: 5000 });
@@ -191,7 +231,7 @@ test.describe('Dispute Wizard - Error Handling', () => {
       }
     });
 
-    await page.goto('/admin/disputes/wizard');
+    await page.goto('/workspace/disputes/wizard');
 
     // Wait for error
     await expect(page.getByText(/error/i)).toBeVisible();
@@ -211,7 +251,7 @@ test.describe('Dispute Wizard - Performance', () => {
   test('should load within 3 seconds', async ({ page }) => {
     const startTime = Date.now();
 
-    await page.goto('/admin/disputes/wizard');
+    await page.goto('/workspace/disputes/wizard');
     await page.waitForSelector('h1, h2, [data-testid="wizard-container"]', { timeout: 3000 });
 
     const loadTime = Date.now() - startTime;
@@ -220,8 +260,8 @@ test.describe('Dispute Wizard - Performance', () => {
   });
 
   test('should handle large item lists efficiently', async ({ page }) => {
-    // Mock response with 50+ items
-    await page.route('**/api/admin/negative-items**', (route) => {
+    // Mock response with 50+ items and verify they render after selecting the fixture client.
+    await page.route(`**/api/admin/clients/${e2eClient.id}`, (route) => {
       const items = Array.from({ length: 50 }, (_, i) => ({
         id: `item-${i}`,
         creditor_name: `Creditor ${i}`,
@@ -232,13 +272,14 @@ test.describe('Dispute Wizard - Performance', () => {
 
       route.fulfill({
         status: 200,
-        body: JSON.stringify({ data: items }),
+        contentType: 'application/json',
+        body: JSON.stringify({ negative_items: items, personal_info_disputes: [], inquiry_disputes: [], credit_reports: [] }),
       });
     });
 
-    await page.goto('/admin/disputes/wizard');
-
-    // TODO: Navigate to step 2 and verify items load
-    // Performance should remain acceptable
+    await page.goto('/workspace/disputes/wizard');
+    await page.getByText(`${e2eClient.first_name} ${e2eClient.last_name}`).click();
+    await page.getByRole('button', { name: /^Next/ }).click();
+    await expect(page.getByText('Creditor 49')).toBeVisible();
   });
 });

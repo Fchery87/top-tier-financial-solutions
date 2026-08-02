@@ -13,7 +13,6 @@ const authMock = vi.hoisted(() => ({
   },
 }));
 
-const isSuperAdminMock = vi.hoisted(() => vi.fn());
 const getUserRoleMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
@@ -25,7 +24,6 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 vi.mock('@/lib/admin-auth', () => ({
-  isSuperAdmin: isSuperAdminMock,
   getUserRole: getUserRoleMock,
 }));
 
@@ -41,7 +39,6 @@ describe('PUT /api/admin/disputes/[id] submission tracking', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
-    isSuperAdminMock.mockResolvedValue(true);
     getUserRoleMock.mockResolvedValue('super_admin');
   });
 

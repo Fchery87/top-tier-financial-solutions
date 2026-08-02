@@ -22,18 +22,18 @@ npm run test                  # Component tests
 - Sub-routes: Follow Next.js App Router conventions
 
 ### Authentication Pattern
-Portal routes require client authentication:
+The server portal layout owns page authentication and redirects team roles to `/workspace`:
 ```typescript
 // ✅ DO: Check client authentication
 import { auth } from '@/lib/auth';
 
-async function validateClientAccess() {
+async function PortalLayout() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
   
   if (!session?.user?.email) {
-    redirect('/login');
+    redirect('/sign-in?next=/portal');
   }
   
   return session.user;
@@ -83,7 +83,8 @@ const agreementData = {
 - Search for client data: `rg -n "clients.*email|client.*access" src/app/portal/`
 
 ## Common Gotchas
-- All portal routes must validate client access
+- `src/app/portal/layout.tsx` is the sole page-level auth owner; child pages must not duplicate `useAuth` loading gates.
+- All portal API routes must validate client ownership
 - Never expose other clients' data
 - Agreement signing must be audit-ready (IP, timestamp, user agent)
 - Use absolute imports: `@/lib/auth`, `@/db/client`

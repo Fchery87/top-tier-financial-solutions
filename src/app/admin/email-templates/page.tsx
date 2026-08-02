@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AdminGuard } from '@/components/workspace/AdminGuard';
 import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
 import { StatGrid } from '@/components/workspace/StatGrid';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -93,20 +92,17 @@ export default function EmailTemplatesPage() {
 
   if (loading) {
     return (
-      <AdminGuard>
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-secondary" />
-            <p className="mt-4 text-muted-foreground">Loading email templates...</p>
-          </div>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-secondary" />
+          <p className="mt-4 text-muted-foreground">Loading email templates...</p>
         </div>
-      </AdminGuard>
+      </div>
     );
   }
 
   return (
-    <AdminGuard>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <AdminPageHeader
           eyebrow="Content"
           title="Email Templates"
@@ -352,7 +348,6 @@ export default function EmailTemplatesPage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </AdminGuard>
+    </div>
   );
 }

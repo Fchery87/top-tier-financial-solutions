@@ -5,7 +5,7 @@ import { and, eq, desc, sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
 import { evaluateBillingReadiness } from '@/lib/billing-readiness';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
 import { formatClientDisplayIdentity } from '@/lib/client-display-identity';
 
 // Helper to generate invoice number
@@ -21,13 +21,13 @@ function generateInvoiceNumber(): string {
 // GET - List fee configs, billing profiles, or invoices
 export async function GET(request: NextRequest) {
   try {
-    const adminUser = await getAdminSessionUser('admin');
-    if (!adminUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'invoices';
+    const adminUser = await requireCapability(type === 'fee_configs' ? 'billing:system' : 'billing:client');
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const clientId = searchParams.get('client_id');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -148,12 +148,12 @@ export async function GET(request: NextRequest) {
 // POST - Create fee config, billing profile, or invoice
 export async function POST(request: NextRequest) {
   try {
-    const adminUser = await getAdminSessionUser('admin');
+    const body = await request.json();
+    const adminUser = await requireCapability(body.type === 'fee_config' ? 'billing:system' : 'billing:client');
     if (!adminUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
     const { type } = body;
     const headersList = await headers();
     const ipAddress = headersList.get('x-forwarded-for') || 'unknown';

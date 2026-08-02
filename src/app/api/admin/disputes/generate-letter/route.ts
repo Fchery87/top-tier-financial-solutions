@@ -3,11 +3,14 @@ import { db } from '@/db/client';
 import { clients, negativeItems, clientDocuments } from '@/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { generateUniqueDisputeLetter, generateMultiItemDisputeLetter, DISPUTE_REASON_CODES } from '@/lib/ai-letter-generator';
+import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/dispute-evidence';
-import { getAdminSessionUser } from '@/lib/admin-session';
+import { requireCapability } from '@/lib/admin-session';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
 import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
+import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib/dispute-draft-generator';
+import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 
 type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
 
@@ -27,13 +30,13 @@ interface DisputeItemPayload {
 }
 
 async function validateAdmin() {
-  return getAdminSessionUser('super_admin');
+  return requireCapability('disputes:write');
 }
 
 export async function POST(request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -57,6 +60,7 @@ export async function POST(request: NextRequest) {
       evidenceDocumentIds, // Optional: evidence attachments (clientDocuments IDs)
       clientConfirmedOwnershipClaims,
       policyDecision,
+      priorDisputeId,
     } = body;
 
     if (!clientId || !bureau) {
@@ -105,6 +109,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (targetRecipient === 'cfpb') {
+      const requestedItemIds = [
+        ...(Array.isArray(disputeItems) ? disputeItems.map(item => item?.id) : []),
+        ...(Array.isArray(negativeItemIds) ? negativeItemIds : []),
+        typeof negativeItemId === 'string' ? negativeItemId : null,
+      ].filter((itemId): itemId is string => typeof itemId === 'string' && itemId.length > 0);
+      const uniqueRequestedItemIds = [...new Set(requestedItemIds)];
+      if (uniqueRequestedItemIds.length !== 1) {
+        return NextResponse.json({ error: 'CFPB generation requires exactly one item per eligible CRA predecessor' }, { status: 400 });
+      }
+      if (typeof priorDisputeId !== 'string' || !priorDisputeId.trim()) {
+        return NextResponse.json({ error: 'A prior CRA dispute is required before CFPB generation', reason: 'missing_cra_dispute' }, { status: 409 });
+      }
+      const history = await loadDisputeChain(priorDisputeId);
+      const decision = decideEscalation({
+        history,
+        plan: {
+          nextRound: round || 1,
+          targetRecipient: 'cfpb',
+          disputeType: 'fcra_violation_notice',
+          methodology: 'factual',
+          reasonCodes,
+          customReason: customReason || 'CFPB complaint packet',
+        },
+      });
+      if (decision.kind === 'blocked') {
+        return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
+      }
+      if (history[0]?.clientId !== clientId) {
+        return NextResponse.json({ error: 'The prior CRA dispute does not belong to this client' }, { status: 409 });
+      }
+      const craDispute = history.find(entry => entry.targetRecipient === 'bureau' && entry.sentAt !== null);
+      if (
+        !craDispute
+        || craDispute.clientId !== clientId
+        || craDispute.negativeItemId !== uniqueRequestedItemIds[0]
+      ) {
+        return NextResponse.json({ error: 'The prior CRA dispute does not match the selected item' }, { status: 409 });
+      }
+    }
+
     const reportGate = await requireLatestApprovedReportForClient(clientId);
     if (!reportGate.allowed) {
       return NextResponse.json(
@@ -148,6 +193,18 @@ export async function POST(request: NextRequest) {
       bureau: payload?.bureau || bureau,
     });
 
+    const mapPayloadToSnapshot = (payload: DisputeItemPayload): DraftItemSnapshotInput => ({
+      kind: payload.kind || 'tradeline',
+      bureau: payload.bureau || bureau,
+      creditorName: payload.creditorName,
+      originalCreditor: payload.originalCreditor,
+      accountNumber: payload.accountNumber || payload.value,
+      itemType: payload.itemType,
+      amount: payload.amount,
+      dateReported: payload.dateReported,
+      inquiryDate: payload.inquiryDate,
+    });
+
     // Handle multi-item combined letter
     if (combineItems && ((disputeItems && disputeItems.length > 0) || (negativeItemIds && negativeItemIds.length > 0))) {
       // Use provided dispute items if available, otherwise fetch legacy negative items
@@ -183,6 +240,14 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate combined letter
+      const combinedSelection = await selectLibraryForGeneration({
+        round: round || 1,
+        targetRecipient: targetRecipient || 'bureau',
+        bureau,
+        itemType: validItems[0]?.itemType || 'unknown',
+        reasonCodes,
+        methodology: methodology || undefined,
+      });
       const letterContent = await generateMultiItemDisputeLetter({
         disputeType: disputeType || 'standard',
         round: round || 1,
@@ -203,9 +268,33 @@ export async function POST(request: NextRequest) {
         methodology: methodology,
         metro2Violations: metro2Violations,
         enclosures: enclosures,
+        librarySelection: combinedSelection,
+      });
+
+      const persistedDraft = await persistGeneratedDisputeDraft({
+        clientId,
+        bureau,
+        negativeItemId: validItems.length === 1 && validItems[0]?.kind === 'tradeline' ? validItems[0].id : null,
+        disputeReason: reasonCodes.join(', '),
+        disputeType: disputeType || 'standard',
+        round: round || 1,
+        reasonCodes,
+        policyDecision,
+        escalationPath: targetRecipient || 'bureau',
+        priorDisputeId: priorDisputeId || null,
+        methodology: methodology || null,
+        letterContent,
+        generatedByAi: true,
+        creditorName: validItems.length === 1 ? validItems[0]?.creditorName : null,
+        accountNumber: validItems.length === 1 ? validItems[0]?.accountNumber : null,
+        items: validItems.map(mapPayloadToSnapshot),
+        selection: combinedSelection,
+        actorUserId: adminUser.id,
       });
 
       return NextResponse.json({
+        dispute_id: persistedDraft.disputeId,
+        revision: persistedDraft.revision,
         letter_content: letterContent,
         client_name: `${client.firstName} ${client.lastName}`,
         bureau: bureau,
@@ -215,6 +304,7 @@ export async function POST(request: NextRequest) {
         item_count: validItems.length,
         item_ids: validItems.map((i: DisputeItemPayload) => i.id),
         combined: true,
+        library_selection: combinedSelection,
       });
     }
 
@@ -246,6 +336,14 @@ export async function POST(request: NextRequest) {
 
     // Generate the letter using AI
     const payloadData = mapPayloadToItemData(itemPayload || body);
+    const selection = await selectLibraryForGeneration({
+      round: round || 1,
+      targetRecipient: targetRecipient || 'bureau',
+      bureau,
+      itemType: payloadData.itemType,
+      reasonCodes,
+      methodology: methodology || undefined,
+    });
 
     const letterContent = await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
@@ -274,9 +372,44 @@ export async function POST(request: NextRequest) {
       },
       reasonCodes: reasonCodes,
       customReason: customReason,
+      librarySelection: selection,
+    });
+
+    const snapshotItem: DisputeItemPayload = itemPayload || {
+      id: negativeItemId || 'generated-item',
+      kind: 'tradeline',
+      bureau,
+      creditorName: payloadData.creditorName,
+      originalCreditor: payloadData.originalCreditor,
+      accountNumber: payloadData.accountNumber,
+      itemType: payloadData.itemType,
+      amount: payloadData.amount,
+      dateReported: payloadData.dateReported,
+    };
+    const persistedDraft = await persistGeneratedDisputeDraft({
+      clientId,
+      bureau,
+      negativeItemId: snapshotItem.kind === 'tradeline' ? negativeItemId || snapshotItem.id : null,
+      disputeReason: reasonCodes.join(', '),
+      disputeType: disputeType || 'standard',
+      round: round || 1,
+      reasonCodes,
+      policyDecision,
+      escalationPath: targetRecipient || 'bureau',
+      priorDisputeId: priorDisputeId || null,
+      methodology: methodology || null,
+      letterContent,
+      generatedByAi: true,
+      creditorName: payloadData.creditorName,
+      accountNumber: payloadData.accountNumber,
+      items: [mapPayloadToSnapshot(snapshotItem)],
+      selection,
+      actorUserId: adminUser.id,
     });
 
     return NextResponse.json({
+      dispute_id: persistedDraft.disputeId,
+      revision: persistedDraft.revision,
       letter_content: letterContent,
       client_name: `${client.firstName} ${client.lastName}`,
       bureau: bureau,
@@ -284,6 +417,7 @@ export async function POST(request: NextRequest) {
       dispute_type: disputeType || 'standard',
       reason_codes: reasonCodes,
       combined: false,
+      library_selection: selection,
     });
   } catch (error) {
     console.error('Error generating dispute letter:', error);

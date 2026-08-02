@@ -6,14 +6,14 @@ const dbMock = vi.hoisted(() => ({
   insert: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 vi.mock('next/headers', () => ({
@@ -23,7 +23,7 @@ vi.mock('next/headers', () => ({
 describe('POST /api/admin/billing credit audit engagement billing', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('requires credit audit invoices to use a separate credit audit engagement', async () => {
@@ -51,10 +51,25 @@ describe('POST /api/admin/billing credit audit engagement billing', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('billing:client');
     expect(body).toMatchObject({
       code: 'CREDIT_AUDIT_ENGAGEMENT_REQUIRED',
       error: 'Credit Audit invoices require a separate Credit Audit engagement',
     });
     expect(dbMock.insert).not.toHaveBeenCalled();
   }, 30000);
+
+  it('denies a staff-equivalent fee configuration mutation without billing:system', async () => {
+    requireCapabilityMock.mockResolvedValue(null);
+    const { POST } = await import('@/app/api/admin/billing/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'fee_config', name: 'Monthly', feeModel: 'monthly', amount: 10000 }),
+    }));
+
+    expect(response.status).toBe(403);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('billing:system');
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
 });

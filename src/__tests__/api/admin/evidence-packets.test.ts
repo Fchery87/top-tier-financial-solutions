@@ -6,20 +6,20 @@ const dbMock = vi.hoisted(() => ({
   insert: vi.fn(),
 }));
 
-const adminSessionMock = vi.hoisted(() => vi.fn());
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));
 
 vi.mock('@/lib/admin-session', () => ({
-  getAdminSessionUser: adminSessionMock,
+  requireCapability: requireCapabilityMock,
 }));
 
 describe('POST /api/admin/evidence-packets', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+    requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('creates an evidence packet for a client dispute claim from owned documents and confirmations', async () => {
@@ -53,6 +53,7 @@ describe('POST /api/admin/evidence-packets', () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
+    expect(requireCapabilityMock).toHaveBeenCalledWith('disputes:write');
     expect(body).toMatchObject({
       id: 'packet-1',
       client_id: 'client-1',

@@ -55,16 +55,15 @@ export { Component };
 - Use semantic variant names: `primary`, `secondary`, `outline`, `ghost`, `destructive`
 
 ### Admin Component Pattern
-Admin components should handle authentication and loading states:
+Server layouts and capability-gated APIs handle authentication; client components should handle loading and mutation states:
 ```typescript
-// ✅ DO: Copy from src/components/admin/AdminGuard.tsx
+// ✅ DO: Keep authentication in the server layout and capability checks in the API.
 'use client';
 
-import { authClient } from '@/lib/admin-auth';
 import { ReactNode } from 'react';
 
-export function AdminGuard({ children }: { children: ReactNode }) {
-  // Authentication and authorization logic
+export function Component({ children }: { children: ReactNode }) {
+  // Loading and interaction state only; authorization is server-owned.
   return <>{children}</>;
 }
 ```
@@ -89,7 +88,7 @@ interface DataTableProps<T> {
 ## Touch Points / Key Files
 - Utilities: `src/lib/utils.ts` (cn function)
 - UI foundation: `src/components/ui/Button.tsx`
-- Admin guard: `src/components/admin/AdminGuard.tsx`
+- Team manager: `src/components/workspace/team/TeamManager.tsx`
 - Data table: `src/components/admin/DataTable.tsx`
 - Admin sidebar: `src/components/admin/AdminSidebar.tsx`
 

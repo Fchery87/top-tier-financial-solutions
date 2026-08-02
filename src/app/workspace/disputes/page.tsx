@@ -22,6 +22,7 @@ interface Dispute {
   id: string; client_id: string; client_name: string; negative_item_id: string | null;
   bureau: string; dispute_reason: string; dispute_type: string; status: string;
   round: number; tracking_number: string | null; sent_at: string | null;
+  letter_content: string | null;
   response_deadline: string | null; response_received_at: string | null;
   outcome: string | null; response_notes: string | null; response_document_url?: string | null;
   response_channel: string | null; score_impact: number | null;

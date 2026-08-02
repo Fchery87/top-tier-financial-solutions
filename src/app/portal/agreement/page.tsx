@@ -3,7 +3,6 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { 
@@ -38,7 +37,6 @@ interface InitialFields {
 
 export default function AgreementPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
   const [agreement, setAgreement] = React.useState<Agreement | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [signing, setSigning] = React.useState(false);
@@ -58,10 +56,8 @@ export default function AgreementPage() {
   const [hasDrawnSignature, setHasDrawnSignature] = React.useState(false);
 
   React.useEffect(() => {
-    if (user) {
-      fetchAgreement();
-    }
-  }, [user]);
+    void fetchAgreement();
+  }, []);
 
   const fetchAgreement = async () => {
     setLoading(true);
@@ -263,32 +259,6 @@ export default function AgreementPage() {
 
     return content;
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-secondary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8">
-        <Card className="max-w-md w-full bg-card/80 backdrop-blur-sm border-border/50">
-          <CardHeader className="text-center">
-            <CardTitle className="font-display text-2xl">Sign In Required</CardTitle>
-            <CardDescription>Please sign in to view your service agreement.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Button asChild className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90">
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (success) {
     return (

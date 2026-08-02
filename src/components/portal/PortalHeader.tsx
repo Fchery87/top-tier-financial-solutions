@@ -8,7 +8,7 @@ interface PortalHeaderProps {
 
 export default function PortalHeader({ userName }: PortalHeaderProps) {
   return (
-    <section className="platform-shell relative pt-28 pb-10 md:pt-32 md:pb-12">
+    <section className="platform-shell relative pb-10 pt-10 md:pb-12 md:pt-12">
       <div className="absolute inset-0 rule-grid opacity-25" />
       <div className="container relative mx-auto px-4 md:px-6">
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">

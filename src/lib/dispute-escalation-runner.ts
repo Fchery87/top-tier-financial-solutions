@@ -3,8 +3,11 @@ import { and, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clients, disputes, negativeItems, creditAccounts, slaInstances, tasks } from '@/db/schema';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
+import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { setSetting } from '@/lib/settings-service';
 import { buildEscalationPlan, getDisputeSlaInstanceId, type EscalationPlan } from '@/lib/dispute-automation';
+import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
+import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 
 export const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run';
 
@@ -19,6 +22,8 @@ export interface RunDisputeEscalationResult {
   escalated: number;
   would_escalate: number;
   skipped: number;
+  deferred: number;
+  next_eligibility_at: string | null;
 }
 
 interface EscalationLetterParamsInput {
@@ -78,6 +83,8 @@ export async function runDisputeEscalationAutomation(
   let escalatedCount = 0;
   let wouldEscalateCount = 0;
   let skippedCount = 0;
+  let deferredCount = 0;
+  let nextEligibilityAt: Date | null = null;
 
   for (const dispute of candidates) {
     if ((dispute.round || 1) >= 4) {
@@ -132,6 +139,16 @@ export async function runDisputeEscalationAutomation(
       currentBureau: dispute.bureau,
     });
 
+    const decision = plan.targetRecipient === 'cfpb'
+      ? decideEscalation({ plan, history: await loadDisputeChain(dispute.id) })
+      : null;
+    if (decision?.kind === 'blocked') {
+      deferredCount += 1;
+      const eligibleAt = decision.eligibility.eligibleAt;
+      if (eligibleAt && (!nextEligibilityAt || eligibleAt < nextEligibilityAt)) nextEligibilityAt = eligibleAt;
+      continue;
+    }
+
     if (options.dryRun) {
       wouldEscalateCount += 1;
       continue;
@@ -144,20 +161,24 @@ export async function runDisputeEscalationAutomation(
       creditAccount: creditAccount || null,
       plan,
     });
+    const librarySelection = await selectLibraryForGeneration({
+      round: letterParams.round,
+      targetRecipient: letterParams.targetRecipient,
+      bureau: letterParams.itemData.bureau,
+      itemType: letterParams.itemData.itemType,
+      reasonCodes: letterParams.reasonCodes,
+      methodology: letterParams.methodology,
+    });
 
-    const letterContent = await generateUniqueDisputeLetter(letterParams);
+    const letterContent = await generateUniqueDisputeLetter({ ...letterParams, librarySelection });
 
     const createdAt = new Date();
-    const nextDisputeId = randomUUID();
-
-    await db.insert(disputes).values({
-      id: nextDisputeId,
+    const persistedDraft = await persistGeneratedDisputeDraft({
       clientId: dispute.clientId,
       negativeItemId: dispute.negativeItemId,
       bureau: dispute.bureau,
       disputeReason: `Auto escalation: ${plan.customReason}`,
       disputeType: plan.disputeType,
-      status: 'draft',
       round: plan.nextRound,
       escalationPath: plan.targetRecipient,
       letterContent,
@@ -166,9 +187,18 @@ export async function runDisputeEscalationAutomation(
       generatedByAi: true,
       methodology: plan.methodology,
       priorDisputeId: dispute.id,
-      reasonCodes: JSON.stringify(plan.reasonCodes),
-      createdAt,
-      updatedAt: createdAt,
+      reasonCodes: plan.reasonCodes,
+      items: [{
+        kind: 'tradeline',
+        bureau: dispute.bureau,
+        creditorName: negativeItem.creditorName,
+        originalCreditor: negativeItem.originalCreditor,
+        accountNumber: creditAccount?.accountNumber || null,
+        itemType: negativeItem.itemType,
+        amount: negativeItem.amount,
+        dateReported: negativeItem.dateReported?.toISOString(),
+      }],
+      selection: librarySelection,
     });
 
     await db
@@ -198,7 +228,7 @@ export async function runDisputeEscalationAutomation(
         id: randomUUID(),
         clientId: dispute.clientId,
         title: `Review auto-escalated dispute R${plan.nextRound}`,
-        description: `${getTaskMarker(dispute.id)} Verify and send drafted escalation ${nextDisputeId} for ${dispute.bureau}.`,
+        description: `${getTaskMarker(dispute.id)} Verify and send drafted escalation ${persistedDraft.disputeId} for ${dispute.bureau}.`,
         status: 'todo',
         priority: 'high',
         dueDate: createdAt,
@@ -228,6 +258,8 @@ export async function runDisputeEscalationAutomation(
     escalated: escalatedCount,
     would_escalate: wouldEscalateCount,
     skipped: skippedCount,
+    deferred: deferredCount,
+    next_eligibility_at: nextEligibilityAt?.toISOString() || null,
   };
 
   await setSetting(
@@ -240,6 +272,8 @@ export async function runDisputeEscalationAutomation(
       escalated: result.escalated,
       wouldEscalate: result.would_escalate,
       skipped: result.skipped,
+      deferred: result.deferred,
+      nextEligibilityAt: result.next_eligibility_at,
       error: null,
     },
     'json',
@@ -261,6 +295,8 @@ export async function writeDisputeEscalationFailure(error: unknown) {
       escalated: 0,
       wouldEscalate: 0,
       skipped: 0,
+      deferred: 0,
+      nextEligibilityAt: null,
       error: error instanceof Error ? error.message : 'Unknown error',
     },
     'json',

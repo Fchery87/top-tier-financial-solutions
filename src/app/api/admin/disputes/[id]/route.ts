@@ -5,6 +5,11 @@ import { disputes, negativeItems, clients, disputeOutcomes, slaDefinitions, slaI
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
+import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
+import { recordLibraryOutcome } from '@/lib/letter-library-effectiveness';
+import { saveDisputeLetter } from '@/lib/dispute-letter-workflow';
+import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
+import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { triggerAutomation } from '@/lib/email-service';
 import {
   buildEscalationPlan,
@@ -167,6 +172,9 @@ export async function PUT(
       analysisConfidence,
       autoSelected,
       responseType,
+      letterContent,
+      acknowledgeWarnings,
+      expectedRevision,
     } = body;
 
     // Get current dispute
@@ -178,6 +186,48 @@ export async function PUT(
 
     if (!currentDispute) {
       return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+    }
+
+    let negativeItem: typeof negativeItems.$inferSelect | null = null;
+    if (currentDispute.negativeItemId) {
+      const [item] = await db
+        .select()
+        .from(negativeItems)
+        .where(eq(negativeItems.id, currentDispute.negativeItemId))
+        .limit(1);
+      negativeItem = item || null;
+    }
+
+    if (createNextRound && outcome === 'verified' && currentDispute.negativeItemId) {
+      const plannedEscalation = buildEscalationPlan({
+        currentRound: currentDispute.round || 1,
+        trigger: 'verified',
+        currentBureau: currentDispute.bureau,
+      });
+      if (plannedEscalation.targetRecipient === 'cfpb') {
+        const decision = decideEscalation({ plan: plannedEscalation, history: await loadDisputeChain(id) });
+        if (decision.kind === 'blocked') {
+          return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
+        }
+      }
+    }
+
+    if (letterContent !== undefined) {
+      if (typeof letterContent !== 'string') {
+        return NextResponse.json({ error: 'letterContent must be a string' }, { status: 400 });
+      }
+      const letterResult = await saveDisputeLetter({
+        disputeId: id,
+        content: letterContent,
+        source: 'manual',
+        actorUserId: adminUser.id,
+        acknowledgeWarnings: acknowledgeWarnings === true,
+        expectedRevision: typeof expectedRevision === 'number' ? expectedRevision : undefined,
+      });
+      if (letterResult.kind === 'immutable') return NextResponse.json({ error: 'This letter is immutable' }, { status: 409 });
+      if (letterResult.kind === 'conflict') return NextResponse.json({ error: 'conflict', ...letterResult }, { status: 409 });
+      if (letterResult.kind === 'blocked') return NextResponse.json({ error: 'This letter references data that is not in the client file.', ...letterResult }, { status: 422 });
+      if (letterResult.kind === 'warnings') return NextResponse.json({ error: 'needs_acknowledgement', ...letterResult }, { status: 409 });
     }
 
     const isMarkingSubmitted = status === 'sent' || status === 'submitted' || sentAt !== undefined;
@@ -193,16 +243,6 @@ export async function PUT(
 
     if (outcome !== undefined && !STRUCTURED_RESPONSE_OUTCOMES.has(outcome)) {
       return NextResponse.json({ error: 'Outcome must use structured response review vocabulary' }, { status: 400 });
-    }
-
-    let negativeItem: typeof negativeItems.$inferSelect | null = null;
-    if (currentDispute.negativeItemId) {
-      const [item] = await db
-        .select()
-        .from(negativeItems)
-        .where(eq(negativeItems.id, currentDispute.negativeItemId))
-        .limit(1);
-      negativeItem = item || null;
     }
 
     // Build update object
@@ -311,7 +351,7 @@ export async function PUT(
       .update(disputes)
       .set(updateData)
       .where(eq(disputes.id, id));
-    
+
     console.log(`[AUDIT] Dispute ${id} updated by admin ${adminUser.email}`);
 
     if (sentAt !== undefined) {
@@ -414,6 +454,12 @@ export async function PUT(
       });
 
       outcomeRecordId = outcomeId;
+
+      await recordLibraryOutcome({
+        libraryId: currentDispute.letterTemplateId,
+        previousOutcome: currentDispute.outcome,
+        nextOutcome: outcome,
+      });
     }
 
     // Auto-escalation: Create Round 2 dispute if item was verified
@@ -433,6 +479,14 @@ export async function PUT(
           currentBureau: currentDispute.bureau,
         });
         const nextRound = escalationPlan.nextRound;
+        const librarySelection = await selectLibraryForGeneration({
+          round: nextRound,
+          targetRecipient: escalationPlan.targetRecipient,
+          bureau: currentDispute.bureau,
+          itemType: negativeItem.itemType,
+          reasonCodes: escalationPlan.reasonCodes,
+          methodology: escalationPlan.methodology,
+        });
 
         // Generate escalation letter
         const letterContent = await generateUniqueDisputeLetter({
@@ -454,19 +508,15 @@ export async function PUT(
           },
           reasonCodes: escalationPlan.reasonCodes,
           customReason: escalationReason || escalationPlan.customReason,
+          librarySelection,
         });
 
-        const nextId = randomUUID();
-        const now = new Date();
-
-        await db.insert(disputes).values({
-          id: nextId,
+        const persistedDraft = await persistGeneratedDisputeDraft({
           clientId: currentDispute.clientId,
           negativeItemId: currentDispute.negativeItemId,
           bureau: currentDispute.bureau,
           disputeReason: `Escalation from Round ${currentDispute.round} - ${escalationReason || escalationPlan.customReason}`,
           disputeType: escalationPlan.disputeType,
-          status: 'draft',
           round: nextRound,
           escalationPath: escalationPlan.targetRecipient,
           letterContent,
@@ -475,16 +525,26 @@ export async function PUT(
           generatedByAi: true,
           methodology: escalationPlan.methodology,
           priorDisputeId: currentDispute.id,
-          reasonCodes: JSON.stringify(escalationPlan.reasonCodes),
-          createdAt: now,
-          updatedAt: now,
+          reasonCodes: escalationPlan.reasonCodes,
+          items: [{
+            kind: 'tradeline',
+            bureau: currentDispute.bureau,
+            creditorName: negativeItem.creditorName,
+            originalCreditor: negativeItem.originalCreditor,
+            accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
+            itemType: negativeItem.itemType,
+            amount: negativeItem.amount,
+            dateReported: negativeItem.dateReported?.toISOString(),
+          }],
+          selection: librarySelection,
+          actorUserId: adminUser.id,
         });
 
         // Fetch created dispute
         const [created] = await db
           .select()
           .from(disputes)
-          .where(eq(disputes.id, nextId))
+          .where(eq(disputes.id, persistedDraft.disputeId))
           .limit(1);
 
         nextRoundDispute = {

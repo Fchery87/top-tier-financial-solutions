@@ -29,7 +29,11 @@ export default function SignInPage() {
       if (result.error) {
         setError(result.error.message || 'Invalid email or password');
       } else {
-        router.push('/');
+        const next = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null;
+        const landingResponse = await fetch(`/api/auth/landing${next ? `?next=${encodeURIComponent(next)}` : ''}`);
+        const landingData: unknown = await landingResponse.json().catch(() => null);
+        const landing = isRecord(landingData) && typeof landingData.landing === 'string' ? landingData.landing : '/';
+        router.push(landing);
         router.refresh();
       }
     } catch {
@@ -133,4 +137,8 @@ export default function SignInPage() {
       </div>
     </div>
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

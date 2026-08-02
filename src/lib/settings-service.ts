@@ -10,6 +10,7 @@ import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
+export type SettingsMutationExecutor = Pick<typeof db, 'delete' | 'insert' | 'select' | 'update'>;
 
 export const DEFAULT_LLM_MODELS = {
   google: 'gemini-2.5-flash',
@@ -105,7 +106,8 @@ export async function setSetting(
   category: string = 'general',
   description?: string,
   isSecret: boolean = false,
-  userId?: string
+  userId?: string,
+  executor: SettingsMutationExecutor = db,
 ): Promise<void> {
   let stringValue: string;
 
@@ -126,7 +128,7 @@ export async function setSetting(
   }
 
   // Check if setting exists
-  const existing = await db
+  const existing = await executor
     .select()
     .from(systemSettings)
     .where(eq(systemSettings.settingKey, key))
@@ -134,7 +136,7 @@ export async function setSetting(
 
   if (existing.length > 0) {
     // Update existing
-    await db
+    await executor
       .update(systemSettings)
       .set({
         settingValue: stringValue,
@@ -149,7 +151,7 @@ export async function setSetting(
   } else {
     // Insert new
     const { randomUUID } = await import('crypto');
-    await db.insert(systemSettings).values({
+    await executor.insert(systemSettings).values({
       id: randomUUID(),
       settingKey: key,
       settingValue: stringValue,
@@ -168,8 +170,11 @@ export async function setSetting(
 /**
  * Delete a setting
  */
-export async function deleteSetting(key: string): Promise<void> {
-  await db.delete(systemSettings).where(eq(systemSettings.settingKey, key));
+export async function deleteSetting(
+  key: string,
+  executor: SettingsMutationExecutor = db,
+): Promise<void> {
+  await executor.delete(systemSettings).where(eq(systemSettings.settingKey, key));
   settingsCache.delete(key);
 }
 
@@ -277,24 +282,25 @@ export async function getLLMConfig(): Promise<LLMConfig> {
  */
 export async function updateLLMConfig(
   config: Partial<LLMConfig>,
-  userId?: string
+  userId?: string,
+  executor: SettingsMutationExecutor = db,
 ): Promise<void> {
   if (config.provider !== undefined) {
-    await setSetting('llm.provider', config.provider, 'string', 'llm', 'LLM provider (google, openai, anthropic, custom)', false, userId);
+    await setSetting('llm.provider', config.provider, 'string', 'llm', 'LLM provider (google, openai, anthropic, custom)', false, userId, executor);
   }
   if (config.model !== undefined) {
-    await setSetting('llm.model', config.model, 'string', 'llm', 'LLM model identifier', false, userId);
+    await setSetting('llm.model', config.model, 'string', 'llm', 'LLM model identifier', false, userId, executor);
   }
   if (config.apiKey !== undefined) {
-    await setSetting('llm.api_key', config.apiKey, 'string', 'llm', 'LLM API key', true, userId);
+    await setSetting('llm.api_key', config.apiKey, 'string', 'llm', 'LLM API key', true, userId, executor);
   }
   if (config.apiEndpoint !== undefined) {
-    await setSetting('llm.api_endpoint', config.apiEndpoint, 'string', 'llm', 'Custom LLM API endpoint', false, userId);
+    await setSetting('llm.api_endpoint', config.apiEndpoint, 'string', 'llm', 'Custom LLM API endpoint', false, userId, executor);
   }
   if (config.temperature !== undefined) {
-    await setSetting('llm.temperature', config.temperature, 'number', 'llm', 'LLM temperature (0-1)', false, userId);
+    await setSetting('llm.temperature', config.temperature, 'number', 'llm', 'LLM temperature (0-1)', false, userId, executor);
   }
   if (config.maxTokens !== undefined) {
-    await setSetting('llm.max_tokens', config.maxTokens, 'number', 'llm', 'Maximum tokens for LLM response', false, userId);
+    await setSetting('llm.max_tokens', config.maxTokens, 'number', 'llm', 'Maximum tokens for LLM response', false, userId, executor);
   }
 }

@@ -1,28 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { setSetting, getSettingsByCategory, clearSettingsCache } from '@/lib/settings-service';
+import { deleteSetting, getSettingsByCategory, setSetting } from '@/lib/settings-service';
+import { requireCapability } from '@/lib/admin-session';
+import { recordAdminActivity } from '@/lib/admin-activity';
 
 type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
+type SettingType = 'string' | 'number' | 'boolean' | 'json';
 
-// Check if user is super admin
-async function checkSuperAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user) {
-    return { authorized: false, error: 'Unauthorized' };
-  }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-  const userRole = (session.user as { role?: string }).role;
-  if (userRole !== 'super_admin') {
-    return { authorized: false, error: 'Super admin access required' };
-  }
+function isSettingType(value: unknown): value is SettingType {
+  return value === 'string' || value === 'number' || value === 'boolean' || value === 'json';
+}
 
-  return { authorized: true, userId: session.user.id };
+function isSettingValue(value: unknown): value is SettingValue {
+  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+    || Array.isArray(value) || isRecord(value);
 }
 
 /**
@@ -30,9 +27,9 @@ async function checkSuperAdmin() {
  * Get all settings or settings by category
  */
 export async function GET(request: NextRequest) {
-  const authCheck = await checkSuperAdmin();
-  if (!authCheck.authorized) {
-    return NextResponse.json({ error: authCheck.error }, { status: 403 });
+  const adminUser = await requireCapability('settings:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -92,27 +89,35 @@ export async function GET(request: NextRequest) {
  * Update a setting value
  */
 export async function PUT(request: NextRequest) {
-  const authCheck = await checkSuperAdmin();
-  if (!authCheck.authorized) {
-    return NextResponse.json({ error: authCheck.error }, { status: 403 });
+  const adminUser = await requireCapability('settings:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
-    const body: {
-      key?: string;
-      value?: unknown;
-      type?: 'string' | 'number' | 'boolean' | 'json';
-      category?: string;
-      description?: string;
-      isSecret?: boolean;
-    } = await request.json();
-    const { key, value, type, category, description, isSecret } = body;
+    const rawBody: unknown = await request.json();
+    if (!isRecord(rawBody)) return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
+    const key = typeof rawBody.key === 'string' ? rawBody.key : '';
+    const value = rawBody.value;
+    const type = rawBody.type;
+    const category = typeof rawBody.category === 'string' ? rawBody.category : undefined;
+    const description = typeof rawBody.description === 'string' ? rawBody.description : undefined;
+    const isSecret = typeof rawBody.isSecret === 'boolean' ? rawBody.isSecret : undefined;
 
-    if (!key || type === undefined) {
+    if (!key || !isSettingType(type) || !isSettingValue(value)) {
       return NextResponse.json({ error: 'Missing required fields: key, type' }, { status: 400 });
     }
 
-    await setSetting(key, value as SettingValue, type, category, description, isSecret, authCheck.userId);
+    await db.transaction(async (tx) => {
+      await setSetting(key, value, type, category, description, isSecret, adminUser.id, tx);
+      await recordAdminActivity(tx, {
+        actorUserId: adminUser.id,
+        action: 'settings.updated',
+        subjectType: 'settings',
+        subjectId: key,
+        metadata: { changedFields: ['value', 'type', 'category', 'description', 'isSecret'] },
+      });
+    });
 
     return NextResponse.json({ 
       success: true, 
@@ -129,31 +134,47 @@ export async function PUT(request: NextRequest) {
  * Create a new setting
  */
 export async function POST(request: NextRequest) {
-  const authCheck = await checkSuperAdmin();
-  if (!authCheck.authorized) {
-    return NextResponse.json({ error: authCheck.error }, { status: 403 });
+  const adminUser = await requireCapability('settings:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
-    const body = await request.json();
-    const { key, value, type, category, description, isSecret } = body;
+    const rawBody: unknown = await request.json();
+    if (!isRecord(rawBody)) return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
+    const key = typeof rawBody.key === 'string' ? rawBody.key : '';
+    const value = rawBody.value;
+    const type = rawBody.type;
+    const category = typeof rawBody.category === 'string' ? rawBody.category : 'general';
+    const description = typeof rawBody.description === 'string' ? rawBody.description : undefined;
+    const isSecret = rawBody.isSecret === true;
 
-    if (!key || type === undefined) {
+    if (!key || !isSettingType(type) || !isSettingValue(value)) {
       return NextResponse.json({ error: 'Missing required fields: key, type' }, { status: 400 });
     }
 
-    // Check if setting already exists
-    const existing = await db
-      .select()
-      .from(systemSettings)
-      .where(eq(systemSettings.settingKey, key))
-      .limit(1);
+    const created = await db.transaction(async (tx) => {
+      const existing = await tx
+        .select()
+        .from(systemSettings)
+        .where(eq(systemSettings.settingKey, key))
+        .limit(1);
+      if (existing.length > 0) return false;
 
-    if (existing.length > 0) {
+      await setSetting(key, value, type, category, description, isSecret, adminUser.id, tx);
+      await recordAdminActivity(tx, {
+        actorUserId: adminUser.id,
+        action: 'settings.created',
+        subjectType: 'settings',
+        subjectId: key,
+        metadata: { changedFields: ['value', 'type', 'category', 'description', 'isSecret'] },
+      });
+      return true;
+    });
+
+    if (!created) {
       return NextResponse.json({ error: 'Setting already exists' }, { status: 400 });
     }
-
-    await setSetting(key, value, type, category || 'general', description, isSecret || false, authCheck.userId);
 
     return NextResponse.json({ 
       success: true, 
@@ -170,9 +191,9 @@ export async function POST(request: NextRequest) {
  * Delete a setting
  */
 export async function DELETE(request: NextRequest) {
-  const authCheck = await checkSuperAdmin();
-  if (!authCheck.authorized) {
-    return NextResponse.json({ error: authCheck.error }, { status: 403 });
+  const adminUser = await requireCapability('settings:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -183,8 +204,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing key parameter' }, { status: 400 });
     }
 
-    await db.delete(systemSettings).where(eq(systemSettings.settingKey, key));
-    clearSettingsCache();
+    await db.transaction(async (tx) => {
+      await deleteSetting(key, tx);
+      await recordAdminActivity(tx, {
+        actorUserId: adminUser.id,
+        action: 'settings.deleted',
+        subjectType: 'settings',
+        subjectId: key,
+        metadata: { changedFields: [] },
+      });
+    });
 
     return NextResponse.json({ 
       success: true, 

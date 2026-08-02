@@ -27,6 +27,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getUserRole } from '@/lib/admin-auth';
 import AdminLayout from '@/app/admin/layout';
+import { WorkspaceShell } from '@/components/workspace/WorkspaceShell';
 
 const children = <div data-testid="child">child content</div>;
 
@@ -79,7 +80,7 @@ describe('AdminLayout', () => {
     await expect(AdminLayout({ children })).rejects.toThrow('REDIRECT:/workspace');
   });
 
-  it('renders the content wrapper and does not redirect for an admin role', async () => {
+  it('renders the workspace shell and does not redirect for an admin role', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: 'u1', email: 'admin@example.com' },
     } as never);
@@ -88,12 +89,12 @@ describe('AdminLayout', () => {
     const element = await AdminLayout({ children });
 
     expect(redirect).not.toHaveBeenCalled();
-    expect(element.type).toBe('div');
-    expect(element.props.className).toBe('mx-auto max-w-[1600px] p-4 md:p-6 lg:p-8');
+    expect(element.type).toBe(WorkspaceShell);
+    expect(element.props.role).toBe('admin');
     expect(element.props.children).toBe(children);
   });
 
-  it('renders the content wrapper and does not redirect for a super_admin role', async () => {
+  it('renders the workspace shell and does not redirect for a super_admin role', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: 'u1', email: 'super@example.com' },
     } as never);
@@ -102,7 +103,8 @@ describe('AdminLayout', () => {
     const element = await AdminLayout({ children });
 
     expect(redirect).not.toHaveBeenCalled();
-    expect(element.type).toBe('div');
+    expect(element.type).toBe(WorkspaceShell);
+    expect(element.props.role).toBe('super_admin');
     expect(element.props.children).toBe(children);
   });
 });

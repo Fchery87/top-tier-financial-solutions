@@ -10,12 +10,14 @@ import { useWizardContext } from './WizardContext';
 import { calculateLetterStrength } from '@/lib/letter-strength-calculator';
 import { type DisputeItemPayload, formatPersonalInfoType } from './types';
 import { formatCurrency, formatItemType } from '@/lib/format';
+import { LetterStudio } from '@/components/workspace/disputes/LetterStudio';
 
 export function StepReview() {
   const ctx = useWizardContext();
   const {
     generationMethod, aiAnalysisResults, aiAnalysisSummary, confidenceThreshold,
     generatedLetters,
+    setGeneratedLetters,
     bulkTrackingNumber, setBulkTrackingNumber, bulkSendDate, setBulkSendDate,
     markingAsSent, bulkSentSuccess, handleBulkMarkAsSent,
     selectedEvidenceIds, evidenceDocuments,
@@ -145,7 +147,7 @@ export function StepReview() {
           <CardDescription>{generatedLetters.length} letters generated for review</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {generatedLetters.map((letter, index) => {
+          {generatedLetters.map((letter) => {
             const payloadItems = letter.items && letter.items.length > 0 ? letter.items : [];
             const primaryItem = payloadItems[0];
 
@@ -156,7 +158,7 @@ export function StepReview() {
             };
 
             return (
-              <div key={index} className="border border-border rounded-lg overflow-hidden">
+              <div key={letter.id} className="border border-border rounded-lg overflow-hidden">
                 <div className="bg-muted/50 px-4 py-3 flex items-center justify-between">
                   <div>
                     {letter.combined ? (
@@ -185,8 +187,12 @@ export function StepReview() {
                     <Button variant="ghost" size="sm" onClick={() => downloadLetter(letter.content, letter.combined ? `dispute-${letter.bureau}-combined-${payloadItems.length}-items.txt` : `dispute-${letter.bureau}-${primaryItem?.creditorName || 'item'}.txt`)}><Download className="w-4 h-4 mr-1" />Download</Button>
                   </div>
                 </div>
-                <div className="p-4 max-h-[400px] overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm font-mono">{letter.content}</pre>
+                <div className="p-4">
+                  <LetterStudio
+                    disputeId={letter.id}
+                    initialLetter={letter.content}
+                    onSaved={(content, revision) => setGeneratedLetters(current => current.map(item => item.id === letter.id ? { ...item, content, revision } : item))}
+                  />
                 </div>
               </div>
             );

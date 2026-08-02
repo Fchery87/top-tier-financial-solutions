@@ -22,13 +22,3 @@ export async function getUserRole(email: string): Promise<UserRole | null> {
     return null;
   }
 }
-
-export async function isSuperAdmin(email: string): Promise<boolean> {
-  const role = await getUserRole(email);
-  return role === 'super_admin';
-}
-
-export async function isAdmin(email: string): Promise<boolean> {
-  const role = await getUserRole(email);
-  return role === 'admin' || role === 'super_admin';
-}

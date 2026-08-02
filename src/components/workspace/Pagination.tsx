@@ -63,10 +63,7 @@ export function Pagination({
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-4 text-[13px] text-muted-foreground">
-        <span>
-          Showing <span className="font-mono tabular-nums text-foreground">{startItem}–{endItem}</span> of{' '}
-          <span className="font-mono tabular-nums text-foreground">{totalItems}</span>
-        </span>
+        <span>Showing {startItem} to {endItem} of {totalItems} results</span>
         {onItemsPerPageChange && (
           <div className="flex items-center gap-2">
             <span>Show</span>

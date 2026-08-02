@@ -12,7 +12,6 @@ const authMock = vi.hoisted(() => ({
 }));
 
 const adminAuthMock = vi.hoisted(() => ({
-  isSuperAdmin: vi.fn(),
   getUserRole: vi.fn(),
 }));
 
@@ -55,7 +54,6 @@ describe('GET /api/admin/disputes/discrepancies', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
-    adminAuthMock.isSuperAdmin.mockResolvedValue(true);
     adminAuthMock.getUserRole.mockResolvedValue('super_admin');
   });
 
@@ -107,7 +105,6 @@ describe('GET /api/admin/disputes/discrepancies', () => {
 
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
-    adminAuthMock.isSuperAdmin.mockResolvedValue(true);
     adminAuthMock.getUserRole.mockResolvedValue('super_admin');
 
     mockDiscrepancyQuery([

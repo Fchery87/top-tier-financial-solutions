@@ -31,6 +31,7 @@ interface UseGenerateDisputeLettersOptions {
   selectedMethodology: string;
   selectedBureaus: string[];
   targetRecipient: TargetRecipient;
+  priorDisputeId: string;
   selectedDisputeType: string;
   disputeRound: number;
   customReason: string;
@@ -64,6 +65,7 @@ export function useGenerateDisputeLetters({
   selectedMethodology,
   selectedBureaus,
   targetRecipient,
+  priorDisputeId,
   selectedDisputeType,
   disputeRound,
   customReason,
@@ -111,6 +113,7 @@ export function useGenerateDisputeLetters({
       selectedMethodology,
       selectedBureaus,
       targetRecipient,
+      priorDisputeId,
       selectedDisputeType,
       disputeRound,
       customReason,
@@ -145,6 +148,7 @@ export function useGenerateDisputeLetters({
     selectedMethodology,
     selectedBureaus,
     targetRecipient,
+    priorDisputeId,
     selectedDisputeType,
     disputeRound,
     customReason,

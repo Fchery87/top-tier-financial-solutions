@@ -196,6 +196,14 @@ export function AdminSidebar({ collapsed = false, onToggle, mobileOpen = false, 
           onNavigate={handleNavClick}
         />
       )}
+      {can('team:manage') && (
+        <NavRow
+          item={{ name: 'Team & Roles', href: '/admin/team', icon: Users }}
+          active={pathname.startsWith('/admin/team')}
+          collapsed={isCollapsed}
+          onNavigate={handleNavClick}
+        />
+      )}
       <NavRow
         item={{ name: 'Back to Site', href: '/', icon: LogOut, exact: true }}
         active={false}

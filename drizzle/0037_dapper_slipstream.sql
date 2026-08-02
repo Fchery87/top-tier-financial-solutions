@@ -1,0 +1,1 @@
+ALTER TABLE "disputes" ADD CONSTRAINT "disputes_letter_template_id_dispute_letter_library_id_fk" FOREIGN KEY ("letter_template_id") REFERENCES "public"."dispute_letter_library"("id") ON DELETE set null ON UPDATE no action;

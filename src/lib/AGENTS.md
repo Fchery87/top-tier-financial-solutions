@@ -35,10 +35,10 @@ export function cn(...inputs: ClassValue[]) {
 ```
 
 ### Authentication Pattern
-Role-based auth with database queries:
+Role-based auth with database queries and capability checks:
 ```typescript
 // ✅ DO: Copy from src/lib/admin-auth.ts
-export type UserRole = 'user' | 'admin' | 'super_admin';
+export type UserRole = 'user' | 'staff' | 'admin' | 'super_admin';
 
 export async function getUserRole(email: string): Promise<UserRole | null> {
   try {
@@ -97,6 +97,8 @@ try {
 - Credit account ingest helpers: `credit-account-ingest.ts`
 - AI letter generator: `ai-letter-generator.ts`
 - Output linting: `letter-lint.ts`
+- Letter workflow: `dispute-letter-workflow.ts`
+- CFPB policy: `cfpb-eligibility.ts` and `dispute-escalation-decision.ts`
 - Email service: `email-service.ts`
 - Parsers: `parsers/` directory for credit report parsing
 
