@@ -106,6 +106,8 @@ Separate outcomes clearly. Deletion means the item no longer reports on a bureau
 
 Compute next decisions from the reviewed response. Possible next decisions include closing the item, updating the item, escalating to the next Dispute Cycle, requesting method of verification, sending a furnisher dispute, or marking the item as not worth further action.
 
+Delivered 2026-08-03: Response Review now returns a deterministic, typed recommendation and never creates a draft as part of the review mutation. Actual responses require a receipt date and response document; an overdue `no_response` review deliberately records neither. The staff workspace has a deadline-prioritized response-review queue, and only a separate “Create recommended draft” action can invoke the existing, fully revalidated next-cycle generation seam.
+
 Acceptance criteria:
 
 1. Every response must pass through Response Review before a next Dispute Cycle is created.

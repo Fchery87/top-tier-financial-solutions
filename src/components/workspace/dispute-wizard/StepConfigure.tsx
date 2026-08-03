@@ -61,7 +61,18 @@ export function StepConfigure() {
       return;
     }
 
-    if (!selectedClient?.id || selectedCfpbItemIds.length !== 1) {
+    if (!selectedClient?.id) {
+      setCfpbEligibility({
+        eligible: false,
+        reason: 'client_required',
+        eligibleAt: null,
+        message: 'Select a client before the CRA predecessor can be matched for CFPB generation.',
+      });
+      setLoadingCfpbEligibility(false);
+      return;
+    }
+
+    if (selectedCfpbItemIds.length !== 1) {
       setCfpbEligibility({
         eligible: false,
         reason: 'one_item_required',
@@ -163,7 +174,7 @@ export function StepConfigure() {
             <Input aria-label="Prior CRA dispute ID" placeholder="Prior CRA dispute ID" value={priorDisputeId} onChange={event => setPriorDisputeId(event.target.value)} />
             {loadingCfpbEligibility && <p className="text-xs text-muted-foreground" aria-live="polite">Checking the prior CRA dispute eligibility…</p>}
             {!loadingCfpbEligibility && cfpbEligibility && (
-              <div data-testid="cfpb-eligibility-preview" className={cfpbEligibility.eligible ? 'rounded-md bg-success/10 p-3 text-success' : 'rounded-md bg-warning/10 p-3 text-warning'}>
+              <div data-testid="cfpb-eligibility-preview" data-selected-item-count={selectedCfpbItemIds.length} data-selected-client-id={selectedClient?.id ?? ''} className={cfpbEligibility.eligible ? 'rounded-md bg-success/10 p-3 text-success' : 'rounded-md bg-warning/10 p-3 text-warning'}>
                 <p className="font-medium">{cfpbEligibility.eligible ? 'Eligible for CFPB escalation' : `Not eligible yet: ${formatCfpbReason(cfpbEligibility.reason)}`}</p>
                 <p className="mt-1 text-xs">{cfpbEligibility.message}</p>
                 {cfpbEligibility.eligibleAt && <p className="mt-1 text-xs">Eligible after {formatEligibilityDate(cfpbEligibility.eligibleAt)}.</p>}

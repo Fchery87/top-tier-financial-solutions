@@ -39,7 +39,7 @@ export default function PortalLetterPreview({ letter, onClose }: PortalLetterPre
                 Round {letter.round ?? 1}
               </span>
               <span className="px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground text-[11px] uppercase">
-                {letter.bureau}
+                {letter.bureau || 'All bureaus'}
               </span>
               <span className="text-[11px] text-muted-foreground truncate">
                 {letter.creditor_name}

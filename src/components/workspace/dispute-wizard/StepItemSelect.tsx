@@ -185,7 +185,7 @@ function TradelinesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
             const instruction = itemDisputeInstructions.get(item.id);
             const showInstructionUI = isSelected && generationMethod === 'template';
             return (
-              <div key={item.id} className={`rounded-lg border transition-all ${isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'}`}>
+              <div data-testid={`wizard-item-${item.id}`} key={item.id} className={`rounded-lg border transition-all ${isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'}`}>
                 <div className="p-4 cursor-pointer" onClick={() => handleToggleItem(item.id)}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

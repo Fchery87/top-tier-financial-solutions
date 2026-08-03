@@ -21,15 +21,17 @@ export function useSelectedClientDataLoad({
     if (!selectedClientId) return;
 
     void fetchNegativeItems(selectedClientId);
-    void fetchDiscrepancies(selectedClientId, selectedReportId);
     void fetchTriage(selectedClientId);
     void fetchEvidence(selectedClientId);
   }, [
     selectedClientId,
-    selectedReportId,
     fetchNegativeItems,
-    fetchDiscrepancies,
     fetchTriage,
     fetchEvidence,
   ]);
+
+  React.useEffect(() => {
+    if (!selectedClientId) return;
+    void fetchDiscrepancies(selectedClientId, selectedReportId);
+  }, [selectedClientId, selectedReportId, fetchDiscrepancies]);
 }

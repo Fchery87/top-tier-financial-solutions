@@ -8,7 +8,7 @@ import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
-import { buildEscalationPlan } from '@/lib/dispute-automation';
+import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
 
 export async function POST(
   _request: NextRequest,
@@ -27,8 +27,39 @@ export async function POST(
       return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
     }
 
-    if (currentDispute.outcome !== 'verified') {
-      return NextResponse.json({ error: 'Quick re-dispute is only available for verified items' }, { status: 400 });
+    if (currentDispute.outcome !== 'verified' && currentDispute.outcome !== 'no_response') {
+      return NextResponse.json({ error: 'A verified or no-response review is required before creating a next-cycle draft' }, { status: 400 });
+    }
+
+    if (currentDispute.outcome === 'verified' && (!currentDispute.responseReceivedAt || !currentDispute.responseDocumentUrl)) {
+      return NextResponse.json({ error: 'Verified escalation requires a completed response review with evidence' }, { status: 400 });
+    }
+
+    if (currentDispute.outcome === 'no_response') {
+      if (!currentDispute.responseDeadline || currentDispute.responseDeadline > new Date()) {
+        return NextResponse.json({
+          error: 'No-response escalation is available only after the response deadline has elapsed',
+        }, { status: 400 });
+      }
+    }
+
+    const recommendation = getResponseReviewRecommendation({
+      outcome: currentDispute.outcome,
+      currentRound: currentDispute.round || 1,
+      bureau: currentDispute.bureau,
+    });
+    if (recommendation.kind !== 'create_next_draft') {
+      return NextResponse.json({ error: 'This response outcome does not recommend a next-cycle draft' }, { status: 400 });
+    }
+    const escalationPlan = recommendation.plan;
+
+    const [existingChild] = await db
+      .select({ id: disputes.id })
+      .from(disputes)
+      .where(eq(disputes.priorDisputeId, currentDispute.id))
+      .limit(1);
+    if (existingChild) {
+      return NextResponse.json({ error: 'A next-cycle draft already exists for this response review' }, { status: 409 });
     }
 
     const [client] = await db.select().from(clients).where(eq(clients.id, currentDispute.clientId)).limit(1);
@@ -48,19 +79,9 @@ export async function POST(
       );
     }
 
-    const nextRound = (currentDispute.round || 1) + 1;
-    const targetRecipient = nextRound >= 4 ? 'cfpb' : nextRound === 2 ? 'bureau' : 'creditor';
-    const nextDisputeType = nextRound >= 4 ? 'fcra_violation_notice' : nextRound === 2 ? 'method_of_verification' : 'direct_creditor';
-    const methodology = nextRound === 2 ? 'method_of_verification' : 'factual';
-    const reasonCodes = nextRound >= 4
-      ? ['repeat_verification', 'fcra_non_compliance']
-      : nextRound === 2
-      ? ['previously_disputed', 'request_verification_method']
-      : ['verification_required', 'metro2_violation'];
-
-    if (targetRecipient === 'cfpb') {
+    if (escalationPlan.targetRecipient === 'cfpb') {
       const decision = decideEscalation({
-        plan: buildEscalationPlan({ currentRound: currentDispute.round || 1, trigger: 'verified', currentBureau: currentDispute.bureau }),
+        plan: escalationPlan,
         history: await loadDisputeChain(currentDispute.id),
       });
       if (decision.kind === 'blocked') {
@@ -68,19 +89,19 @@ export async function POST(
       }
     }
     const librarySelection = await selectLibraryForGeneration({
-      round: nextRound,
-      targetRecipient,
+      round: escalationPlan.nextRound,
+      targetRecipient: escalationPlan.targetRecipient,
       bureau: currentDispute.bureau,
       itemType: negativeItem.itemType,
-      reasonCodes,
-      methodology,
+      reasonCodes: escalationPlan.reasonCodes,
+      methodology: escalationPlan.methodology,
     });
 
     const letterContent = await generateUniqueDisputeLetter({
-      disputeType: nextDisputeType,
-      round: nextRound,
-      targetRecipient,
-      methodology,
+      disputeType: escalationPlan.disputeType,
+      round: escalationPlan.nextRound,
+      targetRecipient: escalationPlan.targetRecipient,
+      methodology: escalationPlan.methodology,
       clientData: { name: `${client.firstName} ${client.lastName}` },
       itemData: {
         creditorName: negativeItem.creditorName,
@@ -91,8 +112,8 @@ export async function POST(
         dateReported: negativeItem.dateReported?.toISOString(),
         bureau: currentDispute.bureau,
       },
-      reasonCodes,
-      customReason: `Escalation after verification in Round ${currentDispute.round || 1}`,
+      reasonCodes: escalationPlan.reasonCodes,
+      customReason: escalationPlan.customReason,
       librarySelection,
     });
 
@@ -100,15 +121,15 @@ export async function POST(
       clientId: currentDispute.clientId,
       negativeItemId: currentDispute.negativeItemId,
       bureau: currentDispute.bureau,
-      disputeReason: `Escalation after verification in Round ${currentDispute.round || 1}`,
-      disputeType: nextDisputeType,
-      round: nextRound,
-      escalationPath: targetRecipient,
+      disputeReason: escalationPlan.customReason,
+      disputeType: escalationPlan.disputeType,
+      round: escalationPlan.nextRound,
+      escalationPath: escalationPlan.targetRecipient,
       letterContent,
       creditorName: negativeItem.creditorName,
       accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
-      methodology,
-      reasonCodes,
+      methodology: escalationPlan.methodology,
+      reasonCodes: escalationPlan.reasonCodes,
       priorDisputeId: currentDispute.id,
       analysisConfidence: currentDispute.analysisConfidence,
       autoSelected: currentDispute.autoSelected ?? false,

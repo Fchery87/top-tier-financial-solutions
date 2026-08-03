@@ -35,8 +35,11 @@ interface LetterStudioProps {
 
 export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSaved }: LetterStudioProps) {
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const lintRequestRef = React.useRef(0);
   const autosaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveGenerationRef = React.useRef(0);
+  const savingRef = React.useRef(false);
   const [letter, setLetter] = React.useState(initialLetter || '');
   const [savedLetter, setSavedLetter] = React.useState(initialLetter || '');
   const [mode, setMode] = React.useState<RewriteMode>('rewrite');
@@ -116,8 +119,16 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
     void refreshState().catch(() => undefined);
   }, [onSaved, refreshState]);
 
+  const cancelPendingAutosave = React.useCallback(() => {
+    autosaveGenerationRef.current += 1;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = null;
+  }, []);
+
   const saveManual = React.useCallback(async (acknowledge = false) => {
-    if (saving || !letter.trim() || findings.some(finding => finding.severity === 'block')) return;
+    if (saving || savingRef.current || !letter.trim() || findings.some(finding => finding.severity === 'block')) return;
+    cancelPendingAutosave();
+    savingRef.current = true;
     setSaving(true);
     setError('');
     setSaved(false);
@@ -143,16 +154,24 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
     } catch {
       setError('The letter could not be saved.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  }, [applySavedState, disputeId, findings, letter, revision, saving]);
+  }, [applySavedState, cancelPendingAutosave, disputeId, findings, letter, revision, saving]);
 
   const rewrite = React.useCallback(async (acknowledge = false) => {
-    if (saving || !letter.trim()) return;
+    if (saving || savingRef.current || !letter.trim()) return;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     setSaved(false);
     try {
+      const textarea = textareaRef.current;
+      const currentSelectionStart = textarea?.selectionStart ?? selectionStart;
+      const currentSelectionEnd = textarea?.selectionEnd ?? selectionEnd;
+      const currentSelectedText = textarea && currentSelectionStart !== null && currentSelectionEnd !== null && currentSelectionEnd > currentSelectionStart
+        ? textarea.value.slice(currentSelectionStart, currentSelectionEnd)
+        : selectedText;
       const response = await fetch(`/api/admin/disputes/${disputeId}/letter/rewrite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -160,9 +179,9 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
           mode,
           tone: mode === 'tone' ? tone : undefined,
           instruction: mode === 'custom' ? instruction : undefined,
-          selectionStart: selectionStart ?? undefined,
-          selectionEnd: selectionEnd ?? undefined,
-          expectedSelectedText: selectedText || undefined,
+          selectionStart: currentSelectionStart ?? undefined,
+          selectionEnd: currentSelectionEnd ?? undefined,
+          expectedSelectedText: currentSelectedText || undefined,
           expectedRevision: revision,
           acknowledgeWarnings: acknowledge,
         }),
@@ -184,11 +203,14 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
     } catch {
       setError('The letter could not be rewritten.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [applySavedState, disputeId, instruction, letter, mode, revision, saving, selectedText, selectionEnd, selectionStart, tone]);
 
   const revert = React.useCallback(async (selected: LetterRevisionSummary, acknowledge = false) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -210,14 +232,18 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
     } catch {
       setError('The letter could not be reverted.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [applySavedState, disputeId, revision]);
 
   const handleBlur = () => {
     if (!letter.trim() || letter === savedLetter || saving || readOnly || immutableReason) return;
-    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    cancelPendingAutosave();
+    const generation = autosaveGenerationRef.current;
     autosaveTimerRef.current = setTimeout(() => {
+      if (generation !== autosaveGenerationRef.current) return;
+      autosaveTimerRef.current = null;
       const activeElement = document.activeElement;
       if (activeElement && rootRef.current?.contains(activeElement)) return;
       void saveManual(false);
@@ -239,6 +265,7 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div>
           <Textarea
+            ref={textareaRef}
             value={letter}
             onChange={event => { setLetter(event.target.value); setSaved(false); }}
             onSelect={event => {
@@ -259,9 +286,9 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
             {mode === 'tone' ? <select value={tone} onChange={event => setTone(parseTone(event.target.value))} className="h-10 rounded-md border border-input bg-background px-3 text-sm" aria-label="Letter tone">
               <option value="professional">Professional</option><option value="concerned">Concerned</option><option value="annoyed">Annoyed</option><option value="disappointed">Disappointed</option><option value="demanding">Demanding</option>
             </select> : mode === 'custom' ? <input value={instruction} onChange={event => setInstruction(event.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm" placeholder="Make the request more specific" aria-label="Rewrite instruction" /> : <p className="flex items-center px-1 text-xs text-muted-foreground">Select text to rewrite only that passage.</p>}
-            <Button variant="outline" onClick={() => void rewrite(false)} disabled={saving || blocked || !letter.trim()}><Wand2 className="mr-2 h-4 w-4" />Rewrite</Button>
+            <Button variant="outline" onMouseDown={cancelPendingAutosave} onClick={() => void rewrite(false)} disabled={saving || blocked || !letter.trim()}><Wand2 className="mr-2 h-4 w-4" />Rewrite</Button>
           </div>}
-          {!immutable && <div className="mt-3 flex justify-end gap-2"><Button onClick={() => void saveManual(acknowledgeWarnings)} disabled={saving || blocked || !letter.trim()}><Save className="mr-2 h-4 w-4" />Save letter</Button>{warning && acknowledgeWarnings && <Button variant="outline" onClick={() => void saveManual(true)} disabled={saving}>Apply with warnings</Button>}</div>}
+          {!immutable && <div className="mt-3 flex justify-end gap-2"><Button onMouseDown={cancelPendingAutosave} onClick={() => void saveManual(acknowledgeWarnings)} disabled={saving || blocked || !letter.trim()}><Save className="mr-2 h-4 w-4" />Save letter</Button>{warning && acknowledgeWarnings && <Button variant="outline" onMouseDown={cancelPendingAutosave} onClick={() => void saveManual(true)} disabled={saving}>Apply with warnings</Button>}</div>}
         </div>
 
         <aside className="space-y-4">

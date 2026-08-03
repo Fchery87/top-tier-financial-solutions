@@ -102,6 +102,7 @@ function roleUpdateErrorMessage(error: unknown): string {
 }
 
 export function TeamManager({ currentUserId }: TeamManagerProps) {
+  void currentUserId;
   const [state, setState] = React.useState<TeamState>({ kind: 'loading' });
   const [updatingMemberId, setUpdatingMemberId] = React.useState<string | null>(null);
   const [operationError, setOperationError] = React.useState<string | null>(null);
@@ -200,7 +201,7 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
             </thead>
             <tbody>
               {state.members.map((member) => {
-                const isCurrentFinalOwner = member.id === currentUserId && member.is_last_super_admin;
+                const isCurrentFinalOwner = member.is_last_super_admin;
                 return (
                   <tr key={member.id} className="border-b last:border-b-0">
                     <td className="px-4 py-3 align-top">

@@ -24,7 +24,8 @@ Added a comprehensive "Clients" section to the admin dashboard for credit repair
 | `fcra_compliance_items` | FCRA reporting-window tracking with clock confidence |
 | `credit_analyses` | Summary scores and metrics per client |
 | `disputes` | Dispute tracking with rounds and outcomes |
-| `dispute_letter_templates` | Pre-built letter templates for disputes |
+| `dispute_letter_library` | Active methodology-specific letter strategies for disputes |
+| `dispute_letter_templates` | Deprecated compatibility table; not used for new generation |
 
 ### Key Relationships
 

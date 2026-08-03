@@ -16,6 +16,8 @@ import { DisputeCalendar } from '@/components/workspace/DisputeCalendar';
 import { DisputeStatsCards } from '@/components/workspace/disputes/DisputeStatsCards';
 import { DisputeFilters } from '@/components/workspace/disputes/DisputeFilters';
 import { DisputeDetailPanel } from '@/components/workspace/disputes/DisputeDetailPanel';
+import { ResponseReviewQueue } from '@/components/workspace/disputes/ResponseReviewQueue';
+import { findDisputeFromQuery } from '@/lib/workspace-dispute-navigation';
 import { toast } from 'sonner';
 
 interface Dispute {
@@ -56,8 +58,10 @@ function readPref<T>(key: string, prefKey: string, field: string, fallback: T): 
 export default function DisputesPage() {
   const searchParams = useSearchParams();
   const { userId, role } = useAdminRole();
+  const disputeIdFromUrl = searchParams.get('dispute');
   const preferencesKey = userId ? `admin-disputes-default-view:${userId}` : 'admin-disputes-default-view';
   const [disputes, setDisputes] = React.useState<Dispute[]>([]);
+  const [responseReviewQueue, setResponseReviewQueue] = React.useState<Dispute[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedStatus, setSelectedStatus] = React.useState(() => {
     const fromUrl = searchParams.get('status');
@@ -106,10 +110,17 @@ export default function DisputesPage() {
       if (showAwaitingOnly) params.append('awaiting_response', 'true');
       if (roundFilter !== null) params.append('round', String(roundFilter));
       if (outcomeFilter) params.append('outcome', outcomeFilter);
-      const response = await fetch(`/api/admin/disputes?${params.toString()}`);
+      const [response, responseQueueResponse] = await Promise.all([
+        fetch(`/api/admin/disputes?${params.toString()}`),
+        fetch('/api/admin/disputes?awaiting_response=true'),
+      ]);
       if (response.ok) {
         const data = await response.json();
         setDisputes(data.disputes);
+      }
+      if (responseQueueResponse.ok) {
+        const data = await responseQueueResponse.json();
+        setResponseReviewQueue(data.disputes);
       }
     } catch (error) {
       console.error('Error fetching disputes:', error);
@@ -119,6 +130,14 @@ export default function DisputesPage() {
   }, [selectedStatus, selectedBureau, showOverdueOnly, showAwaitingOnly, roundFilter, outcomeFilter]);
 
   React.useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
+
+  React.useEffect(() => {
+    const requestedDispute = findDisputeFromQuery(disputes, disputeIdFromUrl);
+    if (!requestedDispute) return;
+
+    setSelectedDispute(requestedDispute);
+    setShowResponseModal(true);
+  }, [disputes, disputeIdFromUrl]);
 
   const handleLogResponse = (dispute: Dispute) => {
     setSelectedDispute(dispute);
@@ -202,6 +221,20 @@ export default function DisputesPage() {
         }
       />
 
+      <ResponseReviewQueue
+        disputes={responseReviewQueue.map((dispute) => ({
+          id: dispute.id,
+          clientName: dispute.client_name,
+          bureau: dispute.bureau,
+          round: dispute.round,
+          responseDeadline: dispute.response_deadline,
+        }))}
+        onReview={(queuedDispute) => {
+          const dispute = responseReviewQueue.find((item) => item.id === queuedDispute.id);
+          if (dispute) handleLogResponse(dispute);
+        }}
+      />
+
       <DisputeStatsCards stats={stats} showOverdueOnly={showOverdueOnly} onOverdueToggle={() => { setShowOverdueOnly(!showOverdueOnly); resetAuxFilters(); }} />
       <DisputeCalendar disputes={disputes} />
 
@@ -240,7 +273,7 @@ export default function DisputesPage() {
                 {disputes.map((dispute) => {
                   const deadlineStatus = getDeadlineStatus(dispute);
                   return (
-                    <div key={dispute.id} className={`p-4 rounded-lg bg-muted/50 border transition-all hover:bg-muted cursor-pointer ${deadlineStatus?.status === 'overdue' ? 'border-destructive/50' : 'border-border/50'}`} onClick={() => handleLogResponse(dispute)}>
+                    <div data-testid={`dispute-row-${dispute.id}`} key={dispute.id} className={`p-4 rounded-lg bg-muted/50 border transition-all hover:bg-muted cursor-pointer ${deadlineStatus?.status === 'overdue' ? 'border-destructive/50' : 'border-border/50'}`} onClick={() => handleLogResponse(dispute)}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -262,9 +295,9 @@ export default function DisputesPage() {
                         <div className="flex items-center gap-2">
                           <StatusBadge status={dispute.status} variant={getStatusVariant(dispute.status)} />
                           {dispute.status === 'sent' && !dispute.outcome && <Button size="sm" onClick={(e) => { e.stopPropagation(); handleLogResponse(dispute); }}>Log Response</Button>}
-                          {dispute.outcome === 'verified' && (
+                          {(dispute.outcome === 'verified' || dispute.outcome === 'no_response') && (
                             <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleQuickRedispute(dispute); }} disabled={quickEscalatingId === dispute.id}>
-                              {quickEscalatingId === dispute.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}Quick Re-Dispute
+                              {quickEscalatingId === dispute.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}Create recommended draft
                             </Button>
                           )}
                         </div>

@@ -29,8 +29,7 @@ async function checkAndMigrate() {
     'credit_accounts',
     'negative_items',
     'credit_analyses',
-    'disputes',
-    'dispute_letter_templates'
+    'disputes'
   ];
   
   const missingTables = requiredTables.filter(t => !existingTables.includes(t));
@@ -209,25 +208,6 @@ async function checkAndMigrate() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS "disputes_clientId_idx" ON "disputes" ("client_id")`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS "disputes_negativeItemId_idx" ON "disputes" ("negative_item_id")`);
     console.log('  Created disputes table');
-  }
-  
-  if (missingTables.includes('dispute_letter_templates')) {
-    console.log('Creating dispute_letter_templates table...');
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS "dispute_letter_templates" (
-        "id" text PRIMARY KEY NOT NULL,
-        "name" text NOT NULL,
-        "description" text,
-        "dispute_type" text NOT NULL,
-        "target_recipient" text DEFAULT 'bureau',
-        "content" text NOT NULL,
-        "variables" text,
-        "is_active" boolean DEFAULT true,
-        "created_at" timestamp DEFAULT now(),
-        "updated_at" timestamp DEFAULT now()
-      )
-    `);
-    console.log('  Created dispute_letter_templates table');
   }
   
   console.log('Migration complete!');

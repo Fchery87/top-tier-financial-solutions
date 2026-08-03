@@ -219,7 +219,7 @@ export async function installPortalApiFixtures(page: Page): Promise<void> {
 }
 
 export async function installDisputeListFixture(page: Page, status = 'draft'): Promise<void> {
-  await page.route('**/api/admin/disputes?*', async (route) => {
+  await page.route('**/api/admin/disputes**', async (route) => {
     await json(route, {
       disputes: [{
         id: 'e2e-generated-dispute',

@@ -262,14 +262,18 @@ npm run typecheck && npm run lint && npm run test
 
 ## Completion handoff
 
-Scheduled implementation is consolidated in `docs/plans/2026-08-02-workspace-portal-letter-studio-completion.md`. The real `dispute_letter_library` is selected, attributed, persisted with generated revisions, awaited for usage tracking, updated atomically for effectiveness, and protected by strict CRUD array parsing. The remaining verification gates are authenticated browser execution and migration application against the intended development database.
+Scheduled implementation is consolidated in `docs/plans/2026-08-02-workspace-portal-letter-studio-completion.md`. The real `dispute_letter_library` is selected, attributed, persisted with generated revisions, awaited for usage tracking, updated atomically for effectiveness, and protected by strict CRUD array parsing. Authenticated browser execution and the complete repository validation gate are complete.
 
-### Validation update — 2026-08-02
+Phase 7A follow-up implementation is tracked in `docs/plans/2026-08-03-phase-7a-command-search-and-table-retirement.md`. The command palette now searches authorized clients and disputes through a PII-minimized route. The deprecated `dispute_letter_templates` table remains physically retained for compatibility, while active bootstrap and writer scripts are quarantined in favor of `dispute_letter_library`.
 
-- Library, attribution, draft persistence, revision, compliance, and Letter Studio focused coverage passes; CFPB closure coverage passes across 5 files and 16 tests, including the missing CRA-item-attribution regression.
+The Phase 7B generation pilot is tracked in `docs/plans/2026-08-03-letter-library-generation-pilot.md`. Its default `npm run db:pilot-letter-library` command is read-only and validates real development-database selection plus synthetic rotation/effectiveness contracts. The 2026-08-03 run passed with four selected scenarios and two intentional fallbacks; `--execute` remains development-only and is not part of ordinary validation.
+
+### Validation update — 2026-08-02 (final implementation state)
+
+- The read-only audit and normalization decision gate is closed: the active `dispute_letter_library` has 20 rows, the deprecated decoy table has 65 rows, all active rows have prompt context and legal-citation data, no duplicate `(name, content)` signatures were found, and 16 uncovered methodology/recipient/round combinations fall back to round strategy.
+- Library selection, attribution, draft persistence, revision, compliance, and Letter Studio focused coverage passes; the current changed-area unit gate is 3 files and 8 tests, and the CFPB closure suite remains green across 5 files and 16 tests.
 - `npm run typecheck`, `npm run lint`, and `git diff --check` pass.
-- Current elevated `npm run validate` passes end-to-end; its lint, typecheck, full Vitest, and production-build stages all exit 0.
-- Current full Vitest suite passes: 121 files passed, 1 skipped; 885 tests passed, 27 skipped (912 total).
-- The generated migrations are `0037`, `0038`, `0039`, and `0040`; applying them to the intended database remains an environment-dependent check.
-- The local `npm run db:migrate` attempt exited 1 while applying against the configured Neon driver; no external retry was authorized without verifying that target database.
-- The current escalated production build passes end-to-end; only the restricted-sandbox Turbopack invocation is unsuitable for local verification. The authenticated browser gate remains open because the deterministic E2E password and an authorized, seeded development-database run are not available.
+- Authenticated Playwright gates pass against the authorized seeded-development target with no auth bypass: Chromium 32/32, Firefox 32/32, and WebKit 32/32.
+- The generated migrations are `0037`, `0038`, `0039`, and `0040`; the user-reported `npm run db:migrate` returned to the shell without an error against the authorized development target.
+- The escalated production build passes end-to-end, including TypeScript, page-data collection, 126 static pages, and route optimization.
+- `npm run validate` passes with the deterministic Vitest thread-pool configuration: 121 files passed, 1 skipped; 885 tests passed, 27 skipped (912 total). Two stateful cross-file mock suites run in isolation while remaining part of the full coverage gate.

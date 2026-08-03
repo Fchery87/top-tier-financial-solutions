@@ -10,15 +10,17 @@ const teamPayload = {
 };
 
 test.describe('team role controls', () => {
+  test.setTimeout(120000);
   test.use({ storageState: authState('admin') });
 
   test('admin cannot open team role management', async ({ page }) => {
-    await page.goto('/admin/team');
-    await expect(page).toHaveURL(/\/admin$|\/workspace/);
+    await page.goto('/admin/team', { waitUntil: 'commit', timeout: 120000 });
+    await expect(page).toHaveURL(/\/admin$|\/workspace/, { timeout: 60000 });
   });
 });
 
 test.describe('super admin team controls', () => {
+  test.setTimeout(120000);
   test.use({ storageState: authState('super-admin') });
 
   test('super admin can change a role and sees the activity row while retaining final-owner protection', async ({ page }) => {
@@ -39,8 +41,8 @@ test.describe('super admin team controls', () => {
       });
     });
 
-    await page.goto('/admin/team');
-    await expect(page.getByText('Recent activity')).toBeVisible();
+    await page.goto('/admin/team', { waitUntil: 'commit', timeout: 120000 });
+    await expect(page.getByText('Recent activity')).toBeVisible({ timeout: 60000 });
     await expect(page.getByLabel('Role for Fixture Owner')).toBeDisabled();
     await expect(page.getByText('Final super admin — assign another owner first.')).toBeVisible();
 

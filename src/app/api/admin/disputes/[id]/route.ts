@@ -1,24 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
-import { disputes, negativeItems, clients, disputeOutcomes, slaDefinitions, slaInstances } from '@/db/schema';
+import { clients, disputes, negativeItems, disputeOutcomes, slaDefinitions, slaInstances } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
-import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { recordLibraryOutcome } from '@/lib/letter-library-effectiveness';
 import { saveDisputeLetter } from '@/lib/dispute-letter-workflow';
-import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
-import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { triggerAutomation } from '@/lib/email-service';
 import {
-  buildEscalationPlan,
   calculateDisputeDeadlines,
   getDisputeSlaDefinitionId,
   getDisputeSlaInstanceId,
 } from '@/lib/dispute-automation';
+import {
+  getResponseReviewRecommendation,
+  type ResponseReviewOutcome,
+} from '@/lib/response-review-recommendation';
 
-const STRUCTURED_RESPONSE_OUTCOMES = new Set([
+const STRUCTURED_RESPONSE_OUTCOMES: ReadonlySet<string> = new Set([
   'deleted',
   'updated',
   'verified',
@@ -26,29 +25,8 @@ const STRUCTURED_RESPONSE_OUTCOMES = new Set([
   'frivolous',
 ]);
 
-function getNextCycleRecommendation(outcome?: string | null) {
-  if (outcome === 'verified') {
-    return {
-      action: 'method_of_verification',
-      reason: 'Verified responses should be reviewed for investigation method before another dispute cycle.',
-    };
-  }
-
-  if (outcome === 'deleted') {
-    return {
-      action: 'close',
-      reason: 'Deleted items should be closed after verified response review.',
-    };
-  }
-
-  if (outcome === 'updated') {
-    return {
-      action: 'update_item',
-      reason: 'Updated items should refresh item facts before deciding whether another cycle is needed.',
-    };
-  }
-
-  return null;
+function isResponseReviewOutcome(value: unknown): value is ResponseReviewOutcome {
+  return typeof value === 'string' && STRUCTURED_RESPONSE_OUTCOMES.has(value);
 }
 
 // GET single dispute
@@ -188,6 +166,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
     }
 
+    if (createNextRound === true) {
+      return NextResponse.json({
+        error: 'Response review cannot create a next-cycle draft automatically',
+      }, { status: 400 });
+    }
+
     let negativeItem: typeof negativeItems.$inferSelect | null = null;
     if (currentDispute.negativeItemId) {
       const [item] = await db
@@ -196,20 +180,6 @@ export async function PUT(
         .where(eq(negativeItems.id, currentDispute.negativeItemId))
         .limit(1);
       negativeItem = item || null;
-    }
-
-    if (createNextRound && outcome === 'verified' && currentDispute.negativeItemId) {
-      const plannedEscalation = buildEscalationPlan({
-        currentRound: currentDispute.round || 1,
-        trigger: 'verified',
-        currentBureau: currentDispute.bureau,
-      });
-      if (plannedEscalation.targetRecipient === 'cfpb') {
-        const decision = decideEscalation({ plan: plannedEscalation, history: await loadDisputeChain(id) });
-        if (decision.kind === 'blocked') {
-          return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
-        }
-      }
     }
 
     if (letterContent !== undefined) {
@@ -236,13 +206,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Submission tracking is required before marking a dispute submitted' }, { status: 400 });
     }
 
-    const isRecordingResponse = responseReceivedAt !== undefined;
-    if (isRecordingResponse && (!responseDocumentUrl || !outcome)) {
+    if (outcome !== undefined && !isResponseReviewOutcome(outcome)) {
+      return NextResponse.json({ error: 'Outcome must use structured response review vocabulary' }, { status: 400 });
+    }
+
+    if (responseReceivedAt !== undefined && outcome === undefined) {
       return NextResponse.json({ error: 'Response Review requires a response document and outcome classification' }, { status: 400 });
     }
 
-    if (outcome !== undefined && !STRUCTURED_RESPONSE_OUTCOMES.has(outcome)) {
-      return NextResponse.json({ error: 'Outcome must use structured response review vocabulary' }, { status: 400 });
+    if (outcome !== undefined) {
+      if (outcome === 'no_response') {
+        const deadline = currentDispute.responseDeadline;
+        if (!deadline || deadline > new Date()) {
+          return NextResponse.json({ error: 'No response can be recorded only after the response deadline has elapsed' }, { status: 400 });
+        }
+      } else if (!responseReceivedAt || !responseDocumentUrl) {
+        return NextResponse.json({
+          error: 'Response Review requires a response date and response document for this outcome',
+        }, { status: 400 });
+      }
     }
 
     // Build update object
@@ -421,7 +403,6 @@ export async function PUT(
         .where(eq(slaInstances.id, getDisputeSlaInstanceId(currentDispute.id)));
     }
 
-    let outcomeRecordId: string | null = null;
     if (outcome) {
       const outcomeId = randomUUID();
       const responseDateValue = responseReceivedAt ? new Date(responseReceivedAt) : new Date();
@@ -453,114 +434,11 @@ export async function PUT(
         createdAt: new Date(),
       });
 
-      outcomeRecordId = outcomeId;
-
       await recordLibraryOutcome({
         libraryId: currentDispute.letterTemplateId,
         previousOutcome: currentDispute.outcome,
         nextOutcome: outcome,
       });
-    }
-
-    // Auto-escalation: Create Round 2 dispute if item was verified
-    let nextRoundDispute = null;
-    if (createNextRound && outcome === 'verified' && currentDispute.negativeItemId) {
-      // Get client and negative item for next round letter generation
-      const [client] = await db
-        .select()
-        .from(clients)
-        .where(eq(clients.id, currentDispute.clientId))
-        .limit(1);
-
-      if (client && negativeItem) {
-        const escalationPlan = buildEscalationPlan({
-          currentRound: currentDispute.round || 1,
-          trigger: 'verified',
-          currentBureau: currentDispute.bureau,
-        });
-        const nextRound = escalationPlan.nextRound;
-        const librarySelection = await selectLibraryForGeneration({
-          round: nextRound,
-          targetRecipient: escalationPlan.targetRecipient,
-          bureau: currentDispute.bureau,
-          itemType: negativeItem.itemType,
-          reasonCodes: escalationPlan.reasonCodes,
-          methodology: escalationPlan.methodology,
-        });
-
-        // Generate escalation letter
-        const letterContent = await generateUniqueDisputeLetter({
-          disputeType: escalationPlan.disputeType,
-          round: nextRound,
-          targetRecipient: escalationPlan.targetRecipient,
-          methodology: escalationPlan.methodology,
-          clientData: {
-            name: `${client.firstName} ${client.lastName}`,
-          },
-          itemData: {
-            creditorName: negativeItem.creditorName,
-            originalCreditor: negativeItem.originalCreditor || undefined,
-            accountNumber: negativeItem.creditAccountId ? undefined : negativeItem.id.slice(-4),
-            itemType: negativeItem.itemType,
-            amount: negativeItem.amount || undefined,
-            dateReported: negativeItem.dateReported?.toISOString(),
-            bureau: currentDispute.bureau,
-          },
-          reasonCodes: escalationPlan.reasonCodes,
-          customReason: escalationReason || escalationPlan.customReason,
-          librarySelection,
-        });
-
-        const persistedDraft = await persistGeneratedDisputeDraft({
-          clientId: currentDispute.clientId,
-          negativeItemId: currentDispute.negativeItemId,
-          bureau: currentDispute.bureau,
-          disputeReason: `Escalation from Round ${currentDispute.round} - ${escalationReason || escalationPlan.customReason}`,
-          disputeType: escalationPlan.disputeType,
-          round: nextRound,
-          escalationPath: escalationPlan.targetRecipient,
-          letterContent,
-          creditorName: negativeItem.creditorName,
-          accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
-          generatedByAi: true,
-          methodology: escalationPlan.methodology,
-          priorDisputeId: currentDispute.id,
-          reasonCodes: escalationPlan.reasonCodes,
-          items: [{
-            kind: 'tradeline',
-            bureau: currentDispute.bureau,
-            creditorName: negativeItem.creditorName,
-            originalCreditor: negativeItem.originalCreditor,
-            accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
-            itemType: negativeItem.itemType,
-            amount: negativeItem.amount,
-            dateReported: negativeItem.dateReported?.toISOString(),
-          }],
-          selection: librarySelection,
-          actorUserId: adminUser.id,
-        });
-
-        // Fetch created dispute
-        const [created] = await db
-          .select()
-          .from(disputes)
-          .where(eq(disputes.id, persistedDraft.disputeId))
-          .limit(1);
-
-        nextRoundDispute = {
-          id: created.id,
-          round: created.round,
-          dispute_type: created.disputeType,
-          status: created.status,
-        };
-
-        if (outcomeRecordId) {
-          await db
-            .update(disputeOutcomes)
-            .set({ nextDisputeId: created.id })
-            .where(eq(disputeOutcomes.id, outcomeRecordId));
-        }
-      }
     }
 
     // Fetch updated dispute
@@ -631,11 +509,15 @@ export async function PUT(
         response_received_at: updatedDispute.responseReceivedAt?.toISOString(),
         updated_at: updatedDispute.updatedAt?.toISOString(),
       },
-      next_round_dispute: nextRoundDispute,
-      next_cycle_recommendation: getNextCycleRecommendation(outcome),
-      message: nextRoundDispute 
-        ? `Dispute updated and Round ${nextRoundDispute.round} created`
-        : 'Dispute updated successfully',
+      next_round_dispute: null,
+      next_cycle_recommendation: outcome && isResponseReviewOutcome(outcome)
+        ? getResponseReviewRecommendation({
+          outcome,
+          currentRound: currentDispute.round || 1,
+          bureau: currentDispute.bureau,
+        })
+        : null,
+      message: 'Dispute updated successfully',
     });
   } catch (error) {
     console.error('Error updating dispute:', error);

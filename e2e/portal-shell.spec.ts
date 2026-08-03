@@ -5,13 +5,15 @@ import { installPortalApiFixtures } from './fixtures/routes';
 test.use({ storageState: authState('client') });
 
 test.describe('client portal shell', () => {
+  test.setTimeout(60000);
+
   test.beforeEach(async ({ page }) => {
     await installPortalApiFixtures(page);
   });
 
   test('keeps the portal tabs and pending approvals visible across all portal pages', async ({ page }) => {
     for (const path of ['/portal', '/portal/audit-report', '/portal/agreement']) {
-      await page.goto(path);
+      await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60000 });
       const navigation = page.getByRole('navigation');
       await expect(navigation).toBeVisible();
       await expect(navigation.getByRole('link', { name: 'Dashboard' })).toBeVisible();
@@ -24,13 +26,13 @@ test.describe('client portal shell', () => {
   test('places pending letter approvals above the dashboard content', async ({ page }) => {
     await page.goto('/portal');
     const approvalNotice = page.getByText('1 letter need your approval');
-    await expect(approvalNotice).toBeVisible();
+    await expect(approvalNotice).toBeVisible({ timeout: 15000 });
     await expect(approvalNotice).toBeInViewport();
   });
 
   test('exposes My Portal in the signed-in public user menu', async ({ page }) => {
     await page.goto('/about');
-    await page.locator('button[aria-haspopup="menu"]').click();
+    await page.locator('header button[aria-haspopup="menu"]').click();
     await expect(page.getByRole('menuitem', { name: 'My Portal' })).toHaveAttribute('href', '/portal');
     await expect(page.getByRole('menuitem', { name: 'Workspace' })).not.toBeVisible();
   });

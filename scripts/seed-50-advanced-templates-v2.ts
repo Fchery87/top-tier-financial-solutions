@@ -1,4 +1,7 @@
 import 'dotenv/config';
+
+throw new Error('Deprecated: dispute_letter_templates is retained for compatibility only. Seed dispute_letter_library instead.');
+
 import { db } from '../db/client';
 import { disputeLetterTemplates } from '../db/schema';
 import { randomUUID } from 'crypto';

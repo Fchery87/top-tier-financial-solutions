@@ -17,13 +17,15 @@ This plan closes scheduled work from:
 - `docs/plans/2026-07-31-workspace-portal-restructure-and-letter-studio.md`
 - `docs/plans/2026-07-31-letter-library-wiring.md`
 
-“Complete” means every task in Phases 1–6 of the workspace plan and Phases 1–5 of the library plan is implemented, covered at the appropriate test level, and passes the repository definition of done. Phase 7 of the workspace plan remains deliberately deferred:
+“Complete” means every task in Phases 1–6 of the workspace plan and Phases 1–5 of the library plan is implemented, covered at the appropriate test level, and passes the repository definition of done. Phase 7 is now partially implemented through the Phase 7A follow-up; the remaining items stay deliberately deferred:
 
 - `/api/admin/*` is not renamed.
 - Custom database-defined roles are not added.
 - The contingent S.4144/H.R.306 disclosure is not added unless it becomes law.
-- Command-palette record search remains separate work.
-- The old `dispute_letter_templates` table remains deprecated and retained.
+- Command-palette record search is implemented in the Phase 7A follow-up.
+- The old `dispute_letter_templates` table remains deprecated and retained; its active bootstrap and writer tooling is retired.
+- The Phase 7B letter-library generation pilot is implemented as a read-only development audit; provider-backed execution and usage writes remain opt-in and deferred.
+- The 2026-08-03 response-review work queue is complete: recommendations are deterministic, review recording never auto-generates a next-cycle draft, and staff explicitly creates any recommended draft after review.
 
 The generation prompt remains professional and neutral. Tone escalation belongs only to explicit Letter Studio rewrites.
 
@@ -56,13 +58,14 @@ The following table records the gaps found during the pre-implementation audit. 
 | Library Task 3.2 | Wizard drops `library_selection`, so its disputes have null attribution | Phase 3 |
 | Library Tasks 4.1–4.2 | Usage is fire-and-forget; effectiveness is query-then-write and race-prone | Phase 3 |
 | Workspace Tasks 5.1–5.2 | CFPB exhaustion gate and direct-dispute advisory are absent | Phase 5 |
-| Verification gates | Authenticated Playwright coverage is set up and expanded, but live execution needs deterministic credentials and an authorized seeded database; production validation passes in the elevated local environment | Phase 6, with environment-backed execution pending |
+| Verification gates | Authenticated Playwright coverage is set up and expanded; the authorized seeded-database run passes in all configured browsers. The repository validation command now passes with a deterministic Vitest split for two stateful test files | Phase 6 |
 
 The current state is:
 
 - implementation and focused regression coverage are complete;
-- the current elevated `npm run validate` passes end-to-end, including lint, typecheck, the complete Vitest suite, and production build; and
-- migration application and live authenticated browser execution remain unverified because their target and credentials are external to the workspace.
+- lint, typecheck, focused unit tests, production build, and all configured authenticated browser projects pass;
+- the user-reported migration completed against the authorized disposable/development Neon target; and
+- the repository validation command is now deterministic on the workspace filesystem: Vitest uses four threads for the parallel batch, runs the two stateful cross-file mock suites in isolation, and retains the full 121-file/912-test coverage.
 
 Two implementation defects discovered during this audit are included in scope because they prevent the planned behavior:
 
@@ -673,7 +676,7 @@ Test that the advisory appears only for direct recipients and never blocks Next/
 - Modify: `e2e/dispute-wizard.spec.ts`
 - Create or update: test fixture setup script only if the HTTP setup cannot create required records safely
 
-Use Better Auth’s HTTP sign-up/sign-in endpoints and Playwright storage states. Bootstrap the first test super admin through the fixed self-bootstrap route, then create/assign staff, admin, and client users. Keep credentials in test-only environment variables and generated temporary storage files; never commit credentials or auth state.
+Use Better Auth’s HTTP sign-up/sign-in endpoints and Playwright storage states. Bootstrap the first test super admin through the fixed self-bootstrap route when the database is empty; when a seeded development database already has a super admin, use the separately configured `E2E_AUTHORITY_EMAIL` and `E2E_AUTHORITY_PASSWORD` through the protected role API, then create/assign staff, admin, and client users. Keep credentials in test-only environment variables and generated temporary storage files; never commit credentials or auth state.
 
 Update stale `/admin/disputes/wizard` paths to `/workspace/disputes/wizard`. Tests must fail clearly when fixture setup fails; do not silently continue when client cards are absent.
 
@@ -813,13 +816,22 @@ The scheduled code work is implemented through the shared dirty worktree, includ
 - `git diff --check` — pass.
 - CFPB wizard eligibility preview — implemented through the authenticated predecessor-preview route, with client/item matching, eligibility-date/reason copy, and single-item predecessor validation.
 - CFPB server enforcement — all item-payload forms, including legacy `negativeItemIds`, now reject multi-item CFPB generation before letter generation; the selected item is checked against the matched CRA predecessor.
-- `npm run validate` — pass end-to-end in the elevated environment; lint, typecheck, the full Vitest suite, and the production build all exited 0.
-- Focused CFPB closure coverage — pass, 5 files and 16 tests, including the missing CRA-item-attribution regression.
-- Full Vitest suite — pass, 121 files passed and 1 skipped; 885 tests passed and 27 skipped (912 total).
-- `npm run test:e2e -- --list` — pass, 94 tests across three browsers. Live authenticated E2E is pending the deterministic `E2E_PASSWORD` and an authorized, seeded development-database run.
-- Earlier escalated Chromium E2E — setup guard correctly failed because `E2E_PASSWORD` is missing; 20 dependent tests from the then-current suite did not run. The expanded 94-test suite still awaits a credentialed run.
-- `npm run db:migrate` — reached the configured Neon driver but exited 1 without a migration result. An external retry was not authorized because the target database ownership/environment is not verified.
+- `npm run validate` — pass end-to-end after making Vitest’s thread pool and stateful-file isolation explicit in the `test` script.
+- Full Vitest suite — pass: the parallel batch completed 119 files with 882 passing and 27 skipped tests; the two isolated files completed 2 files with 3 passing tests. Total: 121 passed files, 1 skipped file, 885 passed tests, 27 skipped tests (912 total).
+- `npm run lint` — pass.
+- `npm run typecheck` — pass, including the production build’s TypeScript stage.
+- Focused changed-area unit coverage — pass, 3 files and 8 tests covering wizard configuration/review and Letter Studio.
+- `npm run test:e2e -- --list` — pass, 94 listed tests across the configured browsers.
+- Authenticated Playwright project gates — pass: Chromium 32/32, Firefox 32/32, and WebKit 32/32, using the authorized seeded-development authority path and no auth bypass.
+- User-reported `npm run db:migrate` — returned to the shell without an error against the authorized development target.
+- Read-only role audit — the target currently contains one `super_admin` and one `user`, confirming that empty-database bootstrap is not the applicable E2E path.
 - `npx drizzle-kit check` — pass after aligning Drizzle configuration with Next-style local environment precedence (`.env.local` before `.env`).
 - Elevated `npm run build` — pass end-to-end, including compilation, TypeScript, page-data collection, 126 static pages, and route optimization. The restricted sandbox still hits the known Next 16 Turbopack worker-port permission error.
 
-The implementation is ready for the remaining verification gates; the plan must not be marked fully complete until the production build, intended database migration application, and authenticated Playwright runs exit successfully.
+The scheduled implementation, full repository validation, migration confirmation, and authenticated browser gates are complete. Phase 7A follow-up work adds authenticated command-palette record search and a read-only deprecated-table audit without a destructive migration. Phase 7B adds the read-only letter-library generation pilot; its authorized development run passed with four selected scenarios, two intentional fallbacks, three synthetic contract checks, and no usage writes. API namespace renaming, custom roles, contingent statutory disclosure, physical table removal, and provider-backed pilot execution remain intentional deferrals.
+
+## Response-review work queue follow-up — 2026-08-03
+
+The staff-facing response-review work queue is complete. Recording a structured review returns a pure recommendation and rejects obsolete auto-create requests. Actual responses require a response date and evidence URL; `no_response` is accepted only after the persisted deadline and does not invent response evidence. The workspace queue loads the existing awaiting-response list, orders reviews by deadline, opens the shared review panel, and keeps the panel open to display its recommendation. `quick-redispute` is now the separate, revalidated “Create recommended draft” action for eligible verified and no-response reviews; it verifies evidence/deadline state, report approval, duplicate-child prevention, and CFPB eligibility before generation.
+
+Focused verification passed on 2026-08-03: 7 relevant API/component/page suites (42 tests) and the complete TypeScript check. The full repository test and lint commands remain the final workspace-wide release gates.

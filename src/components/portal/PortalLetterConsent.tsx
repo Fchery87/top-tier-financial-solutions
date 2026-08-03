@@ -41,9 +41,9 @@ export default function PortalLetterConsent({
               You can click any letter to preview the full text before approving.
             </p>
             <div className="space-y-2 max-h-[180px] overflow-y-auto">
-              {letters.map((letter) => (
+              {letters.map((letter, index) => (
                 <button
-                  key={letter.dispute_id}
+                  key={`${letter.dispute_id}-${letter.bureau || 'all'}-${letter.round ?? 1}-${index}`}
                   type="button"
                   onClick={() => onLetterClick(letter)}
                   className="w-full text-left p-3 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted/60 transition-colors"
@@ -52,7 +52,7 @@ export default function PortalLetterConsent({
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{letter.creditor_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Round {letter.round ?? 1} &bull; {letter.bureau.toUpperCase()}
+                        Round {letter.round ?? 1} &bull; {(letter.bureau || 'all bureaus').toUpperCase()}
                       </p>
                     </div>
                     <span className={`text-[11px] px-2 py-1 rounded-full border ${

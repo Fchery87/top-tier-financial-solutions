@@ -25,6 +25,7 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
   const [loadingItems, setLoadingItems] = React.useState(false);
   const [creditReports, setCreditReports] = React.useState<CreditReportSummary[]>([]);
   const [selectedReportId, setSelectedReportId] = React.useState<string | null>(null);
+  const loadedClientIdRef = React.useRef<string | null>(null);
 
   const fetchNegativeItems = React.useCallback(async (clientId: string) => {
     setLoadingItems(true);
@@ -33,11 +34,14 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
       if (response.ok) {
         const data = await response.json();
         setNegativeItems(data.negative_items || []);
-        setSelectedItems([]);
         setPersonalInfoItems(data.personal_info_disputes || []);
         setInquiryItems(data.inquiry_disputes || []);
-        setSelectedPersonalItems([]);
-        setSelectedInquiryItems([]);
+        if (loadedClientIdRef.current !== clientId) {
+          setSelectedItems([]);
+          setSelectedPersonalItems([]);
+          setSelectedInquiryItems([]);
+          loadedClientIdRef.current = clientId;
+        }
         const nextCreditReports: CreditReportSummary[] = data.credit_reports || [];
         setCreditReports(nextCreditReports);
         setSelectedReportId(prev => prev ?? nextCreditReports[0]?.id ?? null);
@@ -50,6 +54,7 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
   }, []);
 
   const handleSelectClient = React.useCallback((client: Client) => {
+    loadedClientIdRef.current = null;
     setSelectedClient(client);
     setSelectedItems([]);
     setSelectedPersonalItems([]);

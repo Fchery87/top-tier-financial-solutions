@@ -9,7 +9,7 @@ import { useWizardContext } from './WizardContext';
 export function StepClientSelect() {
   const {
     clients, selectedClient, clientSearch, setClientSearch, loadingClients,
-    handleSelectClient, renderValidationMessages,
+    clientsError, fetchClients, handleSelectClient, renderValidationMessages,
   } = useWizardContext();
 
   return (
@@ -26,6 +26,14 @@ export function StepClientSelect() {
       </CardHeader>
       <CardContent className="space-y-4">
         {renderValidationMessages()}
+        {clientsError && (
+          <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
+            <span>{clientsError}</span>
+            <button type="button" className="font-medium underline underline-offset-2" onClick={() => void fetchClients()}>
+              Retry
+            </button>
+          </div>
+        )}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -51,6 +59,7 @@ export function StepClientSelect() {
               return (
                 <div
                   key={client.id}
+                  data-testid={`wizard-client-${client.id}`}
                   className={`p-4 rounded-lg border cursor-pointer transition-all ${
                     selectedClient?.id === client.id
                       ? 'border-secondary bg-secondary/10'

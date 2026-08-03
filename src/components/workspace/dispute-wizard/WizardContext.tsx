@@ -58,6 +58,8 @@ interface WizardContextValue {
   setClientSearch: React.Dispatch<React.SetStateAction<string>>;
   loadingClients: boolean;
   setLoadingClients: React.Dispatch<React.SetStateAction<boolean>>;
+  clientsError: string | null;
+  setClientsError: React.Dispatch<React.SetStateAction<string | null>>;
 
   negativeItems: NegativeItem[];
   setNegativeItems: React.Dispatch<React.SetStateAction<NegativeItem[]>>;
@@ -253,6 +255,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setClientSearch,
     loadingClients,
     setLoadingClients,
+    clientsError,
+    setClientsError,
     fetchClients,
   } = useWizardClients();
 
@@ -569,7 +573,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   const value: WizardContextValue = {
     currentStep, setCurrentStep, maxSteps, reviewStepId,
-    clients, setClients, selectedClient, setSelectedClient, clientSearch, setClientSearch, loadingClients, setLoadingClients,
+    clients, setClients, selectedClient, setSelectedClient, clientSearch, setClientSearch, loadingClients, setLoadingClients, clientsError, setClientsError,
     negativeItems, setNegativeItems, selectedItems, setSelectedItems, personalInfoItems, setPersonalInfoItems,
     selectedPersonalItems, setSelectedPersonalItems, inquiryItems, setInquiryItems, selectedInquiryItems, setSelectedInquiryItems,
     activeTab, setActiveTab, loadingItems, setLoadingItems, creditReports, setCreditReports, selectedReportId, setSelectedReportId, itemDisputeInstructions, setItemDisputeInstructions,

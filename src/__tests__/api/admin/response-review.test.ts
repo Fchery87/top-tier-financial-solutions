@@ -89,6 +89,101 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     expect(dbMock.insert).not.toHaveBeenCalled();
   }, 30000);
 
+  it('rejects obsolete automatic next-cycle creation requests', async () => {
+    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+
+    dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
+      id: 'dispute-1',
+      clientId: 'client-1',
+      negativeItemId: 'item-1',
+      bureau: 'experian',
+      round: 1,
+      responseReceivedAt: null,
+      responseDeadline: new Date('2026-02-01T00:00:00.000Z'),
+      escalationHistory: null,
+    }]) }) }) });
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+        method: 'PUT',
+        body: JSON.stringify({ createNextRound: true }),
+      }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Response review cannot create a next-cycle draft automatically',
+    });
+  }, 30000);
+
+  it('requires a received date for an actual response outcome', async () => {
+    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+
+    dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
+      id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1,
+      responseReceivedAt: null, responseDeadline: new Date('2026-02-01T00:00:00.000Z'), escalationHistory: null,
+    }]) }) }) });
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: 'responded',
+          outcome: 'verified',
+          responseDocumentUrl: 'portal-documents/user-1/response.pdf',
+        }),
+      }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Response Review requires a response date and response document for this outcome',
+    });
+  }, 30000);
+
+  it('allows an overdue no-response review without fabricated response evidence', async () => {
+    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const updatedDispute = {
+      id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1,
+      status: 'responded', outcome: 'no_response', responseNotes: 'No response by the deadline.',
+      trackingNumber: null, responseChannel: null, submissionMethod: null, submissionRecipient: null,
+      submissionProofDocumentUrl: null, scoreImpact: null, analysisConfidence: null, autoSelected: false,
+      sentAt: new Date('2026-01-01T00:00:00.000Z'),
+      responseDeadline: new Date('2026-02-01T00:00:00.000Z'),
+      responseReceivedAt: null, updatedAt: new Date('2026-02-02T00:00:00.000Z'),
+    };
+
+    dbMock.select
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
+        id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1,
+        responseReceivedAt: null, responseDeadline: new Date('2026-02-01T00:00:00.000Z'), escalationHistory: null,
+      }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([updatedDispute]) }) }) });
+    dbMock.update.mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });
+    dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: 'responded',
+          outcome: 'no_response',
+          responseNotes: 'No response by the deadline.',
+        }),
+      }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.next_cycle_recommendation).toMatchObject({
+      kind: 'create_next_draft',
+      plan: { nextRound: 2, targetRecipient: 'bureau' },
+    });
+  }, 30000);
+
   it('recommends method-of-verification after a verified response review', async () => {
     const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
     const updatedDispute = {
@@ -132,9 +227,13 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.next_cycle_recommendation).toEqual({
-      action: 'method_of_verification',
-      reason: 'Verified responses should be reviewed for investigation method before another dispute cycle.',
+    expect(body.next_cycle_recommendation).toMatchObject({
+      kind: 'create_next_draft',
+      plan: {
+        nextRound: 2,
+        targetRecipient: 'bureau',
+        disputeType: 'method_of_verification',
+      },
     });
   }, 30000);
 });

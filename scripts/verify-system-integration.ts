@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { db } from '../db/client';
-import { disputeLetterTemplates, creditReports, clients } from '../db/schema';
-import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 import { eq } from 'drizzle-orm';
+import { db } from '../db/client';
+import { disputeLetterLibrary, creditReports, clients } from '../db/schema';
+import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 
 async function main() {
   console.log('\n╔═══════════════════════════════════════════════════════════════╗');
@@ -46,22 +46,22 @@ async function main() {
   }
 
   // ============================================
-  // 3. TEST DRIZZLE ORM - DISPUTE TEMPLATES
+  // 3. TEST DRIZZLE ORM - ACTIVE LETTER LIBRARY
   // ============================================
-  console.log('\n🎯 3. VERIFYING DISPUTE TEMPLATES IN DATABASE...\n');
+  console.log('\n🎯 3. VERIFYING ACTIVE LETTER LIBRARY IN DATABASE...\n');
 
   try {
     const templates = await db
       .select({
-        id: disputeLetterTemplates.id,
-        name: disputeLetterTemplates.name,
-        disputeType: disputeLetterTemplates.disputeType,
-        targetRecipient: disputeLetterTemplates.targetRecipient,
-        contentLength: disputeLetterTemplates.content,
-        isActive: disputeLetterTemplates.isActive,
+        id: disputeLetterLibrary.id,
+        name: disputeLetterLibrary.name,
+        methodology: disputeLetterLibrary.methodology,
+        targetRecipient: disputeLetterLibrary.targetRecipient,
+        contentLength: disputeLetterLibrary.content,
+        isActive: disputeLetterLibrary.isActive,
       })
-      .from(disputeLetterTemplates)
-      .where(eq(disputeLetterTemplates.isActive, true));
+      .from(disputeLetterLibrary)
+      .where(eq(disputeLetterLibrary.isActive, true));
 
     console.log(`   ✅ Drizzle ORM Query: SUCCESS`);
     console.log(`   📚 Total Active Templates: ${templates.length}`);
@@ -73,7 +73,7 @@ async function main() {
       const byRecipient: Record<string, number> = {};
       
       templates.forEach(t => {
-        byType[t.disputeType] = (byType[t.disputeType] || 0) + 1;
+        byType[t.methodology] = (byType[t.methodology] || 0) + 1;
         byRecipient[t.targetRecipient] = (byRecipient[t.targetRecipient] || 0) + 1;
       });
       

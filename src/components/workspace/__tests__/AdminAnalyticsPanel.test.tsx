@@ -46,7 +46,7 @@ describe('AdminAnalyticsPanel', () => {
     expect(await screen.findByRole('heading', { name: /operator analytics/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /client outcome analytics/i })).toBeInTheDocument();
 
-    expect(screen.getByText('Pending imports')).toBeInTheDocument();
+    expect(await screen.findByText('Pending imports')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('Open tasks')).toBeInTheDocument();
     expect(screen.getByText('6')).toBeInTheDocument();

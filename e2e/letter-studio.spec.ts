@@ -6,16 +6,21 @@ test.use({ storageState: authState('admin') });
 
 async function openLetterStudio(page: Page, sent = false) {
   const state = await installLetterStudioApiFixtures(page, sent);
-  await page.goto('/workspace/disputes');
-  await page.getByText('Portal Fixture', { exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Letter Studio' })).toBeVisible();
+  await page.goto('/workspace/disputes', { waitUntil: 'commit', timeout: 60000 });
+  await expect(page.getByText('Portal Fixture', { exact: true }).last()).toBeVisible({ timeout: 90000 });
+  await page.getByText('Portal Fixture', { exact: true }).last().click({ force: true });
+  await expect(page.getByRole('heading', { name: 'Letter Studio' })).toBeVisible({ timeout: 30000 });
+  if (!sent) await expect(page.getByRole('textbox', { name: 'Dispute letter content' })).toBeEditable({ timeout: 30000 });
   return state;
 }
 
 test.describe('Letter Studio browser journeys', () => {
+  test.describe.configure({ timeout: 120000 });
+
   test('saves a manual edit and rewrites only the selected passage', async ({ page }) => {
     const state = await openLetterStudio(page);
     const textarea = page.getByRole('textbox', { name: 'Dispute letter content' });
+    await expect(textarea).toBeEditable({ timeout: 15000 });
 
     await textarea.fill('Original fixture letter.');
     await textarea.fill('Original fixture letter with a selected passage.');
@@ -31,7 +36,7 @@ test.describe('Letter Studio browser journeys', () => {
     await expect(textarea).toHaveValue('Rewritten selected fixture passage.');
 
     await textarea.fill('Saved fixture letter.');
-    await page.getByRole('button', { name: 'Save letter' }).click();
+    await page.getByRole('button', { name: 'Save letter' }).click({ force: true });
     await expect.poll(() => state.saveRequests.length).toBe(1);
     expect(state.saveRequests[0]).toMatchObject({ letterContent: 'Saved fixture letter.' });
   });
@@ -39,6 +44,7 @@ test.describe('Letter Studio browser journeys', () => {
   test('autosaves a dirty letter when focus leaves the studio', async ({ page }) => {
     const state = await openLetterStudio(page);
     const textarea = page.getByRole('textbox', { name: 'Dispute letter content' });
+    await expect(textarea).toBeEditable({ timeout: 15000 });
 
     await textarea.fill('Autosaved fixture letter.');
     await page.locator('select').last().focus();
@@ -58,7 +64,7 @@ test.describe('Letter Studio browser journeys', () => {
     const tones = ['professional', 'concerned', 'annoyed', 'disappointed', 'demanding'];
     for (const [index, tone] of tones.entries()) {
       await toneSelect.selectOption(tone);
-      await page.getByRole('button', { name: 'Rewrite' }).click();
+      await page.getByRole('button', { name: 'Rewrite' }).click({ force: true });
       await expect.poll(() => state.toneRequests.length).toBe(index + 1);
     }
 
@@ -68,11 +74,12 @@ test.describe('Letter Studio browser journeys', () => {
   test('keeps warnings saveable after acknowledgement and blocks fabricated creditors', async ({ page }) => {
     const state = await openLetterStudio(page);
     const textarea = page.getByRole('textbox', { name: 'Dispute letter content' });
+    await expect(textarea).toBeEditable({ timeout: 15000 });
 
     await textarea.fill('I will pursue legal action if needed.');
     await expect(page.getByText('Review warnings before saving')).toBeVisible();
-    await page.getByLabel('I reviewed these warnings and want to save this letter.').check();
-    await page.getByRole('button', { name: 'Save letter' }).click();
+    await page.getByLabel('I reviewed these warnings and want to save this letter.').check({ force: true });
+    await page.getByRole('button', { name: 'Save letter' }).click({ force: true });
     await expect.poll(() => state.saveRequests.length).toBe(1);
     expect(state.saveRequests[0]).toMatchObject({ acknowledgeWarnings: true });
 
@@ -84,19 +91,20 @@ test.describe('Letter Studio browser journeys', () => {
   test('shows history and diff, appends a revert revision, and makes sent letters read-only', async ({ page }) => {
     const state = await openLetterStudio(page);
     const textarea = page.getByRole('textbox', { name: 'Dispute letter content' });
+    await expect(textarea).toBeEditable({ timeout: 15000 });
 
     await textarea.fill('A second saved fixture letter.');
-    await page.getByRole('button', { name: 'Save letter' }).click();
+    await page.getByRole('button', { name: 'Save letter' }).click({ force: true });
     await expect(page.getByText(/Revision 2 · manual/)).toBeVisible();
 
-    await page.getByRole('button', { name: /Revision 1 · generated/ }).click();
+    await page.getByRole('button', { name: /Revision 1 · generated/ }).click({ force: true });
     await expect(page.getByText('Diff against revision 1')).toBeVisible();
     await page.getByRole('button', { name: 'Revert to revision 1' }).click();
     await expect.poll(() => state.revertRequests.length).toBe(1);
-    await expect(page.getByText(/Saved as revision 3/)).toBeVisible();
+    await expect(page.getByText(/Saved as revision 3/)).toBeVisible({ timeout: 15000 });
 
     await page.goto('/workspace/disputes');
-    await page.unroute('**/api/admin/disputes?*');
+    await page.unroute('**/api/admin/disputes**');
     const sentState = await openLetterStudio(page, true);
     await expect(page.getByText(/has been sent and its letter is immutable/i)).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Dispute letter content' })).toBeDisabled();

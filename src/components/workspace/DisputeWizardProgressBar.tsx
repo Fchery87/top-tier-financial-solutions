@@ -140,6 +140,8 @@ export function DisputeWizardProgressBar({
             >
               {/* Step Circle Button */}
               <motion.button
+                aria-label={`${step.name} step`}
+                aria-current={status?.isCurrentStep ? 'step' : undefined}
                 onClick={() => {
                   if (isClickable) {
                     onStepClick(step.id);

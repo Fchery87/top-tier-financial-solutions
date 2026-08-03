@@ -23,7 +23,7 @@
     "lint:python:fix": "./venv/bin/ruff check api/ --fix",
     "pretypecheck": "rm -rf .next/dev",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=1/2 && vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=2/2 && vitest run --pool=threads --maxWorkers=1 src/__tests__/api/admin/dispute-submission-tracking.test.ts src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
@@ -35,6 +35,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:repair-migrations": "node scripts/repair-drizzle-migrations.mjs",
+    "db:audit-deprecated-letter-table": "tsx scripts/audit-deprecated-letter-templates.ts",
+    "db:pilot-letter-library": "tsx scripts/run-letter-library-pilot.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

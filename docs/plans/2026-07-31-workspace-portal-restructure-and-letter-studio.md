@@ -1110,12 +1110,13 @@ Matches the DisputeFox pattern (team page shows "the history of actions each has
 
 ---
 
-## Phase 7 (deferred, not scheduled)
+## Phase 7 (partially implemented; remaining items deferred)
 
 - Rename `/api/admin/*` → `/api/workspace/*` — 71 routes, 90 referencing files, zero user-visible benefit. Only worth doing alongside another large API change.
 - Custom user-defined roles: move `ROLE_CAPABILITIES` from code into a `roles` table. Because every gate calls `can()`, this touches the map and the team UI only — no route changes.
 - CRO disclosure on dispute letters (name, state license number, statutory disclosure) if S.4144 / H.R.306 becomes law. Hook: `postProcessLetter` at `src/lib/ai-letter-generator.ts:408`.
-- Command palette record search — `src/components/workspace/CommandPalette.tsx` promises "Search clients, disputes…" (`AdminTopBar.tsx:113`) but only filters 8 static links.
+- Command palette record search — implemented through the capability-protected `/api/admin/search` seam, with client/dispute results, debounced requests, cancellation, keyboard selection, and deep links. See `docs/plans/2026-08-03-phase-7a-command-search-and-table-retirement.md`.
+- Deprecated `dispute_letter_templates` table retirement — the physical table remains retained for compatibility, but active bootstrap/integration checks and legacy writers no longer treat it as current system data. See the Phase 7A follow-up.
 
 ---
 
@@ -1147,17 +1148,14 @@ npm run test:e2e
 
 ## Completion handoff
 
-Scheduled implementation is consolidated in `docs/plans/2026-08-02-workspace-portal-letter-studio-completion.md`. Capability migration, portal layout ownership, transactional letter workflow, generated draft persistence, Letter Studio modules, CFPB decision policy, and authenticated Playwright setup are implemented in the shared worktree. The remaining verification gates are authenticated browser execution and migration application against the intended development database.
+Scheduled implementation is consolidated in `docs/plans/2026-08-02-workspace-portal-letter-studio-completion.md`. Capability migration, portal layout ownership, transactional letter workflow, generated draft persistence, Letter Studio modules, CFPB decision policy, and authenticated Playwright setup are implemented in the shared worktree. Authenticated browser execution and the complete repository validation gate are complete.
 
-### Validation update — 2026-08-02
+### Validation update — 2026-08-02 (final implementation state)
 
 - `npm run typecheck`, `npm run lint`, and `git diff --check` pass.
-- Current elevated `npm run validate` passes end-to-end; its lint, typecheck, full Vitest, and production-build stages all exit 0.
-- Current full Vitest suite passes: 121 files passed, 1 skipped; 885 tests passed, 27 skipped (912 total).
-- Focused CFPB closure coverage passes across 5 files and 16 tests, including the missing CRA-item-attribution regression.
-- `npm run test:e2e -- --list` passes and enumerates 94 authenticated browser tests across Chromium, Firefox, and WebKit. The live run remains pending because the deterministic `E2E_PASSWORD` and an authorized, seeded development-database run are not available.
-- An earlier escalated Chromium run started successfully but stopped at the deterministic setup guard because `E2E_PASSWORD` was missing; 20 dependent browser tests from the then-current suite did not run. The expanded 94-test suite still awaits a credentialed run.
-- Migrations `0037` through `0040` are present for the completed schema work; database application must be confirmed against the intended development database.
-- `npm run db:migrate` reached the configured Neon driver but exited 1 without a migration result. Escalated application was not performed because the target database ownership/environment could not be verified from the workspace.
-- The default Next 16 Turbopack build fails in the restricted sandbox while binding a worker port (`Operation not permitted`), but the current escalated production build passes end-to-end, including compilation, TypeScript, page-data collection, 126 static pages, and route optimization.
-- The remaining deferred items are unchanged: API namespace rename, custom roles, contingent statutory disclosure, command-palette record search, and removal of the deprecated decoy table.
+- Focused changed-area unit coverage passes: 3 files and 8 tests covering wizard configuration/review and Letter Studio; the CFPB closure suite also remains green from the earlier five-file/16-test run.
+- Authenticated Playwright gates pass against the authorized seeded-development target with no auth bypass: Chromium 32/32, Firefox 32/32, and WebKit 32/32. The 94-test listing includes the shared auth setup and all configured browser projects.
+- Migrations `0037` through `0040` are present and user-reported applied against the intended disposable/development database; the read-only role audit found one existing `super_admin` and one `user`, so the empty-database bootstrap path is not applicable.
+- The elevated production build passes end-to-end, including compilation, TypeScript, page-data collection, 126 static pages, and route optimization. The restricted sandbox still hits the known Next 16 Turbopack worker-port permission error.
+- `npm run validate` passes with the deterministic Vitest thread-pool configuration: 121 files passed, 1 skipped; 885 tests passed, 27 skipped (912 total). Two stateful cross-file mock suites run in isolation while remaining part of the full coverage gate.
+- Phase 7A follow-up: command-palette record search is implemented, and active deprecated-table bootstrap/writer tooling is retired while the physical table remains retained for compatibility. The remaining deferred items are the API namespace rename, custom roles, contingent statutory disclosure, and any future destructive removal of the deprecated table. See `docs/plans/2026-08-03-phase-7a-command-search-and-table-retirement.md`.

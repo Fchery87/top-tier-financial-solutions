@@ -309,6 +309,29 @@ describe('WorkQueue', () => {
     });
   });
 
+  describe('Workspace navigation', () => {
+    it('sends response-review work to the workspace disputes filters', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useAdminRole).mockReturnValue(mockAdminContext('user-123'));
+      vi.mocked(global.fetch).mockImplementation((url) => {
+        if (typeof url === 'string' && (url.includes('awaiting_response=true') || url.includes('overdue=true'))) {
+          return Promise.resolve({ ok: true, json: async () => mockDisputesData } as Response);
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ disputes: [], items: [] }) } as Response);
+      });
+
+      render(<WorkQueue />);
+
+      const awaitingClient = await screen.findByText('John Doe');
+      expect(awaitingClient.closest('a')).toHaveAttribute('href', '/workspace/disputes?awaiting_response=true');
+
+      await user.click(screen.getByText('Overdue Responses'));
+
+      const overdueClient = await screen.findByText('Jane Smith');
+      expect(overdueClient.closest('a')).toHaveAttribute('href', '/workspace/disputes?overdue=true');
+    });
+  });
+
   describe('Loading State', () => {
     it('should render component without errors', async () => {
       vi.mocked(useAdminRole).mockReturnValue(mockAdminContext('user-123'));
