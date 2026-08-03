@@ -158,6 +158,7 @@ drizzle-kit.log
 # =============================================================================
 # Workspace / Tooling
 # =============================================================================
+.worktrees/
 # Keep existing workspace file
 !.code-workspace
 .vscode/settings.json
