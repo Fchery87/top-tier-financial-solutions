@@ -5,8 +5,10 @@ import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
+import { uploadLimiter } from '@/lib/rate-limit';
+import { rateLimited } from '@/lib/rate-limit-middleware';
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -97,3 +99,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to upload credit report' }, { status: 500 });
   }
 }
+
+export const POST = rateLimited(uploadLimiter)(postHandler);

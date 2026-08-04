@@ -5,9 +5,11 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { uploadToR2, getSignedDownloadUrl, deleteFromR2 } from '@/lib/r2-storage';
+import { uploadLimiter } from '@/lib/rate-limit';
+import { rateLimited } from '@/lib/rate-limit-middleware';
 
 // POST - Upload attachment to a message
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session || (session.user.role !== 'admin' && session.user.role !== 'super_admin')) {
@@ -75,6 +77,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to upload attachment' }, { status: 500 });
   }
 }
+
+export const POST = rateLimited(uploadLimiter)(postHandler);
 
 // GET - Get signed download URL for attachment
 export async function GET(request: NextRequest) {

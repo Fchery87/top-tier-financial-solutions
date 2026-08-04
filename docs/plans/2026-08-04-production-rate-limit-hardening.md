@@ -67,5 +67,5 @@
 - [x] Applied the upload limiter to portal document uploads and staff dispute-evidence uploads.
 - [x] Applied the public limiter and bounded all persisted contact-form and newsletter string fields before database work.
 - [x] Added focused route and configuration coverage. The focused suite passes with 17 tests; full typecheck, lint, test, and build gates pass after the build-phase regression fix.
+- [x] Applied the upload limiter to the deferred credit-report and message-attachment upload routes, with focused coverage proving an exhausted limit returns `429` before authorization or R2 work.
 - [ ] CAPTCHA/Turnstile remains intentionally deferred; it requires separate Cloudflare configuration and client-side integration.
-- [ ] The historical rate-limit plan's credit-report and message-attachment upload routes remain outside this focused slice and need their own coverage before being wrapped.
