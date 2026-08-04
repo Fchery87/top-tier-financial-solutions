@@ -15,6 +15,17 @@ function hasValidUpstashConfig(): boolean {
 
 const hasUpstashConfig = hasValidUpstashConfig();
 
+if (
+  !hasUpstashConfig
+  && process.env.NODE_ENV === 'production'
+  && process.env.NEXT_PHASE !== 'phase-production-build'
+  && process.env.RATE_LIMIT_DISABLED !== 'true'
+) {
+  throw new Error(
+    'Rate limiting is not configured: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, or set RATE_LIMIT_DISABLED=true to explicitly accept running without rate limits.',
+  );
+}
+
 type RateLimitResult = {
   success: boolean;
   limit: number;
@@ -59,6 +70,16 @@ export const userLimiter = redis
       limiter: Ratelimit.slidingWindow(100, '60 s'),
       ephemeralCache: new Map(),
       prefix: '@ratelimit/user',
+    })
+  : createNoopLimiter();
+
+// Authentication attempts: 10 requests per minute per IP address.
+export const authLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, '60 s'),
+      ephemeralCache: new Map(),
+      prefix: '@ratelimit/auth',
     })
   : createNoopLimiter();
 

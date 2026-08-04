@@ -6,6 +6,8 @@ import { headers } from 'next/headers';
 import { and, eq, ilike, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
+import { uploadLimiter } from '@/lib/rate-limit';
+import { rateLimited } from '@/lib/rate-limit-middleware';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -19,7 +21,7 @@ async function getAuthenticatedUser() {
   return session.user;
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -191,3 +193,5 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const POST = rateLimited(uploadLimiter)(postHandler);

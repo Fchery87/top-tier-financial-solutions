@@ -9,10 +9,15 @@ const dbMock = vi.hoisted(() => ({
 }));
 const requireCapabilityMock = vi.hoisted(() => vi.fn());
 const uploadToR2Mock = vi.hoisted(() => vi.fn());
+const uploadLimiterLimitMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/r2-storage', () => ({ uploadToR2: uploadToR2Mock }));
+vi.mock('@/lib/rate-limit', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/rate-limit')>()),
+  uploadLimiter: { limit: uploadLimiterLimitMock },
+}));
 
 describe('POST /api/admin/disputes/evidence/upload', () => {
   beforeEach(() => {
@@ -22,6 +27,26 @@ describe('POST /api/admin/disputes/evidence/upload', () => {
       key: 'client-documents/user-1/evidence/response.pdf',
       size: 42,
     });
+    uploadLimiterLimitMock.mockResolvedValue({
+      success: true,
+      limit: 5,
+      remaining: 4,
+      reset: 1_800_000_000,
+    });
+  });
+
+  it('rate-limits staff evidence uploads before capability and storage work', async () => {
+    requireCapabilityMock.mockResolvedValue(null);
+    const { POST } = await import('@/app/api/admin/disputes/evidence/upload/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/evidence/upload', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '203.0.113.18' },
+    }));
+
+    expect(response.status).toBe(403);
+    expect(uploadLimiterLimitMock).toHaveBeenCalledWith('ip:203.0.113.18');
+    expect(uploadToR2Mock).not.toHaveBeenCalled();
   });
 
   it('stores staff-uploaded evidence as a controlled client document', async () => {

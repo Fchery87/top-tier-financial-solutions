@@ -382,6 +382,8 @@ git add src/app/api/public src/app/api/newsletter src/app/api/portal/documents/u
 git commit -m "fix(security): rate-limit and length-cap public write endpoints and uploads"
 ```
 
+**Completion update — 2026-08-04:** The production configuration guard, explicit `RATE_LIMIT_DISABLED=true` opt-out, and Better Auth POST limiter are implemented. The guard deliberately exempts Next's `phase-production-build`, because route modules load during compilation; a production server still fails loudly without Upstash configuration. `publicLimiter` now protects contact and newsletter writes with bounded persisted fields, and `uploadLimiter` protects portal document uploads plus staff dispute-evidence uploads. CAPTCHA/Turnstile and the historical credit-report/message-attachment upload routes remain separate follow-up work.
+
 ---
 
 ### Task 6: Fix client search/sort against encrypted columns
