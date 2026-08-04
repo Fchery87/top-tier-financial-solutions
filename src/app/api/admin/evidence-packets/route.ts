@@ -1,10 +1,11 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clientDocuments, clients, evidencePackets } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { verifyEvidencePacket } from '@/lib/dispute-evidence';
+import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
 
 function parseJsonArray(value: string | null) {
   if (!value) return [];
@@ -24,9 +25,39 @@ function formatPacket(packet: typeof evidencePackets.$inferSelect) {
     claim_type: packet.claimType,
     document_ids: parseJsonArray(packet.documentIds),
     confirmations: parseJsonArray(packet.confirmations),
+    created_by_id: packet.createdById,
     created_at: packet.createdAt?.toISOString(),
     updated_at: packet.updatedAt?.toISOString(),
   };
+}
+
+export async function GET(request: NextRequest) {
+  const adminUser = await requireCapability('disputes:read');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const clientId = request.nextUrl.searchParams.get('client_id');
+  const disputeId = request.nextUrl.searchParams.get('dispute_id');
+  if (!clientId) {
+    return NextResponse.json({ error: 'client_id is required' }, { status: 400 });
+  }
+
+  try {
+    const packets = await db
+      .select()
+      .from(evidencePackets)
+      .where(and(
+        eq(evidencePackets.clientId, clientId),
+        disputeId ? eq(evidencePackets.disputeId, disputeId) : undefined,
+      ))
+      .orderBy(desc(evidencePackets.createdAt));
+
+    return NextResponse.json({ packets: packets.map(formatPacket) });
+  } catch (error) {
+    console.error('Error listing evidence packets:', error);
+    return NextResponse.json({ error: 'Failed to list evidence packets' }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -53,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     const [client] = await db
-      .select({ id: clients.id })
+      .select({ id: clients.id, userId: clients.userId })
       .from(clients)
       .where(eq(clients.id, clientId))
       .limit(1);
@@ -64,13 +95,24 @@ export async function POST(request: NextRequest) {
 
     if (documentIds.length > 0) {
       const ownedDocuments = await db
-        .select({ id: clientDocuments.id, userId: clientDocuments.userId })
+        .select({
+          id: clientDocuments.id,
+          userId: clientDocuments.userId,
+          fileUrl: clientDocuments.fileUrl,
+        })
         .from(clientDocuments)
         .where(inArray(clientDocuments.id, documentIds));
 
-      const ownedIds = new Set(ownedDocuments.map((document) => document.id));
-      if (documentIds.some((id) => !ownedIds.has(id))) {
-        return NextResponse.json({ error: 'Evidence packet includes documents that do not exist or are not available' }, { status: 400 });
+      const documentsById = new Map(ownedDocuments.map((document) => [document.id, document]));
+      const hasUnownedDocument = documentIds.some((id) => {
+        const document = documentsById.get(id);
+        return !document || !isClientOwnedEvidenceDocument({
+          clientUserId: client.userId,
+          document,
+        });
+      });
+      if (hasUnownedDocument) {
+        return NextResponse.json({ error: 'Evidence packet documents must belong to the client' }, { status: 400 });
       }
     }
 
@@ -82,6 +124,7 @@ export async function POST(request: NextRequest) {
       claimType,
       documentIds: JSON.stringify(documentIds),
       confirmations: JSON.stringify(confirmations),
+      createdById: adminUser.id,
       createdAt: now,
       updatedAt: now,
     }).returning();

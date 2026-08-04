@@ -201,11 +201,15 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
       sentAt: new Date('2026-01-02T00:00:00.000Z'),
       responseDeadline: new Date('2026-02-01T00:00:00.000Z'),
       responseReceivedAt: new Date('2026-02-01T00:00:00.000Z'),
+      responseDocumentId: 'doc-1',
+      responseDocumentUrl: 'client-documents/user-1/evidence/response.pdf',
       updatedAt: new Date('2026-02-01T00:00:00.000Z'),
     };
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1, responseReceivedAt: null, responseChannel: 'mail', escalationHistory: null }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', userId: 'user-1' }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'doc-1', userId: 'user-1', fileUrl: 'client-documents/user-1/evidence/response.pdf' }]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([updatedDispute]) }) }) });
     dbMock.update.mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
@@ -216,7 +220,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
         body: JSON.stringify({
           status: 'responded',
           responseReceivedAt: '2026-02-01T00:00:00.000Z',
-          responseDocumentUrl: 'portal-documents/user-1/response.pdf',
+          responseDocumentId: 'doc-1',
           responseChannel: 'mail',
           outcome: 'verified',
           responseNotes: 'Verified by bureau.',
@@ -236,4 +240,105 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
       },
     });
   }, 30000);
+
+  it('rejects an arbitrary response document URL for a new actual response review', async () => {
+    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    dbMock.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([{
+            id: 'dispute-1',
+            clientId: 'client-1',
+            negativeItemId: null,
+            bureau: 'experian',
+            round: 1,
+            responseReceivedAt: null,
+            escalationHistory: null,
+          }]),
+        }),
+      }),
+    });
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+        method: 'PUT',
+        body: JSON.stringify({
+          outcome: 'verified',
+          responseReceivedAt: '2026-02-01T00:00:00.000Z',
+          responseDocumentUrl: 'https://files.example/response.pdf',
+        }),
+      }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Response Review requires a controlled response document for this outcome',
+    });
+    expect(dbMock.update).not.toHaveBeenCalled();
+  });
+
+  it('persists an owned response document ID and its controlled R2 key', async () => {
+    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const updatedDispute = {
+      id: 'dispute-1',
+      clientId: 'client-1',
+      status: 'responded',
+      outcome: 'verified',
+      responseNotes: null,
+      trackingNumber: null,
+      responseChannel: 'mail',
+      submissionMethod: null,
+      submissionRecipient: null,
+      submissionProofDocumentUrl: null,
+      scoreImpact: null,
+      analysisConfidence: null,
+      autoSelected: false,
+      sentAt: null,
+      responseDeadline: null,
+      responseReceivedAt: new Date('2026-02-01T00:00:00.000Z'),
+      responseDocumentId: 'doc-1',
+      responseDocumentUrl: 'client-documents/user-1/evidence/response.pdf',
+      updatedAt: new Date('2026-02-01T00:00:00.000Z'),
+    };
+
+    dbMock.select
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
+        id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1,
+        responseReceivedAt: null, responseChannel: 'mail', escalationHistory: null,
+      }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', userId: 'user-1' }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
+        id: 'doc-1', userId: 'user-1', fileUrl: 'client-documents/user-1/evidence/response.pdf',
+      }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([updatedDispute]) }) }) });
+    dbMock.update.mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });
+    dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+        method: 'PUT',
+        body: JSON.stringify({
+          outcome: 'verified',
+          responseReceivedAt: '2026-02-01T00:00:00.000Z',
+          responseDocumentId: 'doc-1',
+        }),
+      }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(dbMock.update).toHaveBeenCalledWith(expect.anything());
+    const updateSet = vi.mocked(dbMock.update).mock.results[0].value.set;
+    expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({
+      responseDocumentId: 'doc-1',
+      responseDocumentUrl: 'client-documents/user-1/evidence/response.pdf',
+    }));
+    await expect(response.json()).resolves.toMatchObject({
+      dispute: {
+        response_document_id: 'doc-1',
+        response_document_url: 'client-documents/user-1/evidence/response.pdf',
+      },
+    });
+  });
 });

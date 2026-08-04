@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { CheckCircle2, Loader2, Sparkles, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { toast } from 'sonner';
 import { LetterStudio } from '@/components/workspace/disputes/LetterStudio';
+import { EvidencePacketPanel } from '@/components/workspace/disputes/EvidencePacketPanel';
 
 interface Dispute {
   id: string;
@@ -22,6 +23,7 @@ interface Dispute {
   response_received_at: string | null;
   outcome: string | null;
   response_notes: string | null;
+  response_document_id?: string | null;
   response_document_url?: string | null;
   response_channel: string | null;
   score_impact: number | null;
@@ -34,6 +36,13 @@ interface ResponseReviewRecommendation {
   kind: RecommendationKind;
   title: string;
   detail: string;
+}
+
+interface EvidenceDocument {
+  id: string;
+  file_name: string;
+  file_type: string | null;
+  created_at: string | null;
 }
 
 const OUTCOME_OPTIONS = [
@@ -102,16 +111,57 @@ function getRecommendation(payload: unknown): ResponseReviewRecommendation | nul
   };
 }
 
+function getUploadedEvidenceDocument(payload: unknown): EvidenceDocument | null {
+  if (
+    typeof payload !== 'object'
+    || payload === null
+    || !('documents' in payload)
+    || !Array.isArray(payload.documents)
+  ) {
+    return null;
+  }
+
+  const [document] = payload.documents;
+  if (
+    typeof document !== 'object'
+    || document === null
+    || !('id' in document)
+    || !('file_name' in document)
+    || typeof document.id !== 'string'
+    || typeof document.file_name !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    id: document.id,
+    file_name: document.file_name,
+    file_type: 'file_type' in document && typeof document.file_type === 'string' ? document.file_type : null,
+    created_at: 'created_at' in document && typeof document.created_at === 'string' ? document.created_at : null,
+  };
+}
+
+function formatEvidenceDocumentLabel(document: EvidenceDocument): string {
+  const uploadedOn = document.created_at
+    ? new Date(document.created_at).toLocaleDateString()
+    : 'upload date unavailable';
+  return `${document.file_name} · ${document.file_type || 'other'} · ${uploadedOn}`;
+}
+
 export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }: DisputeDetailPanelProps) {
   const [responseOutcome, setResponseOutcome] = React.useState('');
   const [responseNotes, setResponseNotes] = React.useState('');
   const [responseDate, setResponseDate] = React.useState('');
   const [responseChannel, setResponseChannel] = React.useState('mail');
-  const [responseDocumentUrl, setResponseDocumentUrl] = React.useState('');
+  const [responseDocumentId, setResponseDocumentId] = React.useState('');
+  const [evidenceDocuments, setEvidenceDocuments] = React.useState<EvidenceDocument[]>([]);
+  const [loadingEvidence, setLoadingEvidence] = React.useState(false);
+  const [uploadingEvidence, setUploadingEvidence] = React.useState(false);
   const [scoreImpact, setScoreImpact] = React.useState('');
   const [recommendation, setRecommendation] = React.useState<ResponseReviewRecommendation | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [creatingDraft, setCreatingDraft] = React.useState(false);
+  const [showEvidencePacket, setShowEvidencePacket] = React.useState(false);
 
   React.useEffect(() => {
     if (dispute) {
@@ -119,17 +169,68 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
       setResponseNotes('');
       setResponseDate(new Date().toISOString().split('T')[0]);
       setResponseChannel(dispute.response_channel || 'mail');
-      setResponseDocumentUrl(dispute.response_document_url || '');
+      setResponseDocumentId(dispute.response_document_id || '');
+      setEvidenceDocuments([]);
       setScoreImpact(dispute.score_impact !== null && dispute.score_impact !== undefined ? String(dispute.score_impact) : '');
       setRecommendation(null);
+      setShowEvidencePacket(false);
     }
   }, [dispute]);
 
   const isNoResponse = responseOutcome === 'no_response';
 
+  React.useEffect(() => {
+    if (!dispute || !responseOutcome || isNoResponse) {
+      setEvidenceDocuments([]);
+      setLoadingEvidence(false);
+      return;
+    }
+
+    let cancelled = false;
+    const loadEvidence = async () => {
+      setLoadingEvidence(true);
+      try {
+        const response = await fetch(`/api/admin/disputes/evidence?clientId=${encodeURIComponent(dispute.client_id)}`);
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(getErrorMessage(payload, 'Failed to load client evidence'));
+        }
+        if (
+          !cancelled
+          && typeof payload === 'object'
+          && payload !== null
+          && 'documents' in payload
+          && Array.isArray(payload.documents)
+        ) {
+          const documents = payload.documents.filter((document): document is EvidenceDocument => (
+            typeof document === 'object'
+            && document !== null
+            && 'id' in document
+            && 'file_name' in document
+            && typeof document.id === 'string'
+            && typeof document.file_name === 'string'
+            && (!('file_type' in document) || typeof document.file_type === 'string' || document.file_type === null)
+            && (!('created_at' in document) || typeof document.created_at === 'string' || document.created_at === null)
+          ));
+          setEvidenceDocuments(documents);
+        }
+      } catch (error) {
+        console.error('Error loading response evidence:', error);
+        if (!cancelled) toast.error('Failed to load client evidence');
+      } finally {
+        if (!cancelled) setLoadingEvidence(false);
+      }
+    };
+
+    void loadEvidence();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispute, isNoResponse, responseOutcome]);
+
   const handleSubmitResponse = async () => {
     if (!dispute || !responseOutcome) return;
-    if (!isNoResponse && (!responseDate || !responseDocumentUrl.trim())) {
+    if (!isNoResponse && (!responseDate || !responseDocumentId)) {
       toast.error('A response date and document are required for this outcome.');
       return;
     }
@@ -145,7 +246,7 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
 
       if (!isNoResponse) {
         payload.responseChannel = responseChannel;
-        payload.responseDocumentUrl = responseDocumentUrl.trim();
+        payload.responseDocumentId = responseDocumentId;
         payload.responseReceivedAt = responseDate;
       }
 
@@ -169,6 +270,40 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
       toast.error('Failed to save response review');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEvidenceUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const [file] = Array.from(event.target.files || []);
+    if (!dispute || !file) return;
+
+    setUploadingEvidence(true);
+    try {
+      const formData = new FormData();
+      formData.append('client_id', dispute.client_id);
+      formData.append('file_type', 'correspondence');
+      formData.append('file', file);
+      const response = await fetch('/api/admin/disputes/evidence/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(getErrorMessage(payload, 'Failed to upload response evidence'));
+      }
+      const document = getUploadedEvidenceDocument(payload);
+      if (!document) {
+        throw new Error('The uploaded evidence document could not be read');
+      }
+      setEvidenceDocuments((documents) => [document, ...documents.filter((item) => item.id !== document.id)]);
+      setResponseDocumentId(document.id);
+      toast.success('Response evidence uploaded.');
+    } catch (error) {
+      console.error('Error uploading response evidence:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload response evidence');
+    } finally {
+      event.target.value = '';
+      setUploadingEvidence(false);
     }
   };
 
@@ -294,17 +429,38 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
                       </div>
                     </div>
 
-                    <div>
-                      <label htmlFor="response-document" className="text-sm font-medium">Response document URL *</label>
-                      <Input
+                    <div className="rounded-lg border border-border bg-muted/20 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label htmlFor="response-document" className="text-sm font-medium">Response document *</label>
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80">
+                          {uploadingEvidence ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                          Upload response evidence
+                          <input
+                            className="sr-only"
+                            type="file"
+                            accept="application/pdf,text/html,text/plain,image/jpeg,image/png,image/gif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            onChange={handleEvidenceUpload}
+                            disabled={uploadingEvidence}
+                          />
+                        </label>
+                      </div>
+                      <select
                         id="response-document"
-                        type="url"
-                        placeholder="https://..."
-                        value={responseDocumentUrl}
-                        onChange={(event) => setResponseDocumentUrl(event.target.value)}
-                        className="mt-1"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">Upload the response to R2 and paste its secure URL for the audit trail.</p>
+                        value={responseDocumentId}
+                        onChange={(event) => setResponseDocumentId(event.target.value)}
+                        disabled={loadingEvidence || uploadingEvidence}
+                        className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="">{loadingEvidence ? 'Loading controlled evidence…' : 'Select a controlled document'}</option>
+                        {evidenceDocuments.map((document) => (
+                          <option key={document.id} value={document.id}>
+                            {formatEvidenceDocumentLabel(document)}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Select an existing client-owned document or upload the bureau response. Files remain private controlled evidence.
+                      </p>
                     </div>
                   </>
                 )}
@@ -332,6 +488,28 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
                     placeholder="Any details about this review..."
                     className="mt-1 min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/20 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">Evidence packet</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Create an attributable record from this client&apos;s controlled evidence.</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      aria-expanded={showEvidencePacket}
+                      onClick={() => setShowEvidencePacket((visible) => !visible)}
+                    >
+                      {showEvidencePacket ? 'Close packet builder' : 'Build evidence packet'}
+                    </Button>
+                  </div>
+                  {showEvidencePacket && (
+                    <div className="mt-3">
+                      <EvidencePacketPanel clientId={dispute.client_id} disputeId={dispute.id} />
+                    </div>
+                  )}
                 </div>
 
                 {recommendation && (

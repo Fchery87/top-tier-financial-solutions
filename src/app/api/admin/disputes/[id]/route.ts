@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
-import { clients, disputes, negativeItems, disputeOutcomes, slaDefinitions, slaInstances } from '@/db/schema';
+import { clientDocuments, clients, disputes, negativeItems, disputeOutcomes, slaDefinitions, slaInstances } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { recordLibraryOutcome } from '@/lib/letter-library-effectiveness';
@@ -16,6 +16,7 @@ import {
   getResponseReviewRecommendation,
   type ResponseReviewOutcome,
 } from '@/lib/response-review-recommendation';
+import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
 
 const STRUCTURED_RESPONSE_OUTCOMES: ReadonlySet<string> = new Set([
   'deleted',
@@ -88,6 +89,7 @@ export async function GET(
         response_received_at: dispute.responseReceivedAt?.toISOString(),
         outcome: dispute.outcome,
         response_notes: dispute.responseNotes,
+        response_document_id: dispute.responseDocumentId,
         response_document_url: dispute.responseDocumentUrl,
         response_channel: dispute.responseChannel,
         score_impact: dispute.scoreImpact,
@@ -134,6 +136,7 @@ export async function PUT(
       status,
       outcome,
       responseNotes,
+      responseDocumentId,
       responseDocumentUrl,
       responseChannel,
       submissionMethod,
@@ -214,16 +217,63 @@ export async function PUT(
       return NextResponse.json({ error: 'Response Review requires a response document and outcome classification' }, { status: 400 });
     }
 
+    let selectedResponseDocument: {
+      id: string;
+      userId: string;
+      fileUrl: string;
+    } | null = null;
+
     if (outcome !== undefined) {
       if (outcome === 'no_response') {
         const deadline = currentDispute.responseDeadline;
         if (!deadline || deadline > new Date()) {
           return NextResponse.json({ error: 'No response can be recorded only after the response deadline has elapsed' }, { status: 400 });
         }
-      } else if (!responseReceivedAt || !responseDocumentUrl) {
-        return NextResponse.json({
-          error: 'Response Review requires a response date and response document for this outcome',
-        }, { status: 400 });
+        if (responseReceivedAt || responseDocumentId || responseDocumentUrl) {
+          return NextResponse.json({
+            error: 'No response reviews cannot include response evidence or a receipt date',
+          }, { status: 400 });
+        }
+      } else {
+        const requestedResponseDocumentId = typeof responseDocumentId === 'string'
+          ? responseDocumentId.trim()
+          : '';
+        if (!responseReceivedAt) {
+          return NextResponse.json({
+            error: 'Response Review requires a response date and response document for this outcome',
+          }, { status: 400 });
+        }
+        if (!requestedResponseDocumentId) {
+          return NextResponse.json({
+            error: 'Response Review requires a controlled response document for this outcome',
+          }, { status: 400 });
+        }
+
+        const [client] = await db
+          .select({ userId: clients.userId })
+          .from(clients)
+          .where(eq(clients.id, currentDispute.clientId))
+          .limit(1);
+        const [document] = await db
+          .select({
+            id: clientDocuments.id,
+            userId: clientDocuments.userId,
+            fileUrl: clientDocuments.fileUrl,
+          })
+          .from(clientDocuments)
+          .where(eq(clientDocuments.id, requestedResponseDocumentId))
+          .limit(1);
+
+        if (!document || !isClientOwnedEvidenceDocument({
+          clientUserId: client?.userId ?? null,
+          document,
+        })) {
+          return NextResponse.json({
+            error: 'Response document must belong to the dispute client',
+          }, { status: 400 });
+        }
+
+        selectedResponseDocument = document;
       }
     }
 
@@ -244,8 +294,9 @@ export async function PUT(
       updateData.responseNotes = responseNotes;
     }
 
-    if (responseDocumentUrl !== undefined) {
-      updateData.responseDocumentUrl = responseDocumentUrl;
+    if (selectedResponseDocument) {
+      updateData.responseDocumentId = selectedResponseDocument.id;
+      updateData.responseDocumentUrl = selectedResponseDocument.fileUrl;
     }
 
     if (responseChannel !== undefined) {
@@ -321,6 +372,7 @@ export async function PUT(
       changes: {
         ...(status !== undefined && { status }),
         ...(outcome !== undefined && { outcome }),
+        ...(selectedResponseDocument && { responseDocumentId: selectedResponseDocument.id }),
         ...(sentAt !== undefined && { sentAt }),
         ...(responseChannel !== undefined && { responseChannel }),
         ...(scoreImpact !== undefined && { scoreImpact }),
@@ -428,7 +480,9 @@ export async function PUT(
         analysisConfidence: analysisConfidence !== undefined
           ? Math.round(analysisConfidence)
           : currentDispute.analysisConfidence ?? null,
-        responseDocumentUrl: responseDocumentUrl ?? currentDispute.responseDocumentUrl ?? null,
+        responseDocumentUrl: outcome === 'no_response'
+          ? null
+          : selectedResponseDocument?.fileUrl ?? currentDispute.responseDocumentUrl ?? null,
         notes: responseNotes ?? null,
         createdBy: adminUser.id,
         createdAt: new Date(),
@@ -496,6 +550,8 @@ export async function PUT(
         status: updatedDispute.status,
         outcome: updatedDispute.outcome,
         response_notes: updatedDispute.responseNotes,
+        response_document_id: updatedDispute.responseDocumentId,
+        response_document_url: updatedDispute.responseDocumentUrl,
         tracking_number: updatedDispute.trackingNumber,
         response_channel: updatedDispute.responseChannel,
         submission_method: updatedDispute.submissionMethod,

@@ -63,6 +63,10 @@ describe('DisputeDetailPanel response review', () => {
   });
 
   it('requires a response document before saving an actual response', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(new Response(JSON.stringify({ documents: [] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
     renderPanel();
     selectOutcome('verified');
 
@@ -71,7 +75,35 @@ describe('DisputeDetailPanel response review', () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith('A response date and document are required for this outcome.');
     });
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith('/api/admin/disputes/evidence?clientId=client-1');
+  });
+
+  it('loads client evidence and submits the selected response document ID', async () => {
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        documents: [{
+          id: 'doc-1',
+          file_name: 'Bureau response.pdf',
+          file_type: 'correspondence',
+          created_at: '2026-02-01T00:00:00.000Z',
+        }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        dispute: { response_document_id: 'doc-1' },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    renderPanel();
+    selectOutcome('verified');
+
+    const documentSelect = await screen.findByLabelText('Response document *');
+    fireEvent.change(documentSelect, { target: { value: 'doc-1' } });
+    fireEvent.click(screen.getByRole('button', { name: /save response/i }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenLastCalledWith('/api/admin/disputes/dispute-1', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"responseDocumentId":"doc-1"'),
+      }));
+    });
   });
 
   it('hides fictitious response evidence fields for a no-response review', () => {
@@ -82,8 +114,27 @@ describe('DisputeDetailPanel response review', () => {
     expect(screen.getByText(/only after the recorded response deadline has elapsed/i)).toBeInTheDocument();
   });
 
+  it('opens packet assembly as an explicit staff action for this dispute', async () => {
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ documents: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ packets: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: /build evidence packet/i }));
+
+    expect(await screen.findByText('No evidence packets yet.')).toBeInTheDocument();
+  });
+
   it('keeps the review open and requires a second click to create a recommended draft', async () => {
     vi.mocked(global.fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        documents: [{
+          id: 'doc-1',
+          file_name: 'Bureau response.pdf',
+          file_type: 'correspondence',
+          created_at: '2026-02-01T00:00:00.000Z',
+        }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         next_cycle_recommendation: {
           kind: 'create_next_draft',
@@ -95,7 +146,7 @@ describe('DisputeDetailPanel response review', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'Draft created' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     const { onClose, onResponseLogged } = renderPanel();
     selectOutcome('verified');
-    fireEvent.change(screen.getByPlaceholderText('https://...'), { target: { value: 'https://files.example/response.pdf' } });
+    fireEvent.change(await screen.findByLabelText('Response document *'), { target: { value: 'doc-1' } });
 
     fireEvent.click(screen.getByRole('button', { name: /save response/i }));
 
@@ -113,13 +164,23 @@ describe('DisputeDetailPanel response review', () => {
   });
 
   it('shows an API error returned while saving a response review', async () => {
-    vi.mocked(global.fetch).mockResolvedValue(new Response(
+    vi.mocked(global.fetch).mockResolvedValueOnce(new Response(
+      JSON.stringify({
+        documents: [{
+          id: 'doc-1',
+          file_name: 'Bureau response.pdf',
+          file_type: 'correspondence',
+          created_at: '2026-02-01T00:00:00.000Z',
+        }],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )).mockResolvedValueOnce(new Response(
       JSON.stringify({ error: 'No response can be recorded only after the response deadline has elapsed' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     ));
     renderPanel();
     selectOutcome('verified');
-    fireEvent.change(screen.getByPlaceholderText('https://...'), { target: { value: 'https://files.example/response.pdf' } });
+    fireEvent.change(await screen.findByLabelText('Response document *'), { target: { value: 'doc-1' } });
 
     fireEvent.click(screen.getByRole('button', { name: /save response/i }));
 

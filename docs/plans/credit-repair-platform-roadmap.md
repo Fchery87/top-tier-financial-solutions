@@ -52,6 +52,8 @@ Add a document checklist for required onboarding evidence, including identity do
 
 Introduce Evidence Packets as the set of documents and client confirmations attached to a dispute claim. Ordinary verification disputes may use default identity and proof-of-address documents. High-risk factual claims require claim-specific evidence before the system allows letter generation or submission.
 
+Implementation note — 2026-08-03: staff response evidence uses the same private, R2-backed `client_documents` inventory as portal uploads. Response Review accepts a client-owned document ID, persists that ID with its controlled storage key, and never accepts a pasted URL for a new review. Evidence Packets verify every selected document belongs to the packet client, retain their creator and timestamp, and are listed only in the requested client/dispute scope. High-risk packet creation remains blocked pending factual confirmation through the portal; this slice does not add malware scanning, public document delivery, or a staff confirmation bypass.
+
 Acceptance criteria:
 
 1. Portal document upload cannot persist arbitrary external URLs.
@@ -106,7 +108,7 @@ Separate outcomes clearly. Deletion means the item no longer reports on a bureau
 
 Compute next decisions from the reviewed response. Possible next decisions include closing the item, updating the item, escalating to the next Dispute Cycle, requesting method of verification, sending a furnisher dispute, or marking the item as not worth further action.
 
-Delivered 2026-08-03: Response Review now returns a deterministic, typed recommendation and never creates a draft as part of the review mutation. Actual responses require a receipt date and response document; an overdue `no_response` review deliberately records neither. The staff workspace has a deadline-prioritized response-review queue, and only a separate “Create recommended draft” action can invoke the existing, fully revalidated next-cycle generation seam.
+Delivered 2026-08-03: Response Review now returns a deterministic, typed recommendation and never creates a draft as part of the review mutation. Actual responses require a receipt date and a selected client-owned response document; the route persists its private R2 key and document ID rather than trusting a pasted URL. An overdue `no_response` review deliberately records neither. The staff workspace has a deadline-prioritized response-review queue, and only a separate “Create recommended draft” action can invoke the existing, fully revalidated next-cycle generation seam.
 
 Acceptance criteria:
 

@@ -811,6 +811,7 @@ export const disputes = pgTable('disputes', {
   outcome: text('outcome'), // 'deleted' | 'verified' | 'updated' | 'pending' | 'no_response'
   responseNotes: text('response_notes'),
   // Enhanced tracking fields
+  responseDocumentId: text('response_document_id').references(() => clientDocuments.id, { onDelete: 'set null' }),
   responseDocumentUrl: text('response_document_url'), // URL to uploaded bureau response document
   responseChannel: text('response_channel'), // 'mail' | 'online' | 'phone' | 'email'
   scoreImpact: integer('score_impact'), // Estimated score delta in points
@@ -838,6 +839,7 @@ export const disputes = pgTable('disputes', {
   index("disputes_batchId_idx").on(table.batchId),
   index("disputes_negativeItemId_idx").on(table.negativeItemId),
   index("disputes_status_idx").on(table.status),
+  index("disputes_responseDocumentId_idx").on(table.responseDocumentId),
   index("disputes_responseDeadline_idx").on(table.responseDeadline),
   index("disputes_methodology_idx").on(table.methodology),
   index("disputes_escalationReadyAt_idx").on(table.escalationReadyAt),
@@ -920,11 +922,13 @@ export const evidencePackets = pgTable('evidence_packets', {
   claimType: text('claim_type').notNull(),
   documentIds: text('document_ids').default('[]').notNull(),
   confirmations: text('confirmations').default('[]').notNull(),
+  createdById: text('created_by_id').references(() => user.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
   index('evidence_packets_clientId_idx').on(table.clientId),
   index('evidence_packets_disputeId_idx').on(table.disputeId),
+  index('evidence_packets_createdById_idx').on(table.createdById),
 ]);
 
 // Deprecated placeholder table. Use disputeLetterLibrary for generation
@@ -1303,6 +1307,10 @@ export const evidencePacketsRelations = relations(evidencePackets, ({ one }) => 
   dispute: one(disputes, {
     fields: [evidencePackets.disputeId],
     references: [disputes.id],
+  }),
+  createdBy: one(user, {
+    fields: [evidencePackets.createdById],
+    references: [user.id],
   }),
 }));
 

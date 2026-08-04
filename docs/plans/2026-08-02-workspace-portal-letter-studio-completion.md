@@ -26,6 +26,7 @@ This plan closes scheduled work from:
 - The old `dispute_letter_templates` table remains deprecated and retained; its active bootstrap and writer tooling is retired.
 - The Phase 7B letter-library generation pilot is implemented as a read-only development audit; provider-backed execution and usage writes remain opt-in and deferred.
 - The 2026-08-03 response-review work queue is complete: recommendations are deterministic, review recording never auto-generates a next-cycle draft, and staff explicitly creates any recommended draft after review.
+- The 2026-08-03 secure-evidence follow-up adds controlled staff uploads, client-owned response-document selection, and attributable Evidence Packets. Its nullable-reference migration is generated but is not applied by this implementation work.
 
 The generation prompt remains professional and neutral. Tone escalation belongs only to explicit Letter Studio rewrites.
 
@@ -832,6 +833,12 @@ The scheduled implementation, full repository validation, migration confirmation
 
 ## Response-review work queue follow-up — 2026-08-03
 
-The staff-facing response-review work queue is complete. Recording a structured review returns a pure recommendation and rejects obsolete auto-create requests. Actual responses require a response date and evidence URL; `no_response` is accepted only after the persisted deadline and does not invent response evidence. The workspace queue loads the existing awaiting-response list, orders reviews by deadline, opens the shared review panel, and keeps the panel open to display its recommendation. `quick-redispute` is now the separate, revalidated “Create recommended draft” action for eligible verified and no-response reviews; it verifies evidence/deadline state, report approval, duplicate-child prevention, and CFPB eligibility before generation.
+The staff-facing response-review work queue is complete. Recording a structured review returns a pure recommendation and rejects obsolete auto-create requests. Actual responses require a response date and a selected client-owned evidence document; the server derives the private R2 key from that document ID rather than accepting an evidence URL. `no_response` is accepted only after the persisted deadline and does not invent response evidence. The workspace queue loads the existing awaiting-response list, orders reviews by deadline, opens the shared review panel, and keeps the panel open to display its recommendation. `quick-redispute` is now the separate, revalidated “Create recommended draft” action for eligible verified and no-response reviews; it verifies evidence/deadline state, report approval, duplicate-child prevention, and CFPB eligibility before generation.
 
 Focused verification passed on 2026-08-03: 7 relevant API/component/page suites (42 tests) and the complete TypeScript check. The full repository test and lint commands remain the final workspace-wide release gates.
+
+## Secure Evidence Packets follow-up — 2026-08-04
+
+The secure-document and Evidence Packet follow-up is complete. Staff uploads and selects only client-owned records from the private R2-backed `client_documents` inventory; response review persists a document ID and its controlled storage key rather than accepting a pasted URL. Evidence Packets enforce the same client ownership boundary, retain the creating staff member, and remain append-only. High-risk factual claims still require portal-confirmed client facts; staff has no bypass. The generated nullable-reference migration is intentionally not applied by this implementation work.
+
+Validation passed in the feature worktree on 2026-08-04: `npm run test` completed with 942 passing tests and 27 skipped; `npm run build` compiled, type-checked, collected page data, and generated 127 static pages successfully; and `npx drizzle-kit check` passed. Better Auth emitted development-secret warnings during static data collection, but the build completed successfully.
