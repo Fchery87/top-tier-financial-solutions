@@ -37,6 +37,22 @@ export const ENCRYPTED_FIELDS = {
   ] as const,
 };
 
+type ClientEncryptedField = (typeof ENCRYPTED_FIELDS.clients)[number];
+
+export type ClientEncryptionFields = {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  ssnLast4: string | null;
+  streetAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  phone: string | null;
+};
+
+export type ClientEncryptionInput = Partial<ClientEncryptionFields>;
+
 function safeDecryptValue(value: unknown): unknown {
   if (!value) return value;
 
@@ -69,12 +85,18 @@ function safeDecryptValue(value: unknown): unknown {
  *   const encrypted = encryptClientData({firstName: 'John', ...});
  *   await db.insert(clients).values(encrypted);
  */
-export function encryptClientData(data: Record<string, unknown>) {
+export function encryptClientData(data: ClientEncryptionFields): ClientEncryptionFields;
+export function encryptClientData(data: ClientEncryptionInput): ClientEncryptionInput;
+export function encryptClientData(data: ClientEncryptionInput): ClientEncryptionInput {
   const encrypted = { ...data };
 
-  for (const field of ENCRYPTED_FIELDS.clients) {
-    if (field in encrypted && encrypted[field]) {
-      encrypted[field] = encrypt(String(encrypted[field]));
+  for (const field of ENCRYPTED_FIELDS.clients satisfies readonly ClientEncryptedField[]) {
+    const value = encrypted[field];
+    if (value) {
+      const encryptedValue = encrypt(value);
+      if (encryptedValue) {
+        encrypted[field] = encryptedValue;
+      }
     }
   }
 
