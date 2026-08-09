@@ -271,7 +271,7 @@ After re-parsing and running the wizard, you should see:
 
 **Check:**
 - Is the API passing `metro2Violations` to the letter generator?
-- Check browser console/network tab for the `/api/admin/disputes/generate-letter` payload
+- Check browser console/network tab for the `/api/workspace/disputes/generate-letter` payload
 
 ### Issue: "Collection" items have no violations
 

@@ -70,7 +70,7 @@ This repo uses a single-context domain documentation layout. See `docs/agents/do
 ### Domain-Specific Searches
 - Credit dispute logic: `rg -n "dispute" src/lib/`
 - AI letter generation: `rg -n "ai.*letter|generate.*letter" src/lib/`
-- Credit report parsing: `rg -n "parse.*report|credit.*analysis|parserReviewStatus|paymentHistoryGrid" src/lib/parsers/ src/lib/ src/app/api/admin/`
+- Credit report parsing: `rg -n "parse.*report|credit.*analysis|parserReviewStatus|paymentHistoryGrid" src/lib/parsers/ src/lib/ src/app/api/workspace/`
 - Authentication: `rg -n "auth|session" src/lib/auth.ts`
 
 ## Definition of Done
