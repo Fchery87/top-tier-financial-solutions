@@ -6,6 +6,28 @@ import { headers } from 'next/headers';
 import { eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { logServerEvent } from '@/lib/server-logger';
+import { readJsonBody } from '@/lib/request-validation';
+import { z } from 'zod';
+
+const MAX_PORTAL_DOCUMENT_SIZE = 10 * 1024 * 1024;
+const portalDocumentTypeSchema = z.enum([
+  'identity_document',
+  'id_document',
+  'proof_of_address',
+  'credit_report',
+  'dispute_letter',
+  'correspondence',
+  'other',
+]);
+const portalDocumentRegistrationSchema = z.object({
+  case_id: z.string().trim().min(1).max(128).optional(),
+  file_name: z.string().trim().min(1).max(255).optional(),
+  file_type: portalDocumentTypeSchema.optional(),
+  file_url: z.string().trim().min(1).max(2_048).optional(),
+  storage_key: z.string().trim().min(1).max(1_024).optional(),
+  file_size: z.number().int().min(0).max(MAX_PORTAL_DOCUMENT_SIZE).optional(),
+  notes: z.string().trim().max(5_000).nullable().optional(),
+}).strict();
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -81,14 +103,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const { case_id, file_name, file_type, file_url, storage_key, file_size, notes } = body;
+    const parsed = await readJsonBody(request, portalDocumentRegistrationSchema);
+    if (parsed.kind !== 'valid') {
+      return NextResponse.json({ error: 'Invalid document registration' }, { status: 400 });
+    }
+
+    const { case_id, file_name, file_type, file_url, storage_key, file_size, notes } = parsed.data;
 
     if (file_url && !storage_key) {
       return NextResponse.json({ error: 'Use a controlled portal upload key, not an arbitrary file URL' }, { status: 400 });
     }
 
-    if (!case_id || !file_name || !storage_key) {
+    if (!case_id || !file_name || !file_type || !storage_key || file_size === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 

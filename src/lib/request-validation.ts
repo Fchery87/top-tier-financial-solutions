@@ -83,11 +83,24 @@ export async function readFormData(request: FormDataRequest): Promise<FormDataRe
 export function requiredFile(formData: FormData, fieldName: string): RequiredFileResult {
   const entry = formData.get(fieldName);
 
-  if (typeof File !== 'undefined' && entry instanceof File) {
+  if (isUploadedFile(entry)) {
     return { kind: 'valid', data: entry };
   }
 
   return { kind: 'invalid_file' };
+}
+
+export function isUploadedFile(value: FormDataEntryValue | null): value is File {
+  if (typeof File !== 'undefined' && value instanceof File) {
+    return true;
+  }
+
+  return value !== null
+    && typeof value !== 'string'
+    && typeof value.name === 'string'
+    && typeof value.type === 'string'
+    && typeof value.size === 'number'
+    && typeof value.arrayBuffer === 'function';
 }
 
 export function validationErrorResponse(_result: InvalidPayloadResult) {

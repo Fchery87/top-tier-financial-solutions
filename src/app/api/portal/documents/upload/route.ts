@@ -9,6 +9,28 @@ import { uploadToR2 } from '@/lib/r2-storage';
 import { uploadLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { logServerEvent } from '@/lib/server-logger';
+import { readFormData, requiredFile } from '@/lib/request-validation';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_DOCUMENT_TYPES = new Set([
+  'identity_document',
+  'id_document',
+  'proof_of_address',
+  'credit_report',
+  'dispute_letter',
+  'correspondence',
+  'other',
+]);
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'text/html',
+  'text/plain',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -29,35 +51,41 @@ async function postHandler(request: NextRequest) {
   }
 
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const fileType = formData.get('file_type') as string || 'other';
-    const notes = formData.get('notes') as string || '';
-
-    if (!file) {
+    const parsedForm = await readFormData(request);
+    if (parsedForm.kind !== 'valid') {
+      return NextResponse.json({ error: 'Invalid upload form' }, { status: 400 });
+    }
+    const fileResult = requiredFile(parsedForm.data, 'file');
+    if (fileResult.kind !== 'valid') {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+    const file = fileResult.data;
+    const fileTypeEntry = parsedForm.data.get('file_type');
+    if (fileTypeEntry !== null && typeof fileTypeEntry !== 'string') {
+      return NextResponse.json({ error: 'Document type must be text' }, { status: 400 });
+    }
+    const fileType = fileTypeEntry?.trim() || 'other';
+    if (!ALLOWED_DOCUMENT_TYPES.has(fileType)) {
+      return NextResponse.json({ error: 'Invalid document type' }, { status: 400 });
+    }
+    const notesEntry = parsedForm.data.get('notes');
+    if (notesEntry !== null && typeof notesEntry !== 'string') {
+      return NextResponse.json({ error: 'Notes must be text' }, { status: 400 });
+    }
+    const notes = notesEntry?.trim() || '';
+    if (notes.length > 5_000 || file.name.trim().length === 0 || file.name.length > 255) {
+      return NextResponse.json({ error: 'Invalid document metadata' }, { status: 400 });
     }
 
     // Validate file type (allow common document types)
-    const allowedTypes = [
-      'application/pdf',
-      'text/html',
-      'text/plain',
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
       return NextResponse.json({ 
         error: 'Invalid file type. Allowed: PDF, HTML, TXT, images, Word documents.' 
       }, { status: 400 });
     }
 
     // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: 'File too large. Maximum size is 10MB.' }, { status: 400 });
     }
 
@@ -80,6 +108,12 @@ async function postHandler(request: NextRequest) {
       .where(eq(clientCases.userId, user.id))
       .limit(1);
 
+    if (!clientCase) {
+      return NextResponse.json({
+        error: 'No active case found. Please contact support.',
+      }, { status: 400 });
+    }
+
     // Upload to R2
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const uploadResult = await uploadToR2(
@@ -95,7 +129,7 @@ async function postHandler(request: NextRequest) {
 
     await db.insert(clientDocuments).values({
       id,
-      caseId: clientCase?.id || '', // Use empty string if no case (schema might require it)
+      caseId: clientCase.id,
       userId: user.id,
       fileName: file.name,
       fileType: fileType,

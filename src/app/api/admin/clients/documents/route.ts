@@ -6,6 +6,40 @@ import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
 import { logServerEvent } from '@/lib/server-logger';
+import { readFormData, requiredFile } from '@/lib/request-validation';
+import { z } from 'zod';
+
+const identityDocumentTypeSchema = z.enum([
+  'government_id',
+  'ssn_card',
+  'proof_of_address',
+  'credit_report',
+  'other',
+]);
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+]);
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+type FormTextResult =
+  | { kind: 'missing' }
+  | { kind: 'invalid' }
+  | { kind: 'valid'; value: string };
+
+function formText(formData: FormData, name: string): FormTextResult {
+  const value = formData.get(name);
+  if (value === null) {
+    return { kind: 'missing' };
+  }
+  if (typeof value !== 'string') {
+    return { kind: 'invalid' };
+  }
+  return { kind: 'valid', value: value.trim() };
+}
 
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('clients:write');
@@ -14,28 +48,51 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const clientId = formData.get('client_id') as string;
-    const documentType = formData.get('document_type') as string;
-    const notes = formData.get('notes') as string | null;
-
-    if (!file) {
+    const parsedForm = await readFormData(request);
+    if (parsedForm.kind !== 'valid') {
+      return NextResponse.json({ error: 'Invalid upload form' }, { status: 400 });
+    }
+    const fileResult = requiredFile(parsedForm.data, 'file');
+    if (fileResult.kind !== 'valid') {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
+    const file = fileResult.data;
 
-    if (!clientId) {
+    const clientIdResult = formText(parsedForm.data, 'client_id');
+    if (clientIdResult.kind === 'invalid') {
+      return NextResponse.json({ error: 'Client ID must be text' }, { status: 400 });
+    }
+    if (clientIdResult.kind === 'missing' || !clientIdResult.value) {
       return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
     }
-
-    if (!documentType) {
-      return NextResponse.json({ error: 'Document type is required' }, { status: 400 });
+    const clientId = clientIdResult.value;
+    if (clientId.length > 128) {
+      return NextResponse.json({ error: 'Client ID is too long' }, { status: 400 });
     }
 
-    // Validate document type
-    const validTypes = ['government_id', 'ssn_card', 'proof_of_address', 'credit_report', 'other'];
-    if (!validTypes.includes(documentType)) {
+    const documentTypeResult = formText(parsedForm.data, 'document_type');
+    if (documentTypeResult.kind === 'invalid') {
+      return NextResponse.json({ error: 'Document type must be text' }, { status: 400 });
+    }
+    if (documentTypeResult.kind === 'missing' || !documentTypeResult.value) {
+      return NextResponse.json({ error: 'Document type is required' }, { status: 400 });
+    }
+    const documentType = identityDocumentTypeSchema.safeParse(documentTypeResult.value);
+
+    if (!documentType.success) {
       return NextResponse.json({ error: 'Invalid document type' }, { status: 400 });
+    }
+
+    const notesResult = formText(parsedForm.data, 'notes');
+    if (notesResult.kind === 'invalid') {
+      return NextResponse.json({ error: 'Notes must be text' }, { status: 400 });
+    }
+    const notes = notesResult.kind === 'valid' ? notesResult.value : null;
+    if (notes !== null && notes.length > 5_000) {
+      return NextResponse.json({ error: 'Notes are too long' }, { status: 400 });
+    }
+    if (file.name.trim().length === 0 || file.name.length > 255) {
+      return NextResponse.json({ error: 'Invalid document metadata' }, { status: 400 });
     }
 
     // Verify client exists
@@ -50,14 +107,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type (images and PDFs only for identity documents)
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
       return NextResponse.json({ error: 'Invalid file type. Please upload an image (JPEG, PNG, GIF, WebP) or PDF.' }, { status: 400 });
     }
 
     // Validate file size (5MB max for identity documents)
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: 'File too large. Maximum size is 5MB.' }, { status: 400 });
     }
 
@@ -77,7 +132,7 @@ export async function POST(request: NextRequest) {
     await db.insert(clientIdentityDocuments).values({
       id,
       clientId,
-      documentType: documentType as 'government_id' | 'ssn_card' | 'proof_of_address' | 'credit_report' | 'other',
+      documentType: documentType.data,
       fileName: file.name,
       fileUrl: uploadResult.key,
       fileSize: uploadResult.size,
@@ -90,7 +145,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id,
       file_name: file.name,
-      document_type: documentType,
+      document_type: documentType.data,
       file_size: uploadResult.size,
       created_at: now.toISOString(),
     }, { status: 201 });
