@@ -2,7 +2,7 @@
 
 **Created:** 2026-07-14
 **Source:** Code-only review of the credit analysis, dispute, and report-parsing systems (no prior docs consulted; every finding is anchored to a file:line in the codebase as of commit `b21da10`).
-**Status:** `[x] P0` `[x] P1` `[x] P2` `[ ] P3` — update this line as phases complete.
+**Status:** `[x] P0` `[x] P1` `[x] P2` `[x] P3` — update this line as phases complete.
 
 ---
 
@@ -90,17 +90,17 @@ These bugs produce wrong FCRA clocks, unfounded dispute grounds, and defective l
 **Problem:** For combined reports, `src/lib/credit-analysis.ts:190-222` marks every account present on all three bureaus and copies identical values into `transunionBalance` / `experianBalance` / `equifaxBalance`. `detectBureauDiscrepancies` (`:693`) groups by the legacy single `bureau` field, so tri-merge uploads (IdentityIQ/SmartCredit/MyScoreIQ — the primary case) can never produce real cross-bureau comparison at account level, and items can be batched to bureaus that don't report them.
 
 **Tasks:**
-- [ ] Extend tri-merge parsers to emit per-bureau values per account (the derogatory-account path in `identityiq-parser.ts` already models this — generalize it to all accounts and to `smartcredit-parser.ts` / `myscoreiq-parser.ts`).
-- [ ] Ingest: populate per-bureau columns only from evidence; presence flags default to **false** when the source shows a bureau column as `-`/empty (replace the current "conservatively mark all true" behavior at `credit-analysis.ts:190-194, 338-344`).
-- [ ] Rewrite `detectBureauDiscrepancies` to compare the per-bureau columns **within a single report pull** instead of grouping legacy `bureau` values across all accounts.
-- [ ] Triage (`dispute-triage.ts` `getItemBureaus`): drop the "undefined means present" fallback once presence flags are evidence-based.
+- [x] Extend tri-merge parsers to emit per-bureau values per account (the derogatory-account path in `identityiq-parser.ts` already models this — generalize it to all accounts and to `smartcredit-parser.ts` / `myscoreiq-parser.ts`).
+- [x] Ingest: populate per-bureau columns only from evidence; presence flags default to **false** when the source shows a bureau column as `-`/empty (replace the current "conservatively mark all true" behavior at `credit-analysis.ts:190-194, 338-344`).
+- [x] Rewrite `detectBureauDiscrepancies` to compare the per-bureau columns **within a single report pull** instead of grouping legacy `bureau` values across all accounts.
+- [x] Triage (`dispute-triage.ts` `getItemBureaus`): drop the "undefined means present" fallback once presence flags are evidence-based.
 
 ### P1.2 — Scope discrepancy detection to one pull
 **Problem:** `detectBureauDiscrepancies` queries ALL client accounts across every report ever uploaded (`credit-analysis.ts:695-698`); a January pull vs a June pull becomes a false "cross-bureau discrepancy." Cross-time comparison already lives in `src/lib/credit-report-pull-comparison.ts` — keep temporal deltas there.
 
 **Tasks:**
-- [ ] Filter the account/profile queries to the triggering `creditReportId` (or same pull window).
-- [ ] Regression test: two pulls of the same account with different balances produce zero `bureauDiscrepancies` rows.
+- [x] Filter the account/profile queries to the triggering `creditReportId` (or same pull window).
+- [x] Regression test: two pulls of the same account with different balances produce zero `bureauDiscrepancies` rows.
 
 ### P1.3 — Consolidate on the factual letter engine; retire the old philosophy
 **Problem:** Two generations coexist in `src/lib/ai-letter-generator.ts`. The structured factual engine (`METRO2_ANALYSIS_SYSTEM_PROMPT`, `:1380`) is the correct posture. The older paths undercut it: `:223` asserts Metro 2 non-compliance "constitutes willful non-compliance" (legal overstatement — Metro 2 is an industry format, not a statute); `:233-238` auto-threatens statutory damages in every round ≥ 2 letter; fallback letters demand "COMPLETE DELETION" in caps; `:196-209` demands the bureau bypass e-OSCAR (no legal basis, a known template-mill tell — the §611(a)(6)(B)(iii) MOV request in the same block is legitimate and stays).
@@ -224,3 +224,4 @@ These bugs produce wrong FCRA clocks, unfounded dispute grounds, and defective l
 | 2026-07-15 | P1 | Consolidated letter generation onto factual prompts, added deterministic output linting, removed round-based evidence boosts from confidence and strength scoring, and completed Phase 1 cleanup/docs sync | `docs/agents/domain.md`, `docs/CREDIT-ANALYSIS-IMPLEMENTATION.md`, `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md`, `docs/IDENTITYIQ_PARSER_GUIDE.md`, `docs/adr/0001-ai-renders-deterministic-dispute-policy.md`, `docs/plans/2026-07-14-credit-brain-accuracy-implementation-plan.md` |
 | 2026-07-15 | P2 | Hardened source detection and deterministic date parsing, added parser fixture/routing coverage, introduced parser-review gating across downstream workflows, persisted payment-history grids, surfaced parser review state in admin flows, centralized current LLM defaults, and hardened factual structured-output + tradeline match confidence behavior | `docs/CREDIT-ANALYSIS-IMPLEMENTATION.md`, `docs/IDENTITYIQ-PARSER-ENHANCEMENTS.md`, `docs/IDENTITYIQ_PARSER_GUIDE.md`, `docs/PARSER-FIX-ORIGINAL-CREDITOR.md`, `docs/SETUP_GUIDE.md`, `AGENTS.md`, `docs/plans/2026-07-14-credit-brain-accuracy-implementation-plan.md` |
 | 2026-07-15 | P3 | Added deterministic re-aging and duplicate-liability detector support, medical-debt triage recommendations, outcome-driven round-1 methodology selection, CFPB complaint-packet routing in the wizard, and completed Phase 3 docs reconciliation | `docs/SECONDARY-BUREAUS-AND-CREDITOR-ANALYTICS.md`, `docs/response-clock.md`, `docs/agents/domain.md`, `docs/plans/credit-repair-platform-roadmap.md`, `docs/plans/2026-07-14-credit-brain-accuracy-implementation-plan.md` |
+| 2026-08-09 | P1/P3 | Reconciled stale plan markers after focused parser, presence, discrepancy, and triage verification (6 suites, 14 tests). | `docs/plans/2026-07-14-credit-brain-accuracy-implementation-plan.md` |

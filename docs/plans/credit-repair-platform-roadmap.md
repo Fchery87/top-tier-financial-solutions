@@ -246,83 +246,94 @@ Security and role hardening should happen continuously, with critical findings t
 
 ## Vertical Slices
 
-- [ ] **S01: Service Engagement Basics** `risk:high` `depends:[]`
+- [x] **S01: Service Engagement Basics** `risk:high` `depends:[]`
   > After this: staff can create or view a Credit Audit or Credit Restoration engagement for a client, and lifecycle progress lives on the engagement.
-- [ ] **S02: Compliance Gate Status** `risk:high` `depends:[S01]`
+- [x] **S02: Compliance Gate Status** `risk:high` `depends:[S01]`
   > After this: staff can see each Compliance Gate check as passing or failing for an engagement.
-- [ ] **S03: Ready For First Work Blocking** `risk:high` `depends:[S02]`
+- [x] **S03: Ready For First Work Blocking** `risk:high` `depends:[S02]`
   > After this: the system blocks Ready for First Work until required gate checks pass.
-- [ ] **S04: Cancellation Window Execution Rules** `risk:high` `depends:[S03]`
+- [x] **S04: Cancellation Window Execution Rules** `risk:high` `depends:[S03]`
   > After this: staff can draft strategy and letters during the window but cannot submit disputes, mark Services Rendered, invoice, or charge.
-- [ ] **S05: Portal Onboarding Blockers** `risk:medium` `depends:[S02]`
+- [x] **S05: Portal Onboarding Blockers** `risk:medium` `depends:[S02]`
   > After this: clients can see missing onboarding actions in the portal.
-- [ ] **S06: Secure Portal Document Upload** `risk:high` `depends:[S01]`
+- [x] **S06: Secure Portal Document Upload** `risk:high` `depends:[S01]`
   > After this: clients upload documents through controlled storage instead of submitting arbitrary file URLs.
-- [ ] **S07: Document Checklist Completion** `risk:medium` `depends:[S06]`
+- [x] **S07: Document Checklist Completion** `risk:medium` `depends:[S06]`
   > After this: required identity and proof-of-address checklist items update from uploaded documents.
-- [ ] **S08: Evidence Packet For A Claim** `risk:high` `depends:[S07]`
+- [x] **S08: Evidence Packet For A Claim** `risk:high` `depends:[S07]`
   > After this: staff can attach specific documents and confirmations to a dispute claim.
-- [ ] **S09: High-Risk Claim Confirmation Gate** `risk:high` `depends:[S08]`
+- [x] **S09: High-Risk Claim Confirmation Gate** `risk:high` `depends:[S08]`
   > After this: not-mine, identity-theft, fraud, never-late, unauthorized-inquiry, and sworn factual claims are blocked without explicit client confirmation and evidence.
-- [ ] **S10: Deterministic Policy Decision** `risk:high` `depends:[S09]`
+- [x] **S10: Deterministic Policy Decision** `risk:high` `depends:[S09]`
   > After this: a dispute item can be evaluated into allowed reason codes, evidence requirements, claim risk, and target recipient without AI.
-- [ ] **S11: Letter Renderer Boundary** `risk:high` `depends:[S10]`
+- [x] **S11: Letter Renderer Boundary** `risk:high` `depends:[S10]`
   > After this: letter generation accepts only approved policy inputs and fails closed without them.
-- [ ] **S12: Policy-Backed Dispute Creation** `risk:high` `depends:[S11]`
+- [x] **S12: Policy-Backed Dispute Creation** `risk:high` `depends:[S11]`
   > After this: creating a dispute persists deterministic policy decisions and generated letter content traceably.
-- [ ] **S13: Dispute Cycle Record** `risk:medium` `depends:[S12]`
+- [x] **S13: Dispute Cycle Record** `risk:medium` `depends:[S12]`
   > After this: staff can group approved disputes into a Dispute Cycle with a cycle number and status.
-- [ ] **S14: Submission Tracking** `risk:high` `depends:[S13]`
+- [x] **S14: Submission Tracking** `risk:high` `depends:[S13]`
   > After this: a dispute package cannot be marked submitted until submission method, recipient, date, and response deadline are recorded.
-- [ ] **S15: Certified Mail Manual Tracking** `risk:medium` `depends:[S14]`
+- [x] **S15: Certified Mail Manual Tracking** `risk:medium` `depends:[S14]`
   > After this: staff can record certified or tracking numbers and proof documents for mailed disputes.
-- [ ] **S16: Response Review Intake** `risk:high` `depends:[S14]`
+- [x] **S16: Response Review Intake** `risk:high` `depends:[S14]`
   > After this: staff can attach a response document and classify a response before any next-cycle action.
-- [ ] **S17: Outcome Vocabulary Enforcement** `risk:medium` `depends:[S16]`
+- [x] **S17: Outcome Vocabulary Enforcement** `risk:medium` `depends:[S16]`
   > After this: outcomes are stored as Deletion, Update, Verified, or other structured statuses without collapsing them into generic success.
-- [ ] **S18: Next-Cycle Recommendation** `risk:high` `depends:[S17]`
+- [x] **S18: Next-Cycle Recommendation** `risk:high` `depends:[S17]`
   > After this: the system recommends close, update, escalate, method-of-verification, furnisher-dispute, or no-further-action after Response Review.
-- [ ] **S19: Credit Report Pull History** `risk:medium` `depends:[S01]`
+- [x] **S19: Credit Report Pull History** `risk:medium` `depends:[S01]`
   > After this: multiple Credit Report Pulls can be stored for the same engagement and shown chronologically.
-- [ ] **S20: Pull Comparison Engine** `risk:high` `depends:[S19]`
+- [x] **S20: Pull Comparison Engine** `risk:high` `depends:[S19]`
   > After this: the system detects deleted, updated, unchanged, and new negative items between two pulls.
-- [ ] **S21: Parser Review State** `risk:medium` `depends:[S20]`
+- [x] **S21: Parser Review State** `risk:medium` `depends:[S20]`
   > After this: extracted report facts show review and confidence state before they can drive disputes or reports.
-- [ ] **S22: Progress Report Inputs** `risk:medium` `depends:[S20,S17]`
+- [x] **S22: Progress Report Inputs** `risk:medium` `depends:[S20,S17]`
   > After this: report comparison and reviewed outcomes feed progress-report data.
-- [ ] **S23: Portal Message Threads** `risk:medium` `depends:[S01]`
+- [x] **S23: Portal Message Threads** `risk:medium` `depends:[S01]`
   > After this: clients and staff can exchange secure messages tied to the client or engagement.
-- [ ] **S24: Notification Preferences** `risk:low` `depends:[S23]`
+- [x] **S24: Notification Preferences** `risk:low` `depends:[S23]`
   > After this: clients can manage email notification preferences and messaging respects them.
-- [ ] **S25: Client Progress Snapshot** `risk:medium` `depends:[S05,S13,S17,S22]`
+- [x] **S25: Client Progress Snapshot** `risk:medium` `depends:[S05,S13,S17,S22]`
   > After this: portal progress is computed from lifecycle, tasks, documents, dispute cycles, outcomes, and report history.
-- [ ] **S26: High-Risk Confirmation In Portal** `risk:high` `depends:[S09,S23]`
+- [x] **S26: High-Risk Confirmation In Portal** `risk:high` `depends:[S09,S23]`
   > After this: clients can explicitly confirm high-risk factual claims from the portal.
-- [ ] **S27: Services Rendered Events** `risk:high` `depends:[S04,S14]`
+- [x] **S27: Services Rendered Events** `risk:high` `depends:[S04,S14]`
   > After this: First Dispute Package Submitted can be recorded as a qualifying Services Rendered event.
-- [ ] **S28: Payable Invoice Gate** `risk:high` `depends:[S27]`
+- [x] **S28: Payable Invoice Gate** `risk:high` `depends:[S27]`
   > After this: invoices cannot become payable unless a qualifying Services Rendered event exists.
-- [ ] **S29: Credit Audit Engagement Billing** `risk:medium` `depends:[S01,S28]`
+- [x] **S29: Credit Audit Engagement Billing** `risk:medium` `depends:[S01,S28]`
   > After this: paid Credit Audit engagements can invoice for audit work under their own agreement and service scope.
-- [ ] **S30: Payment Audit Trail** `risk:medium` `depends:[S28]`
+- [x] **S30: Payment Audit Trail** `risk:medium` `depends:[S28]`
   > After this: every invoice-readiness or payment-status change records who, what, and why.
-- [ ] **S31: Operator Analytics Summary** `risk:medium` `depends:[S14,S17,S20,S27]`
+- [x] **S31: Operator Analytics Summary** `risk:medium` `depends:[S14,S17,S20,S27]`
   > After this: staff can see import success, response aging, cycle throughput, billing readiness, and workload metrics.
-- [ ] **S32: Client Outcome Analytics** `risk:medium` `depends:[S17,S20,S22]`
+- [x] **S32: Client Outcome Analytics** `risk:medium` `depends:[S17,S20,S22]`
   > After this: staff can see deletions, updates, verified outcomes, score movement, new negatives, and bureau progress separately from operator metrics.
-- [ ] **S33: Admin Analytics Panel** `risk:low` `depends:[S31,S32]`
+- [x] **S33: Admin Analytics Panel** `risk:low` `depends:[S31,S32]`
   > After this: admin dashboard shows operational analytics and client outcome analytics in separate sections.
-- [ ] **S34: Permission-Based Admin Access** `risk:high` `depends:[S01]`
+- [x] **S34: Permission-Based Admin Access** `risk:high` `depends:[S01]`
   > After this: admin routes and UI use explicit permissions instead of super-admin-only checks.
-- [ ] **S35: Security Remediation Criticals** `risk:high` `depends:[S34]`
+- [x] **S35: Security Remediation Criticals** `risk:high` `depends:[S34]`
   > After this: role-management bypass, admin access disclosure, secret rotation tasks, and sensitive route rate limits are resolved or documented as externally blocked.
-- [ ] **S36: Safe Rendered HTML And CSP Hardening** `risk:high` `depends:[S35]`
+- [x] **S36: Safe Rendered HTML And CSP Hardening** `risk:high` `depends:[S35]`
   > After this: generated/report/agreement HTML rendering is sanitized or safe by construction, and CSP is tightened.
-- [ ] **S37: PII Boundary Cleanup** `risk:high` `depends:[S34]`
+- [x] **S37: PII Boundary Cleanup** `risk:high` `depends:[S34]`
   > After this: admin, portal, reporting, and letter generation use consistent encryption and decryption boundaries.
-- [ ] **S38: End-To-End Production Readiness Pass** `risk:high` `depends:[S33,S36,S37]`
+- [x] **S38: End-To-End Production Readiness Pass** `risk:high` `depends:[S33,S36,S37]`
   > After this: a test client can move from lead/audit/restoration through gate, dispute cycle, submission, response review, report, invoice readiness, and analytics with verification passing.
 
 ## Definition Of Done For The Roadmap
 
 The roadmap is complete when the platform can safely run a client from Lead through Credit Audit or Credit Restoration, enforce compliance gates, manage evidence-backed dispute cycles, track submissions and responses, produce approved reports, show client progress, invoice only after qualifying service events, and expose separate internal and client-facing analytics.
+
+## Completion reconciliation — 2026-08-09
+
+All S01–S38 slices are implemented. The checklist had not been updated as the
+vertical slices shipped in subsequent workspace, evidence, and security
+changes. The reconciliation is supported by the focused API, library,
+component, and browser coverage for the named seams, including the service
+engagement/compliance, evidence packet, policy, submission, response review,
+report comparison, portal, billing, analytics, permission, safe HTML/CSP, PII,
+and authenticated end-to-end suites. Product initiatives listed under
+**Deferred Scope** remain intentionally outside this completed roadmap.
