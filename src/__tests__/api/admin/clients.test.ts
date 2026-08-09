@@ -39,7 +39,7 @@ describe('POST /api/admin/clients - Create Client', () => {
   });
 
   it('rejects invalid client PII payloads before encryption or database writes', async () => {
-    const { POST } = await import('@/app/api/admin/clients/route');
+    const { POST } = await import('@/app/api/workspace/clients/route');
     const invalidPayloads = [
       [],
       { first_name: 'A'.repeat(201), last_name: 'Doe', email: 'ada@example.com' },

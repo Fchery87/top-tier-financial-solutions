@@ -56,7 +56,7 @@ describe('PUT /api/admin/clients/[id] PII encryption boundary', () => {
   });
 
   it('encrypts all client PII fields accepted by client creation when updating a client', async () => {
-    const { PUT } = await import('@/app/api/admin/clients/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/clients/[id]/route');
 
     const response = await PUT(
       new NextRequest('http://localhost/api/admin/clients/client-1', {
@@ -91,7 +91,7 @@ describe('PUT /api/admin/clients/[id] PII encryption boundary', () => {
   }, 30000);
 
   it('rejects invalid PII updates before encryption or database writes', async () => {
-    const { PUT } = await import('@/app/api/admin/clients/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/clients/[id]/route');
     const invalidPayloads = [
       [],
       { first_name: 'A'.repeat(201) },

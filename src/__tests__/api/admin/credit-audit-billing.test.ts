@@ -27,7 +27,7 @@ describe('POST /api/admin/billing credit audit engagement billing', () => {
   });
 
   it('requires credit audit invoices to use a separate credit audit engagement', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     dbMock.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
@@ -61,7 +61,7 @@ describe('POST /api/admin/billing credit audit engagement billing', () => {
 
   it('denies a staff-equivalent fee configuration mutation without billing:system', async () => {
     requireCapabilityMock.mockResolvedValue(null);
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
       method: 'POST',

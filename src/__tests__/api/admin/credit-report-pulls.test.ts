@@ -22,7 +22,7 @@ describe('GET /api/admin/credit-report-pulls', () => {
   });
 
   it('returns credit report pulls for an engagement chronologically', async () => {
-    const { GET } = await import('@/app/api/admin/credit-report-pulls/route');
+    const { GET } = await import('@/app/api/workspace/credit-report-pulls/route');
     const rows = [
       {
         id: 'report-1',

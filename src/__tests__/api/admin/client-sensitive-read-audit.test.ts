@@ -68,7 +68,7 @@ beforeEach(() => {
 
 describe('client sensitive-read audit routes', () => {
   it('audits a successful client record read without passing protected fields', async () => {
-    const { GET } = await import('@/app/api/admin/clients/[id]/route');
+    const { GET } = await import('@/app/api/workspace/clients/[id]/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/clients/client-1', {
       headers: { 'x-request-id': 'request-1' },
     }), { params: Promise.resolve({ id: 'client-1' }) });
@@ -89,7 +89,7 @@ describe('client sensitive-read audit routes', () => {
   it('audits an audit-report preview without passing report HTML or client fields', async () => {
     dbMock.select.mockReset();
     dbMock.select.mockReturnValueOnce(standardSelect([client])).mockImplementation(() => standardSelect());
-    const { GET } = await import('@/app/api/admin/clients/[id]/audit-report/route');
+    const { GET } = await import('@/app/api/workspace/clients/[id]/audit-report/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/clients/client-1/audit-report?type=simple', {
       headers: { 'x-request-id': 'request-2' },
     }), { params: Promise.resolve({ id: 'client-1' }) });

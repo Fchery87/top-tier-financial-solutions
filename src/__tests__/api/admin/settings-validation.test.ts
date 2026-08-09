@@ -34,7 +34,7 @@ describe('settings write validation', () => {
   });
 
   it('rejects unsafe settings writes before opening a transaction', async () => {
-    const { POST, PUT } = await import('@/app/api/admin/settings/route');
+    const { POST, PUT } = await import('@/app/api/workspace/settings/route');
     const invalidPayloads = [
       [],
       { key: 'contains spaces', type: 'string', value: 'value' },
@@ -56,7 +56,7 @@ describe('settings write validation', () => {
   });
 
   it('rejects unsafe LLM configuration updates before opening a transaction', async () => {
-    const { PUT } = await import('@/app/api/admin/settings/llm/route');
+    const { PUT } = await import('@/app/api/workspace/settings/llm/route');
     const invalidPayloads = [
       [],
       { provider: 'unsupported' },
@@ -87,7 +87,7 @@ describe('settings write validation', () => {
       temperature: 0.7,
       maxTokens: 4096,
     });
-    const { PUT } = await import('@/app/api/admin/settings/llm/route');
+    const { PUT } = await import('@/app/api/workspace/settings/llm/route');
 
     const response = await PUT(jsonRequest('http://localhost/api/admin/settings/llm', 'PUT', {
       apiKey: 'secret-api-key-value',

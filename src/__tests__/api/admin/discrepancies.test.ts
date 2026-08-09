@@ -58,7 +58,7 @@ describe('GET /api/admin/disputes/discrepancies', () => {
   });
 
   it('keeps clientId-only behavior while allowing optional reportId filtering', async () => {
-    const { GET } = await import('@/app/api/admin/disputes/discrepancies/route');
+    const { GET } = await import('@/app/api/workspace/disputes/discrepancies/route');
 
     mockDiscrepancyQuery([
       {

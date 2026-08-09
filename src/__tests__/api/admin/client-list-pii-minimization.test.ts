@@ -66,7 +66,7 @@ describe('GET /api/admin/clients PII minimization', () => {
       })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 1 }]) }) });
 
-    const { GET } = await import('@/app/api/admin/clients/route');
+    const { GET } = await import('@/app/api/workspace/clients/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/clients'));
     const body = await response.json();
 

@@ -28,7 +28,7 @@ describe('POST /api/admin/billing payment audit trail', () => {
   });
 
   it('logs why an invoice became payable from the qualifying services rendered event', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
     const invoiceValues = vi.fn().mockResolvedValue(undefined);
     const auditValues = vi.fn().mockResolvedValue(undefined);
 

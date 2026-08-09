@@ -37,7 +37,7 @@ describe('GET /api/admin/client-outcome-analytics', () => {
   });
 
   it('returns client outcome metrics without operator workload fields', async () => {
-    const { GET } = await import('@/app/api/admin/client-outcome-analytics/route');
+    const { GET } = await import('@/app/api/workspace/client-outcome-analytics/route');
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockResolvedValue([

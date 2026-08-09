@@ -43,7 +43,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   });
 
   it('requires response document and classification when recording a received response', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1, responseReceivedAt: null, escalationHistory: null }]) }) }) });
 
@@ -66,7 +66,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   }, 30000);
 
   it('rejects generic success as a response review outcome', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1, responseReceivedAt: null, escalationHistory: null }]) }) }) });
 
@@ -90,7 +90,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   }, 30000);
 
   it('rejects obsolete automatic next-cycle creation requests', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
       id: 'dispute-1',
@@ -118,7 +118,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   }, 30000);
 
   it('requires a received date for an actual response outcome', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
       id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1,
@@ -144,7 +144,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   }, 30000);
 
   it('allows an overdue no-response review without fabricated response evidence', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
     const updatedDispute = {
       id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1,
       status: 'responded', outcome: 'no_response', responseNotes: 'No response by the deadline.',
@@ -185,7 +185,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   }, 30000);
 
   it('recommends method-of-verification after a verified response review', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
     const updatedDispute = {
       id: 'dispute-1',
       clientId: 'client-1',
@@ -242,7 +242,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   }, 30000);
 
   it('rejects an arbitrary response document URL for a new actual response review', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
     dbMock.select.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
@@ -279,7 +279,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
   });
 
   it('persists an owned response document ID and its controlled R2 key', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
     const updatedDispute = {
       id: 'dispute-1',
       clientId: 'client-1',

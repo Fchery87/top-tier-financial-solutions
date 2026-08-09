@@ -99,7 +99,7 @@ describe('POST /api/admin/disputes/[id]/letter/rewrite', () => {
       attempts: 2,
     });
 
-    const { POST } = await import('@/app/api/admin/disputes/[id]/letter/rewrite/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
     const response = await POST(request({ mode: 'rewrite' }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
 
@@ -118,7 +118,7 @@ describe('POST /api/admin/disputes/[id]/letter/rewrite', () => {
       attempts: 1,
     });
 
-    const { POST } = await import('@/app/api/admin/disputes/[id]/letter/rewrite/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
     const response = await POST(request({ mode: 'tone', tone: 'demanding' }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
 
@@ -136,7 +136,7 @@ describe('POST /api/admin/disputes/[id]/letter/rewrite', () => {
       attempts: 1,
     });
 
-    const { POST } = await import('@/app/api/admin/disputes/[id]/letter/rewrite/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
     const response = await POST(request({ mode: 'custom', instruction: 'Make the request clearer.', acknowledgeWarnings: true }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
 

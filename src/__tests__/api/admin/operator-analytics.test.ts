@@ -37,7 +37,7 @@ describe('GET /api/admin/operator-analytics', () => {
   });
 
   it('returns internal operator metrics without client outcome claims', async () => {
-    const { GET } = await import('@/app/api/admin/operator-analytics/route');
+    const { GET } = await import('@/app/api/workspace/operator-analytics/route');
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 2 }]) }) })

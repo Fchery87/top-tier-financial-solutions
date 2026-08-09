@@ -37,7 +37,7 @@ describe('GET /api/admin/search', () => {
   it('rejects users without either record-read capability', async () => {
     requireCapabilityMock.mockResolvedValue(null);
 
-    const { GET } = await import('@/app/api/admin/search/route');
+    const { GET } = await import('@/app/api/workspace/search/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/search?q=jane'));
 
     expect(response.status).toBe(403);
@@ -45,7 +45,7 @@ describe('GET /api/admin/search', () => {
   });
 
   it('returns an empty result set for queries shorter than two characters', async () => {
-    const { GET } = await import('@/app/api/admin/search/route');
+    const { GET } = await import('@/app/api/workspace/search/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/search?q=j'));
 
     expect(response.status).toBe(200);
@@ -78,7 +78,7 @@ describe('GET /api/admin/search', () => {
       }],
     );
 
-    const { GET } = await import('@/app/api/admin/search/route');
+    const { GET } = await import('@/app/api/workspace/search/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/search?q=jane%20doe'));
     const body = await response.json();
 

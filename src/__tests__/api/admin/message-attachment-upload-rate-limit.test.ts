@@ -29,7 +29,7 @@ describe('POST /api/admin/messages/attachments', () => {
   });
 
   it('rejects an exhausted upload limit before authentication and storage work', async () => {
-    const { POST } = await import('@/app/api/admin/messages/attachments/route');
+    const { POST } = await import('@/app/api/workspace/messages/attachments/route');
     const response = await POST(new NextRequest('http://localhost/api/admin/messages/attachments', {
       method: 'POST',
       headers: { 'x-forwarded-for': '203.0.113.21' },

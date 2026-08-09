@@ -18,7 +18,7 @@ describe('POST /api/admin/automation/dispute-escalations/run', () => {
 
   it('denies a staff-equivalent request without settings:write', async () => {
     requireCapabilityMock.mockResolvedValue(null);
-    const { POST } = await import('@/app/api/admin/automation/dispute-escalations/run/route');
+    const { POST } = await import('@/app/api/workspace/automation/dispute-escalations/run/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/automation/dispute-escalations/run', {
       method: 'POST',

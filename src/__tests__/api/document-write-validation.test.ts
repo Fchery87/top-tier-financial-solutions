@@ -101,7 +101,7 @@ describe('controlled document write validation', () => {
   });
 
   it('rejects more than twenty staff evidence files before client lookup or storage work', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/evidence/upload/route');
+    const { POST } = await import('@/app/api/workspace/disputes/evidence/upload/route');
     const files = Array.from({ length: 21 }, (_, index) => ({
       name: 'files',
       value: `evidence-${index}`,
@@ -121,7 +121,7 @@ describe('controlled document write validation', () => {
   });
 
   it('rejects non-text admin document notes before lookup or storage work', async () => {
-    const { POST } = await import('@/app/api/admin/clients/documents/route');
+    const { POST } = await import('@/app/api/workspace/clients/documents/route');
 
     const response = await POST(multipartRequest('http://localhost/api/admin/clients/documents', [
       { name: 'file', ...pdfFile },

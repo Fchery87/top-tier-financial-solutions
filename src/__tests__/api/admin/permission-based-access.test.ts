@@ -55,7 +55,7 @@ describe('permission-based admin access', () => {
       })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 0 }]) }) });
 
-    const { GET } = await import('@/app/api/admin/tasks/route');
+    const { GET } = await import('@/app/api/workspace/tasks/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/tasks'));
     const body = await response.json();
 
@@ -68,7 +68,7 @@ describe('permission-based admin access', () => {
     authMock.api.getSession.mockResolvedValue({ user: { id: 'user-1', email: 'client@example.com' } });
     adminAuthMock.getUserRole.mockResolvedValue('user');
 
-    const { GET } = await import('@/app/api/admin/tasks/route');
+    const { GET } = await import('@/app/api/workspace/tasks/route');
     const response = await GET(new NextRequest('http://localhost/api/admin/tasks'));
     const body = await response.json();
 

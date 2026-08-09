@@ -63,7 +63,7 @@ describe('POST /api/admin/disputes CFPB gate', () => {
   });
 
   it('requires exactly one selected item', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/route');
+    const { POST } = await import('@/app/api/workspace/disputes/route');
 
     const response = await POST(request({ ...baseBody, negativeItemId: null }));
 
@@ -80,7 +80,7 @@ describe('POST /api/admin/disputes CFPB gate', () => {
       message: 'CFPB escalation is deferred until 2026-09-03T00:00:00.000Z.',
       eligibility: { eligible: false, reason: 'still_pending', eligibleAt: new Date('2026-09-03T00:00:00.000Z') },
     });
-    const { POST } = await import('@/app/api/admin/disputes/route');
+    const { POST } = await import('@/app/api/workspace/disputes/route');
 
     const response = await POST(request(baseBody));
 
@@ -92,7 +92,7 @@ describe('POST /api/admin/disputes CFPB gate', () => {
   it('rejects a predecessor whose CRA item does not match the selected item', async () => {
     loadDisputeChainMock.mockResolvedValue([{ id: 'cra-1', clientId: 'client-1', negativeItemId: 'different-item', targetRecipient: 'bureau', sentAt: new Date('2026-06-01T00:00:00.000Z') }]);
     decideEscalationMock.mockReturnValue({ kind: 'ready', plan: { targetRecipient: 'cfpb' }, eligibility: { eligible: true, reason: 'eligible', eligibleAt: null } });
-    const { POST } = await import('@/app/api/admin/disputes/route');
+    const { POST } = await import('@/app/api/workspace/disputes/route');
 
     const response = await POST(request(baseBody));
 

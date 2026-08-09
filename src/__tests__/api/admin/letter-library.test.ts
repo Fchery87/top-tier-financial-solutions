@@ -63,7 +63,7 @@ describe('letter library API', () => {
   });
 
   it('rejects malformed JSON arrays before any write', async () => {
-    const { parsePayload } = await import('@/app/api/admin/letter-library/route');
+    const { parsePayload } = await import('@/app/api/workspace/letter-library/route');
 
     expect(parsePayload({
       name: 'Broken', methodology: 'factual', content: 'Prompt', item_types: '[broken',
@@ -72,7 +72,7 @@ describe('letter library API', () => {
   });
 
   it('creates a row with array fields intact and capability enforcement', async () => {
-    const { POST } = await import('@/app/api/admin/letter-library/route');
+    const { POST } = await import('@/app/api/workspace/letter-library/route');
     const response = await POST(new NextRequest('http://localhost/api/admin/letter-library', {
       method: 'POST',
       body: JSON.stringify({
@@ -94,7 +94,7 @@ describe('letter library API', () => {
   });
 
   it('preserves arrays when reactivation sends only the active-state change', async () => {
-    const { PATCH } = await import('@/app/api/admin/letter-library/[id]/route');
+    const { PATCH } = await import('@/app/api/workspace/letter-library/[id]/route');
     selectResults.push([libraryRow({ isActive: false })], [libraryRow({ isActive: true })]);
 
     const response = await PATCH(new NextRequest('http://localhost/api/admin/letter-library/library-1', {
@@ -112,7 +112,7 @@ describe('letter library API', () => {
   });
 
   it('deactivates without deleting historical strategy data', async () => {
-    const { DELETE } = await import('@/app/api/admin/letter-library/[id]/route');
+    const { DELETE } = await import('@/app/api/workspace/letter-library/[id]/route');
     selectResults.push([libraryRow()]);
 
     const response = await DELETE(new NextRequest('http://localhost/api/admin/letter-library/library-1', { method: 'DELETE' }), {

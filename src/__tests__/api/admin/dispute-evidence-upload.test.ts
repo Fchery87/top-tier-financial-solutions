@@ -37,7 +37,7 @@ describe('POST /api/admin/disputes/evidence/upload', () => {
 
   it('rate-limits staff evidence uploads before capability and storage work', async () => {
     requireCapabilityMock.mockResolvedValue(null);
-    const { POST } = await import('@/app/api/admin/disputes/evidence/upload/route');
+    const { POST } = await import('@/app/api/workspace/disputes/evidence/upload/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/disputes/evidence/upload', {
       method: 'POST',
@@ -50,7 +50,7 @@ describe('POST /api/admin/disputes/evidence/upload', () => {
   });
 
   it('stores staff-uploaded evidence as a controlled client document', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/evidence/upload/route');
+    const { POST } = await import('@/app/api/workspace/disputes/evidence/upload/route');
     dbMock.select
       .mockReturnValueOnce({
         from: vi.fn().mockReturnValue({

@@ -30,7 +30,7 @@ describe('POST /api/admin/disputes/generate-letter', () => {
   });
 
   it('fails closed when approved policy inputs are missing', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/generate-letter/route');
+    const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/disputes/generate-letter', {
       method: 'POST',
@@ -50,7 +50,7 @@ describe('POST /api/admin/disputes/generate-letter', () => {
   }, 30000);
 
   it('rejects approved policy decisions that do not match the requested reason codes', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/generate-letter/route');
+    const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/disputes/generate-letter', {
       method: 'POST',

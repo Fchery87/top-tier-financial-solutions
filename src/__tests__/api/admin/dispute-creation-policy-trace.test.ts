@@ -68,7 +68,7 @@ describe('POST /api/admin/disputes policy traceability', () => {
   });
 
   it('persists approved policy decision inputs with generated letter content', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/route');
+    const { POST } = await import('@/app/api/workspace/disputes/route');
     const insertedValues: Record<string, unknown>[] = [];
     const createdDispute = {
       id: 'dispute-1',
@@ -143,7 +143,7 @@ describe('POST /api/admin/disputes policy traceability', () => {
   }, 30000);
 
   it('fails closed before generating a letter when approved policy is missing', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/route');
+    const { POST } = await import('@/app/api/workspace/disputes/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/disputes', {
       method: 'POST',

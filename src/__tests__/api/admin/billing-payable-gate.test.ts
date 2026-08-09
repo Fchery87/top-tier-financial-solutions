@@ -30,7 +30,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
   });
 
   it('blocks payable invoice creation without a qualifying services rendered event', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     dbMock.select
       .mockReturnValueOnce({
@@ -69,7 +69,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
   }, 30000);
 
   it('blocks payable invoice creation when the Compliance Gate has blockers', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     dbMock.select
       .mockReturnValueOnce({
@@ -128,7 +128,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
   }, 30000);
 
   it('blocks pay-per-delete invoices until the result is verified', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     dbMock.select
       .mockReturnValueOnce({

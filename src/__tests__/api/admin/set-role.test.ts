@@ -29,7 +29,7 @@ describe('POST /api/admin/set-role bootstrap compatibility', () => {
       previousRole: 'user',
       role: 'super_admin',
     });
-    const { POST } = await import('@/app/api/admin/set-role/route');
+    const { POST } = await import('@/app/api/workspace/set-role/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/set-role', {
       method: 'POST',
@@ -47,7 +47,7 @@ describe('POST /api/admin/set-role bootstrap compatibility', () => {
   it('rejects a bootstrap request that attempts to promote another account', async () => {
     authMock.api.getSession.mockResolvedValue({ user: { id: 'owner-1', email: 'owner@example.com' } });
     dbMock.execute.mockResolvedValueOnce({ rows: [{ count: '0' }] });
-    const { POST } = await import('@/app/api/admin/set-role/route');
+    const { POST } = await import('@/app/api/workspace/set-role/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/set-role', {
       method: 'POST',
@@ -60,7 +60,7 @@ describe('POST /api/admin/set-role bootstrap compatibility', () => {
 
   it('rejects malformed, oversized, and unknown role payloads before database work', async () => {
     authMock.api.getSession.mockResolvedValue({ user: { id: 'owner-1', email: 'owner@example.com' } });
-    const { POST } = await import('@/app/api/admin/set-role/route');
+    const { POST } = await import('@/app/api/workspace/set-role/route');
     const invalidPayloads = [
       [],
       { email: 'not-an-email', role: 'staff' },

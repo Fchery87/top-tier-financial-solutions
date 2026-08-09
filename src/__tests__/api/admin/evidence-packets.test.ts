@@ -23,7 +23,7 @@ describe('POST /api/admin/evidence-packets', () => {
   });
 
   it('creates an evidence packet for a client dispute claim from owned documents and confirmations', async () => {
-    const { POST } = await import('@/app/api/admin/evidence-packets/route');
+    const { POST } = await import('@/app/api/workspace/evidence-packets/route');
     const created = [{
       id: 'packet-1',
       clientId: 'client-1',
@@ -67,7 +67,7 @@ describe('POST /api/admin/evidence-packets', () => {
   }, 30000);
 
   it('requires explicit client confirmation before creating a high-risk evidence packet', async () => {
-    const { POST } = await import('@/app/api/admin/evidence-packets/route');
+    const { POST } = await import('@/app/api/workspace/evidence-packets/route');
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', userId: 'user-1' }]) }) }) })
@@ -91,7 +91,7 @@ describe('POST /api/admin/evidence-packets', () => {
   }, 30000);
 
   it('creates a high-risk evidence packet after explicit client factual confirmation', async () => {
-    const { POST } = await import('@/app/api/admin/evidence-packets/route');
+    const { POST } = await import('@/app/api/workspace/evidence-packets/route');
     const created = [{
       id: 'packet-2',
       clientId: 'client-1',
@@ -140,7 +140,7 @@ describe('POST /api/admin/evidence-packets', () => {
   }, 30000);
 
   it('rejects evidence documents owned by another client', async () => {
-    const { POST } = await import('@/app/api/admin/evidence-packets/route');
+    const { POST } = await import('@/app/api/workspace/evidence-packets/route');
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', userId: 'user-1' }]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ id: 'doc-2', userId: 'user-2', fileUrl: 'client-documents/user-2/evidence/doc-2.pdf' }]) }) });
@@ -164,7 +164,7 @@ describe('POST /api/admin/evidence-packets', () => {
   });
 
   it('lists packets scoped to the requested client and dispute', async () => {
-    const { GET } = await import('@/app/api/admin/evidence-packets/route');
+    const { GET } = await import('@/app/api/workspace/evidence-packets/route');
     dbMock.select.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({

@@ -22,7 +22,7 @@ describe('GET /api/admin/service-engagements/[id]/compliance-gate', () => {
   });
 
   it('returns every required compliance gate check with pass/fail status', async () => {
-    const { GET } = await import('@/app/api/admin/service-engagements/[id]/compliance-gate/route');
+    const { GET } = await import('@/app/api/workspace/service-engagements/[id]/compliance-gate/route');
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1' }]) }) }) })

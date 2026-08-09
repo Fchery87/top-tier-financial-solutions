@@ -43,7 +43,7 @@ describe('PUT /api/admin/disputes/[id] submission tracking', () => {
   });
 
   it('blocks marking a dispute submitted without submission tracking', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, sentAt: null, escalationHistory: null }]) }) }) });
 
@@ -62,7 +62,7 @@ describe('PUT /api/admin/disputes/[id] submission tracking', () => {
   }, 30000);
 
   it('records manual certified mail details when marking a dispute submitted', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
     const updateValues: Record<string, unknown>[] = [];
     const updatedDispute = {
       id: 'dispute-1',

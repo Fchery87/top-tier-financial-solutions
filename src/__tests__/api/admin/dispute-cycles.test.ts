@@ -23,7 +23,7 @@ describe('POST /api/admin/dispute-cycles', () => {
   });
 
   it('creates a canonical dispute cycle record for an engagement', async () => {
-    const { POST } = await import('@/app/api/admin/dispute-cycles/route');
+    const { POST } = await import('@/app/api/workspace/dispute-cycles/route');
     const created = [{
       id: 'cycle-1',
       clientId: 'client-1',
@@ -62,7 +62,7 @@ describe('POST /api/admin/dispute-cycles', () => {
   }, 30000);
 
   it('blocks creating a Dispute Cycle draft without item selection', async () => {
-    const { POST } = await import('@/app/api/admin/dispute-cycles/route');
+    const { POST } = await import('@/app/api/workspace/dispute-cycles/route');
 
     const response = await POST(new NextRequest('http://localhost/api/admin/dispute-cycles', {
       method: 'POST',
