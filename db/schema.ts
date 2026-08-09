@@ -423,7 +423,7 @@ export const clients = pgTable('clients', {
   state: text('state'),
   zipCode: text('zip_code'),
   // Personal identification
-  dateOfBirth: timestamp('date_of_birth'),
+  dateOfBirth: text('date_of_birth'),
   ssnLast4: text('ssn_last_4'), // Last 4 digits only for security
   status: text('status').default('active'), // 'pending' | 'active' | 'paused' | 'completed' | 'cancelled'
   stage: clientStageEnum('stage').default('lead'), // Pipeline stage for CRM tracking

@@ -218,7 +218,7 @@ async function postHandler(request: NextRequest) {
       city: encrypted.city,
       state: encrypted.state,
       zipCode: encrypted.zipCode,
-      dateOfBirth: date_of_birth ? new Date(date_of_birth) : null,
+      dateOfBirth: encrypted.dateOfBirth,
       ssnLast4: encrypted.ssnLast4,
       status: 'active',
       notes: notes || null,

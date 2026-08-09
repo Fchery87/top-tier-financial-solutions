@@ -59,6 +59,30 @@ describe('POST /api/admin/clients - Create Client', () => {
     expect(dbMock.insert).not.toHaveBeenCalled();
   });
 
+  it('persists the encrypted DOB instead of converting it back to a timestamp', async () => {
+    const insertValuesMock = vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ id: 'client-1' }]),
+    });
+    dbMock.insert.mockReturnValue({ values: insertValuesMock });
+    encryptClientDataMock.mockImplementation((data: Record<string, unknown>) => ({
+      ...data,
+      dateOfBirth: 'v3:current_2026:aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cc',
+    }));
+
+    const { POST } = await import('@/app/api/admin/clients/route');
+    const response = await POST(createClientRequest({
+      first_name: 'Ada',
+      last_name: 'Lovelace',
+      email: 'ada@example.com',
+      date_of_birth: '1815-12-10',
+    }));
+
+    expect(response.status).toBe(201);
+    expect(insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({
+      dateOfBirth: 'v3:current_2026:aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cc',
+    }));
+  });
+
   it('should require first_name, last_name, and email', () => {
     const validPayload = {
       first_name: 'John',
