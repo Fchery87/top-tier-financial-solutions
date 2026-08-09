@@ -6,22 +6,20 @@ import { deleteSetting, getSettingsByCategory, setSetting } from '@/lib/settings
 import { requireCapability } from '@/lib/admin-session';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { logServerEvent } from '@/lib/server-logger';
+import { boundedJsonValue, readJsonBody, type BoundedJsonValue } from '@/lib/request-validation';
+import { z } from 'zod';
 
-type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
-type SettingType = 'string' | 'number' | 'boolean' | 'json';
+type SettingValue = BoundedJsonValue;
+const settingTypeSchema = z.enum(['string', 'number', 'boolean', 'json']);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isSettingType(value: unknown): value is SettingType {
-  return value === 'string' || value === 'number' || value === 'boolean' || value === 'json';
-}
-
-function isSettingValue(value: unknown): value is SettingValue {
-  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
-    || Array.isArray(value) || isRecord(value);
-}
+const settingsWriteSchema = z.object({
+  key: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/),
+  value: boundedJsonValue(),
+  type: settingTypeSchema,
+  category: z.string().trim().min(1).max(100).optional(),
+  description: z.string().trim().max(500).optional(),
+  isSecret: z.boolean().optional(),
+}).strict();
 
 /**
  * GET /api/admin/settings
@@ -96,18 +94,11 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const rawBody: unknown = await request.json();
-    if (!isRecord(rawBody)) return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
-    const key = typeof rawBody.key === 'string' ? rawBody.key : '';
-    const value = rawBody.value;
-    const type = rawBody.type;
-    const category = typeof rawBody.category === 'string' ? rawBody.category : undefined;
-    const description = typeof rawBody.description === 'string' ? rawBody.description : undefined;
-    const isSecret = typeof rawBody.isSecret === 'boolean' ? rawBody.isSecret : undefined;
-
-    if (!key || !isSettingType(type) || !isSettingValue(value)) {
+    const parsed = await readJsonBody(request, settingsWriteSchema);
+    if (parsed.kind !== 'valid') {
       return NextResponse.json({ error: 'Missing required fields: key, type' }, { status: 400 });
     }
+    const { key, value, type, category, description, isSecret } = parsed.data;
 
     await db.transaction(async (tx) => {
       await setSetting(key, value, type, category, description, isSecret, adminUser.id, tx);
@@ -141,18 +132,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const rawBody: unknown = await request.json();
-    if (!isRecord(rawBody)) return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
-    const key = typeof rawBody.key === 'string' ? rawBody.key : '';
-    const value = rawBody.value;
-    const type = rawBody.type;
-    const category = typeof rawBody.category === 'string' ? rawBody.category : 'general';
-    const description = typeof rawBody.description === 'string' ? rawBody.description : undefined;
-    const isSecret = rawBody.isSecret === true;
-
-    if (!key || !isSettingType(type) || !isSettingValue(value)) {
+    const parsed = await readJsonBody(request, settingsWriteSchema);
+    if (parsed.kind !== 'valid') {
       return NextResponse.json({ error: 'Missing required fields: key, type' }, { status: 400 });
     }
+    const { key, value, type, description } = parsed.data;
+    const category = parsed.data.category ?? 'general';
+    const isSecret = parsed.data.isSecret ?? false;
 
     const created = await db.transaction(async (tx) => {
       const existing = await tx

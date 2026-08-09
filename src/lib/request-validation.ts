@@ -13,6 +13,14 @@ type BoundedTextOptions = {
   maximumLength: number;
 };
 
+export type BoundedJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | BoundedJsonValue[]
+  | { [key: string]: BoundedJsonValue };
+
 type JsonBodyResult<TData> =
   | { kind: 'valid'; data: TData }
   | { kind: 'malformed_json' }
@@ -38,7 +46,7 @@ export function boundedText({ field, maximumLength }: BoundedTextOptions) {
 }
 
 export function boundedJsonValue() {
-  return z.unknown().superRefine((value, context) => {
+  return z.custom<BoundedJsonValue>().superRefine((value, context) => {
     validateJsonValue({ value, depth: 0, context });
   });
 }

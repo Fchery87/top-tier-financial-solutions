@@ -57,4 +57,28 @@ describe('POST /api/admin/set-role bootstrap compatibility', () => {
     expect(response.status).toBe(403);
     expect(changeUserRoleMock).not.toHaveBeenCalled();
   });
+
+  it('rejects malformed, oversized, and unknown role payloads before database work', async () => {
+    authMock.api.getSession.mockResolvedValue({ user: { id: 'owner-1', email: 'owner@example.com' } });
+    const { POST } = await import('@/app/api/admin/set-role/route');
+    const invalidPayloads = [
+      [],
+      { email: 'not-an-email', role: 'staff' },
+      { email: `${'a'.repeat(310)}@example.com`, role: 'staff' },
+      { email: 'owner@example.com', role: 'owner' },
+      { email: 'owner@example.com', role: ['staff'] },
+    ];
+
+    for (const payload of invalidPayloads) {
+      const response = await POST(new NextRequest('http://localhost/api/admin/set-role', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'content-type': 'application/json' },
+      }));
+      expect(response.status).toBe(400);
+    }
+
+    expect(dbMock.execute).not.toHaveBeenCalled();
+    expect(changeUserRoleMock).not.toHaveBeenCalled();
+  });
 });
