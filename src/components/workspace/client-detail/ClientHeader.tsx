@@ -26,6 +26,11 @@ interface ClientHeaderProps {
   onAuditReport: () => void;
 }
 
+export function formatClientSince(convertedAt: string | null): string {
+  if (!convertedAt) return 'Client since unavailable';
+  return `Client since ${new Date(convertedAt).toLocaleDateString()}`;
+}
+
 export function ClientHeader({
   client,
   disputeStatus,
@@ -73,7 +78,7 @@ export function ClientHeader({
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <StatusBadge status={client.status} variant={getStatusVariant(client.status)} />
               <span className="text-sm text-muted-foreground">
-                Client since {new Date(client.converted_at).toLocaleDateString()}
+                {formatClientSince(client.converted_at)}
               </span>
               {disputeStatus && (
                 <span

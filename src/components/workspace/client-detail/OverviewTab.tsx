@@ -44,7 +44,7 @@ interface OverviewTabProps {
   creditReports: CreditReport[];
   clientNotes: ClientNote[];
   clientTasks: Task[];
-  onClientUpdated: (updated: ClientDetail) => void;
+  onClientUpdated: () => void;
   onSendNudge: () => void;
   sendingNudge: boolean;
 }
@@ -150,7 +150,7 @@ export function OverviewTab({
         body: JSON.stringify(editedClient),
       });
       if (response.ok) {
-        onClientUpdated({ ...client, ...editedClient } as ClientDetail);
+        onClientUpdated();
         setEditMode(false);
       }
     } catch (error) {

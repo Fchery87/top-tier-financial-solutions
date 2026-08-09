@@ -8,7 +8,7 @@ export interface ClientDetail {
   phone: string | null;
   status: string;
   notes: string | null;
-  converted_at: string;
+  converted_at: string | null;
   created_at: string;
   user_name: string | null;
 }

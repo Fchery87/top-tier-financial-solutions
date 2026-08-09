@@ -24,18 +24,9 @@ import { ReportsTab } from '@/components/workspace/client-detail/ReportsTab';
 import { DisputesTab } from '@/components/workspace/client-detail/DisputesTab';
 import { TasksTab } from '@/components/workspace/client-detail/TasksTab';
 import { NotesTab } from '@/components/workspace/client-detail/NotesTab';
+import { useClientRecord } from '@/components/workspace/client-detail/hooks/useClientRecord';
 
 import type {
-  ClientDetail,
-  CreditReport,
-  CreditAnalysis,
-  CreditAccount,
-  NegativeItem,
-  Dispute,
-  ScoreHistory,
-  ClientReadiness,
-  ClientNote,
-  Task,
   ClientDisputeStatus,
 } from '@/components/workspace/client-detail/types';
 import {
@@ -44,24 +35,28 @@ import {
 } from '@/components/workspace/client-detail/types';
 
 export default function ClientDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const clientId = params.id as string;
+  const clientId = params.id;
 
   const [activeTab, setActiveTab] = React.useState<ClientTab>('overview');
-  const [loading, setLoading] = React.useState(true);
-
-  const [client, setClient] = React.useState<ClientDetail | null>(null);
-  const [creditReports, setCreditReports] = React.useState<CreditReport[]>([]);
-  const [latestAnalysis, setLatestAnalysis] = React.useState<CreditAnalysis | null>(null);
-  const [creditAccounts, setCreditAccounts] = React.useState<CreditAccount[]>([]);
-  const [negativeItems, setNegativeItems] = React.useState<NegativeItem[]>([]);
-  const [negativeItemsCount, setNegativeItemsCount] = React.useState(0);
-  const [disputes, setDisputes] = React.useState<Dispute[]>([]);
-  const [scoreHistory, setScoreHistory] = React.useState<ScoreHistory[]>([]);
-  const [readiness, setReadiness] = React.useState<ClientReadiness | null>(null);
-  const [clientNotes, setClientNotes] = React.useState<ClientNote[]>([]);
-  const [clientTasks, setClientTasks] = React.useState<Task[]>([]);
+  const {
+    client,
+    creditReports,
+    latestAnalysis,
+    creditAccounts,
+    negativeItems,
+    negativeItemsCount,
+    disputes,
+    scoreHistory,
+    readiness,
+    clientNotes,
+    clientTasks,
+    loading,
+    error,
+    notFound,
+    refresh,
+  } = useClientRecord(clientId);
 
   const [showUploadModal, setShowUploadModal] = React.useState(false);
   const [showReportModal, setShowReportModal] = React.useState(false);
@@ -79,57 +74,9 @@ export default function ClientDetailPage() {
     [disputes, readiness],
   );
 
-  const fetchClientData = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/workspace/clients/${clientId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setClient(data.client);
-        setCreditReports(data.credit_reports || []);
-        setLatestAnalysis(data.latest_analysis);
-        setCreditAccounts(data.credit_accounts || []);
-        setNegativeItems(data.negative_items || []);
-        setNegativeItemsCount(data.negative_items_count || 0);
-        setDisputes(data.disputes || []);
-        setScoreHistory(data.score_history || []);
-        setReadiness(data.readiness || null);
-      } else if (response.status === 404) {
-        router.push('/workspace/clients');
-      }
-    } catch (error) {
-      console.error('Error fetching client:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, router]);
-
-  const fetchNotesAndTasks = React.useCallback(async () => {
-    try {
-      const [notesRes, tasksRes] = await Promise.all([
-        fetch(`/api/workspace/notes?client_id=${clientId}&limit=50`),
-        fetch(`/api/workspace/tasks?client_id=${clientId}&limit=50`),
-      ]);
-      if (notesRes.ok) {
-        const notesData = await notesRes.json();
-        setClientNotes(notesData.items);
-      }
-      if (tasksRes.ok) {
-        const tasksData = await tasksRes.json();
-        setClientTasks(tasksData.items);
-      }
-    } catch (error) {
-      console.error('Error fetching notes/tasks:', error);
-    }
-  }, [clientId]);
-
   React.useEffect(() => {
-    fetchClientData();
-  }, [fetchClientData]);
-
-  React.useEffect(() => {
-    if (clientId) fetchNotesAndTasks();
-  }, [clientId, fetchNotesAndTasks]);
+    if (notFound) router.push('/workspace/clients');
+  }, [notFound, router]);
 
   const handleUpload = async () => {
     if (!selectedFile) return;
@@ -151,7 +98,7 @@ export default function ClientDetailPage() {
         setSelectedFile(null);
         setSelectedBureau('combined');
         setReportDate('');
-        fetchClientData();
+        void refresh();
       } else {
         const error = await response.json();
         toast.error(error.error || 'Upload failed');
@@ -223,6 +170,15 @@ export default function ClientDetailPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 text-center">
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Button onClick={() => void refresh()}>Try again</Button>
+      </div>
+    );
+  }
+
   if (!client) return null;
 
   return (
@@ -234,7 +190,7 @@ export default function ClientDetailPage() {
         latestAnalysis={latestAnalysis}
         openDisputesCount={disputes.filter((d) => ['sent', 'in_progress', 'pending'].includes(d.status)).length}
         reportsCount={creditReports.length}
-        onRefresh={fetchClientData}
+        onRefresh={refresh}
         onUploadReport={() => setShowUploadModal(true)}
         onAuditReport={() => setShowReportModal(true)}
       />
@@ -270,7 +226,7 @@ export default function ClientDetailPage() {
               creditReports={creditReports}
               clientNotes={clientNotes}
               clientTasks={clientTasks}
-              onClientUpdated={(updated) => setClient(updated)}
+              onClientUpdated={refresh}
               onSendNudge={handleSendNudge}
               sendingNudge={sendingNudge}
             />
@@ -290,7 +246,7 @@ export default function ClientDetailPage() {
               clientId={clientId}
               creditReports={creditReports}
               creditAccounts={creditAccounts}
-              onDataChanged={fetchClientData}
+              onDataChanged={refresh}
               onOpenUploadModal={() => setShowUploadModal(true)}
             />
           )}
@@ -300,7 +256,7 @@ export default function ClientDetailPage() {
               clientId={clientId}
               negativeItems={negativeItems}
               disputes={disputes}
-              onDataChanged={fetchClientData}
+              onDataChanged={refresh}
             />
           )}
 
@@ -308,7 +264,7 @@ export default function ClientDetailPage() {
             <TasksTab
               clientId={clientId}
               tasks={clientTasks}
-              onTasksChanged={fetchNotesAndTasks}
+              onTasksChanged={refresh}
             />
           )}
 
@@ -316,7 +272,7 @@ export default function ClientDetailPage() {
             <NotesTab
               clientId={clientId}
               notes={clientNotes}
-              onNotesChanged={fetchNotesAndTasks}
+              onNotesChanged={refresh}
             />
           )}
         </motion.div>
