@@ -22,7 +22,7 @@ const settingsWriteSchema = z.object({
 }).strict();
 
 /**
- * GET /api/admin/settings
+ * GET /api/workspace/settings
  * Get all settings or settings by category
  */
 export async function GET(request: NextRequest) {
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * PUT /api/admin/settings
+ * PUT /api/workspace/settings
  * Update a setting value
  */
 export async function PUT(request: NextRequest) {
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/settings
+ * POST /api/workspace/settings
  * Create a new setting
  */
 export async function POST(request: NextRequest) {
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * DELETE /api/admin/settings
+ * DELETE /api/workspace/settings
  * Delete a setting
  */
 export async function DELETE(request: NextRequest) {

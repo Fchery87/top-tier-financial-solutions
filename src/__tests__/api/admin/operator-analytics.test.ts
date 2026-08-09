@@ -29,7 +29,7 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Headers()),
 }));
 
-describe('GET /api/admin/operator-analytics', () => {
+describe('GET /api/workspace/operator-analytics', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
@@ -37,7 +37,7 @@ describe('GET /api/admin/operator-analytics', () => {
   });
 
   it('returns internal operator metrics without client outcome claims', async () => {
-    const { GET } = await import('@/app/api/admin/operator-analytics/route');
+    const { GET } = await import('@/app/api/workspace/operator-analytics/route');
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 2 }]) }) })
@@ -47,7 +47,7 @@ describe('GET /api/admin/operator-analytics', () => {
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 5 }]) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 6 }]) }) });
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/operator-analytics'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/operator-analytics'));
     const body = await response.json();
 
     expect(response.status).toBe(200);

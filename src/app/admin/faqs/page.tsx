@@ -30,7 +30,7 @@ export default function FAQsPage() {
   const fetchFaqs = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/faqs?page=1&limit=100');
+      const response = await fetch('/api/workspace/faqs?page=1&limit=100');
       if (response.ok) {
         const data = await response.json();
         setFaqs(data.items);
@@ -72,8 +72,8 @@ export default function FAQsPage() {
     setSaving(true);
     try {
       const url = editingFaq 
-        ? `/api/admin/faqs/${editingFaq.id}`
-        : '/api/admin/faqs';
+        ? `/api/workspace/faqs/${editingFaq.id}`
+        : '/api/workspace/faqs';
       
       const response = await fetch(url, {
         method: editingFaq ? 'PUT' : 'POST',
@@ -94,7 +94,7 @@ export default function FAQsPage() {
 
   const handleTogglePublish = async (faq: FAQ) => {
     try {
-      const response = await fetch(`/api/admin/faqs/${faq.id}`, {
+      const response = await fetch(`/api/workspace/faqs/${faq.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_published: !faq.is_published }),
@@ -115,7 +115,7 @@ export default function FAQsPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/faqs/${pendingDeleteId}`, {
+      const response = await fetch(`/api/workspace/faqs/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 

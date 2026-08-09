@@ -79,7 +79,7 @@ export default function ResultsPage() {
   const fetchResults = React.useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/results?range=${timeRange}`);
+      const response = await fetch(`/api/workspace/results?range=${timeRange}`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);

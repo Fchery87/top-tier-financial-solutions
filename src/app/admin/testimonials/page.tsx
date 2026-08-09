@@ -31,7 +31,7 @@ export default function TestimonialsPage() {
   const fetchTestimonials = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/testimonials?page=1&limit=100');
+      const response = await fetch('/api/workspace/testimonials?page=1&limit=100');
       if (response.ok) {
         const data = await response.json();
         setTestimonials(data.items);
@@ -75,8 +75,8 @@ export default function TestimonialsPage() {
     setSaving(true);
     try {
       const url = editingTestimonial 
-        ? `/api/admin/testimonials/${editingTestimonial.id}`
-        : '/api/admin/testimonials';
+        ? `/api/workspace/testimonials/${editingTestimonial.id}`
+        : '/api/workspace/testimonials';
       
       const response = await fetch(url, {
         method: editingTestimonial ? 'PUT' : 'POST',
@@ -97,7 +97,7 @@ export default function TestimonialsPage() {
 
   const handleToggleApproval = async (testimonial: Testimonial) => {
     try {
-      const response = await fetch(`/api/admin/testimonials/${testimonial.id}`, {
+      const response = await fetch(`/api/workspace/testimonials/${testimonial.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_approved: !testimonial.is_approved }),
@@ -118,7 +118,7 @@ export default function TestimonialsPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/testimonials/${pendingDeleteId}`, {
+      const response = await fetch(`/api/workspace/testimonials/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 

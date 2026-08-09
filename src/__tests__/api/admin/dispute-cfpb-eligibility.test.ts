@@ -11,7 +11,7 @@ vi.mock('@/lib/dispute-escalation-decision', () => ({
   loadDisputeChain: loadDisputeChainMock,
 }));
 
-describe('GET /api/admin/disputes/[id]/cfpb-eligibility', () => {
+describe('GET /api/workspace/disputes/[id]/cfpb-eligibility', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'admin' });
@@ -39,9 +39,9 @@ describe('GET /api/admin/disputes/[id]/cfpb-eligibility', () => {
       message: 'CFPB escalation is deferred until 2026-08-15T00:00:00.000Z.',
     });
 
-    const { GET } = await import('@/app/api/admin/disputes/[id]/cfpb-eligibility/route');
+    const { GET } = await import('@/app/api/workspace/disputes/[id]/cfpb-eligibility/route');
     const response = await GET(
-      new NextRequest('http://localhost/api/admin/disputes/cra-dispute-1/cfpb-eligibility?clientId=client-1&negativeItemId=item-1'),
+      new NextRequest('http://localhost/api/workspace/disputes/cra-dispute-1/cfpb-eligibility?clientId=client-1&negativeItemId=item-1'),
       { params: Promise.resolve({ id: 'cra-dispute-1' }) },
     );
 

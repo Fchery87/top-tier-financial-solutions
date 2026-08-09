@@ -49,7 +49,7 @@ describe('CommandPalette', () => {
     expect(await screen.findByRole('link', { name: /Jane Doe, jane@example.com/ })).toBeInTheDocument();
     expect(screen.getByText('Clients')).toBeInTheDocument();
     expect(screen.getByText('Disputes')).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith('/api/admin/search?q=jane', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith('/api/workspace/search?q=jane', expect.any(Object));
   });
 
   it('links to a selected record and closes the palette', async () => {

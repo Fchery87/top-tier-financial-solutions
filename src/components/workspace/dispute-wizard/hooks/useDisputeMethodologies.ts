@@ -23,7 +23,7 @@ export function useDisputeMethodologies({
 
   const fetchReasonCodes = React.useCallback(async (methodology?: string) => {
     try {
-      const url = methodology ? `/api/admin/disputes/methodologies?methodology=${methodology}` : '/api/admin/disputes/generate-letter';
+      const url = methodology ? `/api/workspace/disputes/methodologies?methodology=${methodology}` : '/api/workspace/disputes/generate-letter';
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -38,7 +38,7 @@ export function useDisputeMethodologies({
   const fetchMethodologies = React.useCallback(async () => {
     setLoadingMethodologies(true);
     try {
-      const response = await fetch('/api/admin/disputes/methodologies');
+      const response = await fetch('/api/workspace/disputes/methodologies');
       if (response.ok) {
         const data = await response.json();
         setMethodologies(data.methodologies || []);

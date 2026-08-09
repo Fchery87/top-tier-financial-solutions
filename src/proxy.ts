@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { resolveApiWorkspaceNamespace } from '@/lib/api-workspace-namespace';
 
 export function proxy(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const forwardedHeaders = new Headers(request.headers);
   forwardedHeaders.set('x-request-id', requestId);
-  const response = NextResponse.next({
-    request: { headers: forwardedHeaders },
-  });
-  response.headers.set('x-request-id', requestId);
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Check if this is the audit-report API route (needs to be embedded in iframe)
@@ -59,10 +56,39 @@ export function proxy(request: NextRequest) {
     ].join('; '),
   };
 
-  // Apply security headers
-  Object.entries(securityHeaders).forEach(([key, value]) => {
-    response.headers.set(key, value);
+  const applyResponseHeaders = (response: NextResponse) => {
+    response.headers.set('x-request-id', requestId);
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    return response;
+  };
+
+  const namespaceResolution = resolveApiWorkspaceNamespace({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    now: new Date(),
   });
+
+  if (namespaceResolution.kind === 'gone') {
+    return applyResponseHeaders(NextResponse.json({ error: 'API endpoint retired' }, { status: 410 }));
+  }
+
+  if (namespaceResolution.kind === 'rewrite') {
+    forwardedHeaders.set('x-api-namespace', 'legacy-admin');
+    const rewriteUrl = new URL(namespaceResolution.destination, request.url);
+    const response = applyResponseHeaders(NextResponse.rewrite(rewriteUrl, {
+      request: { headers: forwardedHeaders },
+    }));
+    response.headers.set('Deprecation', 'true');
+    response.headers.set('Sunset', namespaceResolution.sunset);
+    response.headers.set('Link', `<${namespaceResolution.destination}>; rel="successor-version"`);
+    return response;
+  }
+
+  const response = applyResponseHeaders(NextResponse.next({
+    request: { headers: forwardedHeaders },
+  }));
 
   // Redirect HTTP to HTTPS in production
   const proto = request.headers.get('x-forwarded-proto');

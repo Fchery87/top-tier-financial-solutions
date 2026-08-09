@@ -22,7 +22,7 @@ vi.mock('next/headers', () => ({
   headers: headersMock,
 }));
 
-describe('POST /api/admin/billing payable invoice gate', () => {
+describe('POST /api/workspace/billing payable invoice gate', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -30,7 +30,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
   });
 
   it('blocks payable invoice creation without a qualifying services rendered event', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     dbMock.select
       .mockReturnValueOnce({
@@ -48,7 +48,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
         }),
       });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',
@@ -69,7 +69,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
   }, 30000);
 
   it('blocks payable invoice creation when the Compliance Gate has blockers', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     dbMock.select
       .mockReturnValueOnce({
@@ -106,7 +106,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',
@@ -128,7 +128,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
   }, 30000);
 
   it('blocks pay-per-delete invoices until the result is verified', async () => {
-    const { POST } = await import('@/app/api/admin/billing/route');
+    const { POST } = await import('@/app/api/workspace/billing/route');
 
     dbMock.select
       .mockReturnValueOnce({
@@ -161,7 +161,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',

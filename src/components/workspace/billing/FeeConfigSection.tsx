@@ -82,7 +82,7 @@ export function FeeConfigSection({ feeConfigs, loading, onConfigChanged }: FeeCo
 
     setSaving(true);
     try {
-      const response = await fetch('/api/admin/billing', {
+      const response = await fetch('/api/workspace/billing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

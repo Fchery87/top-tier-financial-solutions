@@ -13,7 +13,7 @@ export function useWizardClients() {
     setClientsError(null);
     try {
       const searchParam = clientSearch ? `&search=${encodeURIComponent(clientSearch)}` : '';
-      const response = await fetch(`/api/admin/clients?page=1&limit=50&status=active${searchParam}`);
+      const response = await fetch(`/api/workspace/clients?page=1&limit=50&status=active${searchParam}`);
       if (!response.ok) throw new Error(`Client request failed with status ${response.status}`);
       const data = await response.json();
       setClients(Array.isArray(data.items) ? data.items : []);

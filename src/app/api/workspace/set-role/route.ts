@@ -49,7 +49,7 @@ function roleChangeResponse(result: Awaited<ReturnType<typeof changeUserRole>>) 
   return NextResponse.json({ success: false, error: result.code }, { status });
 }
 
-// Backward-compatible endpoint. New role changes belong to /api/admin/team.
+// Backward-compatible endpoint. New role changes belong to /api/workspace/team.
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id || !session.user.email) {

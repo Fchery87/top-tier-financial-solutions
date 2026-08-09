@@ -15,14 +15,14 @@ vi.mock('@/lib/admin-session', () => ({
   requireCapability: requireCapabilityMock,
 }));
 
-describe('GET /api/admin/credit-report-pulls', () => {
+describe('GET /api/workspace/credit-report-pulls', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('returns credit report pulls for an engagement chronologically', async () => {
-    const { GET } = await import('@/app/api/admin/credit-report-pulls/route');
+    const { GET } = await import('@/app/api/workspace/credit-report-pulls/route');
     const rows = [
       {
         id: 'report-1',
@@ -50,7 +50,7 @@ describe('GET /api/admin/credit-report-pulls', () => {
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockResolvedValue(rows) }) }) });
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/credit-report-pulls?service_engagement_id=engagement-1'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/credit-report-pulls?service_engagement_id=engagement-1'));
     const body = await response.json();
 
     expect(response.status).toBe(200);

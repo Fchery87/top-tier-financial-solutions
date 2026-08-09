@@ -44,7 +44,7 @@ export async function installWizardApiFixtures(page: Page): Promise<WizardFixtur
     draftId: 'e2e-generated-dispute',
   };
 
-  await page.route('**/api/admin/clients**', async (route) => {
+  await page.route('**/api/workspace/clients**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname.endsWith(`/clients/${e2eClient.id}`)) {
       await json(route, {
@@ -60,7 +60,7 @@ export async function installWizardApiFixtures(page: Page): Promise<WizardFixtur
     await json(route, { items: [e2eClient], total: 1, page: 1, limit: 50 });
   });
 
-  await page.route('**/api/admin/disputes/methodologies**', async (route) => {
+  await page.route('**/api/workspace/disputes/methodologies**', async (route) => {
     await json(route, {
       methodologies: [{
         code: 'factual',
@@ -76,7 +76,7 @@ export async function installWizardApiFixtures(page: Page): Promise<WizardFixtur
     });
   });
 
-  await page.route('**/api/admin/disputes/*/cfpb-eligibility**', async (route) => {
+  await page.route('**/api/workspace/disputes/*/cfpb-eligibility**', async (route) => {
     await json(route, {
       eligible: false,
       reason: 'still_pending',
@@ -85,19 +85,19 @@ export async function installWizardApiFixtures(page: Page): Promise<WizardFixtur
     });
   });
 
-  await page.route('**/api/admin/disputes/discrepancies**', async (route) => {
+  await page.route('**/api/workspace/disputes/discrepancies**', async (route) => {
     await json(route, { summary: { total: 0, highSeverity: 0 } });
   });
 
-  await page.route('**/api/admin/disputes/triage', async (route) => {
+  await page.route('**/api/workspace/disputes/triage', async (route) => {
     await json(route, { quickActions: [], historicalRecommendations: {} });
   });
 
-  await page.route('**/api/admin/disputes/evidence**', async (route) => {
+  await page.route('**/api/workspace/disputes/evidence**', async (route) => {
     await json(route, { documents: [] });
   });
 
-  await page.route('**/api/admin/disputes/analyze-items', async (route) => {
+  await page.route('**/api/workspace/disputes/analyze-items', async (route) => {
     await json(route, {
       analyses: [{
         itemId: e2eNegativeItem.id,
@@ -122,7 +122,7 @@ export async function installWizardApiFixtures(page: Page): Promise<WizardFixtur
     });
   });
 
-  await page.route('**/api/admin/disputes/drafts/generate', async (route) => {
+  await page.route('**/api/workspace/disputes/drafts/generate', async (route) => {
     const requestBody: unknown = route.request().postDataJSON();
     if (typeof requestBody === 'object' && requestBody !== null && !Array.isArray(requestBody)) {
       state.generateRequests.push(requestBody as Record<string, unknown>);
@@ -140,7 +140,7 @@ export async function installWizardApiFixtures(page: Page): Promise<WizardFixtur
     });
   });
 
-  await page.route('**/api/admin/disputes/e2e-generated-dispute/letter', async (route) => {
+  await page.route('**/api/workspace/disputes/e2e-generated-dispute/letter', async (route) => {
     await json(route, {
       content: 'Fixture generated letter requesting documented verification.',
       current_revision: 1,
@@ -160,7 +160,7 @@ export async function installWizardApiFixtures(page: Page): Promise<WizardFixtur
     });
   });
 
-  await page.route('**/api/admin/disputes/e2e-generated-dispute', async (route) => {
+  await page.route('**/api/workspace/disputes/e2e-generated-dispute', async (route) => {
     if (route.request().method() !== 'PUT') {
       await route.fallback();
       return;
@@ -219,7 +219,7 @@ export async function installPortalApiFixtures(page: Page): Promise<void> {
 }
 
 export async function installDisputeListFixture(page: Page, status = 'draft'): Promise<void> {
-  await page.route('**/api/admin/disputes**', async (route) => {
+  await page.route('**/api/workspace/disputes**', async (route) => {
     await json(route, {
       disputes: [{
         id: 'e2e-generated-dispute',
@@ -283,7 +283,7 @@ export async function installLetterStudioApiFixtures(page: Page, sent = false): 
     content,
   }];
 
-  await page.route('**/api/admin/disputes/e2e-generated-dispute/letter', async (route) => {
+  await page.route('**/api/workspace/disputes/e2e-generated-dispute/letter', async (route) => {
     await json(route, {
       content,
       current_revision: revision,
@@ -294,7 +294,7 @@ export async function installLetterStudioApiFixtures(page: Page, sent = false): 
     });
   });
 
-  await page.route('**/api/admin/disputes/e2e-generated-dispute/letter/lint', async (route) => {
+  await page.route('**/api/workspace/disputes/e2e-generated-dispute/letter/lint', async (route) => {
     const body: unknown = route.request().postDataJSON();
     const proposed = isRecord(body) && typeof body.content === 'string' ? body.content : '';
     findings = proposed.includes('not-on-file')
@@ -305,7 +305,7 @@ export async function installLetterStudioApiFixtures(page: Page, sent = false): 
     await json(route, { findings, blocked: findings.some(finding => finding.severity === 'block') });
   });
 
-  await page.route('**/api/admin/disputes/e2e-generated-dispute/letter/rewrite', async (route) => {
+  await page.route('**/api/workspace/disputes/e2e-generated-dispute/letter/rewrite', async (route) => {
     const body: unknown = route.request().postDataJSON();
     const input = isRecord(body) ? body : {};
     const mode = typeof input.mode === 'string' ? input.mode : 'rewrite';
@@ -330,7 +330,7 @@ export async function installLetterStudioApiFixtures(page: Page, sent = false): 
     await json(route, { letter: content, content, revision, findings });
   });
 
-  await page.route('**/api/admin/disputes/e2e-generated-dispute/letter/revisions/*/revert', async (route) => {
+  await page.route('**/api/workspace/disputes/e2e-generated-dispute/letter/revisions/*/revert', async (route) => {
     state.revertRequests.push(route.request().url());
     const selectedRevision = revisions.find(item => item.revision === 1);
     content = typeof selectedRevision?.content === 'string' ? selectedRevision.content : content;
@@ -348,7 +348,7 @@ export async function installLetterStudioApiFixtures(page: Page, sent = false): 
     await json(route, { content, revision, findings: [] });
   });
 
-  await page.route('**/api/admin/disputes/e2e-generated-dispute', async (route) => {
+  await page.route('**/api/workspace/disputes/e2e-generated-dispute', async (route) => {
     if (route.request().method() !== 'PUT') {
       await route.fallback();
       return;

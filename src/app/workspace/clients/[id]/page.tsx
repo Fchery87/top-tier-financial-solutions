@@ -82,7 +82,7 @@ export default function ClientDetailPage() {
   const fetchClientData = React.useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/clients/${clientId}`);
+      const response = await fetch(`/api/workspace/clients/${clientId}`);
       if (response.ok) {
         const data = await response.json();
         setClient(data.client);
@@ -107,8 +107,8 @@ export default function ClientDetailPage() {
   const fetchNotesAndTasks = React.useCallback(async () => {
     try {
       const [notesRes, tasksRes] = await Promise.all([
-        fetch(`/api/admin/notes?client_id=${clientId}&limit=50`),
-        fetch(`/api/admin/tasks?client_id=${clientId}&limit=50`),
+        fetch(`/api/workspace/notes?client_id=${clientId}&limit=50`),
+        fetch(`/api/workspace/tasks?client_id=${clientId}&limit=50`),
       ]);
       if (notesRes.ok) {
         const notesData = await notesRes.json();
@@ -141,7 +141,7 @@ export default function ClientDetailPage() {
       formData.append('bureau', selectedBureau);
       if (reportDate) formData.append('report_date', reportDate);
 
-      const response = await fetch('/api/admin/credit-reports/upload', {
+      const response = await fetch('/api/workspace/credit-reports/upload', {
         method: 'POST',
         body: formData,
       });
@@ -170,7 +170,7 @@ export default function ClientDetailPage() {
       if (openInNewTab) {
         window.open(`/workspace/clients/${clientId}/audit-report`, '_blank');
       } else {
-        const response = await fetch(`/api/admin/clients/${clientId}/audit-report`, { method: 'POST' });
+        const response = await fetch(`/api/workspace/clients/${clientId}/audit-report`, { method: 'POST' });
         if (response.ok) toast.success('Audit report saved successfully!');
       }
     } catch (error) {
@@ -186,7 +186,7 @@ export default function ClientDetailPage() {
     if (!clientId) return;
     setSendingNudge(true);
     try {
-      const response = await fetch(`/api/admin/clients/${clientId}/nudge`, {
+      const response = await fetch(`/api/workspace/clients/${clientId}/nudge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'waiting_on_client' }),

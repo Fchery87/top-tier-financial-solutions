@@ -73,7 +73,7 @@ export function CreateClientModal({ open, onClose, onClientCreated }: CreateClie
 
     setSaving(true);
     try {
-      const response = await fetch('/api/admin/clients', {
+      const response = await fetch('/api/workspace/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClient),
@@ -89,7 +89,7 @@ export function CreateClientModal({ open, onClose, onClientCreated }: CreateClie
             formData.append('client_id', clientData.id);
             formData.append('document_type', doc.type);
 
-            await fetch('/api/admin/clients/documents', {
+            await fetch('/api/workspace/clients/documents', {
               method: 'POST',
               body: formData,
             });

@@ -28,7 +28,7 @@ export function useLetterGeneration() {
 
     for (const request of requests) {
       try {
-        const response = await fetch('/api/admin/disputes/drafts/generate', {
+        const response = await fetch('/api/workspace/disputes/drafts/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(request.body),

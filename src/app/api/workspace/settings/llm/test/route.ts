@@ -22,7 +22,7 @@ async function checkSuperAdmin() {
 }
 
 /**
- * POST /api/admin/settings/llm/test
+ * POST /api/workspace/settings/llm/test
  * Test LLM connection with current configuration
  */
 export async function POST(_request: NextRequest) {

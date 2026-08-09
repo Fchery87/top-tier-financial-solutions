@@ -20,7 +20,7 @@ vi.mock('@/lib/rate-limit-middleware', () => ({
 }));
 
 function createClientRequest(payload: unknown) {
-  return new NextRequest('http://localhost/api/admin/clients', {
+  return new NextRequest('http://localhost/api/workspace/clients', {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: { 'content-type': 'application/json' },
@@ -32,14 +32,14 @@ function createClientRequest(payload: unknown) {
  * Tests cover: creation, listing, retrieval, updating with encryption
  */
 
-describe('POST /api/admin/clients - Create Client', () => {
+describe('POST /api/workspace/clients - Create Client', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
   });
 
   it('rejects invalid client PII payloads before encryption or database writes', async () => {
-    const { POST } = await import('@/app/api/admin/clients/route');
+    const { POST } = await import('@/app/api/workspace/clients/route');
     const invalidPayloads = [
       [],
       { first_name: 'A'.repeat(201), last_name: 'Doe', email: 'ada@example.com' },
@@ -231,7 +231,7 @@ describe('POST /api/admin/clients - Create Client', () => {
   });
 });
 
-describe('GET /api/admin/clients - List Clients', () => {
+describe('GET /api/workspace/clients - List Clients', () => {
   it('should support pagination with page and limit parameters', () => {
     const params = {
       page: 2,
@@ -349,7 +349,7 @@ describe('GET /api/admin/clients - List Clients', () => {
 
   it('should apply rate limiting (10 requests/minute)', () => {
     const rateLimitConfig = {
-      endpoint: '/api/admin/clients',
+      endpoint: '/api/workspace/clients',
       requestsPerMinute: 10,
       applyTo: 'GET',
     };
@@ -370,7 +370,7 @@ describe('GET /api/admin/clients - List Clients', () => {
   });
 });
 
-describe('GET /api/admin/clients/[id] - Get Client Profile', () => {
+describe('GET /api/workspace/clients/[id] - Get Client Profile', () => {
   it('should retrieve complete client record', () => {
     const clientProfile = {
       id: 'client-1',
@@ -491,7 +491,7 @@ describe('GET /api/admin/clients/[id] - Get Client Profile', () => {
   });
 });
 
-describe('PUT /api/admin/clients/[id] - Update Client', () => {
+describe('PUT /api/workspace/clients/[id] - Update Client', () => {
   it('should allow updating first_name with encryption', () => {
     const updatePayload = {
       first_name: 'Jonathan',
@@ -575,7 +575,7 @@ describe('PUT /api/admin/clients/[id] - Update Client', () => {
   });
 });
 
-describe('DELETE /api/admin/clients/[id] - Delete Client', () => {
+describe('DELETE /api/workspace/clients/[id] - Delete Client', () => {
   it('should delete client by ID', () => {
     const clientId = 'client-123';
 
@@ -608,11 +608,11 @@ describe('DELETE /api/admin/clients/[id] - Delete Client', () => {
 describe('Authorization & Rate Limiting', () => {
   it('should require admin authorization on all endpoints', () => {
     const endpoints = [
-      'POST /api/admin/clients',
-      'GET /api/admin/clients',
-      'GET /api/admin/clients/[id]',
-      'PUT /api/admin/clients/[id]',
-      'DELETE /api/admin/clients/[id]',
+      'POST /api/workspace/clients',
+      'GET /api/workspace/clients',
+      'GET /api/workspace/clients/[id]',
+      'PUT /api/workspace/clients/[id]',
+      'DELETE /api/workspace/clients/[id]',
     ];
 
     endpoints.forEach(endpoint => {
@@ -622,7 +622,7 @@ describe('Authorization & Rate Limiting', () => {
 
   it('should apply rate limiting on GET and POST (10 requests/minute)', () => {
     const rateLimitConfig = {
-      endpoint: '/api/admin/clients',
+      endpoint: '/api/workspace/clients',
       limiter: 'sensitiveLimiter',
       requestsPerMinute: 10,
       appliesTo: ['GET', 'POST'],

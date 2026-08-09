@@ -112,7 +112,7 @@ export function useAIAnalysis({
     try {
       const data = await retryWithBackoff(
         async () => {
-          const response = await fetch('/api/admin/disputes/analyze-items', {
+          const response = await fetch('/api/workspace/disputes/analyze-items', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ itemIds: itemsToAnalyze, round: getDisputeRound(), aggressiveness: analysisAggressiveness }),

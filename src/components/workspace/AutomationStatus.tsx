@@ -45,7 +45,7 @@ export function AutomationStatus() {
 
   const fetchAutomationStats = React.useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/automation');
+      const response = await fetch('/api/workspace/automation');
       if (response.ok) {
         const data: AutomationStats = await response.json();
         setStats(data);
@@ -65,7 +65,7 @@ export function AutomationStatus() {
     setRunLoading(dryRun ? 'dry' : 'live');
     setRunMessage(null);
     try {
-      const response = await fetch('/api/admin/automation/dispute-escalations/run', {
+      const response = await fetch('/api/workspace/automation/dispute-escalations/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dryRun }),

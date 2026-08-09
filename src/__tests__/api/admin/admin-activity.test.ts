@@ -47,11 +47,11 @@ describe('administration activity audit', () => {
   });
 
   it('writes a transactional library-create audit row without template content or prompt text', async () => {
-    const { POST } = await import('@/app/api/admin/letter-library/route');
+    const { POST } = await import('@/app/api/workspace/letter-library/route');
     const content = 'Full generated letter content must never enter the audit log.';
     const promptContext = 'Private prompting strategy must never enter the audit log.';
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/letter-library', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/letter-library', {
       method: 'POST',
       body: JSON.stringify({
         name: 'Round one bureau dispute',
@@ -78,10 +78,10 @@ describe('administration activity audit', () => {
   });
 
   it('writes a transactional setting-update audit row without the setting value', async () => {
-    const { PUT } = await import('@/app/api/admin/settings/route');
+    const { PUT } = await import('@/app/api/workspace/settings/route');
     const value = 'secret configuration value';
 
-    const response = await PUT(new NextRequest('http://localhost/api/admin/settings', {
+    const response = await PUT(new NextRequest('http://localhost/api/workspace/settings', {
       method: 'PUT',
       body: JSON.stringify({ key: 'integrations.secret', value, type: 'string', isSecret: true }),
     }));
@@ -101,10 +101,10 @@ describe('administration activity audit', () => {
   });
 
   it('writes a transactional LLM audit row without the API key', async () => {
-    const { PUT } = await import('@/app/api/admin/settings/llm/route');
+    const { PUT } = await import('@/app/api/workspace/settings/llm/route');
     const apiKey = 'private-api-key';
 
-    const response = await PUT(new NextRequest('http://localhost/api/admin/settings/llm', {
+    const response = await PUT(new NextRequest('http://localhost/api/workspace/settings/llm', {
       method: 'PUT',
       body: JSON.stringify({ provider: 'openai', apiKey }),
     }));
@@ -124,9 +124,9 @@ describe('administration activity audit', () => {
   });
 
   it('writes a transactional automation-run audit row', async () => {
-    const { POST } = await import('@/app/api/admin/automation/dispute-escalations/run/route');
+    const { POST } = await import('@/app/api/workspace/automation/dispute-escalations/run/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/automation/dispute-escalations/run', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/automation/dispute-escalations/run', {
       method: 'POST',
       body: JSON.stringify({ dryRun: true }),
     }));

@@ -36,7 +36,7 @@ export default function ServicesPage() {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/services?page=1&limit=100');
+      const response = await fetch('/api/workspace/services?page=1&limit=100');
       if (response.ok) {
         const data = await response.json();
         setServices(data.items);
@@ -76,8 +76,8 @@ export default function ServicesPage() {
     setSaving(true);
     try {
       const url = editingService 
-        ? `/api/admin/services/${editingService.id}`
-        : '/api/admin/services';
+        ? `/api/workspace/services/${editingService.id}`
+        : '/api/workspace/services';
       
       const response = await fetch(url, {
         method: editingService ? 'PUT' : 'POST',
@@ -103,7 +103,7 @@ export default function ServicesPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/services/${pendingDeleteId}`, {
+      const response = await fetch(`/api/workspace/services/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 

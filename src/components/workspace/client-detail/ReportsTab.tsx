@@ -39,7 +39,7 @@ export function ReportsTab({
   const handleAnalyzeReport = async (reportId: string) => {
     setAnalyzing(reportId);
     try {
-      const response = await fetch(`/api/admin/credit-reports/${reportId}/parse`, { method: 'POST' });
+      const response = await fetch(`/api/workspace/credit-reports/${reportId}/parse`, { method: 'POST' });
       if (response.ok) {
         onDataChanged();
       } else {
@@ -58,7 +58,7 @@ export function ReportsTab({
     if (!pendingDeleteReportId) return;
     setDeleting(pendingDeleteReportId);
     try {
-      const response = await fetch(`/api/admin/credit-reports/${pendingDeleteReportId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/workspace/credit-reports/${pendingDeleteReportId}`, { method: 'DELETE' });
       if (response.ok) onDataChanged();
     } catch (error) {
       console.error('Error deleting report:', error);

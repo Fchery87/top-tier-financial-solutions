@@ -93,7 +93,7 @@ UPDATE "user" SET role = 'admin' WHERE email = 'your@email.com';
 Or use the API (first user becomes admin automatically):
 
 ```bash
-curl -X POST http://localhost:3000/api/admin/set-role \
+curl -X POST http://localhost:3000/api/workspace/set-role \
   -H "Content-Type: application/json" \
   -d '{"userId": "user-id", "role": "admin"}'
 ```

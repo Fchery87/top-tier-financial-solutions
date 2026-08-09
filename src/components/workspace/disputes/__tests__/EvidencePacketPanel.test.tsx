@@ -64,7 +64,7 @@ describe('EvidencePacketPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create evidence packet' }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/admin/evidence-packets', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/workspace/evidence-packets', expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('"document_ids":["doc-1"]'),
       }));

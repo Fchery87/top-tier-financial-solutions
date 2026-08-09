@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
  * Tests cover: creation, listing, updating, deletion with encryption/rate limiting
  */
 
-describe('POST /api/admin/disputes - Create Dispute', () => {
+describe('POST /api/workspace/disputes - Create Dispute', () => {
   it('should create a dispute with required fields', async () => {
     const mockDispute = {
       clientId: 'test-client-1',
@@ -134,7 +134,7 @@ describe('POST /api/admin/disputes - Create Dispute', () => {
   });
 });
 
-describe('GET /api/admin/disputes - List Disputes', () => {
+describe('GET /api/workspace/disputes - List Disputes', () => {
   it('should list all disputes with pagination', () => {
     const params = {
       page: 1,
@@ -258,7 +258,7 @@ describe('GET /api/admin/disputes - List Disputes', () => {
   });
 });
 
-describe('PUT /api/admin/disputes/[id] - Update Dispute', () => {
+describe('PUT /api/workspace/disputes/[id] - Update Dispute', () => {
   it('should update dispute status', () => {
     const validStatusUpdates = [
       { from: 'draft', to: 'sent' },
@@ -347,7 +347,7 @@ describe('PUT /api/admin/disputes/[id] - Update Dispute', () => {
   });
 });
 
-describe('DELETE /api/admin/disputes/[id] - Delete Dispute', () => {
+describe('DELETE /api/workspace/disputes/[id] - Delete Dispute', () => {
   it('should delete dispute by ID', () => {
     const disputeId = 'disp-123';
 
@@ -367,7 +367,7 @@ describe('DELETE /api/admin/disputes/[id] - Delete Dispute', () => {
   });
 });
 
-describe('POST /api/admin/disputes/generate-letter - Letter Generation', () => {
+describe('POST /api/workspace/disputes/generate-letter - Letter Generation', () => {
   it('should generate single item dispute letter', () => {
     const letterRequest = {
       clientId: 'client-1',
@@ -422,7 +422,7 @@ describe('POST /api/admin/disputes/generate-letter - Letter Generation', () => {
   });
 });
 
-describe('POST /api/admin/disputes/auto-select - Automatic Item Selection', () => {
+describe('POST /api/workspace/disputes/auto-select - Automatic Item Selection', () => {
   it('should analyze items for dispute potential', () => {
     const analysisRequest = {
       clientId: 'client-1',
@@ -466,7 +466,7 @@ describe('POST /api/admin/disputes/auto-select - Automatic Item Selection', () =
   });
 });
 
-describe('POST /api/admin/disputes/[id]/quick-redispute - Escalation', () => {
+describe('POST /api/workspace/disputes/[id]/quick-redispute - Escalation', () => {
   it('should create Round 2 dispute after verification', () => {
     const escalationRequest = {
       priorDisputeId: 'disp-1',
@@ -503,8 +503,8 @@ describe('Rate Limiting & Encryption', () => {
       limiter: 'sensitiveLimiter',
       requestsPerMinute: 10,
       endpoints: [
-        '/api/admin/disputes',
-        '/api/admin/disputes/[id]',
+        '/api/workspace/disputes',
+        '/api/workspace/disputes/[id]',
       ],
     };
 

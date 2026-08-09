@@ -28,7 +28,7 @@ function safeLLMConfig(config: LLMConfig) {
 }
 
 /**
- * GET /api/admin/settings/llm
+ * GET /api/workspace/settings/llm
  * Get current LLM configuration
  */
 export async function GET(_request: NextRequest) {
@@ -48,7 +48,7 @@ export async function GET(_request: NextRequest) {
 }
 
 /**
- * PUT /api/admin/settings/llm
+ * PUT /api/workspace/settings/llm
  * Update LLM configuration
  */
 export async function PUT(request: NextRequest) {

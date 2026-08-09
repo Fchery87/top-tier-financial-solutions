@@ -43,7 +43,7 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Headers()),
 }));
 
-describe('PUT /api/admin/clients/[id] PII encryption boundary', () => {
+describe('PUT /api/workspace/clients/[id] PII encryption boundary', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
@@ -56,10 +56,10 @@ describe('PUT /api/admin/clients/[id] PII encryption boundary', () => {
   });
 
   it('encrypts all client PII fields accepted by client creation when updating a client', async () => {
-    const { PUT } = await import('@/app/api/admin/clients/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/clients/[id]/route');
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/clients/client-1', {
+      new NextRequest('http://localhost/api/workspace/clients/client-1', {
         method: 'PUT',
         body: JSON.stringify({
           first_name: 'Jane',
@@ -91,7 +91,7 @@ describe('PUT /api/admin/clients/[id] PII encryption boundary', () => {
   }, 30000);
 
   it('rejects invalid PII updates before encryption or database writes', async () => {
-    const { PUT } = await import('@/app/api/admin/clients/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/clients/[id]/route');
     const invalidPayloads = [
       [],
       { first_name: 'A'.repeat(201) },
@@ -104,7 +104,7 @@ describe('PUT /api/admin/clients/[id] PII encryption boundary', () => {
 
     for (const payload of invalidPayloads) {
       const response = await PUT(
-        new NextRequest('http://localhost/api/admin/clients/client-1', {
+        new NextRequest('http://localhost/api/workspace/clients/client-1', {
           method: 'PUT',
           body: JSON.stringify(payload),
           headers: { 'content-type': 'application/json' },

@@ -18,21 +18,21 @@ vi.mock('@/lib/admin-session', () => ({
 }));
 
 function createRequest(body: unknown) {
-  return new NextRequest('http://localhost/api/admin/service-engagements', {
+  return new NextRequest('http://localhost/api/workspace/service-engagements', {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'content-type': 'application/json' },
   });
 }
 
-describe('POST /api/admin/service-engagements', () => {
+describe('POST /api/workspace/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('creates a credit restoration engagement for a client', async () => {
-    const { POST } = await import('@/app/api/admin/service-engagements/route');
+    const { POST } = await import('@/app/api/workspace/service-engagements/route');
     const clientLookup = [{ id: 'client-1' }];
     const activeLookup: unknown[] = [];
     const created = [{
@@ -68,7 +68,7 @@ describe('POST /api/admin/service-engagements', () => {
   }, 30000);
 
   it('blocks a second active engagement for the same service type', async () => {
-    const { POST } = await import('@/app/api/admin/service-engagements/route');
+    const { POST } = await import('@/app/api/workspace/service-engagements/route');
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1' }]) }) }) })
@@ -82,14 +82,14 @@ describe('POST /api/admin/service-engagements', () => {
   }, 30000);
 });
 
-describe('GET /api/admin/service-engagements', () => {
+describe('GET /api/workspace/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('lists engagements for a client', async () => {
-    const { GET } = await import('@/app/api/admin/service-engagements/route');
+    const { GET } = await import('@/app/api/workspace/service-engagements/route');
     const rows = [{
       id: 'engagement-1',
       clientId: 'client-1',
@@ -105,7 +105,7 @@ describe('GET /api/admin/service-engagements', () => {
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(rows) }) });
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/service-engagements?client_id=client-1'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/service-engagements?client_id=client-1'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -121,14 +121,14 @@ describe('GET /api/admin/service-engagements', () => {
   }, 30000);
 });
 
-describe('PATCH /api/admin/service-engagements', () => {
+describe('PATCH /api/workspace/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('blocks ready_for_first_work when compliance gate checks are incomplete', async () => {
-    const { PATCH } = await import('@/app/api/admin/service-engagements/route');
+    const { PATCH } = await import('@/app/api/workspace/service-engagements/route');
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1' }]) }) }) })
@@ -146,7 +146,7 @@ describe('PATCH /api/admin/service-engagements', () => {
 
   it('allows ready_for_first_work when every compliance gate check passes', async () => {
     const { COMPLIANCE_GATE_CHECKS } = await import('@/lib/compliance-gate');
-    const { PATCH } = await import('@/app/api/admin/service-engagements/route');
+    const { PATCH } = await import('@/app/api/workspace/service-engagements/route');
     const updated = [{
       id: 'engagement-1',
       clientId: 'client-1',

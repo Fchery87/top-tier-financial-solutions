@@ -152,7 +152,7 @@ describe.skip('DisputeWizard - Component Rendering', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/admin/clients'),
+        expect.stringContaining('/api/workspace/clients'),
         expect.any(Object)
       );
     });

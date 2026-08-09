@@ -70,7 +70,7 @@ function mockDisputeQueries() {
 }
 
 function request(body: Record<string, unknown>) {
-  return new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter/rewrite', {
+  return new NextRequest('http://localhost/api/workspace/disputes/dispute-1/letter/rewrite', {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'content-type': 'application/json' },
@@ -89,7 +89,7 @@ beforeEach(() => {
   recordLetterRevisionMock.mockResolvedValue(undefined);
 });
 
-describe('POST /api/admin/disputes/[id]/letter/rewrite', () => {
+describe('POST /api/workspace/disputes/[id]/letter/rewrite', () => {
   it('does not persist a rewrite that fabricates source data', async () => {
     mockDisputeQueries();
     rewriteLetterMock.mockResolvedValue({
@@ -99,7 +99,7 @@ describe('POST /api/admin/disputes/[id]/letter/rewrite', () => {
       attempts: 2,
     });
 
-    const { POST } = await import('@/app/api/admin/disputes/[id]/letter/rewrite/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
     const response = await POST(request({ mode: 'rewrite' }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
 
@@ -118,7 +118,7 @@ describe('POST /api/admin/disputes/[id]/letter/rewrite', () => {
       attempts: 1,
     });
 
-    const { POST } = await import('@/app/api/admin/disputes/[id]/letter/rewrite/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
     const response = await POST(request({ mode: 'tone', tone: 'demanding' }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
 
@@ -136,7 +136,7 @@ describe('POST /api/admin/disputes/[id]/letter/rewrite', () => {
       attempts: 1,
     });
 
-    const { POST } = await import('@/app/api/admin/disputes/[id]/letter/rewrite/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
     const response = await POST(request({ mode: 'custom', instruction: 'Make the request clearer.', acknowledgeWarnings: true }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
 

@@ -35,7 +35,7 @@ vi.mock('@/lib/email-service', () => ({
   triggerAutomation: vi.fn(),
 }));
 
-describe('PUT /api/admin/disputes/[id] submission tracking', () => {
+describe('PUT /api/workspace/disputes/[id] submission tracking', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
@@ -43,12 +43,12 @@ describe('PUT /api/admin/disputes/[id] submission tracking', () => {
   });
 
   it('blocks marking a dispute submitted without submission tracking', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, sentAt: null, escalationHistory: null }]) }) }) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({ status: 'sent' }),
       }),
@@ -62,7 +62,7 @@ describe('PUT /api/admin/disputes/[id] submission tracking', () => {
   }, 30000);
 
   it('records manual certified mail details when marking a dispute submitted', async () => {
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
     const updateValues: Record<string, unknown>[] = [];
     const updatedDispute = {
       id: 'dispute-1',
@@ -92,7 +92,7 @@ describe('PUT /api/admin/disputes/[id] submission tracking', () => {
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ onConflictDoNothing: vi.fn().mockResolvedValue(undefined), onConflictDoUpdate: vi.fn().mockResolvedValue(undefined) }) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           status: 'sent',

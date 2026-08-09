@@ -100,7 +100,7 @@ export function WizardModals() {
                       let clientToRestore = clients.find(c => c.id === draft.selectedClientId);
                       if (!clientToRestore && draft.clientSearch) {
                         setClientSearch(draft.clientSearch);
-                        const allClientsResponse = await fetch(`/api/admin/clients?limit=1000&status=active`);
+                        const allClientsResponse = await fetch(`/api/workspace/clients?limit=1000&status=active`);
                         if (allClientsResponse.ok) { const allClientsData = await allClientsResponse.json(); clientToRestore = allClientsData.items.find((c: import('./types').Client) => c.id === draft.selectedClientId); }
                       }
                       if (clientToRestore) { setSelectedClient(clientToRestore); await fetchNegativeItems(clientToRestore.id); }

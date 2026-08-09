@@ -114,7 +114,7 @@ export function CommandPalette() {
     const searchTimer = window.setTimeout(async () => {
       setSearchState('loading');
       try {
-        const response = await fetch(`/api/admin/search?q=${encodeURIComponent(normalizedQuery)}`, {
+        const response = await fetch(`/api/workspace/search?q=${encodeURIComponent(normalizedQuery)}`, {
           signal: controller.signal,
           headers: { Accept: 'application/json' },
         });

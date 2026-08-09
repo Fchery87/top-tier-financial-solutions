@@ -27,7 +27,7 @@ export function GoalTracker() {
         setMonth(now.toLocaleDateString('en-US', { month: 'long' }));
 
         // Fetch stats to calculate current progress
-        const response = await fetch('/api/admin/stats');
+        const response = await fetch('/api/workspace/stats');
         if (response.ok) {
           const stats = await response.json();
           

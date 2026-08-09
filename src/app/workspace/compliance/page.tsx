@@ -44,10 +44,10 @@ export default function CompliancePage() {
     setLoading(true);
     try {
       const [clientsRes, agreementsRes, invoicesRes, messagesRes] = await Promise.all([
-        fetch('/api/admin/clients?limit=1'),
-        fetch('/api/admin/agreements?type=agreements&limit=100'),
-        fetch('/api/admin/billing?type=invoices&limit=100'),
-        fetch('/api/admin/messages?limit=100'),
+        fetch('/api/workspace/clients?limit=1'),
+        fetch('/api/workspace/agreements?type=agreements&limit=100'),
+        fetch('/api/workspace/billing?type=invoices&limit=100'),
+        fetch('/api/workspace/messages?limit=100'),
       ]);
 
       const clientsData = await clientsRes.json();

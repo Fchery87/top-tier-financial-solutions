@@ -110,7 +110,7 @@ export function useWizardDraft(clientId?: string | null) {
 
         // Optional: Save to database via API
         try {
-          await fetch('/api/admin/disputes/draft', {
+          await fetch('/api/workspace/disputes/draft', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -157,7 +157,7 @@ export function useWizardDraft(clientId?: string | null) {
       setLastSavedAt(null);
 
       // Optionally notify backend
-      fetch('/api/admin/disputes/draft', {
+      fetch('/api/workspace/disputes/draft', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId }),

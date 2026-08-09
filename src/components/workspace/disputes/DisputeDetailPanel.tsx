@@ -190,7 +190,7 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
     const loadEvidence = async () => {
       setLoadingEvidence(true);
       try {
-        const response = await fetch(`/api/admin/disputes/evidence?clientId=${encodeURIComponent(dispute.client_id)}`);
+        const response = await fetch(`/api/workspace/disputes/evidence?clientId=${encodeURIComponent(dispute.client_id)}`);
         const payload: unknown = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(getErrorMessage(payload, 'Failed to load client evidence'));
@@ -250,7 +250,7 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
         payload.responseReceivedAt = responseDate;
       }
 
-      const response = await fetch(`/api/admin/disputes/${dispute.id}`, {
+      const response = await fetch(`/api/workspace/disputes/${dispute.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -283,7 +283,7 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
       formData.append('client_id', dispute.client_id);
       formData.append('file_type', 'correspondence');
       formData.append('file', file);
-      const response = await fetch('/api/admin/disputes/evidence/upload', {
+      const response = await fetch('/api/workspace/disputes/evidence/upload', {
         method: 'POST',
         body: formData,
       });
@@ -312,7 +312,7 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
 
     setCreatingDraft(true);
     try {
-      const response = await fetch(`/api/admin/disputes/${dispute.id}/quick-redispute`, { method: 'POST' });
+      const response = await fetch(`/api/workspace/disputes/${dispute.id}/quick-redispute`, { method: 'POST' });
       const data: unknown = await response.json().catch(() => null);
       if (!response.ok) {
         toast.error(getErrorMessage(data, 'Failed to create recommended draft'));

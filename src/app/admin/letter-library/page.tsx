@@ -112,7 +112,7 @@ export default function LetterLibraryPage() {
   const loadRows = React.useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/letter-library');
+      const response = await fetch('/api/workspace/letter-library');
       if (!response.ok) throw new Error('Unable to load letter library');
       const data = await response.json() as { templates?: LibraryRow[] };
       setRows(data.templates || []);
@@ -139,7 +139,7 @@ export default function LetterLibraryPage() {
     try {
       const payload = draftToPayload(draft);
       const response = await fetch(
-        draft.id ? `/api/admin/letter-library/${draft.id}` : '/api/admin/letter-library',
+        draft.id ? `/api/workspace/letter-library/${draft.id}` : '/api/workspace/letter-library',
         {
           method: draft.id ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -161,8 +161,8 @@ export default function LetterLibraryPage() {
   const toggleActive = async (row: LibraryRow) => {
     try {
       const response = row.is_active
-        ? await fetch(`/api/admin/letter-library/${row.id}`, { method: 'DELETE' })
-        : await fetch(`/api/admin/letter-library/${row.id}`, {
+        ? await fetch(`/api/workspace/letter-library/${row.id}`, { method: 'DELETE' })
+        : await fetch(`/api/workspace/letter-library/${row.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(draftToPayload(rowToDraft(row), true)),

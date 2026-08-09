@@ -30,7 +30,7 @@ export function useDisputeItems({ getGenerationMethod, setSelectedClient, setIte
   const fetchNegativeItems = React.useCallback(async (clientId: string) => {
     setLoadingItems(true);
     try {
-      const response = await fetch(`/api/admin/clients/${clientId}`);
+      const response = await fetch(`/api/workspace/clients/${clientId}`);
       if (response.ok) {
         const data = await response.json();
         setNegativeItems(data.negative_items || []);

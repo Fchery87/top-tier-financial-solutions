@@ -19,7 +19,7 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => ({
   uploadLimiter: { limit: uploadLimiterLimitMock },
 }));
 
-describe('POST /api/admin/disputes/evidence/upload', () => {
+describe('POST /api/workspace/disputes/evidence/upload', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1' });
@@ -37,9 +37,9 @@ describe('POST /api/admin/disputes/evidence/upload', () => {
 
   it('rate-limits staff evidence uploads before capability and storage work', async () => {
     requireCapabilityMock.mockResolvedValue(null);
-    const { POST } = await import('@/app/api/admin/disputes/evidence/upload/route');
+    const { POST } = await import('@/app/api/workspace/disputes/evidence/upload/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/evidence/upload', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/evidence/upload', {
       method: 'POST',
       headers: { 'x-forwarded-for': '203.0.113.18' },
     }));
@@ -50,7 +50,7 @@ describe('POST /api/admin/disputes/evidence/upload', () => {
   });
 
   it('stores staff-uploaded evidence as a controlled client document', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/evidence/upload/route');
+    const { POST } = await import('@/app/api/workspace/disputes/evidence/upload/route');
     dbMock.select
       .mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -83,7 +83,7 @@ describe('POST /api/admin/disputes/evidence/upload', () => {
       '',
     ].join('\r\n');
 
-    const request = new NextRequest('http://localhost/api/admin/disputes/evidence/upload', {
+    const request = new NextRequest('http://localhost/api/workspace/disputes/evidence/upload', {
       method: 'POST',
       headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
       body,

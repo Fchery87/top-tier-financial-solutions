@@ -65,9 +65,9 @@ The platform now learns which dispute methodology historically works against eac
 
 ### Surfaces
 
-- `GET /api/admin/disputes/insights/creditor-strategies` — full per-creditor breakdown plus a `recommendationsByCreditor` lookup map. Super-admin only.
-- `POST /api/admin/disputes/triage` — response now includes `historicalRecommendations`, a map of negative-item ID to the historically best methodology for that item's creditor. Loading the history is best-effort; triage succeeds without it.
-- `POST /api/admin/disputes/auto-select` — round-1 recommended methodology now prefers historically successful creditor methodology when enough samples exist; static batch heuristics remain fallback.
+- `GET /api/workspace/disputes/insights/creditor-strategies` — full per-creditor breakdown plus a `recommendationsByCreditor` lookup map. Super-admin only.
+- `POST /api/workspace/disputes/triage` — response now includes `historicalRecommendations`, a map of negative-item ID to the historically best methodology for that item's creditor. Loading the history is best-effort; triage succeeds without it.
+- `POST /api/workspace/disputes/auto-select` — round-1 recommended methodology now prefers historically successful creditor methodology when enough samples exist; static batch heuristics remain fallback.
 
 ### Tests
 
@@ -91,7 +91,7 @@ The FCRA 7-year reporting clock runs from the Date of First Delinquency. `src/li
 
 ### Current LLM fallback model IDs
 
-Fallback model defaults (used only when admin LLM settings do not specify a model) were updated in `src/lib/ai-letter-generator.ts` and `src/app/api/admin/settings/llm/test/route.ts`: the retired `claude-3-5-sonnet-20241022` is now `claude-sonnet-4-6`, and `gpt-4o` is now `gpt-5`.
+Fallback model defaults (used only when admin LLM settings do not specify a model) were updated in `src/lib/ai-letter-generator.ts` and `src/app/api/workspace/settings/llm/test/route.ts`: the retired `claude-3-5-sonnet-20241022` is now `claude-sonnet-4-6`, and `gpt-4o` is now `gpt-5`.
 
 ---
 

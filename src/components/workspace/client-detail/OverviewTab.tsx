@@ -144,7 +144,7 @@ export function OverviewTab({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/clients/${clientId}`, {
+      const response = await fetch(`/api/workspace/clients/${clientId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editedClient),

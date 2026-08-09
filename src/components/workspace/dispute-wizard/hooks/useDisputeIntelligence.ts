@@ -20,7 +20,7 @@ function buildDiscrepanciesUrl(clientId: string, reportId?: string | null): stri
   if (reportId) {
     searchParams.set('reportId', reportId);
   }
-  return `/api/admin/disputes/discrepancies?${searchParams.toString()}`;
+  return `/api/workspace/disputes/discrepancies?${searchParams.toString()}`;
 }
 
 export function useDisputeIntelligence({ getDisputeRound }: UseDisputeIntelligenceOptions) {
@@ -51,7 +51,7 @@ export function useDisputeIntelligence({ getDisputeRound }: UseDisputeIntelligen
   const fetchTriage = React.useCallback(async (clientId: string) => {
     setLoadingTriage(true);
     try {
-      const response = await fetch('/api/admin/disputes/triage', {
+      const response = await fetch('/api/workspace/disputes/triage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId, round: getDisputeRound() }),

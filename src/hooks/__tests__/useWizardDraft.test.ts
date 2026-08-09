@@ -245,7 +245,7 @@ describe('useWizardDraft hook', () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/admin/disputes/draft',
+        '/api/workspace/disputes/draft',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -378,7 +378,7 @@ describe('useWizardDraft hook', () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/admin/disputes/draft',
+        '/api/workspace/disputes/draft',
         expect.objectContaining({
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },

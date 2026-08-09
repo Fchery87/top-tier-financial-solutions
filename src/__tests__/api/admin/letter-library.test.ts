@@ -63,7 +63,7 @@ describe('letter library API', () => {
   });
 
   it('rejects malformed JSON arrays before any write', async () => {
-    const { parsePayload } = await import('@/app/api/admin/letter-library/route');
+    const { parsePayload } = await import('@/app/api/workspace/letter-library/route');
 
     expect(parsePayload({
       name: 'Broken', methodology: 'factual', content: 'Prompt', item_types: '[broken',
@@ -72,8 +72,8 @@ describe('letter library API', () => {
   });
 
   it('creates a row with array fields intact and capability enforcement', async () => {
-    const { POST } = await import('@/app/api/admin/letter-library/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/letter-library', {
+    const { POST } = await import('@/app/api/workspace/letter-library/route');
+    const response = await POST(new NextRequest('http://localhost/api/workspace/letter-library', {
       method: 'POST',
       body: JSON.stringify({
         name: 'New strategy', methodology: 'factual', content: 'Prompt',
@@ -89,15 +89,15 @@ describe('letter library API', () => {
     expect(recordAdminActivityMock).toHaveBeenCalledWith(txMock, expect.objectContaining({ action: 'letter_library.created' }));
 
     requireCapabilityMock.mockResolvedValueOnce(null);
-    const forbidden = await POST(new NextRequest('http://localhost/api/admin/letter-library', { method: 'POST', body: '{}' }));
+    const forbidden = await POST(new NextRequest('http://localhost/api/workspace/letter-library', { method: 'POST', body: '{}' }));
     expect(forbidden.status).toBe(403);
   });
 
   it('preserves arrays when reactivation sends only the active-state change', async () => {
-    const { PATCH } = await import('@/app/api/admin/letter-library/[id]/route');
+    const { PATCH } = await import('@/app/api/workspace/letter-library/[id]/route');
     selectResults.push([libraryRow({ isActive: false })], [libraryRow({ isActive: true })]);
 
-    const response = await PATCH(new NextRequest('http://localhost/api/admin/letter-library/library-1', {
+    const response = await PATCH(new NextRequest('http://localhost/api/workspace/letter-library/library-1', {
       method: 'PATCH',
       body: JSON.stringify({ is_active: true }),
     }), { params: Promise.resolve({ id: 'library-1' }) });
@@ -112,10 +112,10 @@ describe('letter library API', () => {
   });
 
   it('deactivates without deleting historical strategy data', async () => {
-    const { DELETE } = await import('@/app/api/admin/letter-library/[id]/route');
+    const { DELETE } = await import('@/app/api/workspace/letter-library/[id]/route');
     selectResults.push([libraryRow()]);
 
-    const response = await DELETE(new NextRequest('http://localhost/api/admin/letter-library/library-1', { method: 'DELETE' }), {
+    const response = await DELETE(new NextRequest('http://localhost/api/workspace/letter-library/library-1', { method: 'DELETE' }), {
       params: Promise.resolve({ id: 'library-1' }),
     });
 
