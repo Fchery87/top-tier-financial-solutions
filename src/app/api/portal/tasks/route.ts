@@ -4,6 +4,7 @@ import { tasks, clients } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { eq, and, or, asc } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -61,7 +62,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error('Error fetching portal tasks:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.tasks.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
   }
 }

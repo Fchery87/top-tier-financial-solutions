@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('Error fetching documents:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.documents.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
   }
 }
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating document:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.documents.error', error: error });
     return NextResponse.json({ error: 'Failed to create document' }, { status: 500 });
   }
 }

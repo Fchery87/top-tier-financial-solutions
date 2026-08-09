@@ -4,6 +4,7 @@ import { clientCases, caseUpdates } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { eq, desc } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -65,7 +66,7 @@ export async function GET() {
 
     return NextResponse.json({ cases: casesWithUpdates });
   } catch (error) {
-    console.error('Error fetching cases:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.cases.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch cases' }, { status: 500 });
   }
 }

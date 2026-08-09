@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { faqItems } from '@/db/schema';
 import { asc, eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
       }))
     );
   } catch (error) {
-    console.error('Error fetching public FAQs:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.public.faqs.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch FAQs' }, { status: 500 });
   }
 }

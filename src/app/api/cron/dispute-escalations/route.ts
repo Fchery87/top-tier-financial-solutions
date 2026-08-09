@@ -4,6 +4,7 @@ import {
   runDisputeEscalationAutomation,
   writeDisputeEscalationFailure,
 } from '@/lib/dispute-escalation-runner';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -18,11 +19,11 @@ export async function POST(request: NextRequest) {
     const result = await runDisputeEscalationAutomation({ dryRun });
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error running dispute escalation cron:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.cron.dispute.escalations.error', error: error });
     try {
       await writeDisputeEscalationFailure(error);
     } catch (settingsError) {
-      console.error('Error writing dispute escalation last-run setting:', settingsError);
+      logServerEvent({ level: 'error', event: 'server.app.api.cron.dispute.escalations.error', error: settingsError });
     }
     return NextResponse.json(
       { error: 'Failed to run dispute escalation automation' },

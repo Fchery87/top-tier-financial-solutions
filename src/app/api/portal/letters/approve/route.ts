@@ -4,6 +4,7 @@ import { clients, letterApprovals } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error approving letter:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.letters.approve.error', error: error });
     return NextResponse.json({ error: 'Failed to approve letter' }, { status: 500 });
   }
 }

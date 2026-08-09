@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { auth } from '@/lib/auth';
 import { clients, evidencePackets } from '@/db/schema';
 import { headers } from 'next/headers';
+import { logServerEvent } from '@/lib/server-logger';
 
 const HIGH_RISK_CLAIM_TYPES = new Set([
   'identity_theft',
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ confirmations: nextConfirmations });
   } catch (error) {
-    console.error('Error recording portal high-risk confirmation:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.high.risk.confirmations.error', error: error });
     return NextResponse.json({ error: 'Failed to record high-risk confirmation' }, { status: 500 });
   }
 }
