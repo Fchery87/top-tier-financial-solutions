@@ -4,10 +4,12 @@ import { NextRequest } from 'next/server';
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
 const requireCapabilityMock = vi.hoisted(() => vi.fn());
 const saveDisputeLetterMock = vi.hoisted(() => vi.fn());
+const recordSensitiveReadMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/dispute-letter-workflow', () => ({ saveDisputeLetter: saveDisputeLetterMock }));
+vi.mock('@/lib/sensitive-read-audit', () => ({ recordSensitiveRead: recordSensitiveReadMock }));
 
 const dispute = {
   id: 'dispute-1',
@@ -43,6 +45,7 @@ beforeEach(() => {
     updatedAt: new Date('2026-08-02T00:00:00Z'),
     findings: [],
   });
+  recordSensitiveReadMock.mockResolvedValue(undefined);
 });
 
 describe('Letter Studio state routes', () => {
@@ -64,13 +67,37 @@ describe('Letter Studio state routes', () => {
       .mockReturnValueOnce(query([{ id: 'library-1', name: 'Factual strategy', methodology: 'factual', targetRecipient: 'bureau' }]));
 
     const { GET } = await import('@/app/api/admin/disputes/[id]/letter/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter'), { params: Promise.resolve({ id: 'dispute-1' }) });
+    const response = await GET(new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter', {
+      headers: { 'x-request-id': 'request-1' },
+    }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ dispute_id: 'dispute-1', content: dispute.letterContent, current_revision: 2 });
     expect(body.library).toMatchObject({ id: 'library-1', name: 'Factual strategy' });
     expect(body.revisions).toHaveLength(1);
+    expect(recordSensitiveReadMock).toHaveBeenCalledTimes(1);
+    expect(recordSensitiveReadMock).toHaveBeenCalledWith(dbMock, {
+      kind: 'dispute_letter',
+      actorUserId: 'operator-1',
+      disputeId: 'dispute-1',
+      route: '/api/admin/disputes/dispute-1/letter',
+      requestId: 'request-1',
+    });
+    expect(JSON.stringify(recordSensitiveReadMock.mock.calls)).not.toContain(dispute.letterContent);
+  });
+
+  it('fails closed before returning letter content when the audit write fails', async () => {
+    dbMock.select.mockReturnValueOnce(query([dispute]));
+    recordSensitiveReadMock.mockRejectedValueOnce(new Error('audit unavailable'));
+    const { GET } = await import('@/app/api/admin/disputes/[id]/letter/route');
+
+    const response = await GET(new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter', {
+      headers: { 'x-request-id': 'request-1' },
+    }), { params: Promise.resolve({ id: 'dispute-1' }) });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: 'Failed to load letter state' });
   });
 
   it('runs preview lint through the letters capability without persisting', async () => {

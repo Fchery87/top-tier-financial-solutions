@@ -5,6 +5,8 @@ import { disputeLetterLibrary, disputeLetterRevisions, disputes } from '@/db/sch
 import { requireCapability } from '@/lib/admin-session';
 import { buildLetterLintContextForDispute } from '@/lib/letter-lint-context';
 import { lintGeneratedLetter } from '@/lib/letter-lint';
+import { logServerEvent } from '@/lib/server-logger';
+import { recordSensitiveRead } from '@/lib/sensitive-read-audit';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -34,7 +36,7 @@ function parseReasonCodes(value: string | null): string[] {
   }
 }
 
-export async function GET(_request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: RouteContext) {
   const user = await requireCapability('disputes:read');
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -42,6 +44,14 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, id)).limit(1);
     if (!dispute) return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+
+    await recordSensitiveRead(db, {
+      kind: 'dispute_letter',
+      actorUserId: user.id,
+      disputeId: dispute.id,
+      route: request.nextUrl.pathname,
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+    });
 
     const revisions = await db
       .select()
@@ -91,7 +101,18 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       user_id: user.id,
     });
   } catch (error) {
-    console.error('Error loading dispute letter state:', error);
+    logServerEvent({
+      level: 'error',
+      event: 'dispute-letter.read.failed',
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+      route: request.nextUrl.pathname,
+      method: request.method,
+      status: 500,
+      actorUserId: user.id,
+      resourceType: 'dispute_letter',
+      resourceId: id,
+      error,
+    });
     return NextResponse.json({ error: 'Failed to load letter state' }, { status: 500 });
   }
 }

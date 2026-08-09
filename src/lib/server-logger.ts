@@ -45,6 +45,12 @@ const SSN_VALUE = /\b\d{3}-?\d{2}-?\d{4}\b/g;
 
 const logger = pino({
   base: undefined,
+  enabled: process.env.NODE_ENV !== 'test',
+  formatters: {
+    level(label) {
+      return { severity: label };
+    },
+  },
   level: process.env.LOG_LEVEL ?? 'info',
   timestamp: pino.stdTimeFunctions.isoTime,
 });
