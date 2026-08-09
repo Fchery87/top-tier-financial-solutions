@@ -70,8 +70,6 @@ export function getAccountPresence(account: ParsedAccount, reportBureau: string 
     }
   }
 
-  const hasStrongSingleBureauBasis = !!account.dateReported || !!account.balance || !!account.accountNumber;
-
   if (reportBureauLower === 'combined') {
     return {
       onTransunion: false,
@@ -83,20 +81,6 @@ export function getAccountPresence(account: ParsedAccount, reportBureau: string 
       transunionBalance: undefined,
       experianBalance: undefined,
       equifaxBalance: undefined,
-    };
-  }
-
-  if (hasStrongSingleBureauBasis) {
-    return {
-      onTransunion: true,
-      onExperian: true,
-      onEquifax: true,
-      transunionDate: account.dateReported,
-      experianDate: account.dateReported,
-      equifaxDate: account.dateReported,
-      transunionBalance: account.balance,
-      experianBalance: account.balance,
-      equifaxBalance: account.balance,
     };
   }
 
