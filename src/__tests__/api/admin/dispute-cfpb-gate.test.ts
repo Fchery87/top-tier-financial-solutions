@@ -33,7 +33,7 @@ function query(rows: unknown[]) {
 }
 
 function request(body: Record<string, unknown>) {
-  return new NextRequest('http://localhost/api/admin/disputes', {
+  return new NextRequest('http://localhost/api/workspace/disputes', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -50,7 +50,7 @@ const baseBody = {
   policyDecision: { approved: true, reasonCodes: ['fcra_non_compliance'] },
 };
 
-describe('POST /api/admin/disputes CFPB gate', () => {
+describe('POST /api/workspace/disputes CFPB gate', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });

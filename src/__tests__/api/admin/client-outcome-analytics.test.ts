@@ -29,7 +29,7 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Headers()),
 }));
 
-describe('GET /api/admin/client-outcome-analytics', () => {
+describe('GET /api/workspace/client-outcome-analytics', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
@@ -50,7 +50,7 @@ describe('GET /api/admin/client-outcome-analytics', () => {
         { bureau: 'transunion' },
       ]) });
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/client-outcome-analytics'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/client-outcome-analytics'));
     const body = await response.json();
 
     expect(response.status).toBe(200);

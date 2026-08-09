@@ -18,14 +18,14 @@ vi.mock('@/lib/admin-session', () => ({
 }));
 
 function createRequest(body: unknown) {
-  return new NextRequest('http://localhost/api/admin/service-engagements', {
+  return new NextRequest('http://localhost/api/workspace/service-engagements', {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'content-type': 'application/json' },
   });
 }
 
-describe('POST /api/admin/service-engagements', () => {
+describe('POST /api/workspace/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -82,7 +82,7 @@ describe('POST /api/admin/service-engagements', () => {
   }, 30000);
 });
 
-describe('GET /api/admin/service-engagements', () => {
+describe('GET /api/workspace/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -105,7 +105,7 @@ describe('GET /api/admin/service-engagements', () => {
 
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(rows) }) });
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/service-engagements?client_id=client-1'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/service-engagements?client_id=client-1'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -121,7 +121,7 @@ describe('GET /api/admin/service-engagements', () => {
   }, 30000);
 });
 
-describe('PATCH /api/admin/service-engagements', () => {
+describe('PATCH /api/workspace/service-engagements', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });

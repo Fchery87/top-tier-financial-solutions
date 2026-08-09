@@ -23,7 +23,7 @@ vi.mock('@/lib/ai-letter-generator', () => ({
   generateMultiItemDisputeLetter: generateMultiItemDisputeLetterMock,
 }));
 
-describe('POST /api/admin/disputes/generate-letter', () => {
+describe('POST /api/workspace/disputes/generate-letter', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
@@ -32,7 +32,7 @@ describe('POST /api/admin/disputes/generate-letter', () => {
   it('fails closed when approved policy inputs are missing', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/generate-letter', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',
@@ -52,7 +52,7 @@ describe('POST /api/admin/disputes/generate-letter', () => {
   it('rejects approved policy decisions that do not match the requested reason codes', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/generate-letter', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',

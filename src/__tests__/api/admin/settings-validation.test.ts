@@ -46,8 +46,8 @@ describe('settings write validation', () => {
     ];
 
     for (const payload of invalidPayloads) {
-      const putResponse = await PUT(jsonRequest('http://localhost/api/admin/settings', 'PUT', payload));
-      const postResponse = await POST(jsonRequest('http://localhost/api/admin/settings', 'POST', payload));
+      const putResponse = await PUT(jsonRequest('http://localhost/api/workspace/settings', 'PUT', payload));
+      const postResponse = await POST(jsonRequest('http://localhost/api/workspace/settings', 'POST', payload));
       expect(putResponse.status).toBe(400);
       expect(postResponse.status).toBe(400);
     }
@@ -71,7 +71,7 @@ describe('settings write validation', () => {
     ];
 
     for (const payload of invalidPayloads) {
-      const response = await PUT(jsonRequest('http://localhost/api/admin/settings/llm', 'PUT', payload));
+      const response = await PUT(jsonRequest('http://localhost/api/workspace/settings/llm', 'PUT', payload));
       expect(response.status).toBe(400);
     }
 
@@ -89,7 +89,7 @@ describe('settings write validation', () => {
     });
     const { PUT } = await import('@/app/api/workspace/settings/llm/route');
 
-    const response = await PUT(jsonRequest('http://localhost/api/admin/settings/llm', 'PUT', {
+    const response = await PUT(jsonRequest('http://localhost/api/workspace/settings/llm', 'PUT', {
       apiKey: 'secret-api-key-value',
     }));
     const body = await response.json();

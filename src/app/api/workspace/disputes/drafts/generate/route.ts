@@ -1,1 +1,1 @@
-export { POST } from '@/app/api/admin/disputes/generate-letter/route';
+export { POST } from '@/app/api/workspace/disputes/generate-letter/route';

@@ -15,7 +15,7 @@ vi.mock('@/lib/admin-session', () => ({
   requireCapability: requireCapabilityMock,
 }));
 
-describe('GET /api/admin/service-engagements/[id]/compliance-gate', () => {
+describe('GET /api/workspace/service-engagements/[id]/compliance-gate', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -32,7 +32,7 @@ describe('GET /api/admin/service-engagements/[id]/compliance-gate', () => {
       ]) }) });
 
     const response = await GET(
-      new NextRequest('http://localhost/api/admin/service-engagements/engagement-1/compliance-gate'),
+      new NextRequest('http://localhost/api/workspace/service-engagements/engagement-1/compliance-gate'),
       { params: Promise.resolve({ id: 'engagement-1' }) },
     );
     const body = await response.json();

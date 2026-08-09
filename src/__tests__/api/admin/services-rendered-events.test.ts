@@ -24,7 +24,7 @@ vi.mock('@/lib/admin-session', () => ({
   requireCapability: requireCapabilityMock,
 }));
 
-describe('POST /api/admin/services-rendered-events', () => {
+describe('POST /api/workspace/services-rendered-events', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -65,7 +65,7 @@ describe('POST /api/admin/services-rendered-events', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue(created) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/services-rendered-events', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -116,7 +116,7 @@ describe('POST /api/admin/services-rendered-events', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([]) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/services-rendered-events', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -154,7 +154,7 @@ describe('POST /api/admin/services-rendered-events', () => {
       }),
     });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/services-rendered-events', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',

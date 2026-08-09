@@ -75,7 +75,7 @@ describe('DisputeDetailPanel response review', () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith('A response date and document are required for this outcome.');
     });
-    expect(global.fetch).toHaveBeenCalledWith('/api/admin/disputes/evidence?clientId=client-1');
+    expect(global.fetch).toHaveBeenCalledWith('/api/workspace/disputes/evidence?clientId=client-1');
   });
 
   it('loads client evidence and submits the selected response document ID', async () => {
@@ -99,7 +99,7 @@ describe('DisputeDetailPanel response review', () => {
     fireEvent.click(screen.getByRole('button', { name: /save response/i }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenLastCalledWith('/api/admin/disputes/dispute-1', expect.objectContaining({
+      expect(global.fetch).toHaveBeenLastCalledWith('/api/workspace/disputes/dispute-1', expect.objectContaining({
         method: 'PUT',
         body: expect.stringContaining('"responseDocumentId":"doc-1"'),
       }));
@@ -157,7 +157,7 @@ describe('DisputeDetailPanel response review', () => {
     fireEvent.click(screen.getByRole('button', { name: /create recommended draft/i }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenLastCalledWith('/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' });
+      expect(global.fetch).toHaveBeenLastCalledWith('/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' });
     });
     expect(onResponseLogged).toHaveBeenCalledTimes(2);
     expect(onClose).toHaveBeenCalledTimes(1);

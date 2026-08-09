@@ -29,7 +29,7 @@ describe('LetterStudio', () => {
     fireEvent.change(textarea, { target: { value: 'Updated letter' } });
     fireEvent.click(screen.getByRole('button', { name: /save letter/i }));
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/admin/disputes/dispute-1', expect.objectContaining({ method: 'PUT' })));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/workspace/disputes/dispute-1', expect.objectContaining({ method: 'PUT' })));
   });
 
   it('autosaves dirty edits when focus leaves the studio', async () => {
@@ -46,7 +46,7 @@ describe('LetterStudio', () => {
     fireEvent.blur(textarea);
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(
-      '/api/admin/disputes/dispute-1',
+      '/api/workspace/disputes/dispute-1',
       expect.objectContaining({ method: 'PUT', body: expect.stringContaining('Autosaved letter') }),
     ));
   });

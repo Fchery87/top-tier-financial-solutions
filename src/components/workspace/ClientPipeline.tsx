@@ -174,7 +174,7 @@ export function ClientPipeline() {
 
   async function fetchPipeline() {
     try {
-      const response = await fetch('/api/admin/dashboard/pipeline');
+      const response = await fetch('/api/workspace/dashboard/pipeline');
       if (response.ok) {
         const data = await response.json();
         setPipeline(data);
@@ -234,7 +234,7 @@ export function ClientPipeline() {
 
     // Update on server
     try {
-      await fetch('/api/admin/dashboard/pipeline', {
+      await fetch('/api/workspace/dashboard/pipeline', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

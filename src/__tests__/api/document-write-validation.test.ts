@@ -109,7 +109,7 @@ describe('controlled document write validation', () => {
       contentType: 'application/pdf',
     }));
 
-    const response = await POST(multipartRequest('http://localhost/api/admin/disputes/evidence/upload', [
+    const response = await POST(multipartRequest('http://localhost/api/workspace/disputes/evidence/upload', [
       { name: 'client_id', value: 'client-1' },
       { name: 'file_type', value: 'correspondence' },
       ...files,
@@ -123,7 +123,7 @@ describe('controlled document write validation', () => {
   it('rejects non-text admin document notes before lookup or storage work', async () => {
     const { POST } = await import('@/app/api/workspace/clients/documents/route');
 
-    const response = await POST(multipartRequest('http://localhost/api/admin/clients/documents', [
+    const response = await POST(multipartRequest('http://localhost/api/workspace/clients/documents', [
       { name: 'file', ...pdfFile },
       { name: 'client_id', value: 'client-1' },
       { name: 'document_type', value: 'government_id' },

@@ -22,7 +22,7 @@ vi.mock('next/headers', () => ({
   headers: headersMock,
 }));
 
-describe('POST /api/admin/billing payable invoice gate', () => {
+describe('POST /api/workspace/billing payable invoice gate', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -48,7 +48,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
         }),
       });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',
@@ -106,7 +106,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',
@@ -161,7 +161,7 @@ describe('POST /api/admin/billing payable invoice gate', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',

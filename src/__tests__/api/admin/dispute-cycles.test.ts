@@ -16,7 +16,7 @@ vi.mock('@/lib/admin-session', () => ({
   requireCapability: requireCapabilityMock,
 }));
 
-describe('POST /api/admin/dispute-cycles', () => {
+describe('POST /api/workspace/dispute-cycles', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -38,7 +38,7 @@ describe('POST /api/admin/dispute-cycles', () => {
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1', clientId: 'client-1' }]) }) }) });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue(created) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/dispute-cycles', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/dispute-cycles', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -64,7 +64,7 @@ describe('POST /api/admin/dispute-cycles', () => {
   it('blocks creating a Dispute Cycle draft without item selection', async () => {
     const { POST } = await import('@/app/api/workspace/dispute-cycles/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/dispute-cycles', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/dispute-cycles', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',

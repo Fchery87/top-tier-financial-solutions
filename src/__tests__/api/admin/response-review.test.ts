@@ -35,7 +35,7 @@ vi.mock('@/lib/email-service', () => ({
   triggerAutomation: vi.fn(),
 }));
 
-describe('PUT /api/admin/disputes/[id] response review intake', () => {
+describe('PUT /api/workspace/disputes/[id] response review intake', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
@@ -48,7 +48,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1, responseReceivedAt: null, escalationHistory: null }]) }) }) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           responseReceivedAt: '2026-02-01T00:00:00.000Z',
@@ -71,7 +71,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'dispute-1', clientId: 'client-1', negativeItemId: null, bureau: 'experian', round: 1, responseReceivedAt: null, escalationHistory: null }]) }) }) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           responseReceivedAt: '2026-02-01T00:00:00.000Z',
@@ -104,7 +104,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     }]) }) }) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({ createNextRound: true }),
       }),
@@ -126,7 +126,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     }]) }) }) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           status: 'responded',
@@ -165,7 +165,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           status: 'responded',
@@ -215,7 +215,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           status: 'responded',
@@ -260,7 +260,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           outcome: 'verified',
@@ -316,7 +316,7 @@ describe('PUT /api/admin/disputes/[id] response review intake', () => {
     dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
     const response = await PUT(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
         method: 'PUT',
         body: JSON.stringify({
           outcome: 'verified',

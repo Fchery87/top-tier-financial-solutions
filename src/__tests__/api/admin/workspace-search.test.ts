@@ -26,7 +26,7 @@ function selectBuilder(result: unknown[]) {
   return builder;
 }
 
-describe('GET /api/admin/search', () => {
+describe('GET /api/workspace/search', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     selectResults.length = 0;
@@ -38,7 +38,7 @@ describe('GET /api/admin/search', () => {
     requireCapabilityMock.mockResolvedValue(null);
 
     const { GET } = await import('@/app/api/workspace/search/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/search?q=jane'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/search?q=jane'));
 
     expect(response.status).toBe(403);
     expect(dbMock.select).not.toHaveBeenCalled();
@@ -46,7 +46,7 @@ describe('GET /api/admin/search', () => {
 
   it('returns an empty result set for queries shorter than two characters', async () => {
     const { GET } = await import('@/app/api/workspace/search/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/search?q=j'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/search?q=j'));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ query: '', results: [] });
@@ -79,7 +79,7 @@ describe('GET /api/admin/search', () => {
     );
 
     const { GET } = await import('@/app/api/workspace/search/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/search?q=jane%20doe'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/search?q=jane%20doe'));
     const body = await response.json();
 
     expect(response.status).toBe(200);

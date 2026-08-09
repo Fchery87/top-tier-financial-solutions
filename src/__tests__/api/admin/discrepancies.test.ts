@@ -50,7 +50,7 @@ vi.mock('drizzle-orm', async (importOriginal) => ({
   isNull: drizzleOrmMock.isNull,
 }));
 
-describe('GET /api/admin/disputes/discrepancies', () => {
+describe('GET /api/workspace/disputes/discrepancies', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
@@ -95,7 +95,7 @@ describe('GET /api/admin/disputes/discrepancies', () => {
       },
     ]);
 
-    const clientOnlyResponse = await GET(new NextRequest('http://localhost/api/admin/disputes/discrepancies?clientId=client-1'));
+    const clientOnlyResponse = await GET(new NextRequest('http://localhost/api/workspace/disputes/discrepancies?clientId=client-1'));
     const clientOnlyBody = await clientOnlyResponse.json();
 
     expect(clientOnlyResponse.status).toBe(200);
@@ -126,7 +126,7 @@ describe('GET /api/admin/disputes/discrepancies', () => {
       },
     ]);
 
-    const reportFilteredResponse = await GET(new NextRequest('http://localhost/api/admin/disputes/discrepancies?clientId=client-1&reportId=report-a'));
+    const reportFilteredResponse = await GET(new NextRequest('http://localhost/api/workspace/disputes/discrepancies?clientId=client-1&reportId=report-a'));
     const reportFilteredBody = await reportFilteredResponse.json();
 
     expect(reportFilteredResponse.status).toBe(200);

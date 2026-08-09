@@ -104,7 +104,7 @@ test.describe('Letter Studio browser journeys', () => {
     await expect(page.getByText(/Saved as revision 3/)).toBeVisible({ timeout: 15000 });
 
     await page.goto('/workspace/disputes');
-    await page.unroute('**/api/admin/disputes**');
+    await page.unroute('**/api/workspace/disputes**');
     const sentState = await openLetterStudio(page, true);
     await expect(page.getByText(/has been sent and its letter is immutable/i)).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Dispute letter content' })).toBeDisabled();

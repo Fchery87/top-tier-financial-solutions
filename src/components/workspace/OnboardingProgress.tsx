@@ -35,7 +35,7 @@ export function OnboardingProgress() {
   React.useEffect(() => {
     async function fetchStats() {
       try {
-        const response = await fetch('/api/admin/stats');
+        const response = await fetch('/api/workspace/stats');
         if (response.ok) {
           const data = await response.json();
           

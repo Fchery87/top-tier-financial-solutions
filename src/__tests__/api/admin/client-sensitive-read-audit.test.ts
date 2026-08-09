@@ -69,7 +69,7 @@ beforeEach(() => {
 describe('client sensitive-read audit routes', () => {
   it('audits a successful client record read without passing protected fields', async () => {
     const { GET } = await import('@/app/api/workspace/clients/[id]/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/clients/client-1', {
+    const response = await GET(new NextRequest('http://localhost/api/workspace/clients/client-1', {
       headers: { 'x-request-id': 'request-1' },
     }), { params: Promise.resolve({ id: 'client-1' }) });
 
@@ -79,7 +79,7 @@ describe('client sensitive-read audit routes', () => {
       kind: 'client_record',
       actorUserId: 'operator-1',
       clientId: 'client-1',
-      route: '/api/admin/clients/client-1',
+      route: '/api/workspace/clients/client-1',
       requestId: 'request-1',
     });
     expect(JSON.stringify(recordSensitiveReadMock.mock.calls)).not.toContain(client.email);
@@ -90,7 +90,7 @@ describe('client sensitive-read audit routes', () => {
     dbMock.select.mockReset();
     dbMock.select.mockReturnValueOnce(standardSelect([client])).mockImplementation(() => standardSelect());
     const { GET } = await import('@/app/api/workspace/clients/[id]/audit-report/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/clients/client-1/audit-report?type=simple', {
+    const response = await GET(new NextRequest('http://localhost/api/workspace/clients/client-1/audit-report?type=simple', {
       headers: { 'x-request-id': 'request-2' },
     }), { params: Promise.resolve({ id: 'client-1' }) });
 
@@ -100,7 +100,7 @@ describe('client sensitive-read audit routes', () => {
       kind: 'client_record',
       actorUserId: 'operator-1',
       clientId: 'client-1',
-      route: '/api/admin/clients/client-1/audit-report',
+      route: '/api/workspace/clients/client-1/audit-report',
       requestId: 'request-2',
     });
     expect(JSON.stringify(recordSensitiveReadMock.mock.calls)).not.toContain(client.email);

@@ -9,7 +9,7 @@ vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/team-role-management', () => ({ changeUserRole: changeUserRoleMock }));
 
-describe('/api/admin/team', () => {
+describe('/api/workspace/team', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -82,7 +82,7 @@ describe('/api/admin/team', () => {
     });
     const { PATCH } = await import('@/app/api/workspace/team/route');
 
-    const response = await PATCH(new NextRequest('http://localhost/api/admin/team', {
+    const response = await PATCH(new NextRequest('http://localhost/api/workspace/team', {
       method: 'PATCH',
       body: JSON.stringify({ user_id: 'member-1', role: 'admin' }),
     }));
@@ -104,7 +104,7 @@ describe('/api/admin/team', () => {
     changeUserRoleMock.mockResolvedValue({ ok: false, code });
     const { PATCH } = await import('@/app/api/workspace/team/route');
 
-    const response = await PATCH(new NextRequest('http://localhost/api/admin/team', {
+    const response = await PATCH(new NextRequest('http://localhost/api/workspace/team', {
       method: 'PATCH',
       body: JSON.stringify({ user_id: 'member-1', role: 'admin' }),
     }));

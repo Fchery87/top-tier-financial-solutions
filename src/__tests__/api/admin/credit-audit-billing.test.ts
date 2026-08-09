@@ -20,7 +20,7 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Headers({ 'x-forwarded-for': '127.0.0.1' })),
 }));
 
-describe('POST /api/admin/billing credit audit engagement billing', () => {
+describe('POST /api/workspace/billing credit audit engagement billing', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -37,7 +37,7 @@ describe('POST /api/admin/billing credit audit engagement billing', () => {
       }),
     });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',
@@ -63,7 +63,7 @@ describe('POST /api/admin/billing credit audit engagement billing', () => {
     requireCapabilityMock.mockResolvedValue(null);
     const { POST } = await import('@/app/api/workspace/billing/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({ type: 'fee_config', name: 'Monthly', feeModel: 'monthly', amount: 10000 }),
     }));

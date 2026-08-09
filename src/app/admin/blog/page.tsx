@@ -58,8 +58,8 @@ export default function BlogAdminPage() {
     setLoading(true);
     try {
       const [postsRes, categoriesRes] = await Promise.all([
-        fetch('/api/admin/blog-posts?page=1&limit=100'),
-        fetch('/api/admin/blog-categories'),
+        fetch('/api/workspace/blog-posts?page=1&limit=100'),
+        fetch('/api/workspace/blog-categories'),
       ]);
       
       if (postsRes.ok) {
@@ -117,8 +117,8 @@ export default function BlogAdminPage() {
     setSaving(true);
     try {
       const url = editingPost 
-        ? `/api/admin/blog-posts/${editingPost.id}`
-        : '/api/admin/blog-posts';
+        ? `/api/workspace/blog-posts/${editingPost.id}`
+        : '/api/workspace/blog-posts';
       
       const response = await fetch(url, {
         method: editingPost ? 'PUT' : 'POST',
@@ -144,7 +144,7 @@ export default function BlogAdminPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      await fetch(`/api/admin/blog-posts/${pendingDeleteId}`, { method: 'DELETE' });
+      await fetch(`/api/workspace/blog-posts/${pendingDeleteId}`, { method: 'DELETE' });
       fetchPosts();
     } catch (error) {
       console.error('Error deleting post:', error);

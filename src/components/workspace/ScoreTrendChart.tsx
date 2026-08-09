@@ -166,7 +166,7 @@ export function ScoreTrendChart() {
   React.useEffect(() => {
     async function fetchTrends() {
       try {
-        const response = await fetch('/api/admin/dashboard/trends');
+        const response = await fetch('/api/workspace/dashboard/trends');
         if (response.ok) {
           const trendData = await response.json();
           setData(trendData);

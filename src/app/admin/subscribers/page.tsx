@@ -37,7 +37,7 @@ export default function SubscribersAdminPage() {
     setLoading(true);
     try {
       const statusParam = filter !== 'all' ? `&status=${filter}` : '';
-      const response = await fetch(`/api/admin/subscribers?page=1&limit=100${statusParam}`);
+      const response = await fetch(`/api/workspace/subscribers?page=1&limit=100${statusParam}`);
       if (response.ok) {
         const data = await response.json();
         setSubscribers(data.items);

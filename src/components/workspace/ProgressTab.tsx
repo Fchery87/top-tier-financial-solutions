@@ -99,7 +99,7 @@ export function ProgressTab({ clientId, creditReports, scoreHistory, disputes }:
       if (report1) params.append('report1', report1);
       if (report2) params.append('report2', report2);
 
-      const response = await fetch(`/api/admin/clients/${clientId}/compare-reports?${params.toString()}`);
+      const response = await fetch(`/api/workspace/clients/${clientId}/compare-reports?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setComparison(data.comparison);

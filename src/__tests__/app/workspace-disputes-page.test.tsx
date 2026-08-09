@@ -126,6 +126,6 @@ describe('Workspace disputes deep links', () => {
     await waitFor(() => {
       expect(screen.getByTestId('dispute-detail-panel')).toHaveTextContent('queued-response');
     });
-    expect(global.fetch).toHaveBeenCalledWith('/api/admin/disputes?awaiting_response=true');
+    expect(global.fetch).toHaveBeenCalledWith('/api/workspace/disputes?awaiting_response=true');
   });
 });

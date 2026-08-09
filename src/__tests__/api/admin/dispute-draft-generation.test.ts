@@ -33,7 +33,7 @@ vi.mock('@/lib/dispute-compliance-policy', () => ({ evaluateDisputeCompliance: e
 vi.mock('@/lib/dispute-policy-decision', () => ({ approvedPolicyMatchesDisputeInputs: approvedPolicyMatchesDisputeInputsMock }));
 vi.mock('@/lib/dispute-escalation-decision', () => ({ decideEscalation: decideEscalationMock, loadDisputeChain: loadDisputeChainMock }));
 
-describe('POST /api/admin/disputes/drafts/generate', () => {
+describe('POST /api/workspace/disputes/drafts/generate', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
@@ -61,7 +61,7 @@ describe('POST /api/admin/disputes/drafts/generate', () => {
 
   it('returns a persisted dispute ID, revision one, and durable library attribution', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/drafts/generate/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/drafts/generate', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/drafts/generate', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',
@@ -103,7 +103,7 @@ describe('POST /api/admin/disputes/drafts/generate', () => {
 
   it('blocks CFPB generation when the predecessor ID is missing', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/drafts/generate/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/drafts/generate', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/drafts/generate', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',
@@ -130,7 +130,7 @@ describe('POST /api/admin/disputes/drafts/generate', () => {
     });
     const { POST } = await import('@/app/api/workspace/disputes/drafts/generate/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/drafts/generate', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/drafts/generate', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',
@@ -150,7 +150,7 @@ describe('POST /api/admin/disputes/drafts/generate', () => {
 
   it('rejects a legacy multi-item CFPB request before generation', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/drafts/generate/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/drafts/generate', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/drafts/generate', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',
@@ -178,7 +178,7 @@ describe('POST /api/admin/disputes/drafts/generate', () => {
     });
     const { POST } = await import('@/app/api/workspace/disputes/drafts/generate/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/drafts/generate', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/drafts/generate', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',

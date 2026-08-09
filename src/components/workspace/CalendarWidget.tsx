@@ -82,7 +82,7 @@ export function CalendarWidget() {
   React.useEffect(() => {
     async function fetchCalendar() {
       try {
-        const response = await fetch('/api/admin/dashboard/calendar');
+        const response = await fetch('/api/workspace/dashboard/calendar');
         if (response.ok) {
           const calendarData = await response.json();
           setData(calendarData);

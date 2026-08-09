@@ -21,7 +21,7 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Headers({ 'x-forwarded-for': '127.0.0.1' })),
 }));
 
-describe('POST /api/admin/billing payment audit trail', () => {
+describe('POST /api/workspace/billing payment audit trail', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
@@ -65,7 +65,7 @@ describe('POST /api/admin/billing payment audit trail', () => {
       .mockReturnValueOnce({ values: invoiceValues })
       .mockReturnValueOnce({ values: auditValues });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/billing', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/billing', {
       method: 'POST',
       body: JSON.stringify({
         type: 'invoice',

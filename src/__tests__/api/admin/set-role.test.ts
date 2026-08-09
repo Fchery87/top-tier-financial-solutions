@@ -12,7 +12,7 @@ vi.mock('next/headers', () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/team-role-management', () => ({ changeUserRole: changeUserRoleMock }));
 
-describe('POST /api/admin/set-role bootstrap compatibility', () => {
+describe('POST /api/workspace/set-role bootstrap compatibility', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -31,7 +31,7 @@ describe('POST /api/admin/set-role bootstrap compatibility', () => {
     });
     const { POST } = await import('@/app/api/workspace/set-role/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/set-role', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/set-role', {
       method: 'POST',
       body: JSON.stringify({ email: 'owner@example.com', role: 'super_admin' }),
     }));
@@ -49,7 +49,7 @@ describe('POST /api/admin/set-role bootstrap compatibility', () => {
     dbMock.execute.mockResolvedValueOnce({ rows: [{ count: '0' }] });
     const { POST } = await import('@/app/api/workspace/set-role/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/set-role', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/set-role', {
       method: 'POST',
       body: JSON.stringify({ email: 'other@example.com', role: 'super_admin' }),
     }));
@@ -70,7 +70,7 @@ describe('POST /api/admin/set-role bootstrap compatibility', () => {
     ];
 
     for (const payload of invalidPayloads) {
-      const response = await POST(new NextRequest('http://localhost/api/admin/set-role', {
+      const response = await POST(new NextRequest('http://localhost/api/workspace/set-role', {
         method: 'POST',
         body: JSON.stringify(payload),
         headers: { 'content-type': 'application/json' },

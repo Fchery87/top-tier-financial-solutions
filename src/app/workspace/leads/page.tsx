@@ -44,7 +44,7 @@ export default function LeadsPage() {
     setLoading(true);
     try {
       const statusParam = selectedStatus !== 'all' ? `&status=${selectedStatus}` : '';
-      const response = await fetch(`/api/admin/leads?page=1&limit=100${statusParam}`);
+      const response = await fetch(`/api/workspace/leads?page=1&limit=100${statusParam}`);
       if (response.ok) {
         const data = await response.json();
         setLeads(data.items);
@@ -63,7 +63,7 @@ export default function LeadsPage() {
   const handleStatusUpdate = async (id: string, newStatus: ConsultationStatus) => {
     setUpdating(true);
     try {
-      const response = await fetch(`/api/admin/leads/${id}`, {
+      const response = await fetch(`/api/workspace/leads/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -86,7 +86,7 @@ export default function LeadsPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/leads/${pendingDeleteId}`, {
+      const response = await fetch(`/api/workspace/leads/${pendingDeleteId}`, {
         method: 'DELETE',
       });
       if (response.ok) {

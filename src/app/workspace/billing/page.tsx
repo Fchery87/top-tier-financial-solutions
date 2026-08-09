@@ -51,7 +51,7 @@ export default function BillingPage() {
 
   const fetchInvoices = async () => {
     try {
-      const response = await fetch('/api/admin/billing?type=invoices&limit=100');
+      const response = await fetch('/api/workspace/billing?type=invoices&limit=100');
       if (response.ok) {
         const data = await response.json();
         setInvoices(data.items);
@@ -64,7 +64,7 @@ export default function BillingPage() {
 
   const fetchFeeConfigs = async () => {
     try {
-      const response = await fetch('/api/admin/billing?type=fee_configs&limit=100');
+      const response = await fetch('/api/workspace/billing?type=fee_configs&limit=100');
       if (response.ok) {
         const data = await response.json();
         setFeeConfigs(data.items);

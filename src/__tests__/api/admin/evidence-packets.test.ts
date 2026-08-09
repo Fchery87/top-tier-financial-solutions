@@ -16,7 +16,7 @@ vi.mock('@/lib/admin-session', () => ({
   requireCapability: requireCapabilityMock,
 }));
 
-describe('POST /api/admin/evidence-packets', () => {
+describe('POST /api/workspace/evidence-packets', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -41,7 +41,7 @@ describe('POST /api/admin/evidence-packets', () => {
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ id: 'doc-1', userId: 'user-1', fileUrl: 'client-documents/user-1/evidence/doc-1.pdf' }]) }) });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue(created) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/evidence-packets', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/evidence-packets', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -73,7 +73,7 @@ describe('POST /api/admin/evidence-packets', () => {
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', userId: 'user-1' }]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ id: 'doc-1', userId: 'user-1', fileUrl: 'client-documents/user-1/evidence/doc-1.pdf' }]) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/evidence-packets', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/evidence-packets', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -112,7 +112,7 @@ describe('POST /api/admin/evidence-packets', () => {
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ id: 'doc-1', userId: 'user-1', fileUrl: 'client-documents/user-1/evidence/doc-1.pdf' }]) }) });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue(created) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/evidence-packets', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/evidence-packets', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -145,7 +145,7 @@ describe('POST /api/admin/evidence-packets', () => {
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', userId: 'user-1' }]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ id: 'doc-2', userId: 'user-2', fileUrl: 'client-documents/user-2/evidence/doc-2.pdf' }]) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/evidence-packets', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/evidence-packets', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -184,7 +184,7 @@ describe('POST /api/admin/evidence-packets', () => {
     });
 
     const response = await GET(new NextRequest(
-      'http://localhost/api/admin/evidence-packets?client_id=client-1&dispute_id=dispute-1',
+      'http://localhost/api/workspace/evidence-packets?client_id=client-1&dispute_id=dispute-1',
     ));
 
     expect(response.status).toBe(200);

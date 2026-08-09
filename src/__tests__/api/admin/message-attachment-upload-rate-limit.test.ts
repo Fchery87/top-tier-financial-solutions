@@ -17,7 +17,7 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => ({
   uploadLimiter: { limit: uploadLimiterLimitMock },
 }));
 
-describe('POST /api/admin/messages/attachments', () => {
+describe('POST /api/workspace/messages/attachments', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     uploadLimiterLimitMock.mockResolvedValue({
@@ -30,7 +30,7 @@ describe('POST /api/admin/messages/attachments', () => {
 
   it('rejects an exhausted upload limit before authentication and storage work', async () => {
     const { POST } = await import('@/app/api/workspace/messages/attachments/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/messages/attachments', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/messages/attachments', {
       method: 'POST',
       headers: { 'x-forwarded-for': '203.0.113.21' },
     }));

@@ -52,7 +52,7 @@ vi.mock('@/lib/db-encryption', () => ({
   decryptClientData: (data: unknown) => data,
 }));
 
-describe('POST /api/admin/disputes policy traceability', () => {
+describe('POST /api/workspace/disputes policy traceability', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
@@ -112,7 +112,7 @@ describe('POST /api/admin/disputes policy traceability', () => {
       violations: [],
     };
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',
@@ -145,7 +145,7 @@ describe('POST /api/admin/disputes policy traceability', () => {
   it('fails closed before generating a letter when approved policy is missing', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes', {
       method: 'POST',
       body: JSON.stringify({
         clientId: 'client-1',

@@ -20,7 +20,7 @@ export default function AuditReportPage() {
 
     const loadClientName = async () => {
       try {
-        const res = await fetch(`/api/admin/clients/${clientId}`);
+        const res = await fetch(`/api/workspace/clients/${clientId}`);
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
@@ -64,7 +64,7 @@ export default function AuditReportPage() {
     setLoading(true);
     setError(null);
     if (iframeRef.current) {
-      iframeRef.current.src = `/api/admin/clients/${clientId}/audit-report?type=${reportType}&t=${Date.now()}`;
+      iframeRef.current.src = `/api/workspace/clients/${clientId}/audit-report?type=${reportType}&t=${Date.now()}`;
     }
   };
 
@@ -73,7 +73,7 @@ export default function AuditReportPage() {
     setReportType(newType);
     setLoading(true);
     if (iframeRef.current) {
-      iframeRef.current.src = `/api/admin/clients/${clientId}/audit-report?type=${newType}`;
+      iframeRef.current.src = `/api/workspace/clients/${clientId}/audit-report?type=${newType}`;
     }
   };
 
@@ -183,7 +183,7 @@ export default function AuditReportPage() {
           <div className="relative" style={{ minHeight: '800px' }}>
             <iframe
               ref={iframeRef}
-              src={`/api/admin/clients/${clientId}/audit-report?type=${reportType}`}
+              src={`/api/workspace/clients/${clientId}/audit-report?type=${reportType}`}
               className="w-full border-0"
               style={{ height: 'calc(100vh - 180px)', minHeight: '800px' }}
               onLoad={handleIframeLoad}

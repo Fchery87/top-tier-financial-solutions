@@ -30,7 +30,7 @@ export default function DisclaimersPage() {
   const fetchDisclaimers = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/disclaimers?page=1&limit=100');
+      const response = await fetch('/api/workspace/disclaimers?page=1&limit=100');
       if (response.ok) {
         const data = await response.json();
         setDisclaimers(data.items);
@@ -72,8 +72,8 @@ export default function DisclaimersPage() {
     setSaving(true);
     try {
       const url = editingDisclaimer 
-        ? `/api/admin/disclaimers/${editingDisclaimer.id}`
-        : '/api/admin/disclaimers';
+        ? `/api/workspace/disclaimers/${editingDisclaimer.id}`
+        : '/api/workspace/disclaimers';
       
       const response = await fetch(url, {
         method: editingDisclaimer ? 'PUT' : 'POST',
@@ -94,7 +94,7 @@ export default function DisclaimersPage() {
 
   const handleToggleActive = async (disclaimer: Disclaimer) => {
     try {
-      const response = await fetch(`/api/admin/disclaimers/${disclaimer.id}`, {
+      const response = await fetch(`/api/workspace/disclaimers/${disclaimer.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !disclaimer.is_active }),
@@ -115,7 +115,7 @@ export default function DisclaimersPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/disclaimers/${pendingDeleteId}`, {
+      const response = await fetch(`/api/workspace/disclaimers/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 

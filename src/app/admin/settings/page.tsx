@@ -64,7 +64,7 @@ export default function SettingsPage() {
 
   const fetchLLMConfig = React.useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/settings/llm');
+      const response = await fetch('/api/workspace/settings/llm');
       if (response.ok) {
         const data = await response.json();
         setLlmConfig(data.config);
@@ -78,7 +78,7 @@ export default function SettingsPage() {
 
   const fetchAllSettings = React.useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/settings');
+      const response = await fetch('/api/workspace/settings');
       if (response.ok) {
         const data = await response.json();
         setAllSettings(data.settings);
@@ -138,7 +138,7 @@ export default function SettingsPage() {
           }
         });
 
-        const response = await fetch('/api/admin/settings/llm', {
+        const response = await fetch('/api/workspace/settings/llm', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updates),
@@ -151,7 +151,7 @@ export default function SettingsPage() {
 
       if (dashboardHasChanges) {
         const requests = [
-          fetch('/api/admin/settings', {
+          fetch('/api/workspace/settings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -163,7 +163,7 @@ export default function SettingsPage() {
               isSecret: false,
             }),
           }),
-          fetch('/api/admin/settings', {
+          fetch('/api/workspace/settings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -203,7 +203,7 @@ export default function SettingsPage() {
 
     try {
       if (hasChanges) {
-        const response = await fetch('/api/admin/settings/llm', {
+        const response = await fetch('/api/workspace/settings/llm', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(editedConfig),
@@ -218,7 +218,7 @@ export default function SettingsPage() {
         setHasChanges(false);
       }
 
-      const response = await fetch('/api/admin/settings/llm/test', {
+      const response = await fetch('/api/workspace/settings/llm/test', {
         method: 'POST',
       });
 

@@ -94,7 +94,7 @@ export default function TasksPage() {
       if (selectedPriority !== 'all') params.append('priority', selectedPriority);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await fetch(`/api/admin/tasks?${params}`);
+      const response = await fetch(`/api/workspace/tasks?${params}`);
       if (response.ok) {
         const data = await response.json();
         setTasks(data.items);
@@ -109,7 +109,7 @@ export default function TasksPage() {
 
   const fetchClients = React.useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/clients?limit=100');
+      const response = await fetch('/api/workspace/clients?limit=100');
       if (response.ok) {
         const data = await response.json();
         setClients(data.items);
@@ -134,7 +134,7 @@ export default function TasksPage() {
   const confirmDeleteTask = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/tasks/${pendingDeleteId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/workspace/tasks/${pendingDeleteId}`, { method: 'DELETE' });
       if (response.ok) {
         fetchTasks();
       }
@@ -147,7 +147,7 @@ export default function TasksPage() {
 
   const handleStatusChange = async (task: Task, newStatus: string) => {
     try {
-      await fetch(`/api/admin/tasks/${task.id}`, {
+      await fetch(`/api/workspace/tasks/${task.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),

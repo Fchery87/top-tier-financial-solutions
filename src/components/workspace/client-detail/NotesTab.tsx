@@ -27,7 +27,7 @@ export function NotesTab({ clientId, notes, onNotesChanged }: NotesTabProps) {
     if (!newNote.trim()) return;
     setAddingNote(true);
     try {
-      const response = await fetch('/api/admin/notes', {
+      const response = await fetch('/api/workspace/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ client_id: clientId, content: newNote.trim() }),
@@ -46,7 +46,7 @@ export function NotesTab({ clientId, notes, onNotesChanged }: NotesTabProps) {
   const confirmDeleteNote = async () => {
     if (!pendingDeleteNoteId) return;
     try {
-      await fetch(`/api/admin/notes/${pendingDeleteNoteId}`, { method: 'DELETE' });
+      await fetch(`/api/workspace/notes/${pendingDeleteNoteId}`, { method: 'DELETE' });
       onNotesChanged();
     } catch (error) {
       console.error('Error deleting note:', error);

@@ -91,7 +91,7 @@ export function StepConfigure() {
       negativeItemId: selectedCfpbItemIds[0],
     });
 
-    void fetch(`/api/admin/disputes/${encodeURIComponent(disputeId)}/cfpb-eligibility?${query.toString()}`, { signal: controller.signal })
+    void fetch(`/api/workspace/disputes/${encodeURIComponent(disputeId)}/cfpb-eligibility?${query.toString()}`, { signal: controller.signal })
       .then(async response => {
         const value: unknown = await response.json().catch(() => ({}));
         const preview = parseCfpbEligibilityPreview(value);

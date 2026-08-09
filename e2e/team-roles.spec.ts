@@ -26,7 +26,7 @@ test.describe('super admin team controls', () => {
   test('super admin can change a role and sees the activity row while retaining final-owner protection', async ({ page }) => {
     let currentRole = 'staff';
     let patchCount = 0;
-    await page.route('**/api/admin/team', async (route) => {
+    await page.route('**/api/workspace/team', async (route) => {
       if (route.request().method() === 'PATCH') {
         patchCount += 1;
         currentRole = 'admin';

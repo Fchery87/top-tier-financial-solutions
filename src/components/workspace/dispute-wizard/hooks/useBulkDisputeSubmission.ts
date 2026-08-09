@@ -33,7 +33,7 @@ export function useBulkDisputeSubmission({
       const targetRecipient = getTargetRecipient();
 
       for (const letter of generatedLetters) {
-        const response = await fetch(`/api/admin/disputes/${letter.id}`, {
+        const response = await fetch(`/api/workspace/disputes/${letter.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

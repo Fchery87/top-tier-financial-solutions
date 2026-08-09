@@ -67,7 +67,7 @@ describe('Letter Studio state routes', () => {
       .mockReturnValueOnce(query([{ id: 'library-1', name: 'Factual strategy', methodology: 'factual', targetRecipient: 'bureau' }]));
 
     const { GET } = await import('@/app/api/workspace/disputes/[id]/letter/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter', {
+    const response = await GET(new NextRequest('http://localhost/api/workspace/disputes/dispute-1/letter', {
       headers: { 'x-request-id': 'request-1' },
     }), { params: Promise.resolve({ id: 'dispute-1' }) });
     const body = await response.json();
@@ -81,7 +81,7 @@ describe('Letter Studio state routes', () => {
       kind: 'dispute_letter',
       actorUserId: 'operator-1',
       disputeId: 'dispute-1',
-      route: '/api/admin/disputes/dispute-1/letter',
+      route: '/api/workspace/disputes/dispute-1/letter',
       requestId: 'request-1',
     });
     expect(JSON.stringify(recordSensitiveReadMock.mock.calls)).not.toContain(dispute.letterContent);
@@ -92,7 +92,7 @@ describe('Letter Studio state routes', () => {
     recordSensitiveReadMock.mockRejectedValueOnce(new Error('audit unavailable'));
     const { GET } = await import('@/app/api/workspace/disputes/[id]/letter/route');
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter', {
+    const response = await GET(new NextRequest('http://localhost/api/workspace/disputes/dispute-1/letter', {
       headers: { 'x-request-id': 'request-1' },
     }), { params: Promise.resolve({ id: 'dispute-1' }) });
 
@@ -104,7 +104,7 @@ describe('Letter Studio state routes', () => {
     dbMock.select.mockReturnValueOnce(query([dispute]));
     const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/lint/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter/lint', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/dispute-1/letter/lint', {
       method: 'POST',
       body: JSON.stringify({ content: dispute.letterContent }),
     }), { params: Promise.resolve({ id: 'dispute-1' }) });
@@ -117,7 +117,7 @@ describe('Letter Studio state routes', () => {
     dbMock.select.mockReturnValueOnce(query([{ id: 'revision-1', disputeId: 'dispute-1', content: 'Earlier letter.' }]));
     const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/revisions/[revisionId]/revert/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/dispute-1/letter/revisions/revision-1/revert', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/dispute-1/letter/revisions/revision-1/revert', {
       method: 'POST', body: JSON.stringify({ expectedRevision: 2 }),
     }), { params: Promise.resolve({ id: 'dispute-1', revisionId: 'revision-1' }) });
 

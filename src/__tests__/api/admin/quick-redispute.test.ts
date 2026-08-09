@@ -32,7 +32,7 @@ function selectResult(rows: unknown[]) {
   };
 }
 
-describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
+describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1' });
@@ -53,7 +53,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
     }]) }) }) });
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
       { params: Promise.resolve({ id: 'dispute-1' }) },
     );
 
@@ -102,7 +102,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
       }]));
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
       { params: Promise.resolve({ id: 'dispute-1' }) },
     );
 
@@ -138,7 +138,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
     }]));
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
       { params: Promise.resolve({ id: 'dispute-1' }) },
     );
 

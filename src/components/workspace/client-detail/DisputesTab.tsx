@@ -49,7 +49,7 @@ export function DisputesTab({
     if (!selectedNegativeItem) return;
     setCreatingDispute(true);
     try {
-      const response = await fetch('/api/admin/disputes', {
+      const response = await fetch('/api/workspace/disputes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

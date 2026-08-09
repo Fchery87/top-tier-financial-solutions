@@ -112,7 +112,7 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
     setOperationError(null);
 
     try {
-      const response = await fetch('/api/admin/team');
+      const response = await fetch('/api/workspace/team');
       if (response.status === 403) {
         setState({ kind: 'forbidden' });
         return;
@@ -145,7 +145,7 @@ export function TeamManager({ currentUserId }: TeamManagerProps) {
     setUpdatingMemberId(member.id);
     setOperationError(null);
     try {
-      const response = await fetch('/api/admin/team', {
+      const response = await fetch('/api/workspace/team', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: member.id, role }),

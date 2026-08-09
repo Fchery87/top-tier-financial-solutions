@@ -6,7 +6,7 @@ test.use({ storageState: authState('staff') });
 
 test.describe('workspace command-palette record search', () => {
   test('searches clients and disputes and navigates to the selected record', async ({ page }) => {
-    await page.route('**/api/admin/search**', async (route) => {
+    await page.route('**/api/workspace/search**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -31,7 +31,7 @@ test.describe('workspace command-palette record search', () => {
         }),
       });
     });
-    await page.route('**/api/admin/clients/e2e-client-record', async (route) => {
+    await page.route('**/api/workspace/clients/e2e-client-record', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

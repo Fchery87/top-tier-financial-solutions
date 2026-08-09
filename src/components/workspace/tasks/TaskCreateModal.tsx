@@ -82,7 +82,7 @@ export function TaskCreateModal({ open, editingTask, clients, onClose, onSaved }
     setSaving(true);
     try {
       const method = editingTask ? 'PUT' : 'POST';
-      const url = editingTask ? `/api/admin/tasks/${editingTask.id}` : '/api/admin/tasks';
+      const url = editingTask ? `/api/workspace/tasks/${editingTask.id}` : '/api/workspace/tasks';
       const body = editingTask
         ? {
             title: form.title,

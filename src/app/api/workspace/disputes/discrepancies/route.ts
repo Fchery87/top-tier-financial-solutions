@@ -23,7 +23,7 @@ export interface DiscrepancyWithRecommendation {
   legalBasis: string;
 }
 
-// GET /api/admin/disputes/discrepancies?clientId=xxx
+// GET /api/workspace/disputes/discrepancies?clientId=xxx
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin/disputes/discrepancies/resolve
+// POST /api/workspace/disputes/discrepancies/resolve
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {

@@ -75,7 +75,7 @@ export default function MessagesPage() {
   const fetchThreads = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/messages?limit=100');
+      const response = await fetch('/api/workspace/messages?limit=100');
       if (response.ok) {
         const data = await response.json();
         setThreads(asArray<MessageThread>(data.items));
@@ -91,7 +91,7 @@ export default function MessagesPage() {
   const fetchMessages = async (threadId: string) => {
     setLoadingMessages(true);
     try {
-      const response = await fetch(`/api/admin/messages?thread_id=${threadId}`);
+      const response = await fetch(`/api/workspace/messages?thread_id=${threadId}`);
       if (response.ok) {
         const data = await response.json();
         setThreadMessages(asArray<Message>(data.messages));
@@ -108,7 +108,7 @@ export default function MessagesPage() {
   const fetchClients = async (search: string) => {
     setLoadingClients(true);
     try {
-      const response = await fetch(`/api/admin/clients?search=${encodeURIComponent(search)}&limit=10`);
+      const response = await fetch(`/api/workspace/clients?search=${encodeURIComponent(search)}&limit=10`);
       if (response.ok) {
         const data = await response.json();
         setClients(asArray<Client>(data.items));
@@ -156,7 +156,7 @@ export default function MessagesPage() {
 
     setSending(true);
     try {
-      const response = await fetch('/api/admin/messages', {
+      const response = await fetch('/api/workspace/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,7 +181,7 @@ export default function MessagesPage() {
 
     setSending(true);
     try {
-      const response = await fetch('/api/admin/messages', {
+      const response = await fetch('/api/workspace/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

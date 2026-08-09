@@ -51,7 +51,7 @@ describe('administration activity audit', () => {
     const content = 'Full generated letter content must never enter the audit log.';
     const promptContext = 'Private prompting strategy must never enter the audit log.';
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/letter-library', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/letter-library', {
       method: 'POST',
       body: JSON.stringify({
         name: 'Round one bureau dispute',
@@ -81,7 +81,7 @@ describe('administration activity audit', () => {
     const { PUT } = await import('@/app/api/workspace/settings/route');
     const value = 'secret configuration value';
 
-    const response = await PUT(new NextRequest('http://localhost/api/admin/settings', {
+    const response = await PUT(new NextRequest('http://localhost/api/workspace/settings', {
       method: 'PUT',
       body: JSON.stringify({ key: 'integrations.secret', value, type: 'string', isSecret: true }),
     }));
@@ -104,7 +104,7 @@ describe('administration activity audit', () => {
     const { PUT } = await import('@/app/api/workspace/settings/llm/route');
     const apiKey = 'private-api-key';
 
-    const response = await PUT(new NextRequest('http://localhost/api/admin/settings/llm', {
+    const response = await PUT(new NextRequest('http://localhost/api/workspace/settings/llm', {
       method: 'PUT',
       body: JSON.stringify({ provider: 'openai', apiKey }),
     }));
@@ -126,7 +126,7 @@ describe('administration activity audit', () => {
   it('writes a transactional automation-run audit row', async () => {
     const { POST } = await import('@/app/api/workspace/automation/dispute-escalations/run/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/automation/dispute-escalations/run', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/automation/dispute-escalations/run', {
       method: 'POST',
       body: JSON.stringify({ dryRun: true }),
     }));

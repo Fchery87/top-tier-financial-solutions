@@ -14,7 +14,7 @@ describe('ClientsPage null name safety', () => {
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
 
-      if (url.includes('/api/admin/clients')) {
+      if (url.includes('/api/workspace/clients')) {
         return {
           ok: true,
           json: async () => ({
@@ -39,7 +39,7 @@ describe('ClientsPage null name safety', () => {
         } as Response;
       }
 
-      if (url.includes('/api/admin/leads')) {
+      if (url.includes('/api/workspace/leads')) {
         return {
           ok: true,
           json: async () => ({ items: [] }),

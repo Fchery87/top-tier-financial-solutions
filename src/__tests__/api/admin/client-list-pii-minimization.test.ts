@@ -42,7 +42,7 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Headers()),
 }));
 
-describe('GET /api/admin/clients PII minimization', () => {
+describe('GET /api/workspace/clients PII minimization', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     authMock.api.getSession.mockResolvedValue({ user: { id: 'admin-1', email: 'admin@example.com' } });
@@ -67,7 +67,7 @@ describe('GET /api/admin/clients PII minimization', () => {
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 1 }]) }) });
 
     const { GET } = await import('@/app/api/workspace/clients/route');
-    const response = await GET(new NextRequest('http://localhost/api/admin/clients'));
+    const response = await GET(new NextRequest('http://localhost/api/workspace/clients'));
     const body = await response.json();
 
     expect(response.status).toBe(200);

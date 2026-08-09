@@ -55,7 +55,7 @@ export function useDisputeAutoSelection({
     setAutoSelecting(true);
     setAutoSelectSummary('');
     try {
-      const response = await fetch('/api/admin/disputes/auto-select', {
+      const response = await fetch('/api/workspace/disputes/auto-select', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId, round: getDisputeRound() }),

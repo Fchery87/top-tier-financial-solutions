@@ -111,8 +111,8 @@ export default function DisputesPage() {
       if (roundFilter !== null) params.append('round', String(roundFilter));
       if (outcomeFilter) params.append('outcome', outcomeFilter);
       const [response, responseQueueResponse] = await Promise.all([
-        fetch(`/api/admin/disputes?${params.toString()}`),
-        fetch('/api/admin/disputes?awaiting_response=true'),
+        fetch(`/api/workspace/disputes?${params.toString()}`),
+        fetch('/api/workspace/disputes?awaiting_response=true'),
       ]);
       if (response.ok) {
         const data = await response.json();
@@ -147,7 +147,7 @@ export default function DisputesPage() {
   const handleQuickRedispute = async (dispute: Dispute) => {
     setQuickEscalatingId(dispute.id);
     try {
-      const resp = await fetch(`/api/admin/disputes/${dispute.id}/quick-redispute`, { method: 'POST' });
+      const resp = await fetch(`/api/workspace/disputes/${dispute.id}/quick-redispute`, { method: 'POST' });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         toast.error(err.error || 'Failed to create quick re-dispute');
