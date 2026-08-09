@@ -8,7 +8,8 @@
  * - negativeItems: creditorName
  */
 
-import { encrypt, decrypt } from './encryption';
+import { decrypt, encrypt, isCiphertextValue } from './encryption';
+import { logServerEvent } from '@/lib/server-logger';
 
 // List of fields that should be encrypted in each table
 export const ENCRYPTED_FIELDS = {
@@ -56,26 +57,19 @@ export type ClientEncryptionInput = Partial<ClientEncryptionFields>;
 function safeDecryptValue(value: unknown): unknown {
   if (!value) return value;
 
-  const raw = String(value);
-  const parts = raw.split(':');
-
-  // Only attempt decrypt for values that match our stored ciphertext shape:
-  // IV_HEX:ENCRYPTED_HEX where IV is 16 bytes (32 hex chars).
-  if (
-    parts.length !== 2 ||
-    parts[0].length !== 32 ||
-    !/^[0-9a-f]+$/i.test(parts[0]) ||
-    !/^[0-9a-f]+$/i.test(parts[1])
-  ) {
+  if (!isCiphertextValue(value)) {
     return value;
   }
 
   try {
-    return decrypt(raw);
-  } catch {
-    // Backward compatibility: preserve original value when decryption fails
-    // (e.g., legacy plaintext rows or data encrypted with a rotated key).
-    return value;
+    return decrypt(value);
+  } catch (error) {
+    logServerEvent({
+      level: 'error',
+      event: 'server.lib.db.encryption.decrypt.failed',
+      error,
+    });
+    return '[decryption-failed]';
   }
 }
 

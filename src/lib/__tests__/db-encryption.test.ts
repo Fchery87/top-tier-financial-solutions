@@ -18,6 +18,14 @@ describe('db-encryption safe decryption', () => {
     expect(result.lastName).toBeNull();
   });
 
+  it('returns a display-safe sentinel for ciphertext-shaped values that cannot decrypt', () => {
+    const result = decryptClientData({
+      firstName: `${'a'.repeat(32)}:${'b'.repeat(32)}`,
+    });
+
+    expect(result.firstName).toBe('[decryption-failed]');
+  });
+
   it('preserves original value when account/item/dispute decryption fails', () => {
     expect(decryptCreditAccountData({ creditorName: 'zzzz:ffff' }).creditorName).toBe('zzzz:ffff');
     expect(decryptNegativeItemData({ creditorName: 'zzzz:ffff' }).creditorName).toBe('zzzz:ffff');
@@ -37,5 +45,15 @@ describe('db-encryption safe decryption', () => {
     expect(decrypted.lastName).toBe('Doe');
     expect(decrypted.phone).toBe('555-1111');
   });
-});
 
+  it('decrypts versioned authenticated client values', () => {
+    const encrypted = encryptClientData({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      dateOfBirth: '1990-01-01',
+    });
+
+    expect(encrypted.dateOfBirth).toMatch(/^v3:test:/);
+    expect(decryptClientData(encrypted).dateOfBirth).toBe('1990-01-01');
+  });
+});
