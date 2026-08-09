@@ -1,68 +1,19 @@
-import { GoogleGenAI } from '@google/genai';
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
 import { getObsolescenceClock } from './fcra-clock';
-import { DEFAULT_LLM_MODELS, getLLMConfig, type LLMConfig } from './settings-service';
+import { getLLMConfig, type LLMConfig } from './settings-service';
 import { lintGeneratedLetter } from './letter-lint';
 import type { Selection } from './letter-library-selector';
 import { logServerEvent } from '@/lib/server-logger';
 import { renderGeneratedLetter as renderGeneratedLetterDeterministically } from './letter-rendering/render-generated-letter';
 import { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-rendering/letter-prompt-data';
+import { generateLetterDraft } from './letter-rendering/provider-adapter';
 
 export { renderGeneratedLetter } from './letter-rendering/render-generated-letter';
 export { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
 export { REASON_CODE_DESCRIPTIONS } from './letter-rendering/letter-prompt-data';
 
 export async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
-  switch (config.provider) {
-    case 'google': {
-      const genAI = new GoogleGenAI({ apiKey: config.apiKey! });
-      const response = await genAI.models.generateContent({
-        model: config.model || DEFAULT_LLM_MODELS.google,
-        contents: prompt,
-        config: {
-          temperature: config.temperature || 0.1,
-          maxOutputTokens: config.maxTokens || 4096,
-          responseMimeType: 'application/json',
-        },
-      });
-      return typeof response.text === 'string' ? response.text : '';
-    }
-    case 'openai': {
-      const openai = new OpenAI({ apiKey: config.apiKey });
-      const response = await openai.chat.completions.create({
-        model: config.model || DEFAULT_LLM_MODELS.openai,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: config.temperature || 0.1,
-        max_tokens: config.maxTokens || 4096,
-        response_format: { type: 'json_object' },
-      });
-      return response.choices[0]?.message?.content || '';
-    }
-    case 'anthropic': {
-      const anthropic = new Anthropic({ apiKey: config.apiKey });
-      const response = await anthropic.messages.create({
-        model: config.model || DEFAULT_LLM_MODELS.anthropic,
-        max_tokens: config.maxTokens || 4096,
-        messages: [{ role: 'user', content: prompt }],
-      });
-      const textBlock = response.content.find(block => block.type === 'text');
-      return textBlock?.type === 'text' ? textBlock.text : '';
-    }
-    case 'zhipu': {
-      const openai = new OpenAI({ apiKey: config.apiKey, baseURL: config.apiEndpoint || 'https://api.z.ai/api/paas/v4' });
-      const response = await openai.chat.completions.create({
-        model: config.model || DEFAULT_LLM_MODELS.zhipu,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: config.temperature || 0.1,
-        max_tokens: config.maxTokens || 4096,
-      });
-      return response.choices[0]?.message?.content || '';
-    }
-    default:
-      throw new Error(`Unsupported LLM provider: ${config.provider}`);
-  }
+  return generateLetterDraft({ prompt, config });
 }
 
 interface ClientInfo {
