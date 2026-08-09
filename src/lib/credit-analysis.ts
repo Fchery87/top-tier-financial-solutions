@@ -33,6 +33,7 @@ import { buildCreditAccountDerivedFields } from './credit-account-ingest';
 import { getAccountPresence } from './credit-account-bureau-presence';
 import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
 import { buildAccountBalanceDiscrepancies } from './credit-analysis-discrepancies';
+import { logServerEvent } from '@/lib/server-logger';
 
 function determineParserReviewStatus(params: {
   sourceConfidence?: string;
@@ -489,7 +490,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       .where(eq(creditReports.id, reportId));
 
   } catch (error) {
-    console.error('Error analyzing credit report:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.credit.analysis.error', error: error });
     
     // Update status to failed
     await db

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 /**
  * PII Encryption Service
@@ -53,7 +54,7 @@ export function encrypt(plaintext: string | null | undefined): string | null {
     // Return IV + encrypted data so we can decrypt later
     return `${iv.toString(CIPHER_ENCODING)}:${encrypted}`;
   } catch (error) {
-    console.error('[Encryption Error]', error);
+    logServerEvent({ level: 'error', event: 'server.lib.encryption.error', error: error });
     throw error;
   }
 }
@@ -71,7 +72,7 @@ export function decrypt(ciphertext: string | null | undefined): string | null {
     const parts = ciphertext.split(':');
 
     if (parts.length !== 2) {
-      console.error('[Encryption Error] Invalid ciphertext format');
+      logServerEvent({ level: 'error', event: 'server.lib.encryption.error' });
       return null;
     }
 
@@ -84,7 +85,7 @@ export function decrypt(ciphertext: string | null | undefined): string | null {
 
     return decrypted;
   } catch (error) {
-    console.error('[Decryption Error]', error);
+    logServerEvent({ level: 'error', event: 'server.lib.encryption.error', error: error });
     throw error;
   }
 }
