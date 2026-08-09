@@ -111,3 +111,7 @@ def test_content_schema_module_exposes_admin_and_public_content_contracts() -> N
             "PublicFAQResponse",
         )
     )
+
+
+def test_public_content_router_has_its_own_domain_module() -> None:
+    assert importlib.util.find_spec("api.routers.content_public") is not None
