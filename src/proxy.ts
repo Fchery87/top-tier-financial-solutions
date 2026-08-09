@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
-  const response = NextResponse.next();
+  const requestId = crypto.randomUUID();
+  const forwardedHeaders = new Headers(request.headers);
+  forwardedHeaders.set('x-request-id', requestId);
+  const response = NextResponse.next({
+    request: { headers: forwardedHeaders },
+  });
+  response.headers.set('x-request-id', requestId);
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Check if this is the audit-report API route (needs to be embedded in iframe)
@@ -68,10 +74,12 @@ export function proxy(request: NextRequest) {
     host &&
     !host.includes('localhost')
   ) {
-    return NextResponse.redirect(
+    const redirect = NextResponse.redirect(
       `https://${host}${request.nextUrl.pathname}${request.nextUrl.search}`,
       301
     );
+    redirect.headers.set('x-request-id', requestId);
+    return redirect;
   }
 
   return response;
