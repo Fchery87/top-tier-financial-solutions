@@ -7,7 +7,12 @@ const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
 
 vi.mock('@/db/client', () => ({ db: dbMock }));
 
-import { clearSettingsCache, getLLMConfig, updateLLMConfig } from '@/lib/settings-service';
+import {
+  clearSettingsCache,
+  getLLMConfig,
+  type SettingsMutationExecutor,
+  updateLLMConfig,
+} from '@/lib/settings-service';
 
 describe('LLM API key storage', () => {
   beforeEach(() => {
@@ -57,16 +62,34 @@ function createSettingsExecutor({
   existingRows,
   valuesMock,
 }: {
-  existingRows: unknown[];
-  valuesMock: ReturnType<typeof vi.fn>;
-}) {
+  existingRows: Array<{ description: string | null }>;
+  valuesMock: (values: InsertedSetting) => unknown;
+}): SettingsMutationExecutor {
   return {
-    select: vi.fn(() => createSelectChain(vi.fn().mockResolvedValue(existingRows))),
-    insert: vi.fn(() => ({ values: valuesMock })),
-    update: vi.fn(),
-    delete: vi.fn(),
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => existingRows,
+        }),
+      }),
+    }),
+    insert: () => ({
+      values: async (values) => {
+        valuesMock(values);
+      },
+    }),
+    update: () => ({
+      set: () => ({
+        where: async () => undefined,
+      }),
+    }),
+    delete: () => ({
+      where: async () => undefined,
+    }),
   };
 }
+
+type InsertedSetting = Parameters<ReturnType<SettingsMutationExecutor['insert']>['values']>[0];
 
 function createSelectChain(limitMock: ReturnType<typeof vi.fn>) {
   return {

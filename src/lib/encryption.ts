@@ -102,6 +102,11 @@ export function generateEncryptionKey(): string {
   return crypto.randomBytes(32).toString(HEX_ENCODING);
 }
 
+/** Returns the configured key ID used for newly encrypted values. */
+export function getActiveEncryptionKeyId(): string {
+  return getEncryptionKeyring().activeKeyId;
+}
+
 export function encryptObject(
   object: Record<string, unknown>,
   fieldsToEncrypt: readonly string[],

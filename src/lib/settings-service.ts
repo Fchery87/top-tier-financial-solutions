@@ -7,11 +7,33 @@
 
 import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm';
 import { decrypt, encrypt, isCiphertextValue } from '@/lib/encryption';
 
 type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
-export type SettingsMutationExecutor = Pick<typeof db, 'delete' | 'insert' | 'select' | 'update'>;
+type SettingMutationRow = Pick<typeof systemSettings.$inferSelect, 'description'>;
+type SettingsMutationValues = Partial<typeof systemSettings.$inferInsert>;
+
+export type SettingsMutationExecutor = {
+  select(): {
+    from(table: typeof systemSettings): {
+      where(condition: SQL): {
+        limit(limit: number): Promise<SettingMutationRow[]>;
+      };
+    };
+  };
+  insert(table: typeof systemSettings): {
+    values(values: typeof systemSettings.$inferInsert): Promise<unknown>;
+  };
+  update(table: typeof systemSettings): {
+    set(values: SettingsMutationValues): {
+      where(condition: SQL): Promise<unknown>;
+    };
+  };
+  delete(table: typeof systemSettings): {
+    where(condition: SQL): Promise<unknown>;
+  };
+};
 
 export const DEFAULT_LLM_MODELS = {
   google: 'gemini-2.5-flash',
