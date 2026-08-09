@@ -507,7 +507,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating client:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
   }
 }
@@ -527,7 +527,7 @@ export async function DELETE(
     await db.delete(clients).where(eq(clients.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting client:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
   }
 }

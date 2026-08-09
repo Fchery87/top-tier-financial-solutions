@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { consultationRequests } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { desc, count, eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(request: NextRequest) {
   const user = await requireCapability('leads:read');
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching leads:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.leads.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 });
   }
 }

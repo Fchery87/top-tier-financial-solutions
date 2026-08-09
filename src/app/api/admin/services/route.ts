@@ -4,6 +4,7 @@ import { services } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { desc, count } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(request: NextRequest) {
   const user = await requireCapability('content:read');
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching services:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.services.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 });
   }
 }
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       updated_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating service:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.services.error', error: error });
     return NextResponse.json({ error: 'Failed to create service' }, { status: 500 });
   }
 }

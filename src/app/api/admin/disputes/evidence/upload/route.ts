@@ -7,6 +7,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { uploadLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { uploadToR2 } from '@/lib/r2-storage';
+import { logServerEvent } from '@/lib/server-logger';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -149,7 +150,7 @@ async function postHandler(request: NextRequest) {
       ...(documents.length === 1 ? documents[0] : {}),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading dispute evidence:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.evidence.upload.error', error: error });
     return NextResponse.json({ error: 'Failed to upload evidence documents' }, { status: 500 });
   }
 }

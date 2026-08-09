@@ -11,6 +11,7 @@ import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
 import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
 import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
+import { logServerEvent } from '@/lib/server-logger';
 
 type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
 
@@ -420,7 +421,7 @@ export async function POST(request: NextRequest) {
       library_selection: selection,
     });
   } catch (error) {
-    console.error('Error generating dispute letter:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.generate.letter.error', error: error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate letter' },
       { status: 500 }

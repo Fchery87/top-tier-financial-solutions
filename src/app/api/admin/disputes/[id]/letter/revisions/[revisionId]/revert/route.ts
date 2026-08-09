@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { disputeLetterRevisions } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { saveDisputeLetter } from '@/lib/dispute-letter-workflow';
+import { logServerEvent } from '@/lib/server-logger';
 
 interface RouteContext {
   params: Promise<{ id: string; revisionId: string }>;
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (result.kind === 'warnings') return NextResponse.json({ error: 'needs_acknowledgement', ...result }, { status: 409 });
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error reverting dispute letter revision:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.letter.revisions.revisionid.revert.error', error: error });
     return NextResponse.json({ error: 'Failed to revert dispute letter' }, { status: 500 });
   }
 }

@@ -7,6 +7,7 @@ import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
 import { evaluateBillingReadiness } from '@/lib/billing-readiness';
 import { requireCapability } from '@/lib/admin-session';
 import { formatClientDisplayIdentity } from '@/lib/client-display-identity';
+import { logServerEvent } from '@/lib/server-logger';
 
 // Helper to generate invoice number
 function generateInvoiceNumber(): string {
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error fetching billing data:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.billing.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch billing data' }, { status: 500 });
   }
 }
@@ -340,7 +341,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error creating billing record:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.billing.error', error: error });
     return NextResponse.json({ error: 'Failed to create billing record' }, { status: 500 });
   }
 }

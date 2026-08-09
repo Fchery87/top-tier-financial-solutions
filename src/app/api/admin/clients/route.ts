@@ -8,6 +8,7 @@ import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
 import { encryptClientData, decryptClientData } from '@/lib/db-encryption';
 import { randomUUID } from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 type EncryptedClientPayload = {
   firstName: string;
@@ -137,7 +138,7 @@ async function getHandler(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching clients:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
   }
 }
@@ -229,7 +230,7 @@ async function postHandler(request: NextRequest) {
       });
     } catch (emailError) {
       // Log but don't fail the request
-      console.error('Error sending welcome email:', emailError);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.error', error: emailError });
     }
 
     return NextResponse.json({
@@ -246,7 +247,7 @@ async function postHandler(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating client:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.error', error: error });
     return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
   }
 }

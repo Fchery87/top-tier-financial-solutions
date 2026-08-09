@@ -7,6 +7,7 @@ import { headers } from 'next/headers';
 import { uploadToR2, getSignedDownloadUrl, deleteFromR2 } from '@/lib/r2-storage';
 import { uploadLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
+import { logServerEvent } from '@/lib/server-logger';
 
 // POST - Upload attachment to a message
 async function postHandler(request: NextRequest) {
@@ -73,7 +74,7 @@ async function postHandler(request: NextRequest) {
       message: 'Attachment uploaded successfully',
     }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading attachment:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.messages.attachments.error', error: error });
     return NextResponse.json({ error: 'Failed to upload attachment' }, { status: 500 });
   }
 }
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
       download_url: downloadUrl,
     });
   } catch (error) {
-    console.error('Error getting attachment URL:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.messages.attachments.error', error: error });
     return NextResponse.json({ error: 'Failed to get attachment URL' }, { status: 500 });
   }
 }
@@ -152,7 +153,7 @@ export async function DELETE(request: NextRequest) {
     try {
       await deleteFromR2(attachment.fileUrl);
     } catch (r2Error) {
-      console.error('Error deleting from R2:', r2Error);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.messages.attachments.error', error: r2Error });
       // Continue with database deletion even if R2 delete fails
     }
 
@@ -161,7 +162,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ message: 'Attachment deleted successfully' });
   } catch (error) {
-    console.error('Error deleting attachment:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.messages.attachments.error', error: error });
     return NextResponse.json({ error: 'Failed to delete attachment' }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { eq, desc, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { DISCLOSURE_TEXTS, REQUIRED_DISCLOSURES_NY } from '@/lib/service-agreement-template';
+import { logServerEvent } from '@/lib/server-logger';
 
 // GET - List agreement templates or client agreements
 export async function GET(request: NextRequest) {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error fetching agreements:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.agreements.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch agreements' }, { status: 500 });
   }
 }
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error creating agreement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.agreements.error', error: error });
     return NextResponse.json({ error: 'Failed to create agreement' }, { status: 500 });
   }
 }

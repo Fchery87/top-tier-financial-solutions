@@ -3,6 +3,7 @@ import { getLLMConfig, updateLLMConfig, clearSettingsCache, type LLMConfig } fro
 import { db } from '@/db/client';
 import { requireCapability } from '@/lib/admin-session';
 import { recordAdminActivity } from '@/lib/admin-activity';
+import { logServerEvent } from '@/lib/server-logger';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -36,7 +37,7 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json({ config: response });
   } catch (error) {
-    console.error('Error fetching LLM config:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.llm.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch LLM configuration' }, { status: 500 });
   }
 }
@@ -101,7 +102,7 @@ export async function PUT(request: NextRequest) {
       config: await getLLMConfig(),
     });
   } catch (error) {
-    console.error('Error updating LLM config:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.llm.error', error: error });
     return NextResponse.json({ error: 'Failed to update LLM configuration' }, { status: 500 });
   }
 }

@@ -9,6 +9,7 @@ import {
   getItemTypeConfig,
   getRecommendedMethodology,
 } from '@/lib/dispute-config-loader';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function validateAdmin() {
   const session = await auth.api.getSession({
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
       item_type_config: itemTypeConfig,
     });
   } catch (error) {
-    console.error('Error loading dispute methodologies:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.methodologies.error', error: error });
     return NextResponse.json(
       { error: 'Failed to load dispute methodologies' },
       { status: 500 }

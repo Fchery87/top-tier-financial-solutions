@@ -5,6 +5,7 @@ import { db } from '@/db/client';
 import { complianceGateChecks, disputes, servicesRenderedEvents } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
+import { logServerEvent } from '@/lib/server-logger';
 
 function formatEvent(event: typeof servicesRenderedEvents.$inferSelect) {
   return {
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(formatEvent(created), { status: 201 });
   } catch (error) {
-    console.error('Error recording services rendered event:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.services.rendered.events.error', error: error });
     return NextResponse.json({ error: 'Failed to record services rendered event' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { asc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { creditReports } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { logServerEvent } from '@/lib/server-logger';
 
 function formatPull(report: typeof creditReports.$inferSelect) {
   return {
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items: reports.map(formatPull) });
   } catch (error) {
-    console.error('Error fetching credit report pulls:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.credit.report.pulls.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch credit report pulls' }, { status: 500 });
   }
 }

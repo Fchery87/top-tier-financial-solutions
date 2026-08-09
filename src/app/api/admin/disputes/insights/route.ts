@@ -3,6 +3,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
 import { disputes, disputeOutcomes } from '@/db/schema';
 import { and, gte } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 function isMissingColumnError(error: unknown): boolean {
   const code = (error as { code?: string })?.code || (error as { cause?: { code?: string } })?.cause?.code;
@@ -276,7 +277,7 @@ export async function GET(request: NextRequest) {
       recommendations,
     });
   } catch (error) {
-    console.error('Error fetching dispute insights:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.insights.error', error: error });
     return NextResponse.json(
       { error: 'Failed to fetch dispute insights' },
       { status: 500 }

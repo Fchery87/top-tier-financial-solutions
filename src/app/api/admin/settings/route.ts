@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { deleteSetting, getSettingsByCategory, setSetting } from '@/lib/settings-service';
 import { requireCapability } from '@/lib/admin-session';
 import { recordAdminActivity } from '@/lib/admin-activity';
+import { logServerEvent } from '@/lib/server-logger';
 
 type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
 type SettingType = 'string' | 'number' | 'boolean' | 'json';
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ settings: parsedSettings });
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }
 }
@@ -124,7 +125,7 @@ export async function PUT(request: NextRequest) {
       message: `Setting "${key}" updated successfully` 
     });
   } catch (error) {
-    console.error('Error updating setting:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.error', error: error });
     return NextResponse.json({ error: 'Failed to update setting' }, { status: 500 });
   }
 }
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
       message: `Setting "${key}" created successfully` 
     });
   } catch (error) {
-    console.error('Error creating setting:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.error', error: error });
     return NextResponse.json({ error: 'Failed to create setting' }, { status: 500 });
   }
 }
@@ -220,7 +221,7 @@ export async function DELETE(request: NextRequest) {
       message: `Setting "${key}" deleted successfully` 
     });
   } catch (error) {
-    console.error('Error deleting setting:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.error', error: error });
     return NextResponse.json({ error: 'Failed to delete setting' }, { status: 500 });
   }
 }

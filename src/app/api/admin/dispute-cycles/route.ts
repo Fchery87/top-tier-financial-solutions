@@ -5,6 +5,7 @@ import { db } from '@/db/client';
 import { disputeCycles, serviceEngagements } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { evaluateDisputeCycleDraft } from '@/lib/dispute-cycle-workflow';
+import { logServerEvent } from '@/lib/server-logger';
 
 function parseJsonArray(value: string | null) {
   if (!value) return [];
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(formatCycle(created), { status: 201 });
   } catch (error) {
-    console.error('Error creating dispute cycle:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.dispute.cycles.error', error: error });
     return NextResponse.json({ error: 'Failed to create dispute cycle' }, { status: 500 });
   }
 }

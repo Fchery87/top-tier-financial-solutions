@@ -15,6 +15,7 @@ import {
 } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { count, eq, and, or, desc, isNull, lt, gte, lte } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET() {
   const user = await requireCapability('clients:read');
@@ -223,7 +224,7 @@ export async function GET() {
       recentActivity,
     });
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.stats.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { uploadToR2 } from '@/lib/r2-storage';
+import { logServerEvent } from '@/lib/server-logger';
 
 // Helper to calculate business days
 function addBusinessDays(date: Date, days: number): Date {
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
       document_url: uploadResult.key,
     });
   } catch (error) {
-    console.error('Error signing agreement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.agreements.sign.error', error: error });
     return NextResponse.json({ error: 'Failed to sign agreement' }, { status: 500 });
   }
 }

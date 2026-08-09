@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { emailTemplates } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { desc } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET() {
   const adminUser = await requireCapability('content:read');
@@ -31,7 +32,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error('Error fetching email templates:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.email.templates.error', error: error });
     return NextResponse.json(
       { error: 'Failed to fetch email templates' },
       { status: 500 }

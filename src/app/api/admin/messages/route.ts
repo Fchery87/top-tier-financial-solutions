@@ -4,6 +4,7 @@ import { messageThreads, messages, clients, user } from '@/db/schema';
 import { eq, desc, sql, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { logServerEvent } from '@/lib/server-logger';
 
 // GET - List message threads or messages in a thread
 export async function GET(request: NextRequest) {
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.messages.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
   }
 }
@@ -209,7 +210,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error sending message:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.messages.error', error: error });
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
   }
 }

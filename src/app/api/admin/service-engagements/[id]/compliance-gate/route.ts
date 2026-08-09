@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { complianceGateChecks, serviceEngagements } from '@/db/schema';
 import { buildComplianceGateStatus } from '@/lib/compliance-gate';
 import { requireCapability } from '@/lib/admin-session';
+import { logServerEvent } from '@/lib/server-logger';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -43,7 +44,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       ...buildComplianceGateStatus(records),
     });
   } catch (error) {
-    console.error('Error fetching compliance gate status:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.service.engagements.id.compliance.gate.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch compliance gate status' }, { status: 500 });
   }
 }

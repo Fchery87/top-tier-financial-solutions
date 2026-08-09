@@ -5,6 +5,7 @@ import { creditAccounts, disputeOutcomes, negativeItems } from '@/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { triageItems } from '@/lib/dispute-triage';
 import { buildCreditorStrategyInsights } from '@/lib/creditor-strategy-insights';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: NextRequest) {
   const admin = await requireCapability('disputes:write');
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
         .from(disputeOutcomes);
       insights = buildCreditorStrategyInsights(outcomeRows);
     } catch (insightError) {
-      console.error('Error loading creditor strategy history for triage:', insightError);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.triage.error', error: insightError });
     }
 
     const summary = triageItems(triageReady, round, insights);
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       ...summary,
     });
   } catch (error) {
-    console.error('Error triaging disputes:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.triage.error', error: error });
     return NextResponse.json({ error: 'Failed to triage items' }, { status: 500 });
   }
 }

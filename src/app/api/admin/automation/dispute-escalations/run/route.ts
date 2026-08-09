@@ -6,6 +6,7 @@ import {
   runDisputeEscalationAutomation,
   writeDisputeEscalationFailure,
 } from '@/lib/dispute-escalation-runner';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
@@ -28,11 +29,11 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error running manual dispute escalation automation:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.automation.dispute.escalations.run.error', error: error });
     try {
       await writeDisputeEscalationFailure(error);
     } catch (settingsError) {
-      console.error('Error writing dispute escalation failure metadata:', settingsError);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.automation.dispute.escalations.run.error', error: settingsError });
     }
     return NextResponse.json({ error: 'Failed to run dispute escalation automation' }, { status: 500 });
   }

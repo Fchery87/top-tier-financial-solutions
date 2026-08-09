@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { faqItems } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function PUT(
   request: NextRequest,
@@ -42,7 +43,7 @@ export async function PUT(
       updated_at: updated.updatedAt?.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating FAQ:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.faqs.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update FAQ' }, { status: 500 });
   }
 }
@@ -69,7 +70,7 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Error deleting FAQ:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.faqs.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete FAQ' }, { status: 500 });
   }
 }

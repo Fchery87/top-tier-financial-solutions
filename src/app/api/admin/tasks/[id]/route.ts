@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { tasks, clients, user } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(
   request: NextRequest,
@@ -68,7 +69,7 @@ export async function GET(
       assignee_name: t.assigneeName,
     });
   } catch (error) {
-    console.error('Error fetching task:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.id.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch task' }, { status: 500 });
   }
 }
@@ -115,7 +116,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, updated_at: now.toISOString() });
   } catch (error) {
-    console.error('Error updating task:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
   }
 }
@@ -135,7 +136,7 @@ export async function DELETE(
     await db.delete(tasks).where(eq(tasks.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting task:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
   }
 }

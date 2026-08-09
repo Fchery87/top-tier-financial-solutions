@@ -4,6 +4,7 @@ import { agreementTemplates, clientAgreements, disclosureAcknowledgments } from 
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { logServerEvent } from '@/lib/server-logger';
 
 // GET - Get single agreement template or client agreement
 export async function GET(
@@ -55,7 +56,7 @@ export async function GET(
       });
     }
   } catch (error) {
-    console.error('Error fetching agreement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.agreements.id.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch agreement' }, { status: 500 });
   }
 }
@@ -116,7 +117,7 @@ export async function PUT(
       return NextResponse.json({ message: 'Agreement updated successfully' });
     }
   } catch (error) {
-    console.error('Error updating agreement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.agreements.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update agreement' }, { status: 500 });
   }
 }
@@ -145,7 +146,7 @@ export async function DELETE(
       return NextResponse.json({ message: 'Agreement deleted successfully' });
     }
   } catch (error) {
-    console.error('Error deleting agreement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.agreements.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete agreement' }, { status: 500 });
   }
 }

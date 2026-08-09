@@ -362,7 +362,7 @@ export async function POST(
       },
     }, { status: 201 });
   } catch (error) {
-    console.error('Error saving audit report:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.audit.report.error', error: error });
     return NextResponse.json({ error: 'Failed to save report' }, { status: 500 });
   }
 }

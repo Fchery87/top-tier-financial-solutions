@@ -5,6 +5,7 @@ import { disputes, emailSendLog, emailAutomationRules } from '@/db/schema';
 import { and, or, gte, count, desc, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { getSetting } from '@/lib/settings-service';
 import { getEscalationHealthStatus } from '@/lib/dispute-automation';
+import { logServerEvent } from '@/lib/server-logger';
 
 const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run';
 
@@ -154,7 +155,7 @@ export async function GET(_request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('Error fetching automation stats:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.automation.error', error: error });
     return NextResponse.json(
       { error: 'Failed to fetch automation stats' },
       { status: 500 }

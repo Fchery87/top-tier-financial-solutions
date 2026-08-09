@@ -5,6 +5,7 @@ import { disputeLetterLibrary } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { isRecord, parsePayload, serializeRow } from '../route';
+import { logServerEvent } from '@/lib/server-logger';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -29,7 +30,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     if (!row) return NextResponse.json({ error: 'Letter library row not found' }, { status: 404 });
     return NextResponse.json({ template: serializeRow(row) });
   } catch (error) {
-    console.error('Error fetching letter library row:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.letter.library.id.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch letter library row' }, { status: 500 });
   }
 }
@@ -80,7 +81,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const updated = await findRow(id);
     return NextResponse.json({ template: updated ? serializeRow(updated) : null });
   } catch (error) {
-    console.error('Error updating letter library row:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.letter.library.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update letter library row' }, { status: 500 });
   }
 }
@@ -110,7 +111,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ id, is_active: false });
   } catch (error) {
-    console.error('Error deactivating letter library row:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.letter.library.id.error', error: error });
     return NextResponse.json({ error: 'Failed to deactivate letter library row' }, { status: 500 });
   }
 }

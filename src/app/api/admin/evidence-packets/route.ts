@@ -6,6 +6,7 @@ import { clientDocuments, clients, evidencePackets } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { verifyEvidencePacket } from '@/lib/dispute-evidence';
 import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
+import { logServerEvent } from '@/lib/server-logger';
 
 function parseJsonArray(value: string | null) {
   if (!value) return [];
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ packets: packets.map(formatPacket) });
   } catch (error) {
-    console.error('Error listing evidence packets:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.evidence.packets.error', error: error });
     return NextResponse.json({ error: 'Failed to list evidence packets' }, { status: 500 });
   }
 }
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(formatPacket(created), { status: 201 });
   } catch (error) {
-    console.error('Error creating evidence packet:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.evidence.packets.error', error: error });
     return NextResponse.json({ error: 'Failed to create evidence packet' }, { status: 500 });
   }
 }

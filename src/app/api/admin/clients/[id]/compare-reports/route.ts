@@ -4,6 +4,7 @@ import { clients, creditReports, negativeItems, creditAccounts, creditScoreHisto
 import { requireCapability } from '@/lib/admin-session';
 import { eq, desc } from 'drizzle-orm';
 import { compareApprovedCreditReportPulls } from '@/lib/credit-report-pull-comparison';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(
   request: NextRequest,
@@ -189,7 +190,7 @@ export async function GET(
       })),
     });
   } catch (error) {
-    console.error('Error comparing reports:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.compare.reports.error', error: error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to compare reports' },
       { status: 500 }

@@ -9,6 +9,7 @@ import {
   consolidateReasonCodes,
 } from '@/lib/ai-letter-generator';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: Request) {
   const user = await requireCapability('disputes:write');
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error analyzing items:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.analyze.items.error', error: error });
     return NextResponse.json(
       { error: 'Failed to analyze items' },
       { status: 500 }

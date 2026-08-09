@@ -3,6 +3,7 @@ import { and, count, eq, isNull, lt, lte, or } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { creditReports, disputeCycles, disputes, servicesRenderedEvents, tasks } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { logServerEvent } from '@/lib/server-logger';
 
 function firstCount(rows: { count: number }[]) {
   return Number(rows[0]?.count ?? 0);
@@ -64,7 +65,7 @@ export async function GET(_request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching operator analytics:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.operator.analytics.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch operator analytics' }, { status: 500 });
   }
 }

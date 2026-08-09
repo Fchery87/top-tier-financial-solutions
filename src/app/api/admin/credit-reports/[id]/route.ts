@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { creditReports, creditAccounts, negativeItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromR2 } from '@/lib/r2-storage';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function DELETE(
   request: NextRequest,
@@ -39,7 +40,7 @@ export async function DELETE(
     try {
       await deleteFromR2(report.fileUrl);
     } catch (r2Error) {
-      console.error('Error deleting file from R2:', r2Error);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.credit.reports.id.error', error: r2Error });
       // Continue with database deletion even if R2 delete fails
     }
 
@@ -48,7 +49,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'Credit report deleted successfully' });
   } catch (error) {
-    console.error('Error deleting credit report:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.credit.reports.id.error', error: error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete credit report' },
       { status: 500 }
