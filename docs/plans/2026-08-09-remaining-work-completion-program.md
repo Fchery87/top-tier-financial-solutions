@@ -153,6 +153,14 @@ Do not implement the S.4144/H.R.306 disclosure speculatively. Re-check the
 law’s enacted status before this task; if it is law, write an implementation
 plan around `postProcessLetter` and jurisdictional configuration.
 
+**Status check — 2026-08-09:** not actionable. The official Government
+Publishing Office record describes [S. 4144, the Ending Scam Credit Repair
+Act](https://www.govinfo.gov/app/details/BILLS-119s4144is), as introduced in
+the Senate on March 19, 2026. Its House companion,
+[H.R. 306](https://www.congress.gov/bill/119th-congress/house-bill/306/all-info),
+is also shown as introduced and referred to committee. Neither source records
+enactment. No S.4144/H.R.306-triggered letter disclosure is implemented.
+
 ## Phase 5 — Maintainability and UX program refresh
 
 The existing thermo-nuclear and UI/UX plans use many obsolete
