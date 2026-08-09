@@ -11,6 +11,7 @@ export default defineConfig({
     // these guard against hangs, not slowness.
     testTimeout: 60000,
     hookTimeout: 60000,
+    retry: 0,
     setupFiles: ['./src/__tests__/setup.tsx'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', '.next', 'dist'],
