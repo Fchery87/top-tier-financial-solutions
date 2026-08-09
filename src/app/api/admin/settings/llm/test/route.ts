@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { getLLMConfig } from '@/lib/settings-service';
+import { logServerEvent } from '@/lib/server-logger';
 
 // Check if user is super admin
 async function checkSuperAdmin() {
@@ -133,7 +134,7 @@ export async function POST(_request: NextRequest) {
     }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Connection test failed';
-    console.error('Error testing LLM connection:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.llm.test.error', error: error });
     return NextResponse.json({ 
       success: false, 
       error: message 

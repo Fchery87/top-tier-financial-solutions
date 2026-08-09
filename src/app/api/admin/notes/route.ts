@@ -4,6 +4,7 @@ import { clientNotes, clients, user } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { desc, count, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching notes:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.notes.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
   }
 }
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating note:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.notes.error', error: error });
     return NextResponse.json({ error: 'Failed to create note' }, { status: 500 });
   }
 }

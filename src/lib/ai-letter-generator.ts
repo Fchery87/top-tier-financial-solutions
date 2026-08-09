@@ -5,6 +5,7 @@ import { getObsolescenceClock } from './fcra-clock';
 import { DEFAULT_LLM_MODELS, getLLMConfig, type LLMConfig } from './settings-service';
 import { lintGeneratedLetter } from './letter-lint';
 import type { Selection } from './letter-library-selector';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
   switch (config.provider) {
@@ -104,7 +105,7 @@ async function recordLibraryUsage(selection?: Selection): Promise<void> {
 
   await import('./letter-library-repo')
     .then(({ incrementLibraryUsage }) => incrementLibraryUsage(libraryId))
-    .catch(error => console.error('Failed to record letter library usage:', error));
+    .catch(error => logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: error }));
 }
 
 const BUREAU_ADDRESSES: Record<string, string> = {
@@ -454,7 +455,7 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
   const llmConfig = await getLLMConfig();
 
   if (!llmConfig.apiKey) {
-    console.warn('No LLM API key configured, falling back to template-based letter');
+    logServerEvent({ level: 'warn', event: 'server.lib.ai.letter.generator.warn' });
     const fallbackLetter = buildNeutralFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildLetterLintContext(params));
     await recordLibraryUsage(params.librarySelection);
@@ -469,7 +470,7 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
     await recordLibraryUsage(params.librarySelection);
     return processedLetter;
   } catch (error) {
-    console.error('AI letter generation failed:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: error });
     const fallbackLetter = buildNeutralFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildLetterLintContext(params));
     await recordLibraryUsage(params.librarySelection);
@@ -526,7 +527,7 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
   const llmConfig = await getLLMConfig();
 
   if (!llmConfig.apiKey) {
-    console.warn('No LLM API key configured, falling back to template-based letter');
+    logServerEvent({ level: 'warn', event: 'server.lib.ai.letter.generator.warn' });
     const fallbackLetter = generateMultiItemFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
     await recordLibraryUsage(params.librarySelection);
@@ -541,7 +542,7 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
     await recordLibraryUsage(params.librarySelection);
     return processedLetter;
   } catch (error) {
-    console.error('AI multi-item letter generation failed:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: error });
     const fallbackLetter = generateMultiItemFallbackLetter(params);
     assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
     await recordLibraryUsage(params.librarySelection);
@@ -1318,7 +1319,7 @@ export async function generateFactualMetro2DisputeLetter(params: {
   const llmConfig = await getLLMConfig();
   
   if (!llmConfig.apiKey) {
-    console.warn('No LLM API key configured');
+    logServerEvent({ level: 'warn', event: 'server.lib.ai.letter.generator.warn' });
     return {
       analysisSummary: params.negativeItems.map(item => ({
         itemId: item.itemId,
@@ -1420,7 +1421,7 @@ Return ONLY the JSON object, no markdown formatting.`;
     }>(responseText);
 
     if (!parsedResponse || !Array.isArray(parsedResponse.analysis_summary)) {
-      console.error('Failed to parse AI response as structured JSON:', responseText);
+      logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: responseText });
       return {
         analysisSummary: params.negativeItems.map(item => ({
           itemId: item.itemId,
@@ -1492,7 +1493,7 @@ Return ONLY the JSON object, no markdown formatting.`;
     };
 
   } catch (error) {
-    console.error('Metro 2 analysis failed:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: error });
     return {
       analysisSummary: params.negativeItems.map(item => ({
         itemId: item.itemId,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { creditReports, disputeOutcomes } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { logServerEvent } from '@/lib/server-logger';
 
 const bureauKeys = ['experian', 'transunion', 'equifax'] as const;
 
@@ -76,7 +77,7 @@ export async function GET(_request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching client outcome analytics:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.client.outcome.analytics.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch client outcome analytics' }, { status: 500 });
   }
 }

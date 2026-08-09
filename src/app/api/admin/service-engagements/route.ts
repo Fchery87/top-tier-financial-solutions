@@ -5,6 +5,7 @@ import { db } from '@/db/client';
 import { clients, complianceGateChecks, serviceEngagements } from '@/db/schema';
 import { getBlockingComplianceGateChecks } from '@/lib/compliance-gate';
 import { requireCapability } from '@/lib/admin-session';
+import { logServerEvent } from '@/lib/server-logger';
 
 const allowedServiceTypes = new Set(['credit_audit', 'credit_restoration']);
 
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items: items.map(formatEngagement) });
   } catch (error) {
-    console.error('Error fetching service engagements:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.service.engagements.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch service engagements' }, { status: 500 });
   }
 }
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(formatEngagement(created), { status: 201 });
   } catch (error) {
-    console.error('Error creating service engagement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.service.engagements.error', error: error });
     return NextResponse.json({ error: 'Failed to create service engagement' }, { status: 500 });
   }
 }
@@ -165,7 +166,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(formatEngagement(updated));
   } catch (error) {
-    console.error('Error updating service engagement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.service.engagements.error', error: error });
     return NextResponse.json({ error: 'Failed to update service engagement' }, { status: 500 });
   }
 }

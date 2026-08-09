@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { blogPosts } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(
   request: NextRequest,
@@ -41,7 +42,7 @@ export async function GET(
       updated_at: p.updatedAt?.toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching blog post:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.blog.posts.id.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch blog post' }, { status: 500 });
   }
 }
@@ -89,7 +90,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, updated_at: now.toISOString() });
   } catch (error) {
-    console.error('Error updating blog post:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.blog.posts.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update blog post' }, { status: 500 });
   }
 }
@@ -109,7 +110,7 @@ export async function DELETE(
     await db.delete(blogPosts).where(eq(blogPosts.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting blog post:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.blog.posts.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete blog post' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 // PDF parsing utility - using pdf-parse v1.x simple API
 import { detectPdfSource, type SourceDetectionResult } from './detect-source';
 import { parseReportDate } from './report-date';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function parsePdf(buffer: Buffer): Promise<{ text: string; numpages: number }> {
   // Dynamic require to avoid build-time bundling issues
@@ -299,7 +300,7 @@ export async function parsePdfCreditReport(buffer: Buffer): Promise<ParsedCredit
   
   // Detect source service
   const detectedSource = detectPdfSource(text);
-  console.log(`[PDF Parser] Detected source: ${detectedSource.source} (confidence: ${detectedSource.confidence})`);
+  logServerEvent({ level: 'info', event: 'server.lib.parsers.pdf.parser.log', error: `[PDF Parser] Detected source: ${detectedSource.source} (confidence: ${detectedSource.confidence})` });
   
   const scores = extractScores(text);
   const consumerProfile = extractConsumerProfile(text);

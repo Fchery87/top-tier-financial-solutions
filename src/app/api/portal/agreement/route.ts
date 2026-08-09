@@ -4,6 +4,7 @@ import { clientAgreements, disclosureAcknowledgments, clients } from '@/db/schem
 import { eq, and, desc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { logServerEvent } from '@/lib/server-logger';
 
 // GET - Get client's pending or most recent agreement
 export async function GET(_request: NextRequest) {
@@ -76,7 +77,7 @@ export async function GET(_request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching agreement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.agreement.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch agreement' }, { status: 500 });
   }
 }

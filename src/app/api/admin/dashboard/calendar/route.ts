@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { disputes, tasks, clientAgreements, clients } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { and, gte, lte, eq, isNull, or } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 interface CalendarEvent {
   id: string;
@@ -173,7 +174,7 @@ export async function GET(_request: NextRequest) {
       counts,
     });
   } catch (error) {
-    console.error('Error fetching calendar events:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.dashboard.calendar.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch calendar events' }, { status: 500 });
   }
 }

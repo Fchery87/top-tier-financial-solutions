@@ -5,6 +5,7 @@ import { disputes } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { buildLetterLintContextForDispute } from '@/lib/letter-lint-context';
 import { lintGeneratedLetter } from '@/lib/letter-lint';
+import { logServerEvent } from '@/lib/server-logger';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }));
     return NextResponse.json({ ...lint, preview: true });
   } catch (error) {
-    console.error('Error linting dispute letter:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.letter.lint.error', error: error });
     return NextResponse.json({ error: 'Failed to lint dispute letter' }, { status: 500 });
   }
 }

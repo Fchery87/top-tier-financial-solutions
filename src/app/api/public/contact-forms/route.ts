@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { consultationRequests } from '@/db/schema';
 import { publicLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
+import { logServerEvent } from '@/lib/server-logger';
 
 const MAX_FULL_NAME_LENGTH = 120;
 const MAX_EMAIL_LENGTH = 254;
@@ -102,7 +103,7 @@ async function postHandler(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating contact form submission:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.public.contact.forms.error', error: error });
     return NextResponse.json({ error: 'Failed to submit contact form' }, { status: 500 });
   }
 }

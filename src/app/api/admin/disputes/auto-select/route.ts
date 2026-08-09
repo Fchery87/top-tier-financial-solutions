@@ -11,6 +11,7 @@ import {
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { buildCreditorStrategyInsights, getRecommendedMethodologyForCreditor } from '@/lib/creditor-strategy-insights';
 import { disputeOutcomes } from '@/db/schema';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: Request) {
   const adminUser = await requireCapability('disputes:write');
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
         recommendedMethodology = historicalMethodology;
       }
     } catch (historyError) {
-      console.error('Error loading historical methodology recommendations for auto-select:', historyError);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.auto.select.error', error: historyError });
     }
     const averageConfidence = analyses.reduce((sum, a) => sum + a.confidence, 0) / analyses.length;
 
@@ -150,7 +151,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error auto-selecting disputable items:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.auto.select.error', error: error });
     return NextResponse.json({ error: 'Failed to auto-select disputable items' }, { status: 500 });
   }
 }

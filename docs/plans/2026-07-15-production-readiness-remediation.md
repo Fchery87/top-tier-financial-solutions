@@ -777,7 +777,7 @@ Ordered by value for this business:
 1. **Cloudflare Turnstile on contact + newsletter forms** — completes the public-endpoint protection from Task 5 (use @turnstile-spin skill).
 2. **Letter mailing API integration (Lob / PostGrid / Click2Mail)** — the largest competitive feature gap; the manual submission-tracking model in `db/schema.ts` is the natural seam.
 3. **One-click credit monitoring import** (IdentityIQ / SmartCredit credential pull) to complement the deterministic parsers.
-4. **Structured logging** — replace the 316 `console.*` calls with `pino` + request IDs; add audit-log rows for sensitive reads (client record views, report downloads, letter generation).
+4. **[x] Structured logging** — completed 2026-08-09. Pino now emits request-correlated, redacted server events; the proxy replaces client-supplied request IDs; protected client, report-preview, and dispute-letter reads fail closed when their PII-minimized audit rows cannot be written. A source audit prevents new direct `console.*` calls in server routes and libraries.
 5. **Blind-index columns** for encrypted client fields — only if client volume makes Task 6's in-memory filter slow (>5k clients; the warning log added in Task 6 is the trigger).
 6. **Zod at API boundaries** — replace hand-rolled validation route-by-route, starting with routes that accept client PII.
 7. **Envelope encryption / key rotation** (KMS or versioned keys) — the `v2:` format from Task 9 already leaves room for a key-version segment.

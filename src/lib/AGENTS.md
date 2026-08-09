@@ -75,17 +75,30 @@ export const adminClient = {
 ```
 
 ### Error Handling Pattern
-Consistent error logging and user feedback:
+Server-side errors must use the redacting structured logger. It drops unsafe
+metadata keys and error payload data, and it is server-only. Client components
+keep user-facing feedback local; never send a server log payload to the browser.
 ```typescript
-// ✅ DO: Standard error handling
+// ✅ DO: Safe server error handling
+import { logServerEvent } from '@/lib/server-logger';
+
 try {
   const result = await riskyOperation();
   return result;
 } catch (error) {
-  console.error('Error in operation:', error);
+  logServerEvent({
+    level: 'error',
+    event: 'domain.operation.failed',
+    error,
+  });
   throw new Error('Operation failed');
 }
 ```
+
+For protected reads, call `recordSensitiveRead` after authorization and
+resource-existence checks but before returning the protected response. Provide
+only its typed resource ID, route, request ID, and actor ID. An audit-write
+failure must return a non-sensitive `500` response instead of releasing data.
 
 ## Touch Points / Key Files
 - Auth configuration: `auth.ts`

@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { clients, tasks } from '@/db/schema';
 import { inArray } from 'drizzle-orm';
 import { triggerAutomation } from '@/lib/email-service';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -100,13 +101,13 @@ export async function POST(request: NextRequest) {
         );
         nudged += 1;
       } catch (emailError) {
-        console.error('Error sending auto stalled-client reminder:', emailError);
+        logServerEvent({ level: 'error', event: 'server.app.api.cron.nudge.stalled.clients.error', error: emailError });
       }
     }
 
     return NextResponse.json({ success: true, nudged_clients: nudged });
   } catch (error) {
-    console.error('Error running stalled client nudge cron:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.cron.nudge.stalled.clients.error', error: error });
     return NextResponse.json(
       { error: 'Failed to run stalled client check' },
       { status: 500 },

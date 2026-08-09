@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
 import { uploadLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function postHandler(request: NextRequest) {
   const adminUser = await requireCapability('disputes:write');
@@ -95,7 +96,7 @@ async function postHandler(request: NextRequest) {
       uploaded_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading credit report:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.credit.reports.upload.error', error: error });
     return NextResponse.json({ error: 'Failed to upload credit report' }, { status: 500 });
   }
 }

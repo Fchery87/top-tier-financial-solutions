@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { clients, creditAnalyses, user } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq, desc, sql } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 interface PipelineClient {
   id: string;
@@ -139,7 +140,7 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json(pipeline);
   } catch (error) {
-    console.error('Error fetching pipeline data:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.dashboard.pipeline.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch pipeline data' }, { status: 500 });
   }
 }
@@ -173,7 +174,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating client stage:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.dashboard.pipeline.error', error: error });
     return NextResponse.json({ error: 'Failed to update client stage' }, { status: 500 });
   }
 }

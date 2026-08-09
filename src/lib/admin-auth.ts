@@ -1,6 +1,7 @@
 import { db } from '@/db/client';
 import { user } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export type UserRole = 'user' | 'staff' | 'admin' | 'super_admin';
 
@@ -18,7 +19,7 @@ export async function getUserRole(email: string): Promise<UserRole | null> {
 
     return (result[0].role as UserRole) || 'user';
   } catch (error) {
-    console.error('Error fetching user role:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.admin.auth.error', error: error });
     return null;
   }
 }

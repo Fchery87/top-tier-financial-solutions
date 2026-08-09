@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { services } from '@/db/schema';
 import { asc } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error('Error fetching services:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.services.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch services', services: [] }, { status: 500 });
   }
 }

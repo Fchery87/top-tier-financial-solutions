@@ -5,6 +5,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('clients:write');
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading client document:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.documents.error', error: error });
     return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });
   }
 }
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('Error fetching client documents:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.documents.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
   }
 }

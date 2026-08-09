@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { creditScoreHistory, clients } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { gte } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 interface TrendPoint {
   date: string;
@@ -153,7 +154,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Error fetching trend data:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.dashboard.trends.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch trend data' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Ratelimit } from '@upstash/ratelimit';
 import { getRateLimitKey, formatRateLimitHeaders } from './rate-limit';
+import { logServerEvent } from '@/lib/server-logger';
 
 /**
  * Applies rate limiting to an API route handler
@@ -57,7 +58,7 @@ export async function withRateLimit(
       return response;
     } catch (error) {
       // If rate limiting fails, allow request to proceed (graceful degradation)
-      console.error('[Rate Limit Error]', error);
+      logServerEvent({ level: 'error', event: 'server.lib.rate.limit.middleware.error', error: error });
       return handler(request);
     }
   };
@@ -108,7 +109,7 @@ export function rateLimited(
 
         return response;
       } catch (error) {
-        console.error('[Rate Limit Error]', error);
+        logServerEvent({ level: 'error', event: 'server.lib.rate.limit.middleware.error', error: error });
         return handler(request);
       }
     };

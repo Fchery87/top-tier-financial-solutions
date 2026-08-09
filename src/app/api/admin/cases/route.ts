@@ -4,6 +4,7 @@ import { clientCases, caseUpdates, user } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { desc, count, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching cases:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.cases.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch cases' }, { status: 500 });
   }
 }
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating case:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.cases.error', error: error });
     return NextResponse.json({ error: 'Failed to create case' }, { status: 500 });
   }
 }

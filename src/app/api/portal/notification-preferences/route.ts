@@ -5,6 +5,7 @@ import { db } from '@/db/client';
 import { auth } from '@/lib/auth';
 import { clients, clientNotificationPreferences } from '@/db/schema';
 import { headers } from 'next/headers';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -82,7 +83,7 @@ export async function GET() {
       }),
     });
   } catch (error) {
-    console.error('Error fetching portal notification preferences:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.notification.preferences.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch notification preferences' }, { status: 500 });
   }
 }
@@ -149,7 +150,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ preferences: formatPreferences(nextPreferences) });
   } catch (error) {
-    console.error('Error updating portal notification preferences:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.notification.preferences.error', error: error });
     return NextResponse.json({ error: 'Failed to update notification preferences' }, { status: 500 });
   }
 }

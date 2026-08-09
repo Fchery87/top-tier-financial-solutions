@@ -5,6 +5,7 @@ import { db } from '@/db/client';
 import { disputeLetterLibrary } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { recordAdminActivity } from '@/lib/admin-activity';
+import { logServerEvent } from '@/lib/server-logger';
 
 function parseStringArray(value: unknown): string[] | null {
   if (value === undefined || value === null || value === '') return null;
@@ -98,7 +99,7 @@ export async function GET() {
     const rows = await db.select().from(disputeLetterLibrary).orderBy(desc(disputeLetterLibrary.updatedAt));
     return NextResponse.json({ templates: rows.map(serializeRow) });
   } catch (error) {
-    console.error('Error fetching letter library:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.letter.library.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch letter library' }, { status: 500 });
   }
 }
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ id, name: payload.name }, { status: 201 });
   } catch (error) {
-    console.error('Error creating letter library row:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.letter.library.error', error: error });
     return NextResponse.json({ error: 'Failed to create letter library row' }, { status: 500 });
   }
 }

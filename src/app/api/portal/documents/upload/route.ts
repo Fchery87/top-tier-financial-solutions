@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
 import { uploadLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -173,7 +174,7 @@ async function postHandler(request: NextRequest) {
       }
     } catch (taskError) {
       // Task automation should never block document upload
-      console.error('Error auto-creating/completing tasks for document upload:', taskError);
+      logServerEvent({ level: 'error', event: 'server.app.api.portal.documents.upload.error', error: taskError });
     }
 
     return NextResponse.json({
@@ -187,7 +188,7 @@ async function postHandler(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading document:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.documents.upload.error', error: error });
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Failed to upload document' 
     }, { status: 500 });

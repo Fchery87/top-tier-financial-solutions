@@ -9,6 +9,8 @@ import { generateCreditAnalysisReportHTML, type CreditAnalysisReportData } from 
 import { parseIdentityIQReport } from '@/lib/parsers/identityiq-parser';
 import { getFileFromR2 } from '@/lib/r2-storage';
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
+import { logServerEvent } from '@/lib/server-logger';
+import { recordSensitiveRead } from '@/lib/sensitive-read-audit';
 
 // GET - Generate and return report HTML (preview)
 // Query params: ?type=comprehensive (default) | simple
@@ -36,6 +38,14 @@ export async function GET(
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
+
+    await recordSensitiveRead(db, {
+      kind: 'client_record',
+      actorUserId: adminUser.id,
+      clientId: client.id,
+      route: request.nextUrl.pathname,
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+    });
 
     // For comprehensive report, try to get fresh parsed data from latest credit report
     if (reportType === 'comprehensive') {
@@ -98,7 +108,17 @@ export async function GET(
             },
           });
         } catch (parseError) {
-          console.error('Error parsing credit report for comprehensive view:', parseError);
+          logServerEvent({
+            level: 'warn',
+            event: 'credit-report.preview-parse.failed',
+            requestId: request.headers.get('x-request-id') ?? 'unavailable',
+            route: request.nextUrl.pathname,
+            method: request.method,
+            actorUserId: adminUser.id,
+            resourceType: 'client_record',
+            resourceId: client.id,
+            error: parseError,
+          });
           // Fall through to simple report
         }
       }
@@ -170,7 +190,18 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error generating audit report:', error);
+    logServerEvent({
+      level: 'error',
+      event: 'credit-report.preview.failed',
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+      route: request.nextUrl.pathname,
+      method: request.method,
+      status: 500,
+      actorUserId: adminUser.id,
+      resourceType: 'client_record',
+      resourceId: clientId,
+      error,
+    });
     return NextResponse.json({ error: 'Failed to generate report' }, { status: 500 });
   }
 }
@@ -331,7 +362,7 @@ export async function POST(
       },
     }, { status: 201 });
   } catch (error) {
-    console.error('Error saving audit report:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.audit.report.error', error: error });
     return NextResponse.json({ error: 'Failed to save report' }, { status: 500 });
   }
 }

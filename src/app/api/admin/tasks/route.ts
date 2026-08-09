@@ -8,6 +8,7 @@ import { can, type Capability } from '@/lib/capabilities';
 import { desc, asc, count, eq, or, ilike, and, gte, lte, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { triggerAutomation } from '@/lib/email-service';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function validateAdmin(capability: Capability) {
   const session = await auth.api.getSession({
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
   }
 }
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
           task_id: id,
         });
       } catch (emailError) {
-        console.error('Error sending task-created email:', emailError);
+        logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.error', error: emailError });
       }
     }
 
@@ -229,7 +230,7 @@ export async function POST(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating task:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.error', error: error });
     return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
   }
 }

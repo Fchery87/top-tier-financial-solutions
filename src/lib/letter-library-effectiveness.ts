@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { disputeLetterLibrary } from '@/db/schema';
+import { logServerEvent } from '@/lib/server-logger';
 
 export interface EffectivenessTransitionInput {
   previousOutcome: string | null | undefined;
@@ -57,6 +58,6 @@ export async function recordLibraryOutcome(input: {
       })
       .where(eq(disputeLetterLibrary.id, input.libraryId));
   } catch (error) {
-    console.error('Failed to update letter library effectiveness:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.letter.library.effectiveness.error', error: error });
   }
 }

@@ -3,6 +3,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { db } from '@/db/client';
 import { bureauDiscrepancies } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export interface DiscrepancyWithRecommendation {
   id: string;
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching discrepancies:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.discrepancies.error', error: error });
     return NextResponse.json(
       { error: 'Failed to fetch discrepancies' },
       { status: 500 }
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error resolving discrepancy:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.discrepancies.error', error: error });
     return NextResponse.json(
       { error: 'Failed to resolve discrepancy' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+import { logServerEvent } from '@/lib/server-logger';
 
 // Check if running in serverless environment (no file system access)
 const _isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.CLOUDFLARE_WORKER;
@@ -356,7 +357,7 @@ export function loadStrategiesConfig(): DisputeStrategiesConfig {
     return strategiesConfig;
   } catch {
     // Fall back to embedded config for serverless environments
-    console.warn('Using embedded dispute strategies config (file system not available)');
+    logServerEvent({ level: 'warn', event: 'server.lib.dispute.config.loader.warn' });
     strategiesConfig = EMBEDDED_STRATEGIES_CONFIG;
     return strategiesConfig;
   }
@@ -561,7 +562,7 @@ export function loadPromptConfig(methodology: string): PromptConfig | null {
       return config;
     }
   } catch {
-    console.warn(`File system error loading prompt for ${methodology}, using embedded config`);
+    logServerEvent({ level: 'warn', event: 'server.lib.dispute.config.loader.warn', error: `File system error loading prompt for ${methodology}, using embedded config` });
   }
 
   // Fall back to embedded prompts
@@ -570,7 +571,7 @@ export function loadPromptConfig(methodology: string): PromptConfig | null {
     return EMBEDDED_PROMPTS[methodology];
   }
 
-  console.warn(`Prompt config not found for methodology: ${methodology}`);
+  logServerEvent({ level: 'warn', event: 'server.lib.dispute.config.loader.warn', error: `Prompt config not found for methodology: ${methodology}` });
   return null;
 }
 

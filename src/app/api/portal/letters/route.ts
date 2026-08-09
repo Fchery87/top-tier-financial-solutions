@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { eq, and, inArray, desc, isNotNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -120,7 +121,7 @@ export async function GET() {
 
     return NextResponse.json({ letters });
   } catch (error) {
-    console.error('Error fetching portal letters:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.letters.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch letters for approval' }, { status: 500 });
   }
 }

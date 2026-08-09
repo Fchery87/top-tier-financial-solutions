@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { eq, desc } from 'drizzle-orm';
 
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -70,7 +71,7 @@ export async function GET(_request: NextRequest) {
       } : null,
     });
   } catch (error) {
-    console.error('Error checking audit report:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.audit.report.error', error: error });
     return NextResponse.json({ error: 'Failed to check report status' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
 import { analyzeCreditReport } from '@/lib/credit-analysis';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(
   request: NextRequest,
@@ -17,7 +18,7 @@ export async function POST(
     await analyzeCreditReport(id);
     return NextResponse.json({ success: true, message: 'Credit report analyzed successfully' });
   } catch (error) {
-    console.error('Error parsing credit report:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.credit.reports.id.parse.error', error: error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to parse credit report' },
       { status: 500 }

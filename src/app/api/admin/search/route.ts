@@ -11,6 +11,7 @@ import {
 } from '@/lib/workspace-search';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
+import { logServerEvent } from '@/lib/server-logger';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -107,7 +108,7 @@ async function getHandler(request: NextRequest) {
       }),
     });
   } catch (error) {
-    console.error('Workspace search failed:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.search.error', error: error });
     return NextResponse.json({ error: 'Failed to search workspace records' }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { blogPosts, blogCategories, user } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { desc, count, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
 function slugify(text: string): string {
   return text
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching blog posts:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.blog.posts.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch blog posts' }, { status: 500 });
   }
 }
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
       created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating blog post:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.blog.posts.error', error: error });
     return NextResponse.json({ error: 'Failed to create blog post' }, { status: 500 });
   }
 }

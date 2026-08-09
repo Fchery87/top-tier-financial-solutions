@@ -17,6 +17,7 @@ import {
   type ResponseReviewOutcome,
 } from '@/lib/response-review-recommendation';
 import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
+import { logServerEvent } from '@/lib/server-logger';
 
 const STRUCTURED_RESPONSE_OUTCOMES: ReadonlySet<string> = new Set([
   'deleted',
@@ -113,7 +114,7 @@ export async function GET(
       } : null,
     });
   } catch (error) {
-    console.error('Error fetching dispute:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch dispute' }, { status: 500 });
   }
 }
@@ -386,7 +387,7 @@ export async function PUT(
       .set(updateData)
       .where(eq(disputes.id, id));
 
-    console.log(`[AUDIT] Dispute ${id} updated by admin ${adminUser.email}`);
+    logServerEvent({ level: 'info', event: 'server.app.api.admin.disputes.id.log', error: `[AUDIT] Dispute ${id} updated by admin ${adminUser.email}` });
 
     if (sentAt !== undefined) {
       const slaDefinitionId = getDisputeSlaDefinitionId();
@@ -541,7 +542,7 @@ export async function PUT(
       }
     } catch (emailError) {
       // Log but don't fail the request if email fails
-      console.error('Error sending automated email:', emailError);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.error', error: emailError });
     }
 
     return NextResponse.json({
@@ -576,7 +577,7 @@ export async function PUT(
       message: 'Dispute updated successfully',
     });
   } catch (error) {
-    console.error('Error updating dispute:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.error', error: error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update dispute' },
       { status: 500 }
@@ -611,7 +612,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'Dispute deleted' });
   } catch (error) {
-    console.error('Error deleting dispute:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete dispute' }, { status: 500 });
   }
 }

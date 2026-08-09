@@ -4,6 +4,7 @@ import { clients, tasks } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
 import { triggerAutomation } from '@/lib/email-service';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(
   request: NextRequest,
@@ -82,7 +83,7 @@ export async function POST(
         kind: 'client_stalled_nudge',
       });
     } catch (emailError) {
-      console.error('Error sending stalled client reminder email:', emailError);
+      logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.nudge.error', error: emailError });
       // Do not fail the request solely because email failed
     }
 
@@ -92,7 +93,7 @@ export async function POST(
       waiting_days: waitingDays,
     });
   } catch (error) {
-    console.error('Error sending client nudge:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.nudge.error', error: error });
     return NextResponse.json(
       { error: 'Failed to send client reminder' },
       { status: 500 },

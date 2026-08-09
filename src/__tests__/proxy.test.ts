@@ -32,4 +32,18 @@ describe('proxy security headers', () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
   });
+
+  it('generates and forwards a request identifier instead of trusting client input', () => {
+    const response = proxy(new NextRequest('https://example.com/admin/messages', {
+      headers: { 'x-request-id': 'client-controlled-id' },
+    }));
+    const requestId = response.headers.get('x-request-id');
+
+    expect(requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(requestId).not.toBe('client-controlled-id');
+    expect(response.headers.get('x-middleware-request-x-request-id')).toBe(requestId);
+    expect(response.headers.get('x-middleware-override-headers')).toContain('x-request-id');
+  });
 });

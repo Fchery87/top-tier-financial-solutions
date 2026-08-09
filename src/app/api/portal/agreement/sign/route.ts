@@ -5,6 +5,7 @@ import { and, eq, ilike, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { logServerEvent } from '@/lib/server-logger';
 
 // Calculate business days (excludes weekends)
 function addBusinessDays(date: Date, days: number): Date {
@@ -259,7 +260,7 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       });
     } catch (taskError) {
-      console.error('Error auto-updating tasks for agreement sign:', taskError);
+      logServerEvent({ level: 'error', event: 'server.app.api.portal.agreement.sign.error', error: taskError });
     }
 
     return NextResponse.json({
@@ -269,7 +270,7 @@ export async function POST(request: NextRequest) {
       cancellation_deadline: cancellationDeadline.toISOString(),
     });
   } catch (error) {
-    console.error('Error signing agreement:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.agreement.sign.error', error: error });
     return NextResponse.json({ error: 'Failed to sign agreement' }, { status: 500 });
   }
 }

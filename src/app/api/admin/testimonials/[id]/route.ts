@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { testimonials } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function PUT(
   request: NextRequest,
@@ -44,7 +45,7 @@ export async function PUT(
       updated_at: updated.updatedAt?.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating testimonial:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.testimonials.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update testimonial' }, { status: 500 });
   }
 }
@@ -71,7 +72,7 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Error deleting testimonial:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.testimonials.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete testimonial' }, { status: 500 });
   }
 }

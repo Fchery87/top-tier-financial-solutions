@@ -6,7 +6,10 @@ export type AdminActivitySubjectType =
   | 'user_role'
   | 'letter_library'
   | 'settings'
-  | 'automation';
+  | 'automation'
+  | 'client_record'
+  | 'credit_report'
+  | 'dispute_letter';
 
 export interface AdminActivityInput {
   actorUserId: string | null;

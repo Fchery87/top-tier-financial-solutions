@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { publicLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
+import { logServerEvent } from '@/lib/server-logger';
 
 const MAX_EMAIL_LENGTH = 254;
 const MAX_NAME_LENGTH = 100;
@@ -108,7 +109,7 @@ async function postHandler(request: NextRequest) {
       message: 'Thank you for subscribing!' 
     }, { status: 201 });
   } catch (error) {
-    console.error('Error subscribing:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.newsletter.subscribe.error', error: error });
     return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
   }
 }

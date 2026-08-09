@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { clientDocuments, clients, clientCases } from '@/db/schema';
 import { eq, inArray, desc } from 'drizzle-orm';
 import { getEvidenceRequirements } from '@/lib/dispute-evidence';
+import { logServerEvent } from '@/lib/server-logger';
 
 // GET /api/admin/disputes/evidence?clientId=xxx&documentTypes=id_document,proof_of_address
 // Returns client documents filtered by optional document types
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
       ],
     });
   } catch (error) {
-    console.error('Error fetching evidence documents:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.evidence.error', error: error });
     return NextResponse.json(
       { error: 'Failed to fetch evidence documents' },
       { status: 500 }

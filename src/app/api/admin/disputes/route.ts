@@ -19,6 +19,7 @@ import {
   getDisputeSlaDefinitionId,
   getDisputeSlaInstanceId,
 } from '@/lib/dispute-automation';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function validateAdmin(capability: Capability) {
   return requireCapability(capability);
@@ -47,7 +48,7 @@ function safeDecryptClientName(client: { firstName: string; lastName: string } |
     return `${decryptedClient.firstName} ${decryptedClient.lastName}`;
   } catch (error) {
     // Keep endpoint functional when ENCRYPTION_KEY is not configured in local/dev.
-    console.error('[Disputes API] Failed to decrypt client name:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.error', error: error });
     return 'Unknown';
   }
 }
@@ -59,7 +60,7 @@ function safeDecryptCreditorName(creditorName: string | null): string | null {
       ? decryptedDispute.creditorName
       : null;
   } catch (error) {
-    console.error('[Disputes API] Failed to decrypt creditor name:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.error', error: error });
     return null;
   }
 }
@@ -317,7 +318,7 @@ async function postHandler(request: NextRequest) {
       updatedAt: now,
     }).where(eq(disputes.id, id));
     
-    console.log(`[AUDIT] Dispute ${id} created by admin ${adminUser.email} for client ${clientId}`);
+    logServerEvent({ level: 'info', event: 'server.app.api.admin.disputes.log', error: `[AUDIT] Dispute ${id} created by admin ${adminUser.email} for client ${clientId}` });
 
     if (sentDate && computedResponseDeadline) {
       const definitionId = getDisputeSlaDefinitionId();
@@ -388,7 +389,7 @@ async function postHandler(request: NextRequest) {
       created_at: createdDispute.createdAt?.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating dispute:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.error', error: error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create dispute' },
       { status: 500 }
@@ -605,7 +606,7 @@ async function getHandler(request: NextRequest) {
       total: filteredResults.length,
     });
   } catch (error) {
-    console.error('Error fetching disputes:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.error', error: error });
     return NextResponse.json(
       { error: 'Failed to fetch disputes' },
       { status: 500 }

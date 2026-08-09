@@ -9,6 +9,7 @@ import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(
   _request: NextRequest,
@@ -159,7 +160,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error creating quick re-dispute:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.quick.redispute.error', error: error });
     return NextResponse.json({ error: 'Failed to create quick re-dispute' }, { status: 500 });
   }
 }

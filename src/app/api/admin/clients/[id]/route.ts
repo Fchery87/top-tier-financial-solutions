@@ -4,6 +4,8 @@ import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, 
 import { requireCapability } from '@/lib/admin-session';
 import { eq, desc, asc } from 'drizzle-orm';
 import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData } from '@/lib/db-encryption';
+import { logServerEvent } from '@/lib/server-logger';
+import { recordSensitiveRead } from '@/lib/sensitive-read-audit';
 
 function toISOStringSafe(value: unknown): string | null {
   if (!value) return null;
@@ -49,6 +51,14 @@ export async function GET(
     if (!clientResult) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
+
+    await recordSensitiveRead(db, {
+      kind: 'client_record',
+      actorUserId: adminUser.id,
+      clientId: clientResult.id,
+      route: request.nextUrl.pathname,
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+    });
 
     // Decrypt client data
     const decryptedClient = decryptClientData({
@@ -410,7 +420,18 @@ export async function GET(
       })),
     });
   } catch (error) {
-    console.error('Error fetching client:', error);
+    logServerEvent({
+      level: 'error',
+      event: 'client.read.failed',
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+      route: request.nextUrl.pathname,
+      method: request.method,
+      status: 500,
+      actorUserId: adminUser.id,
+      resourceType: 'client_record',
+      resourceId: id,
+      error,
+    });
     return NextResponse.json({ error: 'Failed to fetch client' }, { status: 500 });
   }
 }
@@ -486,7 +507,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating client:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.error', error: error });
     return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
   }
 }
@@ -506,7 +527,7 @@ export async function DELETE(
     await db.delete(clients).where(eq(clients.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting client:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
   }
 }

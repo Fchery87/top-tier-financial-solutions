@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { clientNotes } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function DELETE(
   request: NextRequest,
@@ -19,7 +20,7 @@ export async function DELETE(
     await db.delete(clientNotes).where(eq(clientNotes.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting note:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.notes.id.error', error: error });
     return NextResponse.json({ error: 'Failed to delete note' }, { status: 500 });
   }
 }

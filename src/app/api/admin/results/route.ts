@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { disputes, clients, negativeItems, creditScoreHistory } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq, and, gte, desc } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 function toISOStringSafe(value: unknown): string | null {
   if (!value) return null;
@@ -212,7 +213,7 @@ export async function GET(request: NextRequest) {
       top_performers: topPerformers,
     });
   } catch (error) {
-    console.error('Error fetching results:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.results.error', error: error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch results' },
       { status: 500 }
