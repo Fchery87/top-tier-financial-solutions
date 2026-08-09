@@ -1,5 +1,11 @@
 # Thermo-Nuclear Code Quality Implementation Plan
 
+> **Superseded for execution on 2026-08-09.** This is a historical audit record.
+> Its `src/components/admin` and `/api/admin` targets predate the workspace
+> migration. Use
+> [the post-workspace architecture and UX refresh plan](2026-08-09-post-workspace-architecture-and-ux-refresh.md)
+> for all new work; do not reopen already-completed wizard extraction tasks.
+
 Status: Draft  
 Created: 2026-05-29  
 Scope: Maintainability remediation plan for the executive-summary findings from the strict code quality review.
