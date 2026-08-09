@@ -7,6 +7,7 @@ import { renderGeneratedLetter as renderGeneratedLetterDeterministically } from 
 import { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-rendering/letter-prompt-data';
 import { generateLetterDraft } from './letter-rendering/provider-adapter';
+import { buildMultiItemDisputeLetterPrompt } from './letter-rendering/build-multi-item-dispute-letter-prompt';
 
 export { renderGeneratedLetter } from './letter-rendering/render-generated-letter';
 export { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
@@ -183,57 +184,6 @@ export function buildManualLetterPrompt(params: GenerateLetterParams): string {
   return buildDisputeLetterPrompt(params);
 }
 
-function buildMultiItemPrompt(params: GenerateMultiItemLetterParams): string {
-  const reasonDescription = getReasonDescriptions(params.reasonCodes);
-  const metro2Section = buildMetro2ViolationsSection(params.metro2Violations);
-  const recipientAddress = params.targetRecipient === 'bureau'
-    ? (BUREAU_ADDRESSES[params.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion)
-    : 'Credit Dispute Department';
-  const itemsList = params.items.map((item, index) => {
-    const maskedAccountNumber = item.accountNumber ? `****${item.accountNumber.slice(-4)}` : '';
-    return `Account ${index + 1}:\n- Creditor: ${item.creditorName}\n${item.originalCreditor ? `- Original Creditor: ${item.originalCreditor}\n` : ''}${maskedAccountNumber ? `- Account Number: ${maskedAccountNumber}\n` : ''}- Type: ${formatItemType(item.itemType)}\n${item.amount ? `- Amount: ${formatCurrency(item.amount)}\n` : ''}${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`.trim();
-  }).join('\n\n');
-  const defaultStrategy = params.round >= 3
-    ? 'This is a direct furnisher escalation. Keep the tone factual and request investigation under FCRA Section 623(a)(8).'
-    : params.round === 2
-      ? 'This is a method-of-verification follow-up. Request the prior investigation method under FCRA Section 611(a)(6)(B)(iii).'
-      : 'This is an initial factual dispute. Request investigation and correction or removal if unverifiable.';
-  const strategy = params.librarySelection?.chosen?.promptContext || defaultStrategy;
-  const legalCitations = params.librarySelection?.chosen?.legalCitations?.filter(Boolean).slice(0, 2) || [];
-
-  return `Write one factual credit dispute letter in plain text only for multiple disputed accounts.
-
-RULES
-- Do not threaten legal action, damages, or punishment.
-- Do not claim identity theft, fraud, or ownership denial unless the provided reasons explicitly support it.
-- Do not demand deletion as the only outcome; request investigation and correction or removal if unverifiable.
-- Do not cite Metro 2 field numbers. Refer only to segment and field names when needed.
-- Keep the tone professional, specific, and factual.
-
-LETTER CONTEXT
-Date: ${formatDate()}
-Recipient:\n${recipientAddress}
-Bureau: ${params.bureau.toUpperCase()}
-Round: ${params.round}
-Client Name: ${params.clientData.name}
-Reason Description: ${reasonDescription}
-${params.customReason ? `Additional Context: ${params.customReason}` : ''}
-${metro2Section || 'No specific Metro 2 issue list was provided. Request verification of the reported data for accuracy and completeness.'}
-
-DISPUTED ACCOUNTS
-${itemsList}
-
-If this is Round 2, request the method of verification. If this is Round 3 or later, keep the focus on a direct furnisher investigation request where applicable.
-
-ROUND STRATEGY
-${strategy}
-${legalCitations.length > 0
-    ? `RELEVANT AUTHORITY\nGround the request in: ${legalCitations.join(', ')}.\nCite at most two, in plain language. Do not stack citations.`
-    : ''}
-
-Return only the completed letter text.`;
-}
-
 function buildLetterLintContext(params: GenerateLetterParams) {
   return {
     reasonCodes: params.reasonCodes,
@@ -381,7 +331,7 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
   }
 
   try {
-    const prompt = buildMultiItemPrompt(params);
+    const prompt = buildMultiItemDisputeLetterPrompt(params);
     const letterText = await generateWithLLM(prompt, llmConfig);
     const processedLetter = postProcessMultiItemLetter(letterText, params);
     assertLetterLint(processedLetter, buildMultiItemLetterLintContext(params));
