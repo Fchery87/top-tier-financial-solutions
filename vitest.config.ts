@@ -30,6 +30,7 @@ export default defineConfig({
     alias: {
       '@/db': path.resolve(__dirname, './db'),
       '@': path.resolve(__dirname, './src'),
+      'server-only': path.resolve(__dirname, './src/__tests__/server-only.ts'),
     },
   },
 });
