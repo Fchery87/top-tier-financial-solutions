@@ -4,13 +4,27 @@ import { db } from '@/db/client';
 import { requireCapability } from '@/lib/admin-session';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { logServerEvent } from '@/lib/server-logger';
+import { readJsonBody } from '@/lib/request-validation';
+import { z } from 'zod';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const llmProviderSchema = z.enum(['google', 'openai', 'anthropic', 'zhipu', 'custom']);
+const llmUpdateSchema = z.object({
+  provider: llmProviderSchema.optional(),
+  model: z.string().trim().min(1).max(500).optional(),
+  apiKey: z.string().max(10_000).optional(),
+  apiEndpoint: z.url().refine((value) => new URL(value).protocol === 'https:', {
+    message: 'LLM endpoint must use HTTPS',
+  }).optional(),
+  temperature: z.number().finite().min(0).max(2).optional(),
+  maxTokens: z.number().int().min(1).max(100_000).optional(),
+}).strict();
 
-function isLLMProvider(value: unknown): value is LLMConfig['provider'] {
-  return value === 'google' || value === 'openai' || value === 'anthropic' || value === 'zhipu' || value === 'custom';
+function safeLLMConfig(config: LLMConfig) {
+  const { apiKey: _apiKey, ...safeConfig } = config;
+  return {
+    ...safeConfig,
+    hasApiKey: Boolean(config.apiKey),
+  };
 }
 
 /**
@@ -26,16 +40,7 @@ export async function GET(_request: NextRequest) {
   try {
     const config = await getLLMConfig();
 
-    // Hide API key in response (show partial if exists)
-    const response = {
-      ...config,
-      apiKey: config.apiKey 
-        ? `${config.apiKey.substring(0, 8)}***${config.apiKey.substring(config.apiKey.length - 4)}`
-        : undefined,
-      hasApiKey: !!config.apiKey,
-    };
-
-    return NextResponse.json({ config: response });
+    return NextResponse.json({ config: safeLLMConfig(config) });
   } catch (error) {
     logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.llm.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch LLM configuration' }, { status: 500 });
@@ -53,31 +58,29 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const rawBody: unknown = await request.json();
-    if (!isRecord(rawBody)) return NextResponse.json({ error: 'Request body must be an object' }, { status: 400 });
+    const parsed = await readJsonBody(request, llmUpdateSchema);
+    if (parsed.kind !== 'valid') {
+      return NextResponse.json({ error: 'Invalid LLM configuration' }, { status: 400 });
+    }
+
+    const rawBody = parsed.data;
     const updates: Partial<LLMConfig> = {};
     if (rawBody.provider !== undefined) {
-      if (!isLLMProvider(rawBody.provider)) return NextResponse.json({ error: 'Invalid LLM provider' }, { status: 400 });
       updates.provider = rawBody.provider;
     }
     if (rawBody.model !== undefined) {
-      if (typeof rawBody.model !== 'string') return NextResponse.json({ error: 'Invalid LLM model' }, { status: 400 });
       updates.model = rawBody.model;
     }
     if (rawBody.apiKey !== undefined && rawBody.apiKey !== '') {
-      if (typeof rawBody.apiKey !== 'string') return NextResponse.json({ error: 'Invalid LLM API key' }, { status: 400 });
       updates.apiKey = rawBody.apiKey;
     }
     if (rawBody.apiEndpoint !== undefined) {
-      if (typeof rawBody.apiEndpoint !== 'string') return NextResponse.json({ error: 'Invalid LLM endpoint' }, { status: 400 });
       updates.apiEndpoint = rawBody.apiEndpoint;
     }
     if (rawBody.temperature !== undefined) {
-      if (typeof rawBody.temperature !== 'number') return NextResponse.json({ error: 'Invalid LLM temperature' }, { status: 400 });
       updates.temperature = rawBody.temperature;
     }
     if (rawBody.maxTokens !== undefined) {
-      if (typeof rawBody.maxTokens !== 'number') return NextResponse.json({ error: 'Invalid LLM maximum tokens' }, { status: 400 });
       updates.maxTokens = rawBody.maxTokens;
     }
 
@@ -99,11 +102,10 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       message: 'LLM configuration updated successfully',
-      config: await getLLMConfig(),
+      config: safeLLMConfig(await getLLMConfig()),
     });
   } catch (error) {
     logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.llm.error', error: error });
     return NextResponse.json({ error: 'Failed to update LLM configuration' }, { status: 500 });
   }
 }
-

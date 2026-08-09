@@ -89,4 +89,32 @@ describe('PUT /api/admin/clients/[id] PII encryption boundary', () => {
       ssnLast4: '1234',
     });
   }, 30000);
+
+  it('rejects invalid PII updates before encryption or database writes', async () => {
+    const { PUT } = await import('@/app/api/admin/clients/[id]/route');
+    const invalidPayloads = [
+      [],
+      { first_name: 'A'.repeat(201) },
+      { email: 'not-an-email' },
+      { lead_id: 'not-a-uuid' },
+      { date_of_birth: 'not-a-date' },
+      { ssn_last_4: '12ab' },
+      { unexpected: 'field' },
+    ];
+
+    for (const payload of invalidPayloads) {
+      const response = await PUT(
+        new NextRequest('http://localhost/api/admin/clients/client-1', {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+          headers: { 'content-type': 'application/json' },
+        }),
+        { params: Promise.resolve({ id: 'client-1' }) },
+      );
+      expect(response.status).toBe(400);
+    }
+
+    expect(encryptionMock.encryptClientData).not.toHaveBeenCalled();
+    expect(dbMock.update).not.toHaveBeenCalled();
+  }, 30000);
 });

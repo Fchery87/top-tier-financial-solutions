@@ -1,4 +1,31 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+
+const dbMock = vi.hoisted(() => ({
+  insert: vi.fn(),
+}));
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
+const encryptClientDataMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/db/client', () => ({ db: dbMock }));
+vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
+vi.mock('@/lib/db-encryption', () => ({
+  decryptClientData: vi.fn((data) => data),
+  encryptClientData: encryptClientDataMock,
+}));
+vi.mock('@/lib/email-service', () => ({ triggerAutomation: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({ sensitiveLimiter: {} }));
+vi.mock('@/lib/rate-limit-middleware', () => ({
+  rateLimited: () => <THandler>(handler: THandler) => handler,
+}));
+
+function createClientRequest(payload: unknown) {
+  return new NextRequest('http://localhost/api/admin/clients', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'content-type': 'application/json' },
+  });
+}
 
 /**
  * Integration tests for client management API endpoints
@@ -6,6 +33,56 @@ import { describe, it, expect } from 'vitest';
  */
 
 describe('POST /api/admin/clients - Create Client', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+  });
+
+  it('rejects invalid client PII payloads before encryption or database writes', async () => {
+    const { POST } = await import('@/app/api/admin/clients/route');
+    const invalidPayloads = [
+      [],
+      { first_name: 'A'.repeat(201), last_name: 'Doe', email: 'ada@example.com' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'not-an-email' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', lead_id: 'not-a-uuid' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', date_of_birth: 'not-a-date' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', ssn_last_4: '12ab' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', unexpected: 'field' },
+    ];
+
+    for (const payload of invalidPayloads) {
+      const response = await POST(createClientRequest(payload));
+      expect(response.status).toBe(400);
+    }
+
+    expect(encryptClientDataMock).not.toHaveBeenCalled();
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
+  it('persists the encrypted DOB instead of converting it back to a timestamp', async () => {
+    const insertValuesMock = vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ id: 'client-1' }]),
+    });
+    dbMock.insert.mockReturnValue({ values: insertValuesMock });
+    encryptClientDataMock.mockImplementation((data: Record<string, unknown>) => ({
+      ...data,
+      dateOfBirth: 'v3:current_2026:aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cc',
+    }));
+
+    const { POST } = await import('@/app/api/admin/clients/route');
+    const response = await POST(createClientRequest({
+      first_name: 'Ada',
+      last_name: 'Lovelace',
+      email: 'ada@example.com',
+      date_of_birth: '1815-12-10',
+    }));
+
+    expect(response.status).toBe(201);
+    expect(insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({
+      dateOfBirth: 'v3:current_2026:aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cc',
+    }));
+  });
+
   it('should require first_name, last_name, and email', () => {
     const validPayload = {
       first_name: 'John',

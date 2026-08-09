@@ -8,8 +8,10 @@ import { uploadLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { uploadToR2 } from '@/lib/r2-storage';
 import { logServerEvent } from '@/lib/server-logger';
+import { isUploadedFile, readFormData } from '@/lib/request-validation';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILES_PER_UPLOAD = 20;
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'text/html',
@@ -33,24 +35,51 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   'other',
 ]);
 
-function readText(formData: FormData, name: string): string | null {
+type FormTextResult =
+  | { kind: 'missing' }
+  | { kind: 'invalid' }
+  | { kind: 'valid'; value: string };
+
+type FilesResult =
+  | { kind: 'missing' }
+  | { kind: 'invalid' }
+  | { kind: 'too_many' }
+  | { kind: 'valid'; files: File[] };
+
+function readText(formData: FormData, name: string): FormTextResult {
   const value = formData.get(name);
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
+  if (value === null || (typeof value === 'string' && !value.trim())) {
+    return { kind: 'missing' };
+  }
+  if (typeof value !== 'string') {
+    return { kind: 'invalid' };
+  }
+  return { kind: 'valid', value: value.trim() };
 }
 
-function isUploadedFile(value: FormDataEntryValue): value is File {
-  return typeof value !== 'string'
-    && typeof value.name === 'string'
-    && typeof value.type === 'string'
-    && typeof value.size === 'number'
-    && typeof value.arrayBuffer === 'function';
+function readFirstText(formData: FormData, names: string[]): FormTextResult {
+  for (const name of names) {
+    if (formData.has(name)) {
+      return readText(formData, name);
+    }
+  }
+  return { kind: 'missing' };
 }
 
-function readFiles(formData: FormData): File[] {
+function readFiles(formData: FormData): FilesResult {
   const singleFile = formData.get('file');
   const files = formData.getAll('files');
   const candidates = singleFile === null ? files : [singleFile, ...files];
-  return candidates.filter(isUploadedFile);
+  if (candidates.length === 0) {
+    return { kind: 'missing' };
+  }
+  if (candidates.length > MAX_FILES_PER_UPLOAD) {
+    return { kind: 'too_many' };
+  }
+  if (candidates.some((candidate) => !isUploadedFile(candidate))) {
+    return { kind: 'invalid' };
+  }
+  return { kind: 'valid', files: candidates.filter(isUploadedFile) };
 }
 
 async function postHandler(request: NextRequest) {
@@ -60,22 +89,58 @@ async function postHandler(request: NextRequest) {
   }
 
   try {
-    const formData = await request.formData();
-    const clientId = readText(formData, 'client_id') ?? readText(formData, 'clientId');
-    const fileType = readText(formData, 'file_type') ?? readText(formData, 'fileType') ?? 'other';
-    const notes = readText(formData, 'notes');
-    const files = readFiles(formData);
-
-    if (!clientId) {
+    const parsedForm = await readFormData(request);
+    if (parsedForm.kind !== 'valid') {
+      return NextResponse.json({ error: 'Invalid upload form' }, { status: 400 });
+    }
+    const clientIdResult = readFirstText(parsedForm.data, ['client_id', 'clientId']);
+    if (clientIdResult.kind === 'invalid') {
+      return NextResponse.json({ error: 'Client ID must be text' }, { status: 400 });
+    }
+    if (clientIdResult.kind === 'missing') {
       return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+    }
+    const clientId = clientIdResult.value;
+    if (clientId.length > 128) {
+      return NextResponse.json({ error: 'Client ID is too long' }, { status: 400 });
+    }
+
+    const fileTypeResult = readFirstText(parsedForm.data, ['file_type', 'fileType']);
+    if (fileTypeResult.kind === 'invalid') {
+      return NextResponse.json({ error: 'Document type must be text' }, { status: 400 });
+    }
+    const fileType = fileTypeResult.kind === 'valid' ? fileTypeResult.value : 'other';
+    if (fileType.length > 50) {
+      return NextResponse.json({ error: 'Invalid document type' }, { status: 400 });
     }
 
     if (!ALLOWED_DOCUMENT_TYPES.has(fileType)) {
       return NextResponse.json({ error: 'Invalid document type' }, { status: 400 });
     }
 
-    if (files.length === 0) {
+    const notesResult = readText(parsedForm.data, 'notes');
+    if (notesResult.kind === 'invalid') {
+      return NextResponse.json({ error: 'Notes must be text' }, { status: 400 });
+    }
+    const notes = notesResult.kind === 'valid' ? notesResult.value : null;
+    if (notes !== null && notes.length > 5_000) {
+      return NextResponse.json({ error: 'Notes are too long' }, { status: 400 });
+    }
+
+    const filesResult = readFiles(parsedForm.data);
+    if (filesResult.kind === 'too_many') {
+      return NextResponse.json({ error: 'A maximum of 20 files may be uploaded at once' }, { status: 400 });
+    }
+    if (filesResult.kind === 'invalid') {
+      return NextResponse.json({ error: 'Each evidence field must contain a file' }, { status: 400 });
+    }
+    if (filesResult.kind === 'missing') {
       return NextResponse.json({ error: 'At least one file is required' }, { status: 400 });
+    }
+    const files = filesResult.files;
+
+    if (files.some((file) => file.name.trim().length === 0 || file.name.length > 255)) {
+      return NextResponse.json({ error: 'Invalid document metadata' }, { status: 400 });
     }
 
     const invalidFile = files.find((file) => !ALLOWED_MIME_TYPES.has(file.type) || file.size > MAX_FILE_SIZE);

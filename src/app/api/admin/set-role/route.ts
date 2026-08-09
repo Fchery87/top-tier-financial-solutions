@@ -6,25 +6,18 @@ import { db } from '@/db/client';
 import { auth } from '@/lib/auth';
 import { requireCapability } from '@/lib/admin-session';
 import { changeUserRole } from '@/lib/team-role-management';
+import { readJsonBody } from '@/lib/request-validation';
+import { z } from 'zod';
 
-interface RoleRequest {
-  email: string;
-  role: string;
-}
+const roleValueSchema = z.enum(['user', 'staff', 'admin', 'super_admin']);
+const roleRequestSchema = z.object({
+  email: z.email().max(320),
+  role: z.string().trim().min(1).max(50),
+}).strict();
 
 interface RoleTarget {
   id: string;
   email: string;
-}
-
-function isRoleRequest(value: unknown): value is RoleRequest {
-  return typeof value === 'object'
-    && value !== null
-    && 'email' in value
-    && 'role' in value
-    && typeof value.email === 'string'
-    && value.email.length > 0
-    && typeof value.role === 'string';
 }
 
 function parseCount(rows: readonly unknown[]): number | null {
@@ -58,21 +51,25 @@ function roleChangeResponse(result: Awaited<ReturnType<typeof changeUserRole>>) 
 
 // Backward-compatible endpoint. New role changes belong to /api/admin/team.
 export async function POST(request: NextRequest) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  if (!isRoleRequest(body)) {
-    return NextResponse.json({ success: false, error: 'Email and role are required' }, { status: 400 });
-  }
-
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id || !session.user.email) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
+
+  const parsed = await readJsonBody(request, roleRequestSchema);
+  if (parsed.kind === 'malformed_json') {
+    return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
+  }
+  if (parsed.kind === 'invalid_payload') {
+    return NextResponse.json({ success: false, error: 'Email and role are required' }, { status: 400 });
+  }
+
+  const parsedRole = roleValueSchema.safeParse(parsed.data.role);
+  if (!parsedRole.success) {
+    return roleChangeResponse({ ok: false, code: 'invalid_role' });
+  }
+
+  const body = { ...parsed.data, role: parsedRole.data };
 
   const superAdminResult = await db.execute(sql`SELECT COUNT(*) AS count FROM "user" WHERE role = 'super_admin'`);
   const superAdminCount = parseCount(superAdminResult.rows);

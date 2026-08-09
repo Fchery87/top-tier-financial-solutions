@@ -8,7 +8,8 @@
  * - negativeItems: creditorName
  */
 
-import { encrypt, decrypt } from './encryption';
+import { decrypt, encrypt, isCiphertextValue } from './encryption';
+import { logServerEvent } from '@/lib/server-logger';
 
 // List of fields that should be encrypted in each table
 export const ENCRYPTED_FIELDS = {
@@ -37,29 +38,38 @@ export const ENCRYPTED_FIELDS = {
   ] as const,
 };
 
+type ClientEncryptedField = (typeof ENCRYPTED_FIELDS.clients)[number];
+
+export type ClientEncryptionFields = {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  ssnLast4: string | null;
+  streetAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  phone: string | null;
+};
+
+export type ClientEncryptionInput = Partial<ClientEncryptionFields>;
+
 function safeDecryptValue(value: unknown): unknown {
   if (!value) return value;
 
-  const raw = String(value);
-  const parts = raw.split(':');
-
-  // Only attempt decrypt for values that match our stored ciphertext shape:
-  // IV_HEX:ENCRYPTED_HEX where IV is 16 bytes (32 hex chars).
-  if (
-    parts.length !== 2 ||
-    parts[0].length !== 32 ||
-    !/^[0-9a-f]+$/i.test(parts[0]) ||
-    !/^[0-9a-f]+$/i.test(parts[1])
-  ) {
+  if (!isCiphertextValue(value)) {
     return value;
   }
 
   try {
-    return decrypt(raw);
-  } catch {
-    // Backward compatibility: preserve original value when decryption fails
-    // (e.g., legacy plaintext rows or data encrypted with a rotated key).
-    return value;
+    return decrypt(value);
+  } catch (error) {
+    logServerEvent({
+      level: 'error',
+      event: 'server.lib.db.encryption.decrypt.failed',
+      error,
+    });
+    return '[decryption-failed]';
   }
 }
 
@@ -69,12 +79,18 @@ function safeDecryptValue(value: unknown): unknown {
  *   const encrypted = encryptClientData({firstName: 'John', ...});
  *   await db.insert(clients).values(encrypted);
  */
-export function encryptClientData(data: Record<string, unknown>) {
+export function encryptClientData(data: ClientEncryptionFields): ClientEncryptionFields;
+export function encryptClientData(data: ClientEncryptionInput): ClientEncryptionInput;
+export function encryptClientData(data: ClientEncryptionInput): ClientEncryptionInput {
   const encrypted = { ...data };
 
-  for (const field of ENCRYPTED_FIELDS.clients) {
-    if (field in encrypted && encrypted[field]) {
-      encrypted[field] = encrypt(String(encrypted[field]));
+  for (const field of ENCRYPTED_FIELDS.clients satisfies readonly ClientEncryptedField[]) {
+    const value = encrypted[field];
+    if (value) {
+      const encryptedValue = encrypt(value);
+      if (encryptedValue) {
+        encrypted[field] = encryptedValue;
+      }
     }
   }
 

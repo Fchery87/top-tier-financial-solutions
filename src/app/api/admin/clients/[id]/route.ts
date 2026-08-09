@@ -3,9 +3,30 @@ import { db } from '@/db/client';
 import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user, personalInfoDisputes, inquiryDisputes, clientAgreements, tasks, clientCases } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { eq, desc, asc } from 'drizzle-orm';
-import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData } from '@/lib/db-encryption';
+import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData, type ClientEncryptionInput } from '@/lib/db-encryption';
 import { logServerEvent } from '@/lib/server-logger';
 import { recordSensitiveRead } from '@/lib/sensitive-read-audit';
+import { readJsonBody, validationErrorResponse } from '@/lib/request-validation';
+import { z } from 'zod';
+
+const clientUpdateSchema = z.object({
+  first_name: z.string().trim().max(200).optional(),
+  last_name: z.string().trim().max(200).optional(),
+  email: z.string().trim().max(320).optional(),
+  phone: z.string().trim().max(50).nullable().optional(),
+  notes: z.string().trim().max(5_000).nullable().optional(),
+  lead_id: z.uuid().nullable().optional(),
+  user_id: z.string().trim().min(1).max(128).nullable().optional(),
+  street_address: z.string().trim().max(300).nullable().optional(),
+  city: z.string().trim().max(100).nullable().optional(),
+  state: z.string().trim().max(100).nullable().optional(),
+  zip_code: z.string().trim().max(20).nullable().optional(),
+  date_of_birth: z.iso.date().nullable().optional(),
+  ssn_last_4: z.string().trim().max(50).nullable().optional(),
+  status: z.string().trim().min(1).max(50).optional(),
+}).strict();
+
+type ClientUpdateData = Partial<typeof clients.$inferInsert>;
 
 function toISOStringSafe(value: unknown): string | null {
   if (!value) return null;
@@ -448,13 +469,25 @@ export async function PUT(
   const { id } = await params;
 
   try {
-    const body = await request.json();
+    const parsed = await readJsonBody(request, clientUpdateSchema);
+    if (parsed.kind !== 'valid') {
+      return validationErrorResponse(parsed);
+    }
+
+    const body = parsed.data;
+    if (body.email !== undefined && !z.email().safeParse(body.email).success) {
+      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 });
+    }
+    if (body.ssn_last_4 && !/^\d{4}$/.test(body.ssn_last_4)) {
+      return NextResponse.json({ error: 'SSN last 4 must be exactly 4 digits' }, { status: 400 });
+    }
+
     const now = new Date();
 
-    const updateData: Record<string, unknown> = { updatedAt: now };
+    const updateData: ClientUpdateData = { updatedAt: now };
 
     // Encrypt PII fields if they're being updated
-    const fieldsToEncrypt: Record<string, string | null> = {};
+    const fieldsToEncrypt: ClientEncryptionInput = {};
 
     if (body.first_name !== undefined) {
       fieldsToEncrypt.firstName = body.first_name;
@@ -488,17 +521,13 @@ export async function PUT(
     if (Object.keys(fieldsToEncrypt).length > 0) {
       const encrypted = encryptClientData(fieldsToEncrypt);
       Object.assign(updateData, encrypted);
-    } else {
-      // Non-encrypted fields
-      if (body.first_name !== undefined) updateData.firstName = body.first_name;
-      if (body.last_name !== undefined) updateData.lastName = body.last_name;
-      if (body.phone !== undefined) updateData.phone = body.phone;
     }
 
     if (body.email !== undefined) updateData.email = body.email;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.user_id !== undefined) updateData.userId = body.user_id;
+    if (body.lead_id !== undefined) updateData.leadId = body.lead_id;
 
     await db
       .update(clients)
