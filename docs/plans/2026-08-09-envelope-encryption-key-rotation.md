@@ -234,3 +234,55 @@ in-memory key only; no test secret is read from or written to disk.
 3. Apply the reviewed Drizzle migrations only to the authorized target database.
 4. Execute a dry run, review aggregate counts, then run `--execute` and retain
    the rotation run ID as deployment evidence.
+
+## Owner production runbook
+
+This command is deliberately database-authoritative: run it only from a
+deployment environment that is configured for the specific authorized target
+database. Never point it at production from an unreviewed local shell.
+
+1. Generate a new 32-byte key in the deployment secret manager. Configure the
+   new active ID and a keyring that contains both the new key and every key
+   needed to decrypt existing `v3` records. Keep `ENCRYPTION_KEY` available
+   while legacy CBC or unkeyed `v2` records might still exist.
+
+   ```dotenv
+   # Replace each placeholder with exactly 64 hexadecimal characters.
+   ENCRYPTION_ACTIVE_KEY_ID="2026_08"
+   ENCRYPTION_KEYRING='{"2026_08":"new-64-character-hex-key","2026_01":"previous-64-character-hex-key"}'
+   ENCRYPTION_KEY="legacy-64-character-hex-key"
+   ```
+
+2. Deploy the dual-key configuration first, then apply the reviewed migration:
+
+   ```bash
+   npm run db:migrate
+   ```
+
+3. Run the default, read-only dry run and record only its aggregate output.
+   It creates no rotation run and makes no database writes.
+
+   ```bash
+   npm run security:rotate-encryption
+   ```
+
+4. After reviewing the dry-run counts, start an executable run with a freshly
+   generated UUID. Store the UUID with the deployment record; the command never
+   prints plaintext, ciphertext, or keys.
+
+   ```bash
+   npm run security:rotate-encryption -- --execute --run-id 6be7c27d-1f95-4a77-a52e-0fafb1f38b1a
+   ```
+
+5. If a run stops with `failure=decryption_failed`, correct the authorized
+   key configuration without changing `ENCRYPTION_ACTIVE_KEY_ID`, then resume
+   the saved run. A resume with a different active key ID is rejected.
+
+   ```bash
+   npm run security:rotate-encryption -- --execute --resume 6be7c27d-1f95-4a77-a52e-0fafb1f38b1a
+   ```
+
+6. Run a final dry run. It must complete with `rotated=0` before retiring
+   legacy keys. Keep the prior keyring entries and `ENCRYPTION_KEY` until this
+   evidence is retained and the owner approves their removal. The ciphertext
+   formats remain decryptable while those keys are retained.
