@@ -21,10 +21,10 @@ export type BoundedJsonValue =
   | BoundedJsonValue[]
   | { [key: string]: BoundedJsonValue };
 
-type JsonBodyResult<TData> =
+export type JsonBodyResult<TData> =
   | { kind: 'valid'; data: TData }
   | { kind: 'malformed_json' }
-  | { kind: 'invalid_payload' };
+  | { kind: 'invalid_payload'; issues: z.core.$ZodIssue[] };
 
 type FormDataResult =
   | { kind: 'valid'; data: FormData }
@@ -66,7 +66,7 @@ export async function readJsonBody<TSchema extends z.ZodType>(
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
-    return { kind: 'invalid_payload' };
+    return { kind: 'invalid_payload', issues: parsed.error.issues };
   }
 
   return { kind: 'valid', data: parsed.data };

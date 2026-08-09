@@ -82,6 +82,9 @@ describe('request validation', () => {
 
     expect(malformed.kind).toBe('malformed_json');
     expect(invalid.kind).toBe('invalid_payload');
+    if (invalid.kind === 'invalid_payload') {
+      expect(invalid.issues).not.toHaveLength(0);
+    }
     expect(valid).toEqual({ kind: 'valid', data: { name: 'Ada' } });
   });
 
@@ -105,7 +108,7 @@ describe('request validation', () => {
 
   it('creates a non-sensitive 400 response for malformed and invalid payloads', async () => {
     const malformedResponse = validationErrorResponse({ kind: 'malformed_json' });
-    const invalidResponse = validationErrorResponse({ kind: 'invalid_payload' });
+    const invalidResponse = validationErrorResponse({ kind: 'invalid_payload', issues: [] });
 
     expect(malformedResponse.status).toBe(400);
     expect(await malformedResponse.json()).toEqual({ error: 'Invalid request payload' });
