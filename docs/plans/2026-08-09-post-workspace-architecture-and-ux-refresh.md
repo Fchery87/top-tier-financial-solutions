@@ -152,45 +152,53 @@ git commit -m "refactor: normalize credit reports before analysis"
 
 ## Task 4: Split FastAPI content modules by domain seam
 
+> **Implementation correction (2026-08-09):** The FastAPI entrypoint is `api/index.py`, not `api/main.py`. This repository has no existing Python tests, test configuration, virtual environment, or database fixture convention. Establish the isolated test harness below before moving code; do not exercise a developer or shared database while characterizing content routes.
+
 **Files:**
+- Create: `api/tests/conftest.py`
 - Create: `api/schemas/content.py`
 - Create: `api/services/content.py`
 - Create: `api/routers/content_admin.py`
 - Create: `api/routers/content_public.py`
 - Create: `api/tests/test_content_admin.py`
 - Create: `api/tests/test_content_public.py`
+- Modify: `requirements.txt`
 - Modify: `api/routers/admin_content.py`
 - Modify: `api/routers/public.py`
-- Modify: `api/main.py`
+- Modify: `api/index.py`
 
-**Step 1: Characterize current public and administrative content responses.**
+**Step 1: Establish the isolated FastAPI test harness.**
 
-Write tests for list/detail response shapes, validation failures, draft/public visibility, and authorization failures using the existing FastAPI test client and database fixture conventions.
+Add `pytest`, `ruff`, and `httpx` to the project test/tool dependencies and create `api/tests/conftest.py`. Before importing `api.index`, configure `DATABASE_URL` to a per-test temporary SQLite database. Provide an in-process HTTPX ASGI fixture that creates tables, clears dependency overrides after each test, and never reads `.env` database configuration. Override the synchronous session dependency with an async generator only inside tests, because this host cannot execute AnyIO threadpool dependencies; use real authentication tokens for authorized administrative cases and leave authentication itself unmodified for the unauthorized case.
 
-**Step 2: Run the tests to observe the pre-extraction behavior.**
+**Step 2: Characterize current public and administrative content responses.**
 
-Run: `pytest api/tests/test_content_admin.py api/tests/test_content_public.py -q`
+Write tests for list/detail response shapes, validation failures, draft/public visibility, and authorization failures. Keep the fixtures local to `api/tests`; do not add a second application factory or a production-only test switch.
+
+**Step 3: Run the characterization tests against the pre-extraction implementation.**
+
+Run: `./venv/bin/python -m pytest api/tests/test_content_admin.py api/tests/test_content_public.py -q`
 
 Expected: the characterization cases pass against the old implementation before any move; add a deliberately missing schema assertion that fails before the schema module exists.
 
-**Step 3: Extract a small content interface.**
+**Step 4: Extract a small content interface.**
 
 Put request/response validation in `api/schemas/content.py`; put shared visibility and persistence behavior behind a single content module interface in `api/services/content.py`; leave routers as thin authentication/transport adapters. Do not mix leads, auth, or unrelated public site routes into this task.
 
-**Step 4: Keep import and route compatibility explicit.**
+**Step 5: Keep import and route compatibility explicit.**
 
-Register the replacement routers in `api/main.py`; retain only compatibility re-exports needed by internal imports until tests prove no callers remain. Do not silently change URL paths or response envelopes.
+Register the replacement routers in `api/index.py`; retain only compatibility re-exports needed by internal imports until tests prove no callers remain. Do not silently change URL paths or response envelopes.
 
-**Step 5: Run focused tests.**
+**Step 6: Run focused tests.**
 
-Run: `pytest api/tests/test_content_admin.py api/tests/test_content_public.py -q`
+Run: `./venv/bin/python -m pytest api/tests/test_content_admin.py api/tests/test_content_public.py -q`
 
 Expected: PASS.
 
-**Step 6: Commit.**
+**Step 7: Commit.**
 
 ```bash
-git add api/schemas/content.py api/services/content.py api/routers/content_admin.py api/routers/content_public.py api/routers/admin_content.py api/routers/public.py api/main.py api/tests/test_content_admin.py api/tests/test_content_public.py
+git add requirements.txt api/tests/conftest.py api/schemas/content.py api/services/content.py api/routers/content_admin.py api/routers/content_public.py api/routers/admin_content.py api/routers/public.py api/index.py api/tests/test_content_admin.py api/tests/test_content_public.py
 git commit -m "refactor: split FastAPI content domain modules"
 ```
 
@@ -286,4 +294,3 @@ git commit -m "test: add transparent fast validation lane"
 3. Run focused Playwright checks for Letter Studio, client record, and responsive workspace behavior.
 4. Re-run the strict architecture audit; close only findings actually addressed and create a new plan for any remaining significant module.
 5. Update `2026-08-09-remaining-work-completion-program.md` with real validation evidence and commit the integration result.
-
