@@ -1124,14 +1124,6 @@ export async function generateFactualMetro2DisputeLetter(params: {
   }
 
   try {
-    const generationConfig = {
-      model: llmConfig.model,
-      config: {
-        temperature: llmConfig.temperature || 0.1,
-        maxOutputTokens: llmConfig.maxTokens || 4096,
-      },
-    };
-
     // Build structured data for the AI
     const negativeItemsJson = JSON.stringify(params.negativeItems, null, 2);
     
@@ -1185,16 +1177,7 @@ Return ONLY the JSON object, no markdown formatting.`;
     const fullPrompt = METRO2_ANALYSIS_SYSTEM_PROMPT + '\n\n---\n\n' + userPrompt;
     let responseText = '';
 
-    if (llmConfig.provider === 'google') {
-      const genAI = new GoogleGenAI({ apiKey: llmConfig.apiKey });
-      const response = await genAI.models.generateContent({
-        ...generationConfig,
-        contents: fullPrompt,
-      });
-      responseText = typeof response.text === 'string' ? response.text : '';
-    } else {
-      responseText = await generateWithLLM(fullPrompt, llmConfig);
-    }
+    responseText = await generateWithLLM(fullPrompt, llmConfig);
     
     responseText = responseText.trim();
 

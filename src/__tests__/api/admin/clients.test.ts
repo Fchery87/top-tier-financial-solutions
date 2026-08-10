@@ -69,7 +69,7 @@ describe('POST /api/workspace/clients - Create Client', () => {
       dateOfBirth: 'v3:current_2026:aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cc',
     }));
 
-    const { POST } = await import('@/app/api/admin/clients/route');
+    const { POST } = await import('@/app/api/workspace/clients/route');
     const response = await POST(createClientRequest({
       first_name: 'Ada',
       last_name: 'Lovelace',
@@ -606,7 +606,7 @@ describe('DELETE /api/workspace/clients/[id] - Delete Client', () => {
 });
 
 describe('Authorization & Rate Limiting', () => {
-  it('should require admin authorization on all endpoints', () => {
+  it('uses the workspace client endpoints guarded by administrative capabilities', () => {
     const endpoints = [
       'POST /api/workspace/clients',
       'GET /api/workspace/clients',
@@ -616,7 +616,7 @@ describe('Authorization & Rate Limiting', () => {
     ];
 
     endpoints.forEach(endpoint => {
-      expect(endpoint).toContain('admin');
+      expect(endpoint).toContain('/api/workspace/clients');
     });
   });
 
