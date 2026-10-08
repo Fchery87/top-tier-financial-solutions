@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import type { NegativeItem, Dispute } from './types';
 import { getRiskSeverityColor } from './types';
 import { formatCurrency, formatItemType } from '@/lib/format';
+import { buildCreateDisputeRequestBody } from './buildCreateDisputeRequestBody';
 
 interface DisputesTabProps {
   clientId: string;
@@ -52,13 +53,13 @@ export function DisputesTab({
       const response = await fetch('/api/workspace/disputes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(buildCreateDisputeRequestBody({
           clientId,
           negativeItemId: selectedNegativeItem.id,
           bureau: disputeBureau,
           disputeReason,
           disputeType,
-        }),
+        })),
       });
       if (response.ok) {
         setShowDisputeModal(false);
