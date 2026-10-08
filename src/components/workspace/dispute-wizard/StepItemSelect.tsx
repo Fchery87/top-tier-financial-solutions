@@ -85,7 +85,7 @@ function TradelinesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
     negativeItems, selectedItems, setSelectedItems, loadingItems,
     generationMethod, itemDisputeInstructions, setItemDisputeInstructions,
     triageQuickActions, autoSelecting, autoSelectSummary,
-    autoSelectDisputableItems, handleToggleItem, updateItemInstruction,
+    autoSelectDisputableItems, handleToggleItem, updateItemInstruction, updateItemCustomReasonCode,
   } = ctx;
 
   return (
@@ -227,7 +227,14 @@ function TradelinesTab({ ctx }: { ctx: ReturnType<typeof useWizardContext> }) {
                       {PRESET_DISPUTE_INSTRUCTIONS.map((preset) => (<option key={preset.code} value={preset.code}>{preset.label}</option>))}
                     </select>
                     {instruction?.presetCode === 'custom' && (
-                      <textarea className="w-full p-2 rounded-md border border-border bg-background text-sm min-h-[80px]" placeholder="Enter your custom dispute instruction for this account..." value={instruction?.customText || ''} onChange={(e) => updateItemInstruction(item.id, 'custom', e.target.value)} />
+                      <>
+                        <textarea className="w-full p-2 rounded-md border border-border bg-background text-sm min-h-[80px]" placeholder="Enter your custom dispute instruction for this account..." value={instruction?.customText || ''} onChange={(e) => updateItemInstruction(item.id, 'custom', e.target.value)} />
+                        <label htmlFor={`custom-reason-code-${item.id}`} className="text-xs font-medium text-muted-foreground">Reason code for this custom instruction (required)</label>
+                        <select id={`custom-reason-code-${item.id}`} className="w-full p-2 rounded-md border border-border bg-background text-sm" value={instruction?.reasonCode || ''} onChange={(e) => updateItemCustomReasonCode(item.id, e.target.value)}>
+                          <option value="">Select reason code...</option>
+                          {PRESET_DISPUTE_INSTRUCTIONS.filter(preset => preset.code !== 'custom').map((preset) => (<option key={preset.code} value={preset.code}>{preset.label}</option>))}
+                        </select>
+                      </>
                     )}
                     {instruction?.presetCode && instruction.presetCode !== 'custom' && (
                       <p className="text-xs text-muted-foreground italic">{PRESET_DISPUTE_INSTRUCTIONS.find(p => p.code === instruction.presetCode)?.description}</p>

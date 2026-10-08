@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
 const requireCapabilityMock = vi.hoisted(() => vi.fn());
 const requireReportMock = vi.hoisted(() => vi.fn());
-const policyMatchMock = vi.hoisted(() => vi.fn());
 const complianceMock = vi.hoisted(() => vi.fn());
 const loadDisputeChainMock = vi.hoisted(() => vi.fn());
 const decideEscalationMock = vi.hoisted(() => vi.fn());
@@ -13,7 +12,6 @@ const generateLetterMock = vi.hoisted(() => vi.fn());
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/parser-review-gate', () => ({ requireLatestApprovedReportForClient: requireReportMock }));
-vi.mock('@/lib/dispute-policy-decision', () => ({ approvedPolicyMatchesDisputeInputs: policyMatchMock }));
 vi.mock('@/lib/dispute-compliance-policy', () => ({ evaluateDisputeCompliance: complianceMock }));
 vi.mock('@/lib/dispute-escalation-decision', () => ({ loadDisputeChain: loadDisputeChainMock, decideEscalation: decideEscalationMock }));
 vi.mock('@/lib/ai-letter-generator', () => ({ generateUniqueDisputeLetter: generateLetterMock }));
@@ -47,7 +45,6 @@ const baseBody = {
   priorDisputeId: 'cra-1',
   negativeItemId: 'item-1',
   reasonCodes: ['fcra_non_compliance'],
-  policyDecision: { approved: true, reasonCodes: ['fcra_non_compliance'] },
 };
 
 describe('POST /api/workspace/disputes CFPB gate', () => {
@@ -55,7 +52,6 @@ describe('POST /api/workspace/disputes CFPB gate', () => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
     requireReportMock.mockResolvedValue({ allowed: true });
-    policyMatchMock.mockReturnValue(true);
     complianceMock.mockReturnValue({ isCompliant: true, violations: [] });
     dbMock.select
       .mockReturnValueOnce(query([{ id: 'client-1', firstName: 'Jane', lastName: 'Client' }]))

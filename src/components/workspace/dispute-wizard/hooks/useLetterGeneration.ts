@@ -36,7 +36,9 @@ export function useLetterGeneration() {
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(typeof data.error === 'string' ? data.error : 'Failed to generate dispute draft');
+          const violations: string[] = Array.isArray(data.violations) ? data.violations : [];
+          const message = typeof data.error === 'string' ? data.error : 'Failed to generate dispute draft';
+          throw new Error([message, ...violations].join(' '));
         }
 
         if (typeof data.dispute_id !== 'string' || typeof data.letter_content !== 'string') {

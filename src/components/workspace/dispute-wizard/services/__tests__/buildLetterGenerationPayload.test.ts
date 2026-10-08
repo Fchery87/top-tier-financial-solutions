@@ -83,6 +83,7 @@ function baseInput(overrides: Partial<LetterGenerationBuilderInput> = {}): Lette
     requestManualReview: true,
     getInstructionText: itemId => `Instruction for ${itemId}`,
     hasItemInstruction: itemId => itemId === 'neg-1',
+    getItemReasonCode: itemId => (itemId === 'neg-1' ? 'wrong_balance' : null),
     itemAppearsOnBureau: (item, bureau) => {
       if (bureau === 'transunion') return item.on_transunion === true;
       if (bureau === 'experian') return item.on_experian === true;
@@ -183,14 +184,44 @@ describe('buildLetterGenerationPayload', () => {
       combineItemsPerBureau: false,
     }));
 
-    expect(plan.reasonCodesToUse).toEqual([]);
+    expect(plan.reasonCodesToUse).toEqual(['wrong_balance']);
     expect(plan.methodologyToUse).toBe('debt_validation');
     expect(plan.requests[0].body).toMatchObject({
+      reasonCodes: ['wrong_balance'],
       customReason: 'Instruction for neg-1',
       disputeInstruction: 'Instruction for neg-1',
       methodology: 'debt_validation',
       metro2Violations: undefined,
     });
+  });
+
+  it('sends no reason code in template mode until the staff member chooses one', () => {
+    const plan = buildLetterGenerationPayload(baseInput({
+      generationMethod: 'template',
+      combineItemsPerBureau: false,
+      getItemReasonCode: () => null,
+    }));
+
+    expect(plan.reasonCodesToUse).toEqual([]);
+    expect(plan.requests[0].body.reasonCodes).toEqual([]);
+  });
+
+  it('scopes template-mode reason codes to the items in each request', () => {
+    const plan = buildLetterGenerationPayload(baseInput({
+      generationMethod: 'template',
+      combineItemsPerBureau: true,
+      personalInfoItems: [personalItem],
+      selectedPersonalItems: ['pi-1'],
+      inquiryItems: [inquiry],
+      selectedInquiryItems: ['inq-1'],
+    }));
+
+    expect(plan.reasonCodesToUse).toEqual(['wrong_balance', 'verification_required', 'inaccurate_reporting', 'obsolete']);
+    expect(plan.requests.map(request => [request.bureau, request.body.reasonCodes])).toEqual([
+      ['transunion', ['wrong_balance']],
+      ['experian', ['wrong_balance', 'verification_required', 'inaccurate_reporting']],
+      ['equifax', ['obsolete', 'verification_required']],
+    ]);
   });
 
   it('returns no requests when no selected dispute items exist', () => {

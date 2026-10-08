@@ -52,14 +52,6 @@ const approvedRequest = {
   reasonCodes: ['verification_required'],
   evidenceDocumentIds: [],
   clientConfirmedOwnershipClaims: false,
-  policyDecision: {
-    approved: true,
-    reasonCodes: ['verification_required'],
-    requiredEvidence: ['identity_document', 'proof_of_address'],
-    claimRisk: 'ordinary',
-    targetRecipient: 'bureau',
-    violations: [],
-  },
 };
 
 describe('high-risk confirmation gates', () => {

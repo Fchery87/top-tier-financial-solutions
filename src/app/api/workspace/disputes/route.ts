@@ -10,7 +10,7 @@ import { decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
 import { requireCapability } from '@/lib/admin-session';
 import type { Capability } from '@/lib/capabilities';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
-import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
+import { decideDisputePolicy } from '@/lib/dispute-policy-decision';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
@@ -98,7 +98,6 @@ async function postHandler(request: NextRequest) {
       analysisConfidence,
       autoSelected,
       clientConfirmedOwnershipClaims,
-      policyDecision,
       priorDisputeId,
     } = body;
 
@@ -109,9 +108,17 @@ async function postHandler(request: NextRequest) {
       );
     }
 
-    const normalizedReasonCodes = Array.isArray(reasonCodes)
-      ? reasonCodes
-      : [disputeReason.includes('not mine') ? 'not_mine' : disputeReason.includes('never late') ? 'never_late' : disputeReason.includes('wrong') ? 'wrong_balance' : 'verification_required'];
+    // Reason codes are chosen by staff. They are never inferred from the
+    // free-text dispute reason.
+    const normalizedReasonCodes: string[] = Array.isArray(reasonCodes)
+      ? reasonCodes.filter((code: unknown): code is string => typeof code === 'string' && code.length > 0)
+      : [];
+    if (normalizedReasonCodes.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one reason code is required' },
+        { status: 400 }
+      );
+    }
 
     const reportGate = await requireLatestApprovedReportForClient(clientId);
     if (!reportGate.allowed) {
@@ -121,21 +128,16 @@ async function postHandler(request: NextRequest) {
       );
     }
 
-    if (!policyDecision?.approved) {
-      return NextResponse.json(
-        { error: 'Approved policy decision is required before dispute letter generation' },
-        { status: 400 }
-      );
-    }
-
-    if (!approvedPolicyMatchesDisputeInputs({
-      policyDecision,
+    // Policy is decided here from the request's facts; a caller-supplied
+    // `policyDecision` is never trusted (ADR 0001).
+    const policyDecision = decideDisputePolicy({
       reasonCodes: normalizedReasonCodes,
-      evidenceDocumentIds,
-      clientConfirmedOwnershipClaims,
-    })) {
+      hasEvidencePacket: Array.isArray(evidenceDocumentIds) && evidenceDocumentIds.length > 0,
+      hasClientFactualConfirmation: clientConfirmedOwnershipClaims === true,
+    });
+    if (!policyDecision.approved) {
       return NextResponse.json(
-        { error: 'Approved policy decision does not match requested dispute inputs' },
+        { error: 'Dispute policy decision was not approved', violations: policyDecision.violations },
         { status: 400 }
       );
     }
@@ -236,9 +238,7 @@ async function postHandler(request: NextRequest) {
         dateReported: negativeItem?.dateReported?.toISOString() || undefined,
         bureau,
       },
-      reasonCodes: Array.isArray(reasonCodes) && reasonCodes.length > 0
-        ? reasonCodes
-        : normalizedReasonCodes,
+      reasonCodes: normalizedReasonCodes,
       customReason: disputeReason,
       librarySelection: generationSelection,
     });

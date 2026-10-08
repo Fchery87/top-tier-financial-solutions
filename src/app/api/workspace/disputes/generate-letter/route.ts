@@ -8,7 +8,7 @@ import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/dispute-evidence';
 import { requireCapability } from '@/lib/admin-session';
 import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
-import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
+import { decideDisputePolicy } from '@/lib/dispute-policy-decision';
 import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
       priorDisputeResult, // NEW: Result of prior dispute
       evidenceDocumentIds, // Optional: evidence attachments (clientDocuments IDs)
       clientConfirmedOwnershipClaims,
-      policyDecision,
       priorDisputeId,
     } = body;
 
@@ -79,21 +78,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!policyDecision?.approved) {
-      return NextResponse.json(
-        { error: 'Approved policy decision is required before letter generation' },
-        { status: 400 }
-      );
-    }
-
-    if (!approvedPolicyMatchesDisputeInputs({
-      policyDecision,
+    // Policy is decided here from the request's facts; a caller-supplied
+    // `policyDecision` is never trusted (ADR 0001).
+    const policyDecision = decideDisputePolicy({
       reasonCodes,
-      evidenceDocumentIds,
-      clientConfirmedOwnershipClaims,
-    })) {
+      hasEvidencePacket: Array.isArray(evidenceDocumentIds) && evidenceDocumentIds.length > 0,
+      hasClientFactualConfirmation: clientConfirmedOwnershipClaims === true,
+    });
+    if (!policyDecision.approved) {
       return NextResponse.json(
-        { error: 'Approved policy decision does not match requested dispute inputs' },
+        { error: 'Dispute policy decision was not approved', violations: policyDecision.violations },
         { status: 400 }
       );
     }

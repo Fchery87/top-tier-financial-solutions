@@ -2,6 +2,17 @@ import * as React from 'react';
 import type { ItemDisputeInstruction } from '../types';
 import { PRESET_DISPUTE_INSTRUCTIONS } from '../types';
 
+/**
+ * The reason code a staff member chose for an item's instruction: the preset's
+ * code, or the code picked alongside a custom instruction. A custom instruction
+ * has no code until one is chosen.
+ */
+export function getInstructionReasonCode(instruction: ItemDisputeInstruction | undefined): string | null {
+  if (!instruction) return null;
+  if (instruction.instructionType === 'custom') return instruction.reasonCode || null;
+  return instruction.presetCode && instruction.presetCode !== 'custom' ? instruction.presetCode : null;
+}
+
 export function useItemDisputeInstructions() {
   const [itemDisputeInstructions, setItemDisputeInstructions] = React.useState<Map<string, ItemDisputeInstruction>>(new Map());
 
@@ -11,7 +22,7 @@ export function useItemDisputeInstructions() {
       if (instructionType === 'preset') {
         newMap.set(itemId, { itemId, instructionType: value === 'custom' ? 'custom' : 'preset', presetCode: value, customText: value === 'custom' ? (prev.get(itemId)?.customText || '') : undefined });
       } else {
-        newMap.set(itemId, { itemId, instructionType: 'custom', presetCode: 'custom', customText: value });
+        newMap.set(itemId, { itemId, instructionType: 'custom', presetCode: 'custom', customText: value, reasonCode: prev.get(itemId)?.reasonCode });
       }
       return newMap;
     });
@@ -25,6 +36,21 @@ export function useItemDisputeInstructions() {
     return preset?.description || '';
   }, [itemDisputeInstructions]);
 
+  const updateItemCustomReasonCode = React.useCallback((itemId: string, reasonCode: string) => {
+    setItemDisputeInstructions(prev => {
+      const current = prev.get(itemId);
+      if (!current || current.instructionType !== 'custom') return prev;
+      const newMap = new Map(prev);
+      newMap.set(itemId, { ...current, reasonCode: reasonCode || undefined });
+      return newMap;
+    });
+  }, []);
+
+  const getItemReasonCode = React.useCallback(
+    (itemId: string): string | null => getInstructionReasonCode(itemDisputeInstructions.get(itemId)),
+    [itemDisputeInstructions],
+  );
+
   const hasItemInstruction = React.useCallback((itemId: string) => Boolean(itemDisputeInstructions.get(itemId)), [itemDisputeInstructions]);
 
   return {
@@ -33,5 +59,7 @@ export function useItemDisputeInstructions() {
     updateItemInstruction,
     getInstructionText,
     hasItemInstruction,
+    updateItemCustomReasonCode,
+    getItemReasonCode,
   };
 }

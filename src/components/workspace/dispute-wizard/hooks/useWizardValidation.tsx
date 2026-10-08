@@ -6,6 +6,7 @@ import {
   validateStep3,
   validateStep4,
 } from '@/lib/dispute-wizard-validation';
+import { getInstructionReasonCode } from './useItemDisputeInstructions';
 import { type StepStatus } from '@/components/workspace/DisputeWizardProgressBar';
 import {
   type Client,
@@ -69,12 +70,13 @@ export function useWizardValidation({
         }
 
         if (generationMethod === 'template' && selectedItems.length > 0) {
+          // A custom instruction counts only when it has text and the staff
+          // member chose its reason code; free text is never a reason code.
           const itemReasonCodes = Object.fromEntries(selectedItems.map(itemId => {
             const instruction = itemDisputeInstructions.get(itemId);
-            if (!instruction) return [itemId, []];
-            if (instruction.instructionType === 'preset' && instruction.presetCode) return [itemId, [instruction.presetCode]];
-            if (instruction.instructionType === 'custom' && instruction.customText?.trim()) return [itemId, [instruction.customText]];
-            return [itemId, []];
+            if (instruction?.instructionType === 'custom' && !instruction.customText?.trim()) return [itemId, []];
+            const reasonCode = getInstructionReasonCode(instruction);
+            return [itemId, reasonCode ? [reasonCode] : []];
           }));
           const templateValidation = validateStep2(selectedItems, itemReasonCodes);
           errors.push(...templateValidation.errors);

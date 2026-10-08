@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { toast } from 'sonner';
 import {
   validateEvidenceRequirements,
   type EvidenceValidationResult,
@@ -41,6 +42,7 @@ interface UseGenerateDisputeLettersOptions {
   evidenceOverrideConfirmed: boolean;
   getInstructionText: (itemId: string) => string;
   hasItemInstruction: (itemId: string) => boolean;
+  getItemReasonCode: (itemId: string) => string | null;
   itemAppearsOnBureau: (item: NegativeItem, bureau: string) => boolean;
   generateLettersFromPlan: (
     requests: LetterGenerationRequestPlan[],
@@ -75,6 +77,7 @@ export function useGenerateDisputeLetters({
   evidenceOverrideConfirmed,
   getInstructionText,
   hasItemInstruction,
+  getItemReasonCode,
   itemAppearsOnBureau,
   generateLettersFromPlan,
   setCurrentStep,
@@ -85,16 +88,6 @@ export function useGenerateDisputeLetters({
 
   const generateLetters = React.useCallback(async (analysisData?: { analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null) => {
     if (!selectedClient) return;
-
-    const usedReasonCodes = generationMethod === 'ai'
-      ? (analysisData?.summary?.allReasonCodes || aiAnalysisSummary?.allReasonCodes || [])
-      : selectedReasonCodes;
-    const evidenceValidation = validateEvidenceRequirements(usedReasonCodes, selectedEvidenceIds, selectedItems);
-    if (!evidenceValidation.isValid && !evidenceOverrideConfirmed) {
-      setEvidenceBlockingStatus(evidenceValidation);
-      setShowEvidenceBlockingModal(true);
-      return;
-    }
 
     const effectiveAnalyses = analysisData?.analyses || aiAnalysisResults;
     const effectiveSummary = analysisData?.summary || aiAnalysisSummary;
@@ -122,14 +115,23 @@ export function useGenerateDisputeLetters({
       requestManualReview,
       getInstructionText,
       hasItemInstruction,
+      getItemReasonCode,
       itemAppearsOnBureau,
     });
 
     if (generationPlan.selectedDisputeItems.length === 0) return;
 
+    const evidenceValidation = validateEvidenceRequirements(generationPlan.reasonCodesToUse, selectedEvidenceIds, selectedItems);
+    if (!evidenceValidation.isValid && !evidenceOverrideConfirmed) {
+      setEvidenceBlockingStatus(evidenceValidation);
+      setShowEvidenceBlockingModal(true);
+      return;
+    }
+
     await generateLettersFromPlan(generationPlan.requests, {
       onError: (error, request) => {
         console.error(request.combined ? 'Error generating combined letter:' : 'Error generating letter:', error);
+        toast.error(`Could not generate the ${request.bureau} letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
       },
     });
     setCurrentStep(reviewStepId);
@@ -158,6 +160,7 @@ export function useGenerateDisputeLetters({
     evidenceOverrideConfirmed,
     getInstructionText,
     hasItemInstruction,
+    getItemReasonCode,
     itemAppearsOnBureau,
     generateLettersFromPlan,
     setCurrentStep,

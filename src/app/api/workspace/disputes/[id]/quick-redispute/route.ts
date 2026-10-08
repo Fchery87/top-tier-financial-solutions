@@ -7,6 +7,7 @@ import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
+import { decideDisputePolicy, hasStoredEvidencePacket } from '@/lib/dispute-policy-decision';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
@@ -95,6 +96,21 @@ export async function POST(
         return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
       }
     }
+    // The next-cycle draft carries forward the prior dispute's evidence; there
+    // is no stored client factual confirmation to carry, so high-risk codes
+    // are refused here (ADR 0001).
+    const policyDecision = decideDisputePolicy({
+      reasonCodes: escalationPlan.reasonCodes,
+      hasEvidencePacket: hasStoredEvidencePacket(currentDispute.evidenceDocumentIds),
+      hasClientFactualConfirmation: false,
+    });
+    if (!policyDecision.approved) {
+      return NextResponse.json(
+        { error: 'Dispute policy decision was not approved', violations: policyDecision.violations },
+        { status: 400 }
+      );
+    }
+
     const librarySelection = await selectLibraryForGeneration({
       round: escalationPlan.nextRound,
       targetRecipient: escalationPlan.targetRecipient,
@@ -137,6 +153,7 @@ export async function POST(
       accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
       methodology: escalationPlan.methodology,
       reasonCodes: escalationPlan.reasonCodes,
+      policyDecision,
       priorDisputeId: currentDispute.id,
       analysisConfidence: currentDispute.analysisConfidence,
       autoSelected: currentDispute.autoSelected ?? false,

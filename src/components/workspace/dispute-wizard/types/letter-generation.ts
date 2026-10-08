@@ -40,6 +40,8 @@ export interface LetterGenerationBuilderInput {
   requestManualReview: boolean;
   getInstructionText: (itemId: string) => string;
   hasItemInstruction: (itemId: string) => boolean;
+  /** Template mode: the reason code the staff member chose for a tradeline, if any. */
+  getItemReasonCode: (itemId: string) => string | null;
   itemAppearsOnBureau: (item: NegativeItem, bureau: string) => boolean;
 }
 

@@ -16,7 +16,6 @@ const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const selectLibraryForGenerationMock = vi.hoisted(() => vi.fn());
 const requireLatestApprovedReportForClientMock = vi.hoisted(() => vi.fn());
 const evaluateDisputeComplianceMock = vi.hoisted(() => vi.fn());
-const approvedPolicyMatchesDisputeInputsMock = vi.hoisted(() => vi.fn());
 const decideEscalationMock = vi.hoisted(() => vi.fn());
 const loadDisputeChainMock = vi.hoisted(() => vi.fn());
 
@@ -30,7 +29,6 @@ vi.mock('@/lib/ai-letter-generator', () => ({
 vi.mock('@/lib/letter-generation-library', () => ({ selectLibraryForGeneration: selectLibraryForGenerationMock }));
 vi.mock('@/lib/parser-review-gate', () => ({ requireLatestApprovedReportForClient: requireLatestApprovedReportForClientMock }));
 vi.mock('@/lib/dispute-compliance-policy', () => ({ evaluateDisputeCompliance: evaluateDisputeComplianceMock }));
-vi.mock('@/lib/dispute-policy-decision', () => ({ approvedPolicyMatchesDisputeInputs: approvedPolicyMatchesDisputeInputsMock }));
 vi.mock('@/lib/dispute-escalation-decision', () => ({ decideEscalation: decideEscalationMock, loadDisputeChain: loadDisputeChainMock }));
 
 describe('POST /api/workspace/disputes/drafts/generate', () => {
@@ -39,7 +37,6 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
     requireLatestApprovedReportForClientMock.mockResolvedValue({ allowed: true });
     evaluateDisputeComplianceMock.mockReturnValue({ isCompliant: true, violations: [] });
-    approvedPolicyMatchesDisputeInputsMock.mockReturnValue(true);
     loadDisputeChainMock.mockResolvedValue([]);
     selectLibraryForGenerationMock.mockResolvedValue({
       chosen: { id: 'library-1', name: 'Verification strategy' },
@@ -74,7 +71,6 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
           itemType: 'collection',
         }],
         reasonCodes: ['verification_required'],
-        policyDecision: { approved: true, reasonCodes: ['verification_required'] },
       }),
     }));
 
@@ -111,7 +107,6 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
         targetRecipient: 'cfpb',
         disputeItems: [{ id: 'item-1', kind: 'tradeline' }],
         reasonCodes: ['verification_required'],
-        policyDecision: { approved: true, reasonCodes: ['verification_required'] },
       }),
     }));
 
@@ -139,7 +134,6 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
         priorDisputeId: 'cra-1',
         disputeItems: [{ id: 'item-1', kind: 'tradeline' }],
         reasonCodes: ['verification_required'],
-        policyDecision: { approved: true, reasonCodes: ['verification_required'] },
       }),
     }));
 
@@ -159,7 +153,6 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
         negativeItemIds: ['item-1', 'item-2'],
         priorDisputeId: 'cra-1',
         reasonCodes: ['verification_required'],
-        policyDecision: { approved: true, reasonCodes: ['verification_required'] },
       }),
     }));
 
@@ -187,7 +180,6 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
         priorDisputeId: 'cra-1',
         disputeItems: [{ id: 'item-1', kind: 'tradeline' }],
         reasonCodes: ['verification_required'],
-        policyDecision: { approved: true, reasonCodes: ['verification_required'] },
       }),
     }));
 

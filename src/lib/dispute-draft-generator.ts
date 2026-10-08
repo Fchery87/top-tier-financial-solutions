@@ -5,6 +5,7 @@ import { disputeLetterRevisions, disputes } from '@/db/schema';
 import type { LetterLintFinding } from '@/lib/letter-lint';
 import type { Selection } from '@/lib/letter-library-selector';
 import type { LetterRevisionSource } from '@/lib/dispute-letter-workflow';
+import type { DisputePolicyDecision } from '@/lib/dispute-policy-decision';
 
 export interface DraftItemSnapshotInput {
   kind: 'tradeline' | 'personal' | 'inquiry';
@@ -28,7 +29,8 @@ export interface PersistGeneratedDisputeDraftInput {
   disputeType: string;
   round: number;
   reasonCodes: string[];
-  policyDecision?: unknown;
+  /** The server's decision (`decideDisputePolicy`); never caller-supplied. */
+  policyDecision: DisputePolicyDecision;
   escalationPath?: string | null;
   methodology?: string | null;
   letterContent: string;
@@ -99,7 +101,7 @@ function draftValues(input: PersistGeneratedDisputeDraftInput, now: Date) {
     status: input.status || 'draft',
     round: input.round,
     reasonCodes: JSON.stringify(input.reasonCodes),
-    policyDecision: input.policyDecision ? JSON.stringify(input.policyDecision) : null,
+    policyDecision: JSON.stringify(input.policyDecision),
     escalationPath: input.escalationPath || null,
     letterContent: input.letterContent,
     letterContextSnapshot: buildLetterContextSnapshot({
@@ -124,6 +126,7 @@ export async function persistGeneratedDisputeDraft(
 ): Promise<PersistedDisputeDraft> {
   if (!input.letterContent.trim()) throw new Error('Generated letter content is required');
   if (input.items.length === 0) throw new Error('At least one dispute item is required');
+  if (!input.policyDecision?.approved) throw new Error('An approved dispute policy decision is required');
 
   const now = new Date();
   const generationMetadata = buildGenerationMetadata(input.selection);

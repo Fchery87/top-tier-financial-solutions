@@ -55,17 +55,18 @@ function buildSelectedDisputeItems(input: LetterGenerationBuilderInput): Selecte
   ];
 }
 
-function buildReasonCodes(input: LetterGenerationBuilderInput): string[] {
-  if (input.generationMethod !== 'ai') return [];
+const PERSONAL_INFO_REASON_CODES = ['verification_required', 'inaccurate_reporting'];
 
+function inquiryReasonCodes(item: InquiryItem): string[] {
+  return [item.is_past_fcra_limit ? 'obsolete' : 'unauthorized_inquiry', 'verification_required'];
+}
+
+function buildAiReasonCodes(input: LetterGenerationBuilderInput): string[] {
   const reasonCodeSet = new Set(input.effectiveSummary?.allReasonCodes || ['verification_required', 'inaccurate_reporting']);
   const hasSelectedPersonal = input.personalInfoItems.some(item => input.selectedPersonalItems.includes(item.id));
   const selectedInquiries = input.inquiryItems.filter(item => input.selectedInquiryItems.includes(item.id));
 
-  if (hasSelectedPersonal) {
-    reasonCodeSet.add('verification_required');
-    reasonCodeSet.add('inaccurate_reporting');
-  }
+  if (hasSelectedPersonal) PERSONAL_INFO_REASON_CODES.forEach(code => reasonCodeSet.add(code));
 
   if (selectedInquiries.length > 0) {
     reasonCodeSet.add(selectedInquiries.some(item => item.is_past_fcra_limit) ? 'obsolete' : 'unauthorized_inquiry');
@@ -73,6 +74,23 @@ function buildReasonCodes(input: LetterGenerationBuilderInput): string[] {
   }
 
   return Array.from(reasonCodeSet);
+}
+
+/**
+ * Template mode: a tradeline's reason code is the one the staff member chose
+ * for its dispute instruction. Personal-information and inquiry codes follow
+ * deterministically from the item data, as in AI mode.
+ */
+function templateEntryReasonCodes(input: LetterGenerationBuilderInput, entry: SelectedDisputeItemEntry): string[] {
+  if (entry.kind === 'personal') return PERSONAL_INFO_REASON_CODES;
+  if (entry.kind === 'inquiry') return inquiryReasonCodes(entry.raw as InquiryItem);
+  const code = input.getItemReasonCode(entry.payload.id);
+  return code ? [code] : [];
+}
+
+function reasonCodesForEntries(input: LetterGenerationBuilderInput, entries: SelectedDisputeItemEntry[]): string[] {
+  if (input.generationMethod === 'ai') return buildAiReasonCodes(input);
+  return Array.from(new Set(entries.flatMap(entry => templateEntryReasonCodes(input, entry))));
 }
 
 function buildPerItemInstructions(input: LetterGenerationBuilderInput): Record<string, string> {
@@ -101,7 +119,7 @@ function methodology(input: LetterGenerationBuilderInput, summary: AIAnalysisSum
 
 export function buildLetterGenerationPayload(input: LetterGenerationBuilderInput): LetterGenerationPayloadPlan {
   const selectedDisputeItems = buildSelectedDisputeItems(input);
-  const reasonCodesToUse = buildReasonCodes(input);
+  const reasonCodesToUse = reasonCodesForEntries(input, selectedDisputeItems);
   const methodologyToUse = methodology(input, input.effectiveSummary);
   const bureausToUse = input.targetRecipient === 'bureau' ? input.selectedBureaus : ['direct'];
   const perItemInstructions = buildPerItemInstructions(input);
@@ -115,7 +133,8 @@ export function buildLetterGenerationPayload(input: LetterGenerationBuilderInput
   if (input.combineItemsPerBureau && input.targetRecipient === 'bureau') {
     const bureausWithItems = bureausToUse.filter(bureau => selectedDisputeItems.some(entry => itemAppliesToBureau(input, entry, bureau)));
     const requests = bureausWithItems.map(bureau => {
-      const itemsForThisBureau = selectedDisputeItems.filter(entry => itemAppliesToBureau(input, entry, bureau)).map(entry => entry.payload);
+      const entriesForThisBureau = selectedDisputeItems.filter(entry => itemAppliesToBureau(input, entry, bureau));
+      const itemsForThisBureau = entriesForThisBureau.map(entry => entry.payload);
       return {
         key: `combined-${bureau}-${itemsForThisBureau.map(item => item.id).join('-')}`,
         bureau,
@@ -131,7 +150,7 @@ export function buildLetterGenerationPayload(input: LetterGenerationBuilderInput
           round: input.disputeRound,
           targetRecipient: input.targetRecipient,
           priorDisputeId: input.priorDisputeId || undefined,
-          reasonCodes: reasonCodesToUse,
+          reasonCodes: reasonCodesForEntries(input, entriesForThisBureau),
           customReason: input.customReason || undefined,
           combineItems: true,
           methodology: methodologyToUse,
@@ -170,7 +189,7 @@ export function buildLetterGenerationPayload(input: LetterGenerationBuilderInput
         round: input.disputeRound,
         targetRecipient: input.targetRecipient,
         priorDisputeId: input.priorDisputeId || undefined,
-        reasonCodes: reasonCodesToUse,
+        reasonCodes: reasonCodesForEntries(input, [entry]),
         customReason: itemInstruction || undefined,
         creditorName: entry.payload.creditorName,
         itemType: entry.payload.itemType,

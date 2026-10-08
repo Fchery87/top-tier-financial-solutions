@@ -129,6 +129,11 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     expect(persistGeneratedDisputeDraftMock).toHaveBeenCalledWith(expect.objectContaining({
       round: 2,
       priorDisputeId: 'dispute-1',
+      policyDecision: expect.objectContaining({
+        approved: true,
+        reasonCodes: expect.arrayContaining(['request_verification_method']),
+        claimRisk: 'ordinary',
+      }),
     }));
   });
 

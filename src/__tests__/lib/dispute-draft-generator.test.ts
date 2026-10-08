@@ -12,6 +12,15 @@ const dbMock = vi.hoisted(() => ({
 
 vi.mock('@/db/client', () => ({ db: dbMock }));
 
+const APPROVED_DECISION = {
+  approved: true,
+  reasonCodes: ['verification_required'],
+  requiredEvidence: ['identity_document', 'proof_of_address'],
+  claimRisk: 'ordinary' as const,
+  targetRecipient: 'bureau' as const,
+  violations: [],
+};
+
 describe('persistGeneratedDisputeDraft', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -28,6 +37,7 @@ describe('persistGeneratedDisputeDraft', () => {
       disputeType: 'standard',
       round: 1,
       reasonCodes: ['verification_required'],
+      policyDecision: APPROVED_DECISION,
       letterContent: 'A compliant letter',
       accountNumber: '123456789',
       items: [{
@@ -105,6 +115,7 @@ describe('persistGeneratedDisputeDraft', () => {
       disputeType: 'standard',
       round: 1,
       reasonCodes: ['verification_required'],
+      policyDecision: APPROVED_DECISION,
       letterContent: 'A regenerated letter',
       items: [{ kind: 'tradeline', bureau: 'experian', creditorName: 'Example Bank' }],
     });
@@ -117,5 +128,22 @@ describe('persistGeneratedDisputeDraft', () => {
       revision: 2,
       source: 'generated',
     });
+  });
+
+  it('refuses to persist a draft whose policy decision is not approved', async () => {
+    const { persistGeneratedDisputeDraft } = await import('@/lib/dispute-draft-generator');
+
+    await expect(persistGeneratedDisputeDraft({
+      clientId: 'client-1',
+      bureau: 'experian',
+      disputeReason: 'not_mine',
+      disputeType: 'standard',
+      round: 1,
+      reasonCodes: ['not_mine'],
+      policyDecision: { ...APPROVED_DECISION, approved: false, violations: ['High-risk claims require claim-specific evidence.'] },
+      letterContent: 'A letter',
+      items: [{ kind: 'tradeline', bureau: 'experian' }],
+    })).rejects.toThrow('An approved dispute policy decision is required');
+    expect(dbMock.transaction).not.toHaveBeenCalled();
   });
 });

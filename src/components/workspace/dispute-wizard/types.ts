@@ -57,6 +57,8 @@ export interface ItemDisputeInstruction {
   instructionType: 'preset' | 'custom';
   presetCode?: string;
   customText?: string;
+  /** Required with a custom instruction: the reason code the staff member chose. */
+  reasonCode?: string;
 }
 
 export interface ReasonCode {

@@ -217,6 +217,7 @@ interface WizardContextValue {
   canProceed: () => boolean;
   getStepValidation: (step: number) => { errors: string[]; warnings: string[] };
   updateItemInstruction: (itemId: string, instructionType: 'preset' | 'custom', value: string) => void;
+  updateItemCustomReasonCode: (itemId: string, reasonCode: string) => void;
   getInstructionText: (itemId: string) => string;
   copyToClipboard: (content: string) => void;
   downloadLetter: (content: string, filename: string) => void;
@@ -266,6 +267,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     updateItemInstruction,
     getInstructionText,
     hasItemInstruction,
+    updateItemCustomReasonCode,
+    getItemReasonCode,
   } = useItemDisputeInstructions();
 
   const {
@@ -525,6 +528,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     evidenceOverrideConfirmed,
     getInstructionText,
     hasItemInstruction,
+    getItemReasonCode,
     itemAppearsOnBureau,
     generateLettersFromPlan,
     setCurrentStep,
@@ -599,7 +603,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     fetchClients, fetchNegativeItems, fetchDiscrepancies, fetchTriage, fetchEvidence, fetchMethodologies, fetchReasonCodes,
     analyzeItemsWithAI, autoSelectDisputableItems, generateLetters, handleSelectClient, handleToggleItem, handleToggleBureau,
     handleUploadEvidence, handleRemoveEvidence, handleBulkMarkAsSent,
-    validateCurrentStep, canProceed, getStepValidation, updateItemInstruction, getInstructionText, copyToClipboard, downloadLetter,
+    validateCurrentStep, canProceed, getStepValidation, updateItemInstruction, updateItemCustomReasonCode, getInstructionText, copyToClipboard, downloadLetter,
     buildStepStatuses, handleStepClick, renderValidationMessages, saveAnalysisPreferences, wizardDraft, reasonCodes, customReason,
   };
 

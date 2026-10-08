@@ -29,27 +29,7 @@ describe('POST /api/workspace/disputes/generate-letter', () => {
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
   });
 
-  it('fails closed when approved policy inputs are missing', async () => {
-    const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
-
-    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
-      method: 'POST',
-      body: JSON.stringify({
-        clientId: 'client-1',
-        bureau: 'experian',
-        reasonCodes: ['verification_required'],
-      }),
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'Approved policy decision is required before letter generation' });
-    expect(dbMock.select).not.toHaveBeenCalled();
-    expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
-    expect(generateMultiItemDisputeLetterMock).not.toHaveBeenCalled();
-  }, 30000);
-
-  it('rejects approved policy decisions that do not match the requested reason codes', async () => {
+  it('decides policy on the server and refuses a high-risk claim without evidence or confirmation', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
 
     const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
@@ -58,7 +38,32 @@ describe('POST /api/workspace/disputes/generate-letter', () => {
         clientId: 'client-1',
         bureau: 'experian',
         reasonCodes: ['never_late'],
-        evidenceDocumentIds: ['doc-1'],
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      error: 'Dispute policy decision was not approved',
+      violations: [
+        'High-risk claims require claim-specific evidence.',
+        'High-risk claims require explicit client factual confirmation.',
+      ],
+    });
+    expect(dbMock.select).not.toHaveBeenCalled();
+    expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
+    expect(generateMultiItemDisputeLetterMock).not.toHaveBeenCalled();
+  }, 30000);
+
+  it('ignores a caller-supplied approved policyDecision that contradicts the request', async () => {
+    const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
+      method: 'POST',
+      body: JSON.stringify({
+        clientId: 'client-1',
+        bureau: 'experian',
+        reasonCodes: ['never_late'],
         clientConfirmedOwnershipClaims: true,
         policyDecision: {
           approved: true,
@@ -73,7 +78,10 @@ describe('POST /api/workspace/disputes/generate-letter', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'Approved policy decision does not match requested dispute inputs' });
+    expect(body).toEqual({
+      error: 'Dispute policy decision was not approved',
+      violations: ['High-risk claims require claim-specific evidence.'],
+    });
     expect(dbMock.select).not.toHaveBeenCalled();
     expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
     expect(generateMultiItemDisputeLetterMock).not.toHaveBeenCalled();

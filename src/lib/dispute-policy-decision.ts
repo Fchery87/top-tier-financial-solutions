@@ -20,13 +20,6 @@ export interface DisputePolicyDecision {
   violations: string[];
 }
 
-function sameStringSet(a: string[], b: string[]) {
-  if (a.length !== b.length) return false;
-  const left = [...a].sort();
-  const right = [...b].sort();
-  return left.every((value, index) => value === right[index]);
-}
-
 export function evaluateDisputePolicy(input: DisputePolicyInput): DisputePolicyDecision {
   const isHighRisk = HIGH_RISK_CLAIM_TYPES.has(input.claimType);
   const requiredEvidence = ['identity_document', 'proof_of_address'];
@@ -54,33 +47,49 @@ export function evaluateDisputePolicy(input: DisputePolicyInput): DisputePolicyD
   };
 }
 
-export function approvedPolicyMatchesDisputeInputs(params: {
-  policyDecision: DisputePolicyDecision | null | undefined;
+export interface DisputePolicyRequest {
   reasonCodes: string[];
-  evidenceDocumentIds?: string[] | null;
-  clientConfirmedOwnershipClaims?: boolean;
-}) {
-  if (!params.policyDecision?.approved) return false;
+  hasEvidencePacket: boolean;
+  hasClientFactualConfirmation: boolean;
+}
 
-  const reasonCodes = params.reasonCodes.filter(Boolean);
-  if (!sameStringSet(params.policyDecision.reasonCodes, reasonCodes)) return false;
+export const MISSING_REASON_CODE_VIOLATION = 'At least one dispute reason code is required.';
 
-  const hasEvidencePacket = Array.isArray(params.evidenceDocumentIds) && params.evidenceDocumentIds.length > 0;
-  const hasClientFactualConfirmation = params.clientConfirmedOwnershipClaims === true;
+/**
+ * Decides dispute policy on the server for a whole request by aggregating the
+ * per-claim decisions. Callers never supply the decision (ADR 0001).
+ */
+export function decideDisputePolicy(request: DisputePolicyRequest): DisputePolicyDecision {
+  const reasonCodes = Array.from(new Set(request.reasonCodes.filter(Boolean)));
   const decisions = reasonCodes.map((claimType) => evaluateDisputePolicy({
     claimType,
-    hasEvidencePacket,
-    hasClientFactualConfirmation,
+    hasEvidencePacket: request.hasEvidencePacket,
+    hasClientFactualConfirmation: request.hasClientFactualConfirmation,
   }));
+  const violations = decisions.flatMap((decision) => decision.violations);
+  if (reasonCodes.length === 0) violations.push(MISSING_REASON_CODE_VIOLATION);
 
-  if (decisions.some((decision) => !decision.approved)) return false;
+  return {
+    approved: violations.length === 0,
+    reasonCodes,
+    requiredEvidence: Array.from(new Set(
+      decisions.length > 0
+        ? decisions.flatMap((decision) => decision.requiredEvidence)
+        : ['identity_document', 'proof_of_address'],
+    )),
+    claimRisk: decisions.some((decision) => decision.claimRisk === 'high') ? 'high' : 'ordinary',
+    targetRecipient: 'bureau',
+    violations,
+  };
+}
 
-  const requiredEvidence = Array.from(new Set(decisions.flatMap((decision) => decision.requiredEvidence)));
-  const claimRisk: ClaimRisk = decisions.some((decision) => decision.claimRisk === 'high') ? 'high' : 'ordinary';
-
-  return (
-    params.policyDecision.claimRisk === claimRisk &&
-    sameStringSet(params.policyDecision.requiredEvidence, requiredEvidence) &&
-    params.policyDecision.targetRecipient === 'bureau'
-  );
+/** True when a persisted dispute's `evidenceDocumentIds` JSON names at least one document. */
+export function hasStoredEvidencePacket(evidenceDocumentIds: string | null | undefined): boolean {
+  if (!evidenceDocumentIds) return false;
+  try {
+    const parsed: unknown = JSON.parse(evidenceDocumentIds);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
 }

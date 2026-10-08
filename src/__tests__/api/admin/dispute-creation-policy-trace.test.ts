@@ -67,7 +67,7 @@ describe('POST /api/workspace/disputes policy traceability', () => {
     dbMock.transaction.mockImplementation(async (callback: (tx: typeof txMock) => Promise<unknown>) => callback(txMock));
   });
 
-  it('persists approved policy decision inputs with generated letter content', async () => {
+  it('persists the server-decided policy with generated letter content', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/route');
     const insertedValues: Record<string, unknown>[] = [];
     const createdDispute = {
@@ -119,7 +119,6 @@ describe('POST /api/workspace/disputes policy traceability', () => {
         bureau: 'experian',
         disputeReason: 'verification_required',
         reasonCodes: ['verification_required'],
-        policyDecision,
       }),
     }));
     const body = await response.json();
@@ -142,7 +141,7 @@ describe('POST /api/workspace/disputes policy traceability', () => {
     });
   }, 30000);
 
-  it('fails closed before generating a letter when approved policy is missing', async () => {
+  it('fails closed before generating a letter when no reason code is chosen', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/route');
 
     const response = await POST(new NextRequest('http://localhost/api/workspace/disputes', {
@@ -150,14 +149,13 @@ describe('POST /api/workspace/disputes policy traceability', () => {
       body: JSON.stringify({
         clientId: 'client-1',
         bureau: 'experian',
-        disputeReason: 'verification_required',
-        reasonCodes: ['verification_required'],
+        disputeReason: 'This account is wrong',
       }),
     }));
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'Approved policy decision is required before dispute letter generation' });
+    expect(body).toEqual({ error: 'At least one reason code is required' });
     expect(dbMock.select).not.toHaveBeenCalled();
     expect(dbMock.insert).not.toHaveBeenCalled();
     expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();

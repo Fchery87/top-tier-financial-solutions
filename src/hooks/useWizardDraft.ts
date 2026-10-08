@@ -11,7 +11,7 @@ export interface WizardDraftData {
   selectedPersonalItems?: string[];
   selectedInquiryItems?: string[];
   activeTab?: 'tradelines' | 'personal' | 'inquiries';
-  itemDisputeInstructions?: Map<string, { itemId: string; instructionType: 'preset' | 'custom'; presetCode?: string; customText?: string }>;
+  itemDisputeInstructions?: Map<string, { itemId: string; instructionType: 'preset' | 'custom'; presetCode?: string; customText?: string; reasonCode?: string }>;
 
   // Step 3: Configuration
   disputeRound?: number;

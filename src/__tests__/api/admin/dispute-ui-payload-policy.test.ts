@@ -90,7 +90,7 @@ function wizardInput(overrides: Record<string, unknown> = {}): LetterGenerationB
     getItemReasonCode: () => 'inaccurate_reporting',
     itemAppearsOnBureau: (item: NegativeItem, bureau: string) => (item.bureaus || []).includes(bureau),
     ...overrides,
-  } as LetterGenerationBuilderInput;
+  } satisfies LetterGenerationBuilderInput;
 }
 
 function mockClientLookup() {
@@ -224,6 +224,7 @@ describe('dispute screens -> server-decided dispute policy', () => {
         bureau: 'experian',
         disputeReason: 'This collection is inaccurate and should be removed.',
         disputeType: 'standard',
+        reasonCode: 'verification_required',
       });
       const result = await postCreateDispute(body);
 

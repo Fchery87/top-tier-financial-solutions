@@ -7,6 +7,7 @@ import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { setSetting } from '@/lib/settings-service';
 import { buildEscalationPlan, getDisputeSlaInstanceId, type EscalationPlan } from '@/lib/dispute-automation';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
+import { decideDisputePolicy, hasStoredEvidencePacket } from '@/lib/dispute-policy-decision';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 
 export const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run';
@@ -149,6 +150,19 @@ export async function runDisputeEscalationAutomation(
       continue;
     }
 
+    // Automated escalations get the same server-side policy decision as staff
+    // requests. Without stored client factual confirmation, a high-risk plan
+    // is refused and left for staff review.
+    const policyDecision = decideDisputePolicy({
+      reasonCodes: plan.reasonCodes,
+      hasEvidencePacket: hasStoredEvidencePacket(dispute.evidenceDocumentIds),
+      hasClientFactualConfirmation: false,
+    });
+    if (!policyDecision.approved) {
+      skippedCount += 1;
+      continue;
+    }
+
     if (options.dryRun) {
       wouldEscalateCount += 1;
       continue;
@@ -188,6 +202,7 @@ export async function runDisputeEscalationAutomation(
       methodology: plan.methodology,
       priorDisputeId: dispute.id,
       reasonCodes: plan.reasonCodes,
+      policyDecision,
       items: [{
         kind: 'tradeline',
         bureau: dispute.bureau,

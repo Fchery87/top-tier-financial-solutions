@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import type { NegativeItem, Dispute } from './types';
 import { getRiskSeverityColor } from './types';
 import { formatCurrency, formatItemType } from '@/lib/format';
-import { buildCreateDisputeRequestBody } from './buildCreateDisputeRequestBody';
+import { buildCreateDisputeRequestBody, CREATE_DISPUTE_REASON_OPTIONS } from './buildCreateDisputeRequestBody';
 
 interface DisputesTabProps {
   clientId: string;
@@ -37,17 +37,19 @@ export function DisputesTab({
   const [disputeBureau, setDisputeBureau] = React.useState('transunion');
   const [disputeReason, setDisputeReason] = React.useState('');
   const [disputeType, setDisputeType] = React.useState('standard');
+  const [disputeReasonCode, setDisputeReasonCode] = React.useState('');
 
   const handleCreateDispute = (item: NegativeItem) => {
     setSelectedNegativeItem(item);
     setDisputeBureau(item.bureau || 'transunion');
     setDisputeReason(item.dispute_reason || `This ${formatItemType(item.item_type).toLowerCase()} is inaccurate and should be removed.`);
     setDisputeType('standard');
+    setDisputeReasonCode('');
     setShowDisputeModal(true);
   };
 
   const handleSubmitDispute = async () => {
-    if (!selectedNegativeItem) return;
+    if (!selectedNegativeItem || !disputeReasonCode) return;
     setCreatingDispute(true);
     try {
       const response = await fetch('/api/workspace/disputes', {
@@ -59,6 +61,7 @@ export function DisputesTab({
           bureau: disputeBureau,
           disputeReason,
           disputeType,
+          reasonCode: disputeReasonCode,
         })),
       });
       if (response.ok) {
@@ -68,7 +71,8 @@ export function DisputesTab({
         onDataChanged();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to create dispute');
+        const violations: string[] = Array.isArray(error.violations) ? error.violations : [];
+        toast.error([error.error || 'Failed to create dispute', ...violations].join(' '));
       }
     } catch (error) {
       console.error('Error creating dispute:', error);
@@ -183,12 +187,21 @@ export function DisputesTab({
                   </select>
                 </div>
                 <div>
+                  <label htmlFor="dispute-reason-code" className="text-sm font-medium">Reason Code</label>
+                  <select id="dispute-reason-code" value={disputeReasonCode} onChange={(e) => setDisputeReasonCode(e.target.value)} className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
+                    <option value="">Choose a reason code…</option>
+                    {CREATE_DISPUTE_REASON_OPTIONS.map(option => (
+                      <option key={option.code} value={option.code}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="text-sm font-medium">Dispute Reason</label>
                   <textarea value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} placeholder="Reason for dispute..." className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background" />
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button variant="outline" className="flex-1" onClick={() => { setShowDisputeModal(false); setSelectedNegativeItem(null); }}>Cancel</Button>
-                  <Button className="flex-1" onClick={handleSubmitDispute} disabled={creatingDispute || !disputeReason.trim()}>
+                  <Button className="flex-1" onClick={handleSubmitDispute} disabled={creatingDispute || !disputeReason.trim() || !disputeReasonCode}>
                     {creatingDispute && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                     Create Dispute
                   </Button>
