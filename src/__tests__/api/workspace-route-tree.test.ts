@@ -13,6 +13,8 @@ agreements/route.ts
 agreements/sign/route.ts
 automation/dispute-escalations/run/route.ts
 automation/route.ts
+billing/invoices/[id]/payments/route.ts
+billing/invoices/[id]/void/route.ts
 billing/route.ts
 blog-categories/route.ts
 blog-posts/[id]/route.ts
@@ -20,6 +22,7 @@ blog-posts/route.ts
 cases/route.ts
 client-outcome-analytics/route.ts
 clients/[id]/audit-report/route.ts
+clients/[id]/billing/route.ts
 clients/[id]/compare-reports/route.ts
 clients/[id]/nudge/route.ts
 clients/[id]/route.ts
@@ -72,6 +75,7 @@ pages/[id]/route.ts
 pages/route.ts
 results/route.ts
 search/route.ts
+service-engagements/[id]/billing-facts/route.ts
 service-engagements/[id]/compliance-gate/route.ts
 service-engagements/route.ts
 services-rendered-events/route.ts

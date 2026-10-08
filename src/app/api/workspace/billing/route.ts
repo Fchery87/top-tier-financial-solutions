@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { feeConfigurations, clientBillingProfiles, invoices, paymentAuditLog, clients, serviceEngagements, servicesRenderedEvents, complianceGateChecks } from '@/db/schema';
+import { feeConfigurations, clientBillingProfiles, invoices, clients } from '@/db/schema';
 import { and, eq, desc, sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
-import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
-import { evaluateBillingReadiness } from '@/lib/billing-readiness';
+import { describeBlocker } from '@/lib/billing-readiness';
+import { createInvoice } from '@/lib/billing-store';
 import { requireCapability } from '@/lib/admin-session';
 import { formatClientDisplayIdentity } from '@/lib/client-display-identity';
 import { logServerEvent } from '@/lib/server-logger';
-
-// Helper to generate invoice number
-function generateInvoiceNumber(): string {
-  const prefix = 'INV';
-  const date = new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `${prefix}-${year}${month}-${random}`;
-}
 
 // GET - List fee configs, billing profiles, or invoices
 export async function GET(request: NextRequest) {
@@ -157,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     const { type } = body;
     const headersList = await headers();
-    const ipAddress = headersList.get('x-forwarded-for') || 'unknown';
+    const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
 
     if (type === 'fee_config') {
       const { name, description, feeModel, amount, frequency, setupFee } = body;
@@ -182,8 +172,33 @@ export async function POST(request: NextRequest) {
     } else if (type === 'billing_profile') {
       const { clientId, feeConfigId } = body;
 
-      if (!clientId) {
-        return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+      if (!clientId || !feeConfigId) {
+        return NextResponse.json({ error: 'Client ID and fee plan are required' }, { status: 400 });
+      }
+
+      const [feeConfig] = await db
+        .select({ id: feeConfigurations.id })
+        .from(feeConfigurations)
+        .where(and(eq(feeConfigurations.id, feeConfigId), eq(feeConfigurations.isActive, true)))
+        .limit(1);
+
+      if (!feeConfig) {
+        return NextResponse.json({ error: 'Fee plan not found' }, { status: 404 });
+      }
+
+      const [existing] = await db
+        .select({ id: clientBillingProfiles.id })
+        .from(clientBillingProfiles)
+        .where(eq(clientBillingProfiles.clientId, clientId))
+        .orderBy(desc(clientBillingProfiles.createdAt))
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(clientBillingProfiles)
+          .set({ feeConfigId, updatedAt: new Date() })
+          .where(eq(clientBillingProfiles.id, existing.id));
+        return NextResponse.json({ id: existing.id, message: 'Billing profile updated successfully' });
       }
 
       const id = crypto.randomUUID();
@@ -196,148 +211,46 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ id, message: 'Billing profile created successfully' });
     } else {
-      // Create invoice
-      const { clientId, serviceEngagementId, invoiceServiceType, amount, description, dueDate, servicesRendered, feeModel, resultVerified } = body;
+      // feeModel and resultVerified in the body are deliberately ignored: payability comes from stored facts.
+      const { clientId, serviceEngagementId, servicesRenderedEventId, invoiceServiceType, amount, description, dueDate } = body;
 
-      if (!clientId || !amount) {
-        return NextResponse.json({ error: 'Client ID and amount are required' }, { status: 400 });
+      if (!clientId || !serviceEngagementId) {
+        return NextResponse.json({ error: 'Client ID and service engagement ID are required' }, { status: 400 });
       }
 
-      if (!serviceEngagementId) {
-        return NextResponse.json({ error: 'Service engagement ID is required' }, { status: 400 });
+      const parsedDueDate = dueDate ? new Date(dueDate) : null;
+      if (parsedDueDate && Number.isNaN(parsedDueDate.getTime())) {
+        return NextResponse.json({ error: 'Due date must be a date' }, { status: 400 });
       }
 
-      // CROA Compliance: Services must be rendered before invoicing
-      if (!servicesRendered) {
-        return NextResponse.json({ 
-          error: 'CROA Compliance: Services must be documented before creating an invoice',
-          code: 'CROA_SERVICES_REQUIRED'
-        }, { status: 400 });
-      }
-
-      const [engagement] = await db
-        .select({
-          id: serviceEngagements.id,
-          serviceType: serviceEngagements.serviceType,
-        })
-        .from(serviceEngagements)
-        .where(and(
-          eq(serviceEngagements.id, serviceEngagementId),
-          eq(serviceEngagements.clientId, clientId),
-        ))
-        .limit(1);
-
-      if (!engagement) {
-        return NextResponse.json({ error: 'Service engagement not found for client' }, { status: 404 });
-      }
-
-      if (invoiceServiceType === 'credit_audit' && engagement.serviceType !== 'credit_audit') {
-        return NextResponse.json({
-          error: 'Credit Audit invoices require a separate Credit Audit engagement',
-          code: 'CREDIT_AUDIT_ENGAGEMENT_REQUIRED'
-        }, { status: 400 });
-      }
-
-      const [qualifyingEvent] = await db
-        .select({
-          id: servicesRenderedEvents.id,
-          eventType: servicesRenderedEvents.eventType,
-          occurredAt: servicesRenderedEvents.occurredAt,
-        })
-        .from(servicesRenderedEvents)
-        .where(and(
-          eq(servicesRenderedEvents.clientId, clientId),
-          eq(servicesRenderedEvents.serviceEngagementId, serviceEngagementId),
-          eq(servicesRenderedEvents.eventType, 'first_dispute_package_submitted'),
-        ))
-        .limit(1);
-
-      if (!qualifyingEvent) {
-        return NextResponse.json({
-          error: 'A qualifying Services Rendered event is required before an invoice can become payable',
-          code: 'SERVICES_RENDERED_EVENT_REQUIRED'
-        }, { status: 400 });
-      }
-
-      const gateRecords = await db
-        .select({
-          checkKey: complianceGateChecks.checkKey,
-          passed: complianceGateChecks.passed,
-          checkedAt: complianceGateChecks.checkedAt,
-          notes: complianceGateChecks.notes,
-        })
-        .from(complianceGateChecks)
-        .where(eq(complianceGateChecks.engagementId, serviceEngagementId));
-
-      const complianceDecision = evaluateComplianceGateAction({
-        records: gateRecords,
-        action: 'create_payable_invoice',
-      });
-
-      if (!complianceDecision.allowed) {
-        return NextResponse.json({
-          error: 'Compliance Gate must pass before creating a payable invoice',
-          code: complianceDecision.code,
-          blocking_checks: complianceDecision.blockingChecks,
-        }, { status: 409 });
-      }
-
-      const billingReadiness = evaluateBillingReadiness({
-        hasQualifyingServicesRenderedEvent: true,
-        feeModel,
-        hasVerifiedResult: resultVerified === true,
-      });
-
-      if (!billingReadiness.payable) {
-        return NextResponse.json({
-          error: billingReadiness.reason,
-          code: billingReadiness.code,
-        }, { status: 409 });
-      }
-
-      const id = crypto.randomUUID();
-      const invoiceNumber = generateInvoiceNumber();
-
-      await db.insert(invoices).values({
-        id,
+      const created = await createInvoice({
         clientId,
-        invoiceNumber,
-        amount,
-        status: 'pending',
-        servicesRendered: JSON.stringify({
-          event_id: qualifyingEvent.id,
-          event_type: qualifyingEvent.eventType,
-          details: servicesRendered,
-        }),
-        servicesRenderedAt: qualifyingEvent.occurredAt,
-        description,
-        dueDate: dueDate ? new Date(dueDate) : null,
-      });
-
-      // Log audit entry
-      await db.insert(paymentAuditLog).values({
-        id: crypto.randomUUID(),
-        clientId,
-        invoiceId: id,
-        action: 'invoice_created',
-        details: JSON.stringify({ 
-          invoice_number: invoiceNumber, 
-          amount, 
-          readiness_reason: 'qualifying_services_rendered_event',
-          service_engagement_id: serviceEngagementId,
-          services_rendered_event_id: qualifyingEvent.id,
-          services_rendered_event_type: qualifyingEvent.eventType,
-          services_rendered_event_occurred_at: qualifyingEvent.occurredAt?.toISOString(),
-          services_rendered: servicesRendered 
-        }),
-        performedById: adminUser.id,
+        serviceEngagementId,
+        servicesRenderedEventId: typeof servicesRenderedEventId === 'string' ? servicesRenderedEventId : null,
+        invoiceServiceType: typeof invoiceServiceType === 'string' ? invoiceServiceType : null,
+        amountCents: amount,
+        description: typeof description === 'string' && description.trim() ? description.trim() : null,
+        dueDate: parsedDueDate,
+        actorUserId: adminUser.id,
         ipAddress,
+        now: new Date(),
       });
 
-      return NextResponse.json({ 
-        id, 
-        invoiceNumber,
-        message: 'Invoice created successfully' 
+      if (created.result === 'rejected') {
+        return NextResponse.json({
+          error: created.error,
+          code: created.code,
+          ...(created.blockers
+            ? { blockers: created.blockers.map((blocker) => ({ kind: blocker.kind, message: describeBlocker(blocker) })) }
+            : {}),
+        }, { status: created.status });
+      }
+
+      return NextResponse.json({
+        id: created.id,
+        invoiceNumber: created.invoiceNumber,
+        amount: created.amountCents,
+        message: 'Invoice created successfully',
       });
     }
   } catch (error) {
