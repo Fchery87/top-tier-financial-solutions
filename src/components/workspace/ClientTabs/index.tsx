@@ -9,10 +9,11 @@ import {
   Scale, 
   CheckSquare, 
   MessageSquare,
-  TrendingUp
+  TrendingUp,
+  Receipt
 } from 'lucide-react';
 
-export type ClientTab = 'overview' | 'progress' | 'reports' | 'disputes' | 'tasks' | 'notes';
+export type ClientTab = 'overview' | 'progress' | 'reports' | 'disputes' | 'tasks' | 'notes' | 'billing';
 
 interface TabConfig {
   id: ClientTab;
@@ -27,6 +28,7 @@ const tabs: TabConfig[] = [
   { id: 'disputes', name: 'Disputes', icon: Scale },
   { id: 'tasks', name: 'Tasks', icon: CheckSquare },
   { id: 'notes', name: 'Notes', icon: MessageSquare },
+  { id: 'billing', name: 'Billing', icon: Receipt },
 ];
 
 interface ClientTabsProps {

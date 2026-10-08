@@ -25,6 +25,7 @@ import { DisputesTab } from '@/components/workspace/client-detail/DisputesTab';
 import { TasksTab } from '@/components/workspace/client-detail/TasksTab';
 import { NotesTab } from '@/components/workspace/client-detail/NotesTab';
 import { useClientRecord } from '@/components/workspace/client-detail/hooks/useClientRecord';
+import { BillingTab } from '@/components/workspace/client-detail/BillingTab';
 
 import type {
   ClientDisputeStatus,
@@ -275,6 +276,8 @@ export default function ClientDetailPage() {
               onNotesChanged={refresh}
             />
           )}
+
+          {activeTab === 'billing' && <BillingTab clientId={clientId} />}
         </motion.div>
       </AnimatePresence>
 
