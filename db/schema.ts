@@ -1517,44 +1517,6 @@ export const servicesRenderedEvents = pgTable('services_rendered_events', {
   index('services_rendered_events_eventType_idx').on(table.eventType),
 ]);
 
-export const paymentAuthorizationStatusEnum = pgEnum('payment_authorization_status', [
-  'active',
-  'revoked',
-  'expired',
-]);
-
-export const paymentAuthorizationAccountTypeEnum = pgEnum('payment_authorization_account_type', [
-  'checking',
-  'savings',
-]);
-
-export const paymentAuthorizations = pgTable('payment_authorizations', {
-  id: text('id').primaryKey(),
-  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
-  status: paymentAuthorizationStatusEnum('status').notNull(),
-  bankName: text('bank_name').notNull(),
-  routingNumberEncrypted: text('routing_number_encrypted').notNull(),
-  accountNumberEncrypted: text('account_number_encrypted').notNull(),
-  routingFingerprint: text('routing_fingerprint'),
-  accountFingerprint: text('account_fingerprint'),
-  accountLast4: text('account_last4').notNull(),
-  accountType: paymentAuthorizationAccountTypeEnum('account_type').notNull(),
-  maximumAmountCents: integer('maximum_amount_cents').notNull(),
-  signatureData: text('signature_data').notNull(),
-  signedAt: timestamp('signed_at').notNull(),
-  signerIpAddress: text('signer_ip_address'),
-  revokedAt: timestamp('revoked_at'),
-  expiresAt: timestamp('expires_at'),
-  supersededById: text('superseded_by_id'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => [
-  index('payment_authorizations_clientId_idx').on(table.clientId),
-  uniqueIndex('payment_authorizations_one_active_per_client')
-    .on(table.clientId)
-    .where(sql`${table.status} = 'active'`),
-]);
-
 // Payment audit log (compliance trail)
 export const paymentAuditLog = pgTable('payment_audit_log', {
   id: text('id').primaryKey(),
@@ -1682,13 +1644,6 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     references: [clientBillingProfiles.id],
   }),
   auditLogs: many(paymentAuditLog),
-}));
-
-export const paymentAuthorizationsRelations = relations(paymentAuthorizations, ({ one }) => ({
-  client: one(clients, {
-    fields: [paymentAuthorizations.clientId],
-    references: [clients.id],
-  }),
 }));
 
 export const paymentAuditLogRelations = relations(paymentAuditLog, ({ one }) => ({

@@ -1,5 +1,3 @@
-import { EXHIBIT_A_PAYMENT_COPY } from '@/lib/payment-authorization/exhibit-a';
-
 // NY GBL Article 28-BB Compliant Service Agreement Template
 // This template complies with New York General Business Law Article 28-BB (Credit Services Business)
 // and the federal Credit Repair Organizations Act (CROA)
@@ -315,9 +313,9 @@ export const NY_SERVICE_AGREEMENT_TEMPLATE = `
         {{service_package}}
       </div>
 
-      <h3 style="font-size: 13px;">Payment Authorization:</h3>
+      <h3 style="font-size: 13px;">How Invoices Are Paid:</h3>
       <div style="padding: 15px; background: #f9f9f9; border: 1px solid #ccc; border-radius: 5px;">
-        <p style="font-size: 12px; margin-bottom: 0;">${EXHIBIT_A_PAYMENT_COPY}</p>
+        <p style="font-size: 12px; margin-bottom: 0;">Fees are invoiced only after the services described above have been performed. You pay each invoice yourself, by a method you initiate. This firm does not collect bank account numbers, does not debit your bank account, and does not create demand drafts or remotely created checks.</p>
       </div>
 
       <div style="margin-top: 20px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px;">

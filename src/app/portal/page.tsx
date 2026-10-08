@@ -181,9 +181,6 @@ export default function PortalPage() {
                     <Button asChild variant="outline" className="w-full justify-start">
                       <Link href="/portal/agreement"><FileSignature className="w-4 h-4 mr-2" />Service Agreement</Link>
                     </Button>
-                    <Button asChild variant="outline" className="w-full justify-start">
-                      <Link href="/portal/payment-authorization"><Shield className="w-4 h-4 mr-2" />Payment authorization</Link>
-                    </Button>
                     {auditReport?.has_report && (
                       <Button asChild variant="outline" className="w-full justify-start">
                         <Link href="/portal/audit-report"><FileText className="w-4 h-4 mr-2" />View Audit Report</Link>

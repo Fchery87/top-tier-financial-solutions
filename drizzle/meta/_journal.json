@@ -330,6 +330,13 @@
       "when": 1791452416466,
       "tag": "0046_backfill_invoice_engagement",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791452637476,
+      "tag": "0047_remove_payment_authorizations",
+      "breakpoints": true
     }
   ]
 }
