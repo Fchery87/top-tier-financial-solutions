@@ -9,14 +9,14 @@ vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/team-role-management', () => ({ changeUserRole: changeUserRoleMock }));
 
-describe('/api/admin/team', () => {
+describe('/api/workspace/team', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
   it('returns 403 when the requester lacks team:manage', async () => {
     requireCapabilityMock.mockResolvedValue(null);
-    const { GET } = await import('@/app/api/admin/team/route');
+    const { GET } = await import('@/app/api/workspace/team/route');
 
     const response = await GET();
 
@@ -46,7 +46,7 @@ describe('/api/admin/team', () => {
           created_at: '2026-08-02T12:15:00.000Z',
         }],
       });
-    const { GET } = await import('@/app/api/admin/team/route');
+    const { GET } = await import('@/app/api/workspace/team/route');
 
     const response = await GET();
 
@@ -80,9 +80,9 @@ describe('/api/admin/team', () => {
       previousRole: 'staff',
       role: 'admin',
     });
-    const { PATCH } = await import('@/app/api/admin/team/route');
+    const { PATCH } = await import('@/app/api/workspace/team/route');
 
-    const response = await PATCH(new NextRequest('http://localhost/api/admin/team', {
+    const response = await PATCH(new NextRequest('http://localhost/api/workspace/team', {
       method: 'PATCH',
       body: JSON.stringify({ user_id: 'member-1', role: 'admin' }),
     }));
@@ -102,9 +102,9 @@ describe('/api/admin/team', () => {
   ])('maps %s role-change results to the correct HTTP status', async (code, status) => {
     requireCapabilityMock.mockResolvedValue({ id: 'owner-1', email: 'owner@example.com', role: 'super_admin' });
     changeUserRoleMock.mockResolvedValue({ ok: false, code });
-    const { PATCH } = await import('@/app/api/admin/team/route');
+    const { PATCH } = await import('@/app/api/workspace/team/route');
 
-    const response = await PATCH(new NextRequest('http://localhost/api/admin/team', {
+    const response = await PATCH(new NextRequest('http://localhost/api/workspace/team', {
       method: 'PATCH',
       body: JSON.stringify({ user_id: 'member-1', role: 'admin' }),
     }));

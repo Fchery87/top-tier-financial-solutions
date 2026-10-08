@@ -92,7 +92,7 @@ test.describe('Dispute Wizard E2E Flow', () => {
     const fixtureState = await installWizardApiFixtures(page);
     const directDisputePosts: string[] = [];
     page.on('request', request => {
-      if (request.method() === 'POST' && request.url().endsWith('/api/admin/disputes')) directDisputePosts.push(request.url());
+      if (request.method() === 'POST' && request.url().endsWith('/api/workspace/disputes')) directDisputePosts.push(request.url());
     });
 
     await selectFixtureClient(page);
@@ -143,7 +143,7 @@ test.describe('Dispute Wizard E2E Flow', () => {
   });
 
   test('allows CFPB generation when the CRA predecessor has a received response', async ({ page }) => {
-    await page.route('**/api/admin/disputes/*/cfpb-eligibility**', async (route) => {
+    await page.route('**/api/workspace/disputes/*/cfpb-eligibility**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -216,7 +216,7 @@ test.describe('Dispute Wizard - Error Handling', () => {
   test.describe.configure({ timeout: 60000 });
   test('should display error message when API fails', async ({ page }) => {
     // Mock API failure
-    await page.route('**/api/admin/clients**', async (route) => {
+    await page.route('**/api/workspace/clients**', async (route) => {
       await route.fulfill({
         status: 500,
         body: JSON.stringify({ error: 'Internal server error' }),
@@ -233,7 +233,7 @@ test.describe('Dispute Wizard - Error Handling', () => {
     let callCount = 0;
 
     // Fail first, succeed second
-    await page.route('**/api/admin/clients**', async (route) => {
+    await page.route('**/api/workspace/clients**', async (route) => {
       callCount++;
       if (callCount === 1) {
         await route.fulfill({
@@ -282,7 +282,7 @@ test.describe('Dispute Wizard - Performance', () => {
   test('should handle large item lists efficiently', async ({ page }) => {
     // Mock response with 50+ items and verify they render after selecting the fixture client.
     await installWizardApiFixtures(page);
-    await page.route(`**/api/admin/clients/${e2eClient.id}`, (route) => {
+    await page.route(`**/api/workspace/clients/${e2eClient.id}`, (route) => {
       const items = Array.from({ length: 50 }, (_, i) => ({
         id: `item-${i}`,
         creditor_name: `Creditor ${i}`,

@@ -25,21 +25,21 @@ describe('DisputeWizardPage render stability', () => {
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
 
-      if (url.includes('/api/admin/clients')) {
+      if (url.includes('/api/workspace/clients')) {
         return {
           ok: true,
           json: async () => ({ items: [] }),
         } as Response;
       }
 
-      if (url.includes('/api/admin/disputes/methodologies')) {
+      if (url.includes('/api/workspace/disputes/methodologies')) {
         return {
           ok: true,
           json: async () => ({ methodologies: [], reason_codes: [] }),
         } as Response;
       }
 
-      if (url.includes('/api/admin/disputes/generate-letter')) {
+      if (url.includes('/api/workspace/disputes/generate-letter')) {
         return {
           ok: true,
           json: async () => ({ reason_codes: [], dispute_types: [] }),
@@ -67,7 +67,7 @@ describe('DisputeWizardPage render stability', () => {
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
 
-      if (url.includes('/api/admin/clients')) {
+      if (url.includes('/api/workspace/clients')) {
         return {
           ok: true,
           json: async () => ({
@@ -85,14 +85,14 @@ describe('DisputeWizardPage render stability', () => {
         } as Response;
       }
 
-      if (url.includes('/api/admin/disputes/methodologies')) {
+      if (url.includes('/api/workspace/disputes/methodologies')) {
         return {
           ok: true,
           json: async () => ({ methodologies: [], reason_codes: [] }),
         } as Response;
       }
 
-      if (url.includes('/api/admin/disputes/generate-letter')) {
+      if (url.includes('/api/workspace/disputes/generate-letter')) {
         return {
           ok: true,
           json: async () => ({ reason_codes: [], dispute_types: [] }),

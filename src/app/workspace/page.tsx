@@ -70,7 +70,7 @@ export default function AdminDashboard() {
 
     async function fetchDashboardPreferences() {
       try {
-        const response = await fetch('/api/admin/settings?category=dashboard');
+        const response = await fetch('/api/workspace/settings?category=dashboard');
         if (!response.ok) return;
         const data = await response.json();
         const settings: Array<{ settingKey: string; parsedValue: unknown }> = data.settings || [];

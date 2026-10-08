@@ -76,8 +76,8 @@ describe('high-risk confirmation gates', () => {
       confirmations: JSON.stringify([{ key: 'client_authorized_review', confirmed: true }]),
     }]));
 
-    const { POST } = await import('@/app/api/admin/disputes/generate-letter/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/generate-letter', {
+    const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
       method: 'POST',
       body: JSON.stringify(approvedRequest),
     }));
@@ -96,8 +96,8 @@ describe('high-risk confirmation gates', () => {
       reason: 'The latest credit report must be approved before letter generation.',
     });
 
-    const { POST } = await import('@/app/api/admin/disputes/generate-letter/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/disputes/generate-letter', {
+    const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
       method: 'POST',
       body: JSON.stringify(approvedRequest),
     }));
@@ -124,8 +124,8 @@ describe('high-risk confirmation gates', () => {
         confirmations: JSON.stringify([]),
       }]));
 
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
-    const response = await PUT(new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
+    const response = await PUT(new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
       method: 'PUT',
       body: JSON.stringify({
         status: 'sent',
@@ -153,8 +153,8 @@ describe('high-risk confirmation gates', () => {
       }]))
       .mockReturnValueOnce(rows([]));
 
-    const { PUT } = await import('@/app/api/admin/disputes/[id]/route');
-    const response = await PUT(new NextRequest('http://localhost/api/admin/disputes/dispute-1', {
+    const { PUT } = await import('@/app/api/workspace/disputes/[id]/route');
+    const response = await PUT(new NextRequest('http://localhost/api/workspace/disputes/dispute-1', {
       method: 'PUT',
       body: JSON.stringify({ status: 'sent' }),
     }), { params: Promise.resolve({ id: 'dispute-1' }) });

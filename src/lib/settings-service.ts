@@ -7,10 +7,33 @@
 
 import { db } from '@/db/client';
 import { systemSettings } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm';
+import { decrypt, encrypt, isCiphertextValue } from '@/lib/encryption';
 
 type SettingValue = string | number | boolean | Record<string, unknown> | unknown[] | null;
-export type SettingsMutationExecutor = Pick<typeof db, 'delete' | 'insert' | 'select' | 'update'>;
+type SettingMutationRow = Pick<typeof systemSettings.$inferSelect, 'description'>;
+type SettingsMutationValues = Partial<typeof systemSettings.$inferInsert>;
+
+export type SettingsMutationExecutor = {
+  select(): {
+    from(table: typeof systemSettings): {
+      where(condition: SQL): {
+        limit(limit: number): Promise<SettingMutationRow[]>;
+      };
+    };
+  };
+  insert(table: typeof systemSettings): {
+    values(values: typeof systemSettings.$inferInsert): Promise<unknown>;
+  };
+  update(table: typeof systemSettings): {
+    set(values: SettingsMutationValues): {
+      where(condition: SQL): Promise<unknown>;
+    };
+  };
+  delete(table: typeof systemSettings): {
+    where(condition: SQL): Promise<unknown>;
+  };
+};
 
 export const DEFAULT_LLM_MODELS = {
   google: 'gemini-2.5-flash',
@@ -28,6 +51,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 export const DEFAULT_LLM_PROVIDER: LLMConfig['provider'] = 'google';
 export const DEFAULT_LLM_TEMPERATURE = 0.7;
 export const DEFAULT_LLM_MAX_TOKENS = 4096;
+const LLM_API_KEY_SETTING = 'llm.api_key';
 
 export function getDefaultLLMModel(provider: LLMConfig['provider']): string {
   return DEFAULT_LLM_MODELS[provider] || DEFAULT_LLM_MODELS.google;
@@ -76,6 +100,10 @@ export async function getSetting(key: string): Promise<SettingValue> {
     case 'string':
     default:
       parsedValue = settingData.settingValue;
+  }
+
+  if (key === LLM_API_KEY_SETTING) {
+    parsedValue = decryptLlmApiKey(parsedValue);
   }
 
   // Cache the value
@@ -127,6 +155,10 @@ export async function setSetting(
       stringValue = String(value);
   }
 
+  if (key === LLM_API_KEY_SETTING) {
+    stringValue = encrypt(stringValue) ?? '';
+  }
+
   // Check if setting exists
   const existing = await executor
     .select()
@@ -165,6 +197,22 @@ export async function setSetting(
 
   // Clear cache
   settingsCache.delete(key);
+}
+
+function decryptLlmApiKey(value: SettingValue): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  if (!isCiphertextValue(value)) {
+    return value;
+  }
+
+  try {
+    return decrypt(value);
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -45,14 +45,14 @@ clients
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/admin/clients` | GET | List clients with search/filter |
-| `/api/admin/clients` | POST | Create client or convert lead |
-| `/api/admin/clients/[id]` | GET | Client detail with reports, analysis, disputes |
-| `/api/admin/clients/[id]` | PUT | Update client info |
-| `/api/admin/clients/[id]` | DELETE | Delete client and all related data |
-| `/api/admin/credit-reports/upload` | POST | Upload credit report file to R2 |
-| `/api/admin/credit-reports/[id]/parse` | POST | Trigger credit report analysis |
-| `/api/admin/dispute-templates` | GET | List dispute letter templates |
+| `/api/workspace/clients` | GET | List clients with search/filter |
+| `/api/workspace/clients` | POST | Create client or convert lead |
+| `/api/workspace/clients/[id]` | GET | Client detail with reports, analysis, disputes |
+| `/api/workspace/clients/[id]` | PUT | Update client info |
+| `/api/workspace/clients/[id]` | DELETE | Delete client and all related data |
+| `/api/workspace/credit-reports/upload` | POST | Upload credit report file to R2 |
+| `/api/workspace/credit-reports/[id]/parse` | POST | Trigger credit report analysis |
+| `/api/workspace/letter-library` | GET | List active dispute letter-library strategies |
 
 ---
 
@@ -246,20 +246,20 @@ src/app/admin/clients/
 └── [id]/
     └── page.tsx                      # Client detail page
 
-src/app/api/admin/clients/
+src/app/api/workspace/clients/
 ├── route.ts                          # GET/POST clients
 └── [id]/
     └── route.ts                      # GET/PUT/DELETE client
 
-src/app/api/admin/credit-reports/
+src/app/api/workspace/credit-reports/
 ├── upload/
 │   └── route.ts                      # POST file upload
 └── [id]/
     └── parse/
         └── route.ts                  # POST trigger analysis
 
-src/app/api/admin/dispute-templates/
-└── route.ts                          # GET templates
+src/app/api/workspace/letter-library/
+└── route.ts                          # GET/POST active letter-library strategies
 
 src/lib/
 ├── credit-analysis.ts                # Analysis orchestration

@@ -1,0 +1,236 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/db/client';
+import { tasks, clients, user } from '@/db/schema';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
+import { getUserRole } from '@/lib/admin-auth';
+import { can, type Capability } from '@/lib/capabilities';
+import { desc, asc, count, eq, or, ilike, and, gte, lte, isNull } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { triggerAutomation } from '@/lib/email-service';
+import { logServerEvent } from '@/lib/server-logger';
+
+async function validateAdmin(capability: Capability) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.email) {
+    return { error: 'Unauthorized' as const };
+  }
+
+  const role = await getUserRole(session.user.email);
+  if (!can(role, capability)) {
+    return { error: 'Forbidden' as const };
+  }
+
+  return { user: { ...session.user, role } };
+}
+
+export async function GET(request: NextRequest) {
+  const adminUser = await validateAdmin('tasks:read');
+  if ('error' in adminUser) {
+    return NextResponse.json({ error: adminUser.error }, { status: adminUser.error === 'Unauthorized' ? 401 : 403 });
+  }
+
+  const searchParams = request.nextUrl.searchParams;
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '20');
+  const status = searchParams.get('status');
+  const priority = searchParams.get('priority');
+  const clientId = searchParams.get('client_id');
+  const assigneeId = searchParams.get('assignee_id');
+  const search = searchParams.get('search') || '';
+  const sortBy = searchParams.get('sort_by') || 'created_at';
+  const sortOrder = searchParams.get('sort_order') || 'desc';
+  const dueBefore = searchParams.get('due_before');
+  const dueAfter = searchParams.get('due_after');
+  const offset = (page - 1) * limit;
+
+  try {
+    const conditions = [];
+    
+    if (search) {
+      conditions.push(
+        or(
+          ilike(tasks.title, `%${search}%`),
+          ilike(tasks.description, `%${search}%`)
+        )
+      );
+    }
+    
+    if (status && status !== 'all') {
+      conditions.push(eq(tasks.status, status as 'todo' | 'in_progress' | 'review' | 'done'));
+    }
+
+    if (priority && priority !== 'all') {
+      conditions.push(eq(tasks.priority, priority as 'low' | 'medium' | 'high' | 'urgent'));
+    }
+    
+    if (clientId) {
+      conditions.push(eq(tasks.clientId, clientId));
+    }
+    
+    if (assigneeId) {
+      if (assigneeId === 'unassigned') {
+        conditions.push(isNull(tasks.assigneeId));
+      } else {
+        conditions.push(eq(tasks.assigneeId, assigneeId));
+      }
+    }
+
+    if (dueBefore) {
+      conditions.push(lte(tasks.dueDate, new Date(dueBefore)));
+    }
+
+    if (dueAfter) {
+      conditions.push(gte(tasks.dueDate, new Date(dueAfter)));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Determine sort column
+    const sortColumn = sortBy === 'due_date' ? tasks.dueDate 
+      : sortBy === 'priority' ? tasks.priority
+      : sortBy === 'status' ? tasks.status
+      : sortBy === 'title' ? tasks.title
+      : tasks.createdAt;
+    
+    const orderDirection = sortOrder === 'asc' ? asc : desc;
+
+    const [items, totalResult] = await Promise.all([
+      db
+        .select({
+          id: tasks.id,
+          clientId: tasks.clientId,
+          assigneeId: tasks.assigneeId,
+          createdById: tasks.createdById,
+          title: tasks.title,
+          description: tasks.description,
+          status: tasks.status,
+          priority: tasks.priority,
+          dueDate: tasks.dueDate,
+          completedAt: tasks.completedAt,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          visibleToClient: tasks.visibleToClient,
+          isBlocking: tasks.isBlocking,
+          clientFirstName: clients.firstName,
+          clientLastName: clients.lastName,
+          assigneeName: user.name,
+        })
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
+        .leftJoin(user, eq(tasks.assigneeId, user.id))
+        .where(whereClause)
+        .orderBy(orderDirection(sortColumn))
+        .limit(limit)
+        .offset(offset),
+      db.select({ count: count() }).from(tasks).where(whereClause),
+    ]);
+
+    return NextResponse.json({
+      items: items.map((t) => ({
+        id: t.id,
+        client_id: t.clientId,
+        assignee_id: t.assigneeId,
+        created_by_id: t.createdById,
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        priority: t.priority,
+        due_date: t.dueDate?.toISOString() || null,
+        completed_at: t.completedAt?.toISOString() || null,
+        created_at: t.createdAt?.toISOString(),
+        updated_at: t.updatedAt?.toISOString(),
+        visible_to_client: t.visibleToClient,
+        is_blocking: t.isBlocking,
+        client_name: t.clientFirstName && t.clientLastName 
+          ? `${t.clientFirstName} ${t.clientLastName}` 
+          : null,
+        assignee_name: t.assigneeName,
+      })),
+      total: totalResult[0].count,
+      page,
+      limit,
+    });
+  } catch (error) {
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.error', error: error });
+    return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const adminUser = await validateAdmin('tasks:write');
+  if ('error' in adminUser) {
+    return NextResponse.json({ error: adminUser.error }, { status: adminUser.error === 'Unauthorized' ? 401 : 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { 
+      title, 
+      description, 
+      client_id, 
+      assignee_id, 
+      status = 'todo', 
+      priority = 'medium', 
+      due_date,
+      visible_to_client = false,
+      is_blocking = false,
+    } = body;
+
+    if (!title) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    }
+
+    const id = randomUUID();
+    const now = new Date();
+
+    await db.insert(tasks).values({
+      id,
+      clientId: client_id || null,
+      assigneeId: assignee_id || null,
+      createdById: adminUser.user.id,
+      title,
+      description: description || null,
+      status: status as 'todo' | 'in_progress' | 'review' | 'done',
+      priority: priority as 'low' | 'medium' | 'high' | 'urgent',
+      dueDate: due_date ? new Date(due_date) : null,
+      visibleToClient: visible_to_client,
+      isBlocking: is_blocking,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Fire a progress update email when we create a new client-facing task
+    if (client_id && visible_to_client) {
+      try {
+        await triggerAutomation('progress_report', client_id, {
+          task_title: title,
+          task_description: description || '',
+          task_priority: priority,
+          task_due_date: due_date || '',
+          task_id: id,
+        });
+      } catch (emailError) {
+        logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.error', error: emailError });
+      }
+    }
+
+    return NextResponse.json({
+      id,
+      title,
+      description,
+      client_id,
+      assignee_id,
+      status,
+      priority,
+      due_date,
+      created_at: now.toISOString(),
+    }, { status: 201 });
+  } catch (error) {
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.tasks.error', error: error });
+    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+  }
+}

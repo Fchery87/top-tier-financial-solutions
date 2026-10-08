@@ -62,7 +62,7 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
   const [library, setLibrary] = React.useState<LetterLibraryInfo | null>(null);
 
   const refreshState = React.useCallback(async () => {
-    const response = await fetch(`/api/admin/disputes/${disputeId}/letter`);
+    const response = await fetch(`/api/workspace/disputes/${disputeId}/letter`);
     const value: unknown = await response.json().catch(() => ({}));
     const aggregate = response.ok ? parseAggregate(value) : null;
     if (!aggregate) throw new Error(readError(value, 'The letter state could not be loaded.'));
@@ -90,7 +90,7 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
     lintRequestRef.current = requestId;
     setLinting(true);
     try {
-      const response = await fetch(`/api/admin/disputes/${disputeId}/letter/lint`, {
+      const response = await fetch(`/api/workspace/disputes/${disputeId}/letter/lint`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -133,7 +133,7 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
     setError('');
     setSaved(false);
     try {
-      const response = await fetch(`/api/admin/disputes/${disputeId}`, {
+      const response = await fetch(`/api/workspace/disputes/${disputeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -172,7 +172,7 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
       const currentSelectedText = textarea && currentSelectionStart !== null && currentSelectionEnd !== null && currentSelectionEnd > currentSelectionStart
         ? textarea.value.slice(currentSelectionStart, currentSelectionEnd)
         : selectedText;
-      const response = await fetch(`/api/admin/disputes/${disputeId}/letter/rewrite`, {
+      const response = await fetch(`/api/workspace/disputes/${disputeId}/letter/rewrite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -214,7 +214,7 @@ export function LetterStudio({ disputeId, initialLetter, readOnly = false, onSav
     setSaving(true);
     setError('');
     try {
-      const response = await fetch(`/api/admin/disputes/${disputeId}/letter/revisions/${selected.id}/revert`, {
+      const response = await fetch(`/api/workspace/disputes/${disputeId}/letter/revisions/${selected.id}/revert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expectedRevision: revision, acknowledgeWarnings: acknowledge }),

@@ -31,7 +31,7 @@ export function EditClientModal({ open, onClose, onConverted }: EditClientModalP
 
   const fetchLeads = React.useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/leads?page=1&limit=100&status=qualified');
+      const response = await fetch('/api/workspace/leads?page=1&limit=100&status=qualified');
       if (response.ok) {
         const data = await response.json();
         setLeads(data.items.filter((l: Lead) => l.status !== 'archived'));
@@ -50,7 +50,7 @@ export function EditClientModal({ open, onClose, onConverted }: EditClientModalP
   const handleConvertLead = async (lead: Lead) => {
     setSaving(true);
     try {
-      const response = await fetch('/api/admin/clients', {
+      const response = await fetch('/api/workspace/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

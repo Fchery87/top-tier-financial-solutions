@@ -14,6 +14,7 @@ import {
 import { headers } from 'next/headers';
 import { buildDocumentChecklist } from '@/lib/document-checklist';
 import { buildClientProgressSnapshot } from '@/lib/client-progress-snapshot';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -99,7 +100,7 @@ export async function GET(_request: NextRequest) {
       }),
     });
   } catch (error) {
-    console.error('Error fetching portal progress snapshot:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.progress.snapshot.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch progress snapshot' }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { db } from '@/db/client';
 import { auth } from '@/lib/auth';
 import { clients, messages, messageThreads } from '@/db/schema';
 import { headers } from 'next/headers';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('Error fetching portal messages:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.messages.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
   }
 }
@@ -215,7 +216,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ thread_id: newThreadId, message_id: messageId }, { status: 201 });
   } catch (error) {
-    console.error('Error sending portal message:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.messages.error', error: error });
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
   }
 }

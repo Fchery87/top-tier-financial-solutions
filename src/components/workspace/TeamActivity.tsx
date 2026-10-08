@@ -31,7 +31,7 @@ export function TeamActivity() {
     async function fetchTeamData() {
       try {
         // Fetch team stats - for now, use the stats endpoint
-        const response = await fetch('/api/admin/stats');
+        const response = await fetch('/api/workspace/stats');
         if (response.ok) {
           const stats = await response.json();
           

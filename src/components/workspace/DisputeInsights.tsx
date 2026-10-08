@@ -68,7 +68,7 @@ export function DisputeInsights() {
       setLoading(true);
       try {
         const response = await fetch(
-          `/api/admin/disputes/insights?range=${currentRange}`
+          `/api/workspace/disputes/insights?range=${currentRange}`
         );
         if (!response.ok) return;
         const json: DisputeInsightsResponse = await response.json();

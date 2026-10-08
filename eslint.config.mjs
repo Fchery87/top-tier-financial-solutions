@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "coverage/**",
     "next-env.d.ts",
+    // Local git worktrees hold other branches and their build output.
+    ".worktrees/**",
   ]),
   {
     rules: {

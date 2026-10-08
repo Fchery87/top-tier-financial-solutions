@@ -2,6 +2,7 @@ import { and, eq, isNull, or } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { disputeLetterLibrary } from '@/db/schema';
 import type { LibraryCandidate, SelectionRequest } from '@/lib/letter-library-selector';
+import { logServerEvent } from '@/lib/server-logger';
 
 export interface LibraryRowInput {
   id: string;
@@ -103,6 +104,6 @@ export async function incrementLibraryUsage(libraryId: string): Promise<void> {
       })
       .where(eq(disputeLetterLibrary.id, libraryId));
   } catch (error) {
-    console.error('Failed to update letter library usage:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.letter.library.repo.error', error: error });
   }
 }

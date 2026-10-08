@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { testimonials } from '@/db/schema';
 import { asc, eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET() {
   try {
@@ -22,7 +23,7 @@ export async function GET() {
       }))
     );
   } catch (error) {
-    console.error('Error fetching public testimonials:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.public.testimonials.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch testimonials' }, { status: 500 });
   }
 }

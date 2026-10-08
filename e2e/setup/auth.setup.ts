@@ -46,7 +46,7 @@ setup('create deterministic role-authenticated storage states', async () => {
 
   const superContext = await playwrightRequest.newContext({ baseURL, timeout: 60_000 });
   await signUpOrSignIn(superContext, users[0].email, password);
-  const bootstrap = await superContext.post('/api/admin/set-role', { data: { email: users[0].email, role: 'super_admin' } });
+  const bootstrap = await superContext.post('/api/workspace/set-role', { data: { email: users[0].email, role: 'super_admin' } });
   let roleManagerContext = superContext;
   let authorityContext: Awaited<ReturnType<typeof playwrightRequest.newContext>> | null = null;
   if (!bootstrap.ok() && bootstrap.status() === 403) {
@@ -55,7 +55,7 @@ setup('create deterministic role-authenticated storage states', async () => {
     }
     authorityContext = await playwrightRequest.newContext({ baseURL, timeout: 60_000 });
     await signIn(authorityContext, authorityEmail, authorityPassword);
-    const roleResponse = await authorityContext.post('/api/admin/set-role', { data: { email: users[0].email, role: 'super_admin' } });
+    const roleResponse = await authorityContext.post('/api/workspace/set-role', { data: { email: users[0].email, role: 'super_admin' } });
     await assertResponse(roleResponse, `assigning super_admin to ${users[0].email} through the existing authority`);
     roleManagerContext = authorityContext;
   } else {
@@ -67,7 +67,7 @@ setup('create deterministic role-authenticated storage states', async () => {
     const context = await playwrightRequest.newContext({ baseURL, timeout: 60_000 });
     await signUpOrSignIn(context, user.email, password);
     if (user.role !== 'user') {
-      const roleResponse = await roleManagerContext.post('/api/admin/set-role', { data: { email: user.email, role: user.role } });
+      const roleResponse = await roleManagerContext.post('/api/workspace/set-role', { data: { email: user.email, role: user.role } });
       await assertResponse(roleResponse, `assigning ${user.role} to ${user.email}`);
     }
     await context.storageState({ path: user.stateFile });

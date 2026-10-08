@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { emailSubscribers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       message: 'You have been unsubscribed.' 
     });
   } catch (error) {
-    console.error('Error unsubscribing:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.newsletter.unsubscribe.error', error: error });
     return NextResponse.json({ error: 'Failed to unsubscribe' }, { status: 500 });
   }
 }

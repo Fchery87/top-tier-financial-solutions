@@ -24,6 +24,7 @@
     "pretypecheck": "rm -rf .next/dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=1/2 && vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=2/2 && vitest run --pool=threads --maxWorkers=1 src/__tests__/api/admin/dispute-submission-tracking.test.ts src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx",
+    "test:fast": "node scripts/test-fast-lane.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
@@ -37,6 +38,7 @@
     "db:repair-migrations": "node scripts/repair-drizzle-migrations.mjs",
     "db:audit-deprecated-letter-table": "tsx scripts/audit-deprecated-letter-templates.ts",
     "db:pilot-letter-library": "tsx scripts/run-letter-library-pilot.ts",
+    "security:rotate-encryption": "tsx scripts/rotate-encryption-keys.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
@@ -67,12 +69,14 @@
     "next-themes": "^0.4.6",
     "openai": "^6.18.0",
     "pdf-parse": "^1.1.1",
+    "pino": "^10.3.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "recharts": "^3.8.0",
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.4.3"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {

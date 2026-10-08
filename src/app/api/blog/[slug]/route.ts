@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { blogPosts, blogCategories, user } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(
   request: NextRequest,
@@ -52,7 +53,7 @@ export async function GET(
       published_at: p.publishedAt?.toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching blog post:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.blog.slug.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch post' }, { status: 500 });
   }
 }

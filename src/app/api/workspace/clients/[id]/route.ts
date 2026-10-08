@@ -1,0 +1,562 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/db/client';
+import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user, personalInfoDisputes, inquiryDisputes, clientAgreements, tasks, clientCases } from '@/db/schema';
+import { requireCapability } from '@/lib/admin-session';
+import { eq, desc, asc } from 'drizzle-orm';
+import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData, type ClientEncryptionInput } from '@/lib/db-encryption';
+import { logServerEvent } from '@/lib/server-logger';
+import { recordSensitiveRead } from '@/lib/sensitive-read-audit';
+import { readJsonBody, validationErrorResponse } from '@/lib/request-validation';
+import { z } from 'zod';
+
+const clientUpdateSchema = z.object({
+  first_name: z.string().trim().max(200).optional(),
+  last_name: z.string().trim().max(200).optional(),
+  email: z.string().trim().max(320).optional(),
+  phone: z.string().trim().max(50).nullable().optional(),
+  notes: z.string().trim().max(5_000).nullable().optional(),
+  lead_id: z.uuid().nullable().optional(),
+  user_id: z.string().trim().min(1).max(128).nullable().optional(),
+  street_address: z.string().trim().max(300).nullable().optional(),
+  city: z.string().trim().max(100).nullable().optional(),
+  state: z.string().trim().max(100).nullable().optional(),
+  zip_code: z.string().trim().max(20).nullable().optional(),
+  date_of_birth: z.iso.date().nullable().optional(),
+  ssn_last_4: z.string().trim().max(50).nullable().optional(),
+  status: z.string().trim().min(1).max(50).optional(),
+}).strict();
+
+type ClientUpdateData = Partial<typeof clients.$inferInsert>;
+
+function toISOStringSafe(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const adminUser = await requireCapability('clients:read');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const [clientResult] = await db
+      .select({
+        id: clients.id,
+        userId: clients.userId,
+        leadId: clients.leadId,
+        firstName: clients.firstName,
+        lastName: clients.lastName,
+        email: clients.email,
+        phone: clients.phone,
+        status: clients.status,
+        notes: clients.notes,
+        convertedAt: clients.convertedAt,
+        createdAt: clients.createdAt,
+        updatedAt: clients.updatedAt,
+        userName: user.name,
+        userEmail: user.email,
+      })
+      .from(clients)
+      .leftJoin(user, eq(clients.userId, user.id))
+      .where(eq(clients.id, id))
+      .limit(1);
+
+    if (!clientResult) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    await recordSensitiveRead(db, {
+      kind: 'client_record',
+      actorUserId: adminUser.id,
+      clientId: clientResult.id,
+      route: request.nextUrl.pathname,
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+    });
+
+    // Decrypt client data
+    const decryptedClient = decryptClientData({
+      firstName: clientResult.firstName,
+      lastName: clientResult.lastName,
+      phone: clientResult.phone,
+      streetAddress: undefined, // Not fetched in this query
+      city: undefined,
+      state: undefined,
+      zipCode: undefined,
+      dateOfBirth: undefined,
+      ssnLast4: undefined,
+    });
+
+    // Get credit reports
+    const reports = await db
+      .select()
+      .from(creditReports)
+      .where(eq(creditReports.clientId, id))
+      .orderBy(desc(creditReports.uploadedAt));
+
+    // Get latest analysis
+    const [latestAnalysis] = await db
+      .select()
+      .from(creditAnalyses)
+      .where(eq(creditAnalyses.clientId, id))
+      .orderBy(desc(creditAnalyses.createdAt))
+      .limit(1);
+
+    // Get all credit accounts
+    const accountsResult = await db
+      .select()
+      .from(creditAccounts)
+      .where(eq(creditAccounts.clientId, id))
+      .orderBy(desc(creditAccounts.createdAt));
+
+    // Get negative items (full list)
+    const negativeItemsResult = await db
+      .select()
+      .from(negativeItems)
+      .where(eq(negativeItems.clientId, id))
+      .orderBy(desc(negativeItems.createdAt));
+
+    // Get disputes
+    const disputesResult = await db
+      .select()
+      .from(disputes)
+      .where(eq(disputes.clientId, id))
+      .orderBy(desc(disputes.createdAt));
+
+    // Get personal info and inquiry disputes (PII + inquiries from parser)
+    const personalInfoDisputesResult = await db
+      .select()
+      .from(personalInfoDisputes)
+      .where(eq(personalInfoDisputes.clientId, id))
+      .orderBy(desc(personalInfoDisputes.createdAt));
+
+    const inquiryDisputesResult = await db
+      .select()
+      .from(inquiryDisputes)
+      .where(eq(inquiryDisputes.clientId, id))
+      .orderBy(desc(inquiryDisputes.createdAt));
+
+    // Get score history for timeline
+    const scoreHistoryResult = await db
+      .select()
+      .from(creditScoreHistory)
+      .where(eq(creditScoreHistory.clientId, id))
+      .orderBy(asc(creditScoreHistory.recordedAt));
+
+    // Readiness signals derived from existing data
+    const agreementsForClient = await db
+      .select({ status: clientAgreements.status })
+      .from(clientAgreements)
+      .where(eq(clientAgreements.clientId, id));
+
+    const tasksForClient = await db
+      .select({
+        status: tasks.status,
+        visibleToClient: tasks.visibleToClient,
+        isBlocking: tasks.isBlocking,
+        createdAt: tasks.createdAt,
+        dueDate: tasks.dueDate,
+      })
+      .from(tasks)
+      .where(eq(tasks.clientId, id));
+
+    const casesForClient = clientResult.userId
+      ? await db
+          .select({ id: clientCases.id })
+          .from(clientCases)
+          .where(eq(clientCases.userId, clientResult.userId))
+      : [];
+
+    // Parse recommendations from latest analysis
+    let recommendations: string[] = [];
+    if (latestAnalysis?.recommendations) {
+      try {
+        recommendations = JSON.parse(latestAnalysis.recommendations);
+      } catch {
+        recommendations = [];
+      }
+    }
+
+    const hasPortalUser = !!clientResult.userId;
+    const hasSignedAgreement = agreementsForClient.some(a => a.status === 'signed');
+    const hasCreditReport = reports.length > 0;
+    const hasAnalyzedReport = !!latestAnalysis;
+    const hasCase = casesForClient.length > 0;
+    const hasDisputes = disputesResult.length > 0;
+
+    const unfinishedClientTasks = tasksForClient.filter(
+      (t) => t.visibleToClient && t.status !== 'done',
+    );
+    const blockingTasks = unfinishedClientTasks.filter((t) => t.isBlocking);
+
+    // Derive how long we've been waiting on the client based on the oldest blocking task
+    let waitingOnClientSince: Date | null = null;
+    for (const task of blockingTasks) {
+      const candidate = task.dueDate || task.createdAt;
+      if (!candidate) continue;
+      if (!waitingOnClientSince || candidate < waitingOnClientSince) {
+        waitingOnClientSince = candidate;
+      }
+    }
+
+    const now = new Date();
+    const waitingOnClientDays = waitingOnClientSince
+      ? Math.floor((now.getTime() - waitingOnClientSince.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    // Simple SLA-style at-risk flag: client has open blocking tasks for 7+ days
+    const atRisk = blockingTasks.length > 0 && waitingOnClientDays >= 7;
+
+    const readiness = {
+      has_portal_user: hasPortalUser,
+      has_signed_agreement: hasSignedAgreement,
+      has_credit_report: hasCreditReport,
+      has_analyzed_report: hasAnalyzedReport,
+      has_case: hasCase,
+      has_disputes: hasDisputes,
+      unfinished_client_tasks: unfinishedClientTasks.length,
+      blocking_tasks: blockingTasks.length,
+      waiting_on_client_since: toISOStringSafe(waitingOnClientSince),
+      waiting_on_client_days: waitingOnClientSince ? waitingOnClientDays : null,
+      at_risk: atRisk,
+      is_ready_for_round:
+        hasPortalUser && hasSignedAgreement && hasAnalyzedReport && blockingTasks.length === 0,
+    };
+
+    return NextResponse.json({
+      client: {
+        id: clientResult.id,
+        user_id: clientResult.userId,
+        lead_id: clientResult.leadId,
+        first_name: decryptedClient.firstName,
+        last_name: decryptedClient.lastName,
+        email: clientResult.email,
+        phone: decryptedClient.phone,
+        status: clientResult.status,
+        notes: clientResult.notes,
+        converted_at: toISOStringSafe(clientResult.convertedAt),
+        created_at: toISOStringSafe(clientResult.createdAt),
+        updated_at: toISOStringSafe(clientResult.updatedAt),
+        user_name: clientResult.userName,
+        user_email: clientResult.userEmail,
+      },
+      readiness,
+      credit_reports: reports.map(r => ({
+        id: r.id,
+        file_name: r.fileName,
+        file_type: r.fileType,
+        file_url: r.fileUrl,
+        file_size: r.fileSize,
+        bureau: r.bureau,
+        report_date: toISOStringSafe(r.reportDate),
+        parse_status: r.parseStatus,
+        parser_review_status: r.parserReviewStatus,
+        uploaded_at: toISOStringSafe(r.uploadedAt),
+      })),
+      latest_analysis: latestAnalysis ? {
+        id: latestAnalysis.id,
+        score_transunion: latestAnalysis.scoreTransunion,
+        score_experian: latestAnalysis.scoreExperian,
+        score_equifax: latestAnalysis.scoreEquifax,
+        total_accounts: latestAnalysis.totalAccounts,
+        open_accounts: latestAnalysis.openAccounts,
+        closed_accounts: latestAnalysis.closedAccounts,
+        total_debt: latestAnalysis.totalDebt,
+        total_credit_limit: latestAnalysis.totalCreditLimit,
+        utilization_percent: latestAnalysis.utilizationPercent,
+        derogatory_count: latestAnalysis.derogatoryCount,
+        collections_count: latestAnalysis.collectionsCount,
+        late_payment_count: latestAnalysis.latePaymentCount,
+        inquiry_count: latestAnalysis.inquiryCount,
+        created_at: toISOStringSafe(latestAnalysis.createdAt),
+        recommendations,
+      } : null,
+      credit_accounts: accountsResult.map(a => {
+        // Compute bureaus array from per-bureau booleans
+        const bureaus: string[] = [];
+        if (a.onTransunion) bureaus.push('transunion');
+        if (a.onExperian) bureaus.push('experian');
+        if (a.onEquifax) bureaus.push('equifax');
+
+        // Decrypt credit account data
+        const decrypted = decryptCreditAccountData({
+          creditorName: a.creditorName,
+        });
+
+        let paymentHistoryGrid: Record<string, Record<string, string>> | null = null;
+        if (a.paymentHistoryGrid) {
+          try {
+            paymentHistoryGrid = JSON.parse(a.paymentHistoryGrid) as Record<string, Record<string, string>>;
+          } catch {
+            paymentHistoryGrid = null;
+          }
+        }
+
+        return {
+          id: a.id,
+          creditor_name: decrypted.creditorName,
+          account_number: a.accountNumber,
+          account_type: a.accountType,
+          account_status: a.accountStatus,
+          balance: a.balance,
+          credit_limit: a.creditLimit,
+          high_credit: a.highCredit,
+          monthly_payment: a.monthlyPayment,
+          past_due_amount: a.pastDueAmount,
+          payment_status: a.paymentStatus,
+          payment_history_grid: paymentHistoryGrid,
+          date_opened: toISOStringSafe(a.dateOpened),
+          bureau: a.bureau, // Legacy field
+          // Per-bureau presence data
+          bureaus, // Computed array of bureau names
+          on_transunion: a.onTransunion ?? false,
+          on_experian: a.onExperian ?? false,
+          on_equifax: a.onEquifax ?? false,
+          transunion_date: toISOStringSafe(a.transunionDate),
+          experian_date: toISOStringSafe(a.experianDate),
+          equifax_date: toISOStringSafe(a.equifaxDate),
+          transunion_balance: a.transunionBalance,
+          experian_balance: a.experianBalance,
+          equifax_balance: a.equifaxBalance,
+          is_negative: a.isNegative,
+          risk_level: a.riskLevel,
+        };
+      }),
+      negative_items: negativeItemsResult.map(n => {
+        // Compute bureaus array from per-bureau booleans
+        const bureaus: string[] = [];
+        if (n.onTransunion) bureaus.push('transunion');
+        if (n.onExperian) bureaus.push('experian');
+        if (n.onEquifax) bureaus.push('equifax');
+
+        // Decrypt negative item data
+        const decrypted = decryptNegativeItemData({
+          creditorName: n.creditorName,
+        });
+
+        let linkedPaymentHistoryGrid: Record<string, Record<string, string>> | null = null;
+        let linkedAccountType: string | null = null;
+        if (n.creditAccountId) {
+          const linkedAccount = accountsResult.find(account => account.id === n.creditAccountId);
+          linkedAccountType = linkedAccount?.accountType ?? null;
+          if (linkedAccount?.paymentHistoryGrid) {
+            try {
+              linkedPaymentHistoryGrid = JSON.parse(linkedAccount.paymentHistoryGrid) as Record<string, Record<string, string>>;
+            } catch {
+              linkedPaymentHistoryGrid = null;
+            }
+          }
+        }
+
+        return {
+          id: n.id,
+          item_type: n.itemType,
+          creditor_name: decrypted.creditorName,
+          original_creditor: n.originalCreditor,
+          account_number: null,
+          amount: n.amount,
+          date_reported: toISOStringSafe(n.dateReported),
+          date_of_first_delinquency: toISOStringSafe(n.dateOfFirstDelinquency),
+          bureau: n.bureau, // Legacy field
+          // Per-bureau presence data
+          bureaus, // Computed array of bureau names
+          on_transunion: n.onTransunion ?? false,
+          on_experian: n.onExperian ?? false,
+          on_equifax: n.onEquifax ?? false,
+          transunion_date: toISOStringSafe(n.transunionDate),
+          experian_date: toISOStringSafe(n.experianDate),
+          equifax_date: toISOStringSafe(n.equifaxDate),
+          transunion_status: n.transunionStatus,
+          experian_status: n.experianStatus,
+          equifax_status: n.equifaxStatus,
+          account_type: linkedAccountType,
+          payment_history_grid: linkedPaymentHistoryGrid,
+          risk_severity: n.riskSeverity,
+          recommended_action: n.recommendedAction,
+          dispute_reason: n.disputeReason,
+          notes: n.notes,
+        };
+      }),
+      negative_items_count: negativeItemsResult.length,
+      personal_info_disputes: personalInfoDisputesResult.map(p => ({
+        id: p.id,
+        bureau: p.bureau,
+        type: p.type,
+        value: p.value,
+        created_at: toISOStringSafe(p.createdAt),
+      })),
+      inquiry_disputes: inquiryDisputesResult.map(i => ({
+        id: i.id,
+        creditor_name: i.creditorName,
+        bureau: i.bureau,
+        inquiry_date: toISOStringSafe(i.inquiryDate),
+        inquiry_type: i.inquiryType,
+        is_past_fcra_limit: i.isPastFcraLimit,
+        days_since_inquiry: i.daysSinceInquiry,
+        created_at: toISOStringSafe(i.createdAt),
+      })),
+      disputes: disputesResult.map(d => {
+        // Decrypt dispute data
+        const decrypted = decryptDisputeData({
+          creditorName: d.creditorName,
+        });
+
+        return {
+          id: d.id,
+          bureau: d.bureau,
+          dispute_reason: d.disputeReason,
+          dispute_type: d.disputeType,
+          status: d.status,
+          round: d.round,
+          tracking_number: d.trackingNumber,
+          sent_at: toISOStringSafe(d.sentAt),
+          response_deadline: toISOStringSafe(d.responseDeadline),
+          response_received_at: toISOStringSafe(d.responseReceivedAt),
+          outcome: d.outcome,
+          response_notes: d.responseNotes,
+          response_document_url: d.responseDocumentUrl,
+          verification_method: d.verificationMethod,
+          escalation_reason: d.escalationReason,
+          creditor_name: decrypted.creditorName,
+          account_number: d.accountNumber,
+          created_at: toISOStringSafe(d.createdAt),
+        };
+      }),
+      score_history: scoreHistoryResult.map(s => ({
+        id: s.id,
+        score_transunion: s.scoreTransunion,
+        score_experian: s.scoreExperian,
+        score_equifax: s.scoreEquifax,
+        average_score: s.averageScore,
+        source: s.source,
+        notes: s.notes,
+        recorded_at: toISOStringSafe(s.recordedAt),
+      })),
+    });
+  } catch (error) {
+    logServerEvent({
+      level: 'error',
+      event: 'client.read.failed',
+      requestId: request.headers.get('x-request-id') ?? 'unavailable',
+      route: request.nextUrl.pathname,
+      method: request.method,
+      status: 500,
+      actorUserId: adminUser.id,
+      resourceType: 'client_record',
+      resourceId: id,
+      error,
+    });
+    return NextResponse.json({ error: 'Failed to fetch client' }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const adminUser = await requireCapability('clients:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const parsed = await readJsonBody(request, clientUpdateSchema);
+    if (parsed.kind !== 'valid') {
+      return validationErrorResponse(parsed);
+    }
+
+    const body = parsed.data;
+    if (body.email !== undefined && !z.email().safeParse(body.email).success) {
+      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 });
+    }
+    if (body.ssn_last_4 && !/^\d{4}$/.test(body.ssn_last_4)) {
+      return NextResponse.json({ error: 'SSN last 4 must be exactly 4 digits' }, { status: 400 });
+    }
+
+    const now = new Date();
+
+    const updateData: ClientUpdateData = { updatedAt: now };
+
+    // Encrypt PII fields if they're being updated
+    const fieldsToEncrypt: ClientEncryptionInput = {};
+
+    if (body.first_name !== undefined) {
+      fieldsToEncrypt.firstName = body.first_name;
+    }
+    if (body.last_name !== undefined) {
+      fieldsToEncrypt.lastName = body.last_name;
+    }
+    if (body.phone !== undefined) {
+      fieldsToEncrypt.phone = body.phone;
+    }
+    if (body.street_address !== undefined) {
+      fieldsToEncrypt.streetAddress = body.street_address;
+    }
+    if (body.city !== undefined) {
+      fieldsToEncrypt.city = body.city;
+    }
+    if (body.state !== undefined) {
+      fieldsToEncrypt.state = body.state;
+    }
+    if (body.zip_code !== undefined) {
+      fieldsToEncrypt.zipCode = body.zip_code;
+    }
+    if (body.date_of_birth !== undefined) {
+      fieldsToEncrypt.dateOfBirth = body.date_of_birth;
+    }
+    if (body.ssn_last_4 !== undefined) {
+      fieldsToEncrypt.ssnLast4 = body.ssn_last_4;
+    }
+
+    // Encrypt if there are PII fields to update
+    if (Object.keys(fieldsToEncrypt).length > 0) {
+      const encrypted = encryptClientData(fieldsToEncrypt);
+      Object.assign(updateData, encrypted);
+    }
+
+    if (body.email !== undefined) updateData.email = body.email;
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+    if (body.user_id !== undefined) updateData.userId = body.user_id;
+    if (body.lead_id !== undefined) updateData.leadId = body.lead_id;
+
+    await db
+      .update(clients)
+      .set(updateData)
+      .where(eq(clients.id, id));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.error', error: error });
+    return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const adminUser = await requireCapability('clients:write');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  try {
+    await db.delete(clients).where(eq(clients.id, id));
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.clients.id.error', error: error });
+    return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
+  }
+}

@@ -16,7 +16,7 @@ describe('sealAccount', () => {
     expect(sealed.accountType).toBe('checking');
     expect(sealed.routingNumberEncrypted).not.toBe('021000021');
     expect(sealed.accountNumberEncrypted).not.toBe('123456789');
-    expect(sealed.routingNumberEncrypted.startsWith('v2:')).toBe(true);
+    expect(sealed.routingNumberEncrypted).toMatch(/^v3:[A-Za-z0-9_-]+:/);
     expect(Object.keys(sealed)).not.toContain('routingNumber');
     expect(Object.keys(sealed)).not.toContain('accountNumber');
   });

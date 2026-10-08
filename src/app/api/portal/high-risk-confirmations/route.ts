@@ -5,6 +5,14 @@ import { auth } from '@/lib/auth';
 import { clients, evidencePackets } from '@/db/schema';
 import { headers } from 'next/headers';
 import { deriveEvidencePacketState, hasExplicitClientFactualConfirmation, HIGH_RISK_CLAIM_TYPES } from '@/lib/dispute-evidence';
+import { logServerEvent } from '@/lib/server-logger';
+import { readJsonBody, validationErrorResponse } from '@/lib/request-validation';
+import { z } from 'zod';
+
+const confirmationSchema = z.object({
+  evidence_packet_id: z.string().trim().max(128).optional(),
+  confirmation_text: z.string().trim().max(2_000).optional(),
+});
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -74,7 +82,7 @@ export async function GET() {
 
     return NextResponse.json({ packets });
   } catch (error) {
-    console.error('Error listing portal high-risk confirmations:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.high.risk.confirmations.list.error', error });
     return NextResponse.json({ error: 'Failed to list high-risk confirmations' }, { status: 500 });
   }
 }
@@ -86,9 +94,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const evidencePacketId = body.evidence_packet_id as string | undefined;
-    const confirmationText = (body.confirmation_text as string | undefined)?.trim();
+    const parsed = await readJsonBody(request, confirmationSchema);
+    if (parsed.kind !== 'valid') {
+      return validationErrorResponse(parsed);
+    }
+    const evidencePacketId = parsed.data.evidence_packet_id;
+    const confirmationText = parsed.data.confirmation_text;
 
     if (!evidencePacketId || !confirmationText) {
       return NextResponse.json({ error: 'Evidence packet ID and confirmation text are required' }, { status: 400 });
@@ -173,7 +184,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ confirmations: nextConfirmations });
   } catch (error) {
-    console.error('Error recording portal high-risk confirmation:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.high.risk.confirmations.error', error: error });
     return NextResponse.json({ error: 'Failed to record high-risk confirmation' }, { status: 500 });
   }
 }

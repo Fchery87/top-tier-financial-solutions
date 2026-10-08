@@ -1,5 +1,11 @@
 # UI/UX Overhaul Implementation Roadmap
 
+> **Superseded for execution on 2026-08-09.** This is a historical audit record.
+> Its admin-path and global-redesign assumptions predate the workspace
+> restructure. Use
+> [the post-workspace architecture and UX refresh plan](2026-08-09-post-workspace-architecture-and-ux-refresh.md)
+> for focused, independently testable workspace UX improvements.
+
 ## Purpose
 
 This roadmap addresses the findings from the comprehensive UI/UX audit conducted May 2026. It covers all phases from critical fixes through polish, ordered by severity and dependency.

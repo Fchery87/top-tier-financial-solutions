@@ -33,12 +33,19 @@ import { buildCreditAccountDerivedFields } from './credit-account-ingest';
 import { getAccountPresence } from './credit-account-bureau-presence';
 import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
 import { buildAccountBalanceDiscrepancies } from './credit-analysis-discrepancies';
+import { normalizeCreditReport } from './credit-report-normalization/normalize-report';
+import { requiresNormalizationReview } from './credit-report-normalization/review-gate';
+import { logServerEvent } from '@/lib/server-logger';
 
 function determineParserReviewStatus(params: {
   sourceConfidence?: string;
   accountCompleteness: number[];
   accountCount: number;
+  normalizationWarningCount: number;
 }): { status: 'needs_review' | 'approved'; reason?: string } {
+  if (params.normalizationWarningCount > 0) {
+    return { status: 'needs_review', reason: 'Normalization reported unsupported or conflicting bureau data' };
+  }
   if (params.sourceConfidence === 'low') {
     return { status: 'needs_review', reason: 'Low source detection confidence' };
   }
@@ -149,6 +156,18 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       parsedData = parseHtmlCreditReport(`<pre>${textContent}</pre>`);
     }
 
+    const normalization = normalizeCreditReport({
+      parsed: parsedData,
+      source: parsedData.detectedSource ?? {
+        source: 'unknown',
+        confidence: 'low',
+        signatures: [],
+      },
+    });
+    if (requiresNormalizationReview(normalization.warnings)) {
+      logServerEvent({ level: 'warn', event: 'server.lib.credit.analysis.normalization.warn' });
+    }
+
     const now = new Date();
 
     // Store consumer profile if available
@@ -161,7 +180,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     const accountIdMap = new Map<string, string>(); // Map creditor+account# to accountId
     const completenessScores: number[] = [];
     
-    for (const account of parsedData.accounts) {
+    for (const { account } of normalization.accounts) {
       const accountId = randomUUID();
       storedAccountIds.push(accountId);
       
@@ -244,6 +263,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       sourceConfidence: parsedData.detectedSource?.confidence,
       accountCompleteness: completenessScores,
       accountCount: parsedData.accounts.length,
+      normalizationWarningCount: normalization.warnings.length,
     });
 
     if (parserReview.status === 'needs_review') {
@@ -310,7 +330,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     
     const negativeItemDedup = new Set<string>();
 
-    for (const item of parsedData.negativeItems) {
+    for (const { item } of normalization.negativeItems) {
       const negativeItemId = randomUUID();
       
       // Try to find matching credit account by creditor name
@@ -489,7 +509,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
       .where(eq(creditReports.id, reportId));
 
   } catch (error) {
-    console.error('Error analyzing credit report:', error);
+    logServerEvent({ level: 'error', event: 'server.lib.credit.analysis.error', error: error });
     
     // Update status to failed
     await db

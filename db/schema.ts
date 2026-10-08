@@ -423,7 +423,7 @@ export const clients = pgTable('clients', {
   state: text('state'),
   zipCode: text('zip_code'),
   // Personal identification
-  dateOfBirth: timestamp('date_of_birth'),
+  dateOfBirth: text('date_of_birth'),
   ssnLast4: text('ssn_last_4'), // Last 4 digits only for security
   status: text('status').default('active'), // 'pending' | 'active' | 'paused' | 'completed' | 'cancelled'
   stage: clientStageEnum('stage').default('lead'), // Pipeline stage for CRM tracking
@@ -1913,6 +1913,26 @@ export const clientNotificationPreferencesRelations = relations(clientNotificati
 
 // LLM provider enum
 export const llmProviderEnum = pgEnum('llm_provider', ['google', 'openai', 'anthropic', 'custom']);
+
+// Checkpoint state for the controlled, resumable encryption-key rotation command.
+// This table intentionally stores only aggregate progress, never encrypted values,
+// plaintext, key material, or raw error messages.
+export const encryptionRotationRuns = pgTable('encryption_rotation_runs', {
+  id: text('id').primaryKey(),
+  activeKeyId: text('active_key_id').notNull(),
+  status: text('status').notNull(),
+  currentTable: text('current_table'),
+  checkpointId: text('checkpoint_id'),
+  scannedCount: integer('scanned_count').notNull().default(0),
+  rotatedCount: integer('rotated_count').notNull().default(0),
+  failureClass: text('failure_class'),
+  startedAt: timestamp('started_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => [
+  index('encryption_rotation_runs_status_idx').on(table.status),
+]);
 
 // System settings for application-wide configuration
 export const systemSettings = pgTable('system_settings', {

@@ -68,7 +68,7 @@ export default function ClientsPage() {
     try {
       const statusParam = selectedStatus !== 'all' ? `&status=${selectedStatus}` : '';
       const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : '';
-      const response = await fetch(`/api/admin/clients?page=1&limit=100${statusParam}${searchParam}`);
+      const response = await fetch(`/api/workspace/clients?page=1&limit=100${statusParam}${searchParam}`);
       if (response.ok) {
         const data = await response.json();
         setClients(data.items);
@@ -91,7 +91,7 @@ export default function ClientsPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/clients/${pendingDeleteId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/workspace/clients/${pendingDeleteId}`, { method: 'DELETE' });
       if (response.ok) {
         fetchClients();
       }

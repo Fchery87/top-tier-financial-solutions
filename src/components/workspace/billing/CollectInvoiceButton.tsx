@@ -12,7 +12,7 @@ export function CollectInvoiceButton({ invoiceId }: { invoiceId: string }) {
     setSubmitting(true);
     setMessage(null);
     try {
-      const response = await fetch(`/api/admin/billing/invoices/${invoiceId}/collect`, {
+      const response = await fetch(`/api/workspace/billing/invoices/${invoiceId}/collect`, {
         method: 'POST',
       });
       const body = await response.json().catch(() => ({}));

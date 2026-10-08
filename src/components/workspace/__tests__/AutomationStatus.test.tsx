@@ -52,7 +52,7 @@ describe('AutomationStatus', () => {
     await userEvent.click(dryRunButton);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/admin/automation/dispute-escalations/run', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/workspace/automation/dispute-escalations/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dryRun: true }),
@@ -76,7 +76,7 @@ describe('AutomationStatus', () => {
     await userEvent.click(runLiveButton);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/admin/automation/dispute-escalations/run', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/workspace/automation/dispute-escalations/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dryRun: false }),

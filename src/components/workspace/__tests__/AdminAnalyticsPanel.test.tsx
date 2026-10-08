@@ -57,8 +57,8 @@ describe('AdminAnalyticsPanel', () => {
     expect(screen.getByText('11')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/admin/operator-analytics');
-      expect(fetchMock).toHaveBeenCalledWith('/api/admin/client-outcome-analytics');
+      expect(fetchMock).toHaveBeenCalledWith('/api/workspace/operator-analytics');
+      expect(fetchMock).toHaveBeenCalledWith('/api/workspace/client-outcome-analytics');
     });
   });
 });

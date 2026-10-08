@@ -15,7 +15,7 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => ({
   uploadLimiter: { limit: uploadLimiterLimitMock },
 }));
 
-describe('POST /api/admin/credit-reports/upload', () => {
+describe('POST /api/workspace/credit-reports/upload', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     uploadLimiterLimitMock.mockResolvedValue({
@@ -27,8 +27,8 @@ describe('POST /api/admin/credit-reports/upload', () => {
   });
 
   it('rejects an exhausted upload limit before capability and storage work', async () => {
-    const { POST } = await import('@/app/api/admin/credit-reports/upload/route');
-    const response = await POST(new NextRequest('http://localhost/api/admin/credit-reports/upload', {
+    const { POST } = await import('@/app/api/workspace/credit-reports/upload/route');
+    const response = await POST(new NextRequest('http://localhost/api/workspace/credit-reports/upload', {
       method: 'POST',
       headers: { 'x-forwarded-for': '203.0.113.20' },
     }));

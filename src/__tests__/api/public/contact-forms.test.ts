@@ -44,6 +44,52 @@ describe('POST /api/public/contact-forms', () => {
     expect(insertValuesMock).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects malformed JSON after rate limiting and before writing a contact submission', async () => {
+    const { POST } = await import('@/app/api/public/contact-forms/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/public/contact-forms', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '203.0.113.22' },
+      body: '{',
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid JSON body' });
+    expect(publicLimiterLimitMock).toHaveBeenCalledWith('ip:203.0.113.22');
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects schema-invalid contact submissions after rate limiting and before writing', async () => {
+    const { POST } = await import('@/app/api/public/contact-forms/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/public/contact-forms', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '203.0.113.23' },
+      body: JSON.stringify(['not', 'a', 'contact', 'form']),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid request payload' });
+    expect(publicLimiterLimitMock).toHaveBeenCalledWith('ip:203.0.113.23');
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-text optional contact fields before writing a submission', async () => {
+    const { POST } = await import('@/app/api/public/contact-forms/route');
+    const response = await POST(new NextRequest('http://localhost/api/public/contact-forms', {
+      method: 'POST',
+      body: JSON.stringify({
+        full_name: 'Taylor Client',
+        email: 'taylor@example.com',
+        message: ['unexpected', 'array'],
+      }),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid request payload' });
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
   it('rejects an oversized message before writing a contact submission', async () => {
     const { POST } = await import('@/app/api/public/contact-forms/route');
 

@@ -16,7 +16,7 @@ export function useEvidenceSelection({ getClientId, onOperationError }: Evidence
   const fetchEvidence = React.useCallback(async (clientId: string) => {
     setLoadingEvidence(true);
     try {
-      const response = await fetch(`/api/admin/disputes/evidence?clientId=${clientId}`);
+      const response = await fetch(`/api/workspace/disputes/evidence?clientId=${clientId}`);
       if (response.ok) {
         const data = await response.json();
         setEvidenceDocuments(data.documents || []);
@@ -37,7 +37,7 @@ export function useEvidenceSelection({ getClientId, onOperationError }: Evidence
     files.forEach((file) => formData.append('files', file));
 
     try {
-      const response = await fetch('/api/admin/disputes/evidence/upload', { method: 'POST', body: formData });
+      const response = await fetch('/api/workspace/disputes/evidence/upload', { method: 'POST', body: formData });
       if (response.ok) {
         const data = await response.json();
         const newDocuments: EvidenceDocument[] = data.documents || [];
@@ -58,7 +58,7 @@ export function useEvidenceSelection({ getClientId, onOperationError }: Evidence
     if (!clientId) return;
 
     try {
-      const response = await fetch('/api/admin/disputes/evidence/delete', {
+      const response = await fetch('/api/workspace/disputes/evidence/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId, documentId }),

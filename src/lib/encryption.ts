@@ -1,147 +1,308 @@
 import crypto from 'crypto';
+import { logServerEvent } from '@/lib/server-logger';
 
-/**
- * PII Encryption Service
- * Encrypts new values with AES-256-GCM. Decrypt still reads the older AES-256-CBC payload.
- *
- * Design: Each encrypted value includes its own IV (initialization vector)
- * so decryption doesn't require a separate IV
- * New format: v2:IV_HEX:TAG_HEX:CIPHER_HEX. Old format: IV_HEX:CIPHER_HEX.
- */
-
-const CBC_ALGORITHM = 'aes-256-cbc';
 const GCM_ALGORITHM = 'aes-256-gcm';
-const ENCODING = 'utf-8';
-const CIPHER_ENCODING = 'hex';
-const V2_PREFIX = 'v2:';
+const LEGACY_CBC_ALGORITHM = 'aes-256-cbc';
+const HEX_ENCODING = 'hex';
+const TEXT_ENCODING = 'utf8';
+const GCM_IV_BYTES = 12;
+const GCM_TAG_BYTES = 16;
+const KEY_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+const KEY_PATTERN = /^[a-f0-9]{64}$/i;
 
-// Get encryption key from environment
-function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
+type EncryptionKeyring = {
+  activeKeyId: string;
+  keys: ReadonlyMap<string, Buffer>;
+  legacyKey: Buffer | undefined;
+};
 
-  if (!key) {
-    // Tests can run without encryption config to keep unit tests deterministic.
-    if (process.env.NODE_ENV === 'test') {
-      return Buffer.alloc(32);
-    }
-
-    throw new Error('ENCRYPTION_KEY environment variable is required');
-  }
-
-  // Convert hex string to buffer (must be 64 hex chars for 256-bit key)
-  if (key.length !== 64) {
-    throw new Error('ENCRYPTION_KEY must be 64 hex characters (256-bit key)');
-  }
-
-  return Buffer.from(key, 'hex');
-}
+type GcmCiphertext = {
+  keyId: string | undefined;
+  iv: Buffer;
+  tag: Buffer;
+  ciphertext: Buffer;
+};
 
 /**
- * Encrypt a string value
- * @param plaintext - Value to encrypt
- * @returns Encrypted value in format: IV_HEX:ENCRYPTED_HEX
+ * Encrypts a value using the active AES-256-GCM key.
+ *
+ * New format: v3:<key-id>:<iv-hex>:<tag-hex>:<ciphertext-hex>
  */
 export function encrypt(plaintext: string | null | undefined): string | null {
   if (!plaintext) return null;
 
   try {
-    const key = getEncryptionKey();
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(GCM_ALGORITHM, key, iv);
-    const encrypted = Buffer.concat([
-      cipher.update(plaintext, ENCODING),
-      cipher.final(),
-    ]);
+    const keyring = getEncryptionKeyring();
+    const activeKey = keyring.keys.get(keyring.activeKeyId);
+
+    if (!activeKey) {
+      throw new Error('Active encryption key is not available');
+    }
+
+    const iv = crypto.randomBytes(GCM_IV_BYTES);
+    const cipher = crypto.createCipheriv(GCM_ALGORITHM, activeKey, iv);
+    const ciphertext = Buffer.concat([cipher.update(plaintext, TEXT_ENCODING), cipher.final()]);
     const tag = cipher.getAuthTag();
-    return `${V2_PREFIX}${iv.toString(CIPHER_ENCODING)}:${tag.toString(CIPHER_ENCODING)}:${encrypted.toString(CIPHER_ENCODING)}`;
+
+    return `v3:${keyring.activeKeyId}:${iv.toString(HEX_ENCODING)}:${tag.toString(HEX_ENCODING)}:${ciphertext.toString(HEX_ENCODING)}`;
   } catch (error) {
-    console.error('[Encryption Error]', error);
+    logServerEvent({ level: 'error', event: 'server.lib.encryption.error', error });
     throw error;
   }
 }
 
 /**
- * Decrypt an encrypted string
- * @param ciphertext - Encrypted value in format: IV_HEX:ENCRYPTED_HEX
- * @returns Decrypted plaintext
+ * Decrypts active v3, historical v2 GCM, and legacy CBC ciphertext.
+ * Callers handling database fields should first use `isCiphertextValue` so
+ * true legacy plaintext is never treated as an encryption failure.
  */
 export function decrypt(ciphertext: string | null | undefined): string | null {
   if (!ciphertext) return null;
 
   try {
-    const key = getEncryptionKey();
-    if (ciphertext.startsWith(V2_PREFIX)) {
-      const parts = ciphertext.slice(V2_PREFIX.length).split(':');
-      if (parts.length !== 3) {
-        console.error('[Encryption Error] Invalid ciphertext format');
-        return null;
+    if (ciphertext.startsWith('v3:')) {
+      const parsed = parseGcmCiphertext(ciphertext, true);
+      const keyring = getEncryptionKeyring();
+
+      if (!parsed.keyId || !keyring.keys.has(parsed.keyId)) {
+        throw new Error('Encryption key ID is not available');
       }
-      const iv = Buffer.from(parts[0], CIPHER_ENCODING);
-      const tag = Buffer.from(parts[1], CIPHER_ENCODING);
-      const encrypted = Buffer.from(parts[2], CIPHER_ENCODING);
-      const decipher = crypto.createDecipheriv(GCM_ALGORITHM, key, iv);
-      decipher.setAuthTag(tag);
-      return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString(ENCODING);
+
+      return decryptGcm(parsed, keyring.keys.get(parsed.keyId));
     }
 
-    const parts = ciphertext.split(':');
-    if (parts.length !== 2) {
-      console.error('[Encryption Error] Invalid ciphertext format');
-      return null;
+    if (ciphertext.startsWith('v2:')) {
+      const parsed = parseGcmCiphertext(ciphertext, false);
+      return decryptGcm(parsed, getEncryptionKeyring().legacyKey);
     }
-    const iv = Buffer.from(parts[0], CIPHER_ENCODING);
-    const decipher = crypto.createDecipheriv(CBC_ALGORITHM, key, iv);
-    let decrypted = decipher.update(parts[1], CIPHER_ENCODING, ENCODING);
-    decrypted += decipher.final(ENCODING);
-    return decrypted;
+
+    return decryptLegacyCbc(ciphertext, getEncryptionKeyring().legacyKey);
   } catch (error) {
-    console.error('[Decryption Error]', error);
+    logServerEvent({ level: 'error', event: 'server.lib.encryption.error', error });
     throw error;
   }
 }
 
-/**
- * Generate a new encryption key (run this once, save to .env)
- * Usage: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
- */
-export function generateEncryptionKey(): string {
-  return crypto.randomBytes(32).toString('hex');
+/** Returns true only for a strict recognized ciphertext shape. */
+export function isCiphertextValue(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+
+  if (value.startsWith('v3:')) {
+    return isValidGcmShape(value, true);
+  }
+
+  if (value.startsWith('v2:')) {
+    return isValidGcmShape(value, false);
+  }
+
+  return isValidLegacyCbcShape(value);
 }
 
-/**
- * Batch encrypt multiple fields
- */
-export function encryptObject<T extends Record<string, unknown>>(
-  obj: T,
-  fieldsToEncrypt: (keyof T)[]
-): T {
-  const encrypted = { ...obj };
+export function generateEncryptionKey(): string {
+  return crypto.randomBytes(32).toString(HEX_ENCODING);
+}
+
+/** Returns the configured key ID used for newly encrypted values. */
+export function getActiveEncryptionKeyId(): string {
+  return getEncryptionKeyring().activeKeyId;
+}
+
+export function encryptObject(
+  object: Record<string, unknown>,
+  fieldsToEncrypt: readonly string[],
+): Record<string, unknown> {
+  const encrypted = { ...object };
 
   for (const field of fieldsToEncrypt) {
-    const value = obj[field];
+    const value = object[field];
     if (value !== null && value !== undefined) {
-      encrypted[field] = encrypt(String(value)) as T[keyof T];
+      encrypted[field] = encrypt(String(value));
     }
   }
 
   return encrypted;
 }
 
-/**
- * Batch decrypt multiple fields
- */
-export function decryptObject<T extends Record<string, unknown>>(
-  obj: T,
-  fieldsToDecrypt: (keyof T)[]
-): T {
-  const decrypted = { ...obj };
+export function decryptObject(
+  object: Record<string, unknown>,
+  fieldsToDecrypt: readonly string[],
+): Record<string, unknown> {
+  const decrypted = { ...object };
 
   for (const field of fieldsToDecrypt) {
-    const value = obj[field];
+    const value = object[field];
     if (value !== null && value !== undefined) {
-      decrypted[field] = decrypt(String(value)) as T[keyof T];
+      decrypted[field] = decrypt(String(value));
     }
   }
 
   return decrypted;
+}
+
+function getEncryptionKeyring(): EncryptionKeyring {
+  const configuredKeyring = process.env.ENCRYPTION_KEYRING;
+  const legacyKey = readOptionalKey(process.env.ENCRYPTION_KEY, 'ENCRYPTION_KEY');
+
+  if (!configuredKeyring) {
+    if (legacyKey) {
+      return {
+        activeKeyId: 'legacy',
+        keys: new Map([['legacy', legacyKey]]),
+        legacyKey,
+      };
+    }
+
+    if (process.env.NODE_ENV === 'test') {
+      const testKey = Buffer.alloc(32);
+      return {
+        activeKeyId: 'test',
+        keys: new Map([['test', testKey]]),
+        legacyKey: testKey,
+      };
+    }
+
+    throw new Error('Encryption keyring is required');
+  }
+
+  const parsedKeyring = parseKeyring(configuredKeyring);
+  const activeKeyId = process.env.ENCRYPTION_ACTIVE_KEY_ID;
+
+  if (!activeKeyId || !KEY_ID_PATTERN.test(activeKeyId)) {
+    throw new Error('ENCRYPTION_ACTIVE_KEY_ID is required and must be a valid key ID');
+  }
+
+  if (!parsedKeyring.has(activeKeyId)) {
+    throw new Error('ENCRYPTION_ACTIVE_KEY_ID is not present in ENCRYPTION_KEYRING');
+  }
+
+  return {
+    activeKeyId,
+    keys: parsedKeyring,
+    legacyKey: legacyKey ?? parsedKeyring.get('legacy'),
+  };
+}
+
+function parseKeyring(rawKeyring: string): ReadonlyMap<string, Buffer> {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(rawKeyring);
+  } catch {
+    throw new Error('ENCRYPTION_KEYRING must be valid JSON');
+  }
+
+  if (!isRecord(parsed)) {
+    throw new Error('ENCRYPTION_KEYRING must be a JSON object');
+  }
+
+  const entries = Object.entries(parsed);
+  if (entries.length === 0 || entries.length > 100) {
+    throw new Error('ENCRYPTION_KEYRING must contain between 1 and 100 keys');
+  }
+
+  const keys = new Map<string, Buffer>();
+
+  for (const [keyId, keyValue] of entries) {
+    if (!KEY_ID_PATTERN.test(keyId) || typeof keyValue !== 'string') {
+      throw new Error('ENCRYPTION_KEYRING contains an invalid key entry');
+    }
+
+    keys.set(keyId, decodeKey(keyValue, 'ENCRYPTION_KEYRING'));
+  }
+
+  return keys;
+}
+
+function readOptionalKey(value: string | undefined, source: string): Buffer | undefined {
+  return value === undefined || value === '' ? undefined : decodeKey(value, source);
+}
+
+function decodeKey(value: string, source: string): Buffer {
+  if (!KEY_PATTERN.test(value)) {
+    throw new Error(`${source} must be 64 hex characters (256-bit key)`);
+  }
+
+  return Buffer.from(value, HEX_ENCODING);
+}
+
+function decryptGcm(parsed: GcmCiphertext, key: Buffer | undefined): string {
+  if (!key) {
+    throw new Error('Legacy encryption key is not available');
+  }
+
+  const decipher = crypto.createDecipheriv(GCM_ALGORITHM, key, parsed.iv);
+  decipher.setAuthTag(parsed.tag);
+  return Buffer.concat([decipher.update(parsed.ciphertext), decipher.final()]).toString(TEXT_ENCODING);
+}
+
+function decryptLegacyCbc(ciphertext: string, key: Buffer | undefined): string {
+  if (!key || !isValidLegacyCbcShape(ciphertext)) {
+    throw new Error('Invalid legacy encryption ciphertext');
+  }
+
+  const [ivHex, encryptedHex] = ciphertext.split(':');
+  const decipher = crypto.createDecipheriv(
+    LEGACY_CBC_ALGORITHM,
+    key,
+    Buffer.from(ivHex, HEX_ENCODING),
+  );
+  return Buffer.concat([
+    decipher.update(Buffer.from(encryptedHex, HEX_ENCODING)),
+    decipher.final(),
+  ]).toString(TEXT_ENCODING);
+}
+
+function parseGcmCiphertext(ciphertext: string, keyed: boolean): GcmCiphertext {
+  if (!isValidGcmShape(ciphertext, keyed)) {
+    throw new Error('Invalid authenticated encryption ciphertext');
+  }
+
+  const parts = ciphertext.split(':');
+  const [keyId, ivHex, tagHex, encryptedHex] = keyed
+    ? [parts[1], parts[2], parts[3], parts[4]]
+    : [undefined, parts[1], parts[2], parts[3]];
+
+  return {
+    keyId,
+    iv: Buffer.from(ivHex, HEX_ENCODING),
+    tag: Buffer.from(tagHex, HEX_ENCODING),
+    ciphertext: Buffer.from(encryptedHex, HEX_ENCODING),
+  };
+}
+
+function isValidGcmShape(value: string, keyed: boolean): boolean {
+  const parts = value.split(':');
+  const expectedLength = keyed ? 5 : 4;
+
+  if (parts.length !== expectedLength || parts[0] !== (keyed ? 'v3' : 'v2')) {
+    return false;
+  }
+
+  const keyId = keyed ? parts[1] : undefined;
+  const offset = keyed ? 2 : 1;
+  const ivHex = parts[offset];
+  const tagHex = parts[offset + 1];
+  const encryptedHex = parts[offset + 2];
+
+  return (keyId === undefined || KEY_ID_PATTERN.test(keyId))
+    && isExactHex(ivHex, GCM_IV_BYTES)
+    && isExactHex(tagHex, GCM_TAG_BYTES)
+    && isNonEmptyHex(encryptedHex);
+}
+
+function isValidLegacyCbcShape(value: string): boolean {
+  const [ivHex, encryptedHex, unexpectedPart] = value.split(':');
+  return unexpectedPart === undefined && isExactHex(ivHex, 16) && isNonEmptyHex(encryptedHex);
+}
+
+function isExactHex(value: string | undefined, byteLength: number): boolean {
+  return value !== undefined && value.length === byteLength * 2 && /^[a-f0-9]+$/i.test(value);
+}
+
+function isNonEmptyHex(value: string | undefined): boolean {
+  return value !== undefined && value.length > 0 && value.length % 2 === 0 && /^[a-f0-9]+$/i.test(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

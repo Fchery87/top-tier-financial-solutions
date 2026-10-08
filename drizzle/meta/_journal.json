@@ -302,6 +302,20 @@
       "when": 1791431666624,
       "tag": "0042_payment_authorizations",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791438582316,
+      "tag": "0043_encrypted_client_dob",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791438583316,
+      "tag": "0044_encryption_rotation_runs",
+      "breakpoints": true
     }
   ]
 }

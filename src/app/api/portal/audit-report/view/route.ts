@@ -9,6 +9,7 @@ import { generateCreditAnalysisReportHTML, type CreditAnalysisReportData } from 
 import { parseIdentityIQReport } from '@/lib/parsers/identityiq-parser';
 import { getFileFromR2 } from '@/lib/r2-storage';
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
             headers: { 'Content-Type': 'text/html' },
           });
         } catch (parseError) {
-          console.error('Error parsing credit report for comprehensive view:', parseError);
+          logServerEvent({ level: 'error', event: 'server.app.api.portal.audit.report.view.error', error: parseError });
           // Fall through to simple report
         }
       }
@@ -231,7 +232,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'text/html' },
     });
   } catch (error) {
-    console.error('Error generating audit report:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.audit.report.view.error', error: error });
     return new NextResponse('Failed to generate report', { status: 500 });
   }
 }

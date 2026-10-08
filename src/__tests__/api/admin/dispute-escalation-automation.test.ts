@@ -13,14 +13,14 @@ vi.mock('@/lib/dispute-escalation-runner', () => ({
   writeDisputeEscalationFailure: writeDisputeEscalationFailureMock,
 }));
 
-describe('POST /api/admin/automation/dispute-escalations/run', () => {
+describe('POST /api/workspace/automation/dispute-escalations/run', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('denies a staff-equivalent request without settings:write', async () => {
     requireCapabilityMock.mockResolvedValue(null);
-    const { POST } = await import('@/app/api/admin/automation/dispute-escalations/run/route');
+    const { POST } = await import('@/app/api/workspace/automation/dispute-escalations/run/route');
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/automation/dispute-escalations/run', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/automation/dispute-escalations/run', {
       method: 'POST',
       body: JSON.stringify({ dryRun: true }),
     }));

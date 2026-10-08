@@ -1,0 +1,83 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/db/client';
+import { creditReports, disputeOutcomes } from '@/db/schema';
+import { requireCapability } from '@/lib/admin-session';
+import { logServerEvent } from '@/lib/server-logger';
+
+const bureauKeys = ['experian', 'transunion', 'equifax'] as const;
+
+type BureauKey = typeof bureauKeys[number];
+
+function emptyBureauProgress() {
+  return {
+    deleted: 0,
+    updated: 0,
+    verified: 0,
+    new_negatives: 0,
+  };
+}
+
+export async function GET(_request: NextRequest) {
+  const adminUser = await requireCapability('clients:read');
+  if (!adminUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  try {
+    const outcomes = await db
+      .select({
+        outcome: disputeOutcomes.outcome,
+        bureau: disputeOutcomes.bureau,
+        scoreImpact: disputeOutcomes.scoreImpact,
+      })
+      .from(disputeOutcomes);
+
+    const newNegatives = await db
+      .select({ bureau: creditReports.bureau })
+      .from(creditReports);
+
+    const bureauProgress: Record<BureauKey, ReturnType<typeof emptyBureauProgress>> = {
+      experian: emptyBureauProgress(),
+      transunion: emptyBureauProgress(),
+      equifax: emptyBureauProgress(),
+    };
+    const outcomeCounts = { deleted: 0, updated: 0, verified: 0 };
+    let totalScoreMovement = 0;
+
+    for (const outcome of outcomes) {
+      if (outcome.outcome === 'deleted') outcomeCounts.deleted += 1;
+      if (outcome.outcome === 'updated') outcomeCounts.updated += 1;
+      if (outcome.outcome === 'verified') outcomeCounts.verified += 1;
+      if (typeof outcome.scoreImpact === 'number') totalScoreMovement += outcome.scoreImpact;
+
+      if (outcome.bureau && bureauKeys.includes(outcome.bureau as BureauKey)) {
+        const bureau = outcome.bureau as BureauKey;
+        if (outcome.outcome === 'deleted') bureauProgress[bureau].deleted += 1;
+        if (outcome.outcome === 'updated') bureauProgress[bureau].updated += 1;
+        if (outcome.outcome === 'verified') bureauProgress[bureau].verified += 1;
+      }
+    }
+
+    for (const item of newNegatives) {
+      if (item.bureau && bureauKeys.includes(item.bureau as BureauKey)) {
+        bureauProgress[item.bureau as BureauKey].new_negatives += 1;
+      }
+    }
+
+    return NextResponse.json({
+      client_outcome_analytics: {
+        outcomes: outcomeCounts,
+        score_movement: {
+          total: totalScoreMovement,
+        },
+        new_negatives: {
+          count: newNegatives.length,
+        },
+        bureau_progress: bureauProgress,
+      },
+    });
+  } catch (error) {
+    logServerEvent({ level: 'error', event: 'server.app.api.admin.client.outcome.analytics.error', error: error });
+    return NextResponse.json({ error: 'Failed to fetch client outcome analytics' }, { status: 500 });
+  }
+}

@@ -7,7 +7,8 @@ export type AdminActivitySubjectType =
   | 'letter_library'
   | 'settings'
   | 'automation'
-  | 'client'
+  | 'client_record'
+  | 'credit_report'
   | 'dispute_letter';
 
 export interface AdminActivityInput {

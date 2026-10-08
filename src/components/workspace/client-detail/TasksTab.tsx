@@ -37,7 +37,7 @@ export function TasksTab({ clientId, tasks, onTasksChanged }: TasksTabProps) {
     if (!newTask.title.trim()) return;
     setAddingTask(true);
     try {
-      const response = await fetch('/api/admin/tasks', {
+      const response = await fetch('/api/workspace/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,7 +62,7 @@ export function TasksTab({ clientId, tasks, onTasksChanged }: TasksTabProps) {
 
   const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
     try {
-      await fetch(`/api/admin/tasks/${taskId}`, {
+      await fetch(`/api/workspace/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -76,7 +76,7 @@ export function TasksTab({ clientId, tasks, onTasksChanged }: TasksTabProps) {
   const confirmDeleteTask = async () => {
     if (!pendingDeleteTaskId) return;
     try {
-      await fetch(`/api/admin/tasks/${pendingDeleteTaskId}`, { method: 'DELETE' });
+      await fetch(`/api/workspace/tasks/${pendingDeleteTaskId}`, { method: 'DELETE' });
       onTasksChanged();
     } catch (error) {
       console.error('Error deleting task:', error);

@@ -71,7 +71,7 @@ export default function AgreementsPage() {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/agreements?type=templates&limit=100');
+      const response = await fetch('/api/workspace/agreements?type=templates&limit=100');
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.items);
@@ -135,8 +135,8 @@ export default function AgreementsPage() {
     setSaving(true);
     try {
       const url = editingTemplate 
-        ? `/api/admin/agreements/${editingTemplate.id}`
-        : '/api/admin/agreements';
+        ? `/api/workspace/agreements/${editingTemplate.id}`
+        : '/api/workspace/agreements';
       
       const response = await fetch(url, {
         method: editingTemplate ? 'PUT' : 'POST',
@@ -169,7 +169,7 @@ export default function AgreementsPage() {
 
   const handleToggleActive = async (template: AgreementTemplate) => {
     try {
-      const response = await fetch(`/api/admin/agreements/${template.id}`, {
+      const response = await fetch(`/api/workspace/agreements/${template.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'template', isActive: !template.isActive }),
@@ -190,7 +190,7 @@ export default function AgreementsPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/agreements/${pendingDeleteId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/workspace/agreements/${pendingDeleteId}`, { method: 'DELETE' });
       if (response.ok) {
         fetchTemplates();
       }

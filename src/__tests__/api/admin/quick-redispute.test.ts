@@ -32,7 +32,7 @@ function selectResult(rows: unknown[]) {
   };
 }
 
-describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
+describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1' });
@@ -43,7 +43,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
   });
 
   it('rejects a no-response draft before the response deadline', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/[id]/quick-redispute/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/quick-redispute/route');
     dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
       id: 'dispute-1',
       outcome: 'no_response',
@@ -53,7 +53,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
     }]) }) }) });
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
       { params: Promise.resolve({ id: 'dispute-1' }) },
     );
 
@@ -67,7 +67,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
     { outcome: 'verified', responseReceivedAt: new Date('2026-02-01T00:00:00.000Z'), responseDocumentUrl: 'https://files.example/verified.pdf' },
     { outcome: 'no_response', responseReceivedAt: null, responseDocumentUrl: null },
   ] as const)('creates a Round 2 draft after an eligible $outcome response review', async ({ outcome, responseReceivedAt, responseDocumentUrl }) => {
-    const { POST } = await import('@/app/api/admin/disputes/[id]/quick-redispute/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/quick-redispute/route');
     const currentDispute = {
       id: 'dispute-1',
       clientId: 'client-1',
@@ -107,7 +107,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
       }]));
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
       { params: Promise.resolve({ id: 'dispute-1' }) },
     );
 
@@ -134,7 +134,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
 
 
   it('refuses a next-cycle draft while the prior dispute packet awaits client confirmation', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/[id]/quick-redispute/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/quick-redispute/route');
     dbMock.select
       .mockReturnValueOnce(selectResult([{
         id: 'dispute-1',
@@ -168,7 +168,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
       });
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
       { params: Promise.resolve({ id: 'dispute-1' }) },
     );
 
@@ -180,7 +180,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
   });
 
   it('rejects verified drafts without recorded response evidence', async () => {
-    const { POST } = await import('@/app/api/admin/disputes/[id]/quick-redispute/route');
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/quick-redispute/route');
     dbMock.select.mockReturnValue(selectResult([{
       id: 'dispute-1',
       outcome: 'verified',
@@ -190,7 +190,7 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
     }]));
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
       { params: Promise.resolve({ id: 'dispute-1' }) },
     );
 

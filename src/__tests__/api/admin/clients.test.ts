@@ -1,11 +1,88 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+
+const dbMock = vi.hoisted(() => ({
+  insert: vi.fn(),
+}));
+const requireCapabilityMock = vi.hoisted(() => vi.fn());
+const encryptClientDataMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/db/client', () => ({ db: dbMock }));
+vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
+vi.mock('@/lib/db-encryption', () => ({
+  decryptClientData: vi.fn((data) => data),
+  encryptClientData: encryptClientDataMock,
+}));
+vi.mock('@/lib/email-service', () => ({ triggerAutomation: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({ sensitiveLimiter: {} }));
+vi.mock('@/lib/rate-limit-middleware', () => ({
+  rateLimited: () => <THandler>(handler: THandler) => handler,
+}));
+
+function createClientRequest(payload: unknown) {
+  return new NextRequest('http://localhost/api/workspace/clients', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'content-type': 'application/json' },
+  });
+}
 
 /**
  * Integration tests for client management API endpoints
  * Tests cover: creation, listing, retrieval, updating with encryption
  */
 
-describe('POST /api/admin/clients - Create Client', () => {
+describe('POST /api/workspace/clients - Create Client', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
+  });
+
+  it('rejects invalid client PII payloads before encryption or database writes', async () => {
+    const { POST } = await import('@/app/api/workspace/clients/route');
+    const invalidPayloads = [
+      [],
+      { first_name: 'A'.repeat(201), last_name: 'Doe', email: 'ada@example.com' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'not-an-email' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', lead_id: 'not-a-uuid' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', date_of_birth: 'not-a-date' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', ssn_last_4: '12ab' },
+      { first_name: 'Ada', last_name: 'Doe', email: 'ada@example.com', unexpected: 'field' },
+    ];
+
+    for (const payload of invalidPayloads) {
+      const response = await POST(createClientRequest(payload));
+      expect(response.status).toBe(400);
+    }
+
+    expect(encryptClientDataMock).not.toHaveBeenCalled();
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
+  it('persists the encrypted DOB instead of converting it back to a timestamp', async () => {
+    const insertValuesMock = vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ id: 'client-1' }]),
+    });
+    dbMock.insert.mockReturnValue({ values: insertValuesMock });
+    encryptClientDataMock.mockImplementation((data: Record<string, unknown>) => ({
+      ...data,
+      dateOfBirth: 'v3:current_2026:aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cc',
+    }));
+
+    const { POST } = await import('@/app/api/workspace/clients/route');
+    const response = await POST(createClientRequest({
+      first_name: 'Ada',
+      last_name: 'Lovelace',
+      email: 'ada@example.com',
+      date_of_birth: '1815-12-10',
+    }));
+
+    expect(response.status).toBe(201);
+    expect(insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({
+      dateOfBirth: 'v3:current_2026:aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cc',
+    }));
+  });
+
   it('should require first_name, last_name, and email', () => {
     const validPayload = {
       first_name: 'John',
@@ -154,7 +231,7 @@ describe('POST /api/admin/clients - Create Client', () => {
   });
 });
 
-describe('GET /api/admin/clients - List Clients', () => {
+describe('GET /api/workspace/clients - List Clients', () => {
   it('should support pagination with page and limit parameters', () => {
     const params = {
       page: 2,
@@ -272,7 +349,7 @@ describe('GET /api/admin/clients - List Clients', () => {
 
   it('should apply rate limiting (10 requests/minute)', () => {
     const rateLimitConfig = {
-      endpoint: '/api/admin/clients',
+      endpoint: '/api/workspace/clients',
       requestsPerMinute: 10,
       applyTo: 'GET',
     };
@@ -293,7 +370,7 @@ describe('GET /api/admin/clients - List Clients', () => {
   });
 });
 
-describe('GET /api/admin/clients/[id] - Get Client Profile', () => {
+describe('GET /api/workspace/clients/[id] - Get Client Profile', () => {
   it('should retrieve complete client record', () => {
     const clientProfile = {
       id: 'client-1',
@@ -414,7 +491,7 @@ describe('GET /api/admin/clients/[id] - Get Client Profile', () => {
   });
 });
 
-describe('PUT /api/admin/clients/[id] - Update Client', () => {
+describe('PUT /api/workspace/clients/[id] - Update Client', () => {
   it('should allow updating first_name with encryption', () => {
     const updatePayload = {
       first_name: 'Jonathan',
@@ -498,7 +575,7 @@ describe('PUT /api/admin/clients/[id] - Update Client', () => {
   });
 });
 
-describe('DELETE /api/admin/clients/[id] - Delete Client', () => {
+describe('DELETE /api/workspace/clients/[id] - Delete Client', () => {
   it('should delete client by ID', () => {
     const clientId = 'client-123';
 
@@ -529,23 +606,23 @@ describe('DELETE /api/admin/clients/[id] - Delete Client', () => {
 });
 
 describe('Authorization & Rate Limiting', () => {
-  it('should require admin authorization on all endpoints', () => {
+  it('uses the workspace client endpoints guarded by administrative capabilities', () => {
     const endpoints = [
-      'POST /api/admin/clients',
-      'GET /api/admin/clients',
-      'GET /api/admin/clients/[id]',
-      'PUT /api/admin/clients/[id]',
-      'DELETE /api/admin/clients/[id]',
+      'POST /api/workspace/clients',
+      'GET /api/workspace/clients',
+      'GET /api/workspace/clients/[id]',
+      'PUT /api/workspace/clients/[id]',
+      'DELETE /api/workspace/clients/[id]',
     ];
 
     endpoints.forEach(endpoint => {
-      expect(endpoint).toContain('admin');
+      expect(endpoint).toContain('/api/workspace/clients');
     });
   });
 
   it('should apply rate limiting on GET and POST (10 requests/minute)', () => {
     const rateLimitConfig = {
-      endpoint: '/api/admin/clients',
+      endpoint: '/api/workspace/clients',
       limiter: 'sensitiveLimiter',
       requestsPerMinute: 10,
       appliesTo: ['GET', 'POST'],

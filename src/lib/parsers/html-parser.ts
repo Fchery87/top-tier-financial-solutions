@@ -11,6 +11,7 @@ import { parseTransUnionReport } from './transunion-parser';
 import { parseExperianReport } from './experian-parser';
 import { parseEquifaxReport } from './equifax-parser';
 import { parseReportDate } from './report-date';
+import { logServerEvent } from '@/lib/server-logger';
 
 export { type ParsedCreditData, type ParsedAccount, type ParsedNegativeItem, type ParsedInquiry };
 export { type CreditReportSource, type SourceDetectionResult };
@@ -57,7 +58,7 @@ export function parseHtmlCreditReport(html: string): ParsedCreditData {
   // Detect the source service
   const detectionResult = detectHtmlSource(html);
   
-  console.log(`[Credit Parser] Detected source: ${detectionResult.source} (confidence: ${detectionResult.confidence})`);
+  logServerEvent({ level: 'info', event: 'server.lib.parsers.html.parser.log', error: `[Credit Parser] Detected source: ${detectionResult.source} (confidence: ${detectionResult.confidence})` });
   
   // Route to specialized parser if available and confidence is sufficient
   if (detectionResult.confidence !== 'low' && SERVICE_PARSERS[detectionResult.source]) {
@@ -71,7 +72,7 @@ export function parseHtmlCreditReport(html: string): ParsedCreditData {
         detectedSource: detectionResult,
       } as ParsedCreditData;
     } catch (error) {
-      console.warn(`[Credit Parser] Specialized parser failed, falling back to generic: ${error}`);
+      logServerEvent({ level: 'warn', event: 'server.lib.parsers.html.parser.warn', error: `[Credit Parser] Specialized parser failed, falling back to generic: ${error}` });
     }
   }
   

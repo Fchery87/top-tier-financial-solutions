@@ -24,14 +24,14 @@ vi.mock('@/lib/admin-session', () => ({
   requireCapability: requireCapabilityMock,
 }));
 
-describe('POST /api/admin/services-rendered-events', () => {
+describe('POST /api/workspace/services-rendered-events', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
   });
 
   it('records First Dispute Package Submitted from a submitted dispute package', async () => {
-    const { POST } = await import('@/app/api/admin/services-rendered-events/route');
+    const { POST } = await import('@/app/api/workspace/services-rendered-events/route');
     const created = [{
       id: 'event-1',
       clientId: 'client-1',
@@ -65,7 +65,7 @@ describe('POST /api/admin/services-rendered-events', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue(created) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/services-rendered-events', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -91,7 +91,7 @@ describe('POST /api/admin/services-rendered-events', () => {
   }, 30000);
 
   it('blocks Services Rendered recording when the Compliance Gate has blockers', async () => {
-    const { POST } = await import('@/app/api/admin/services-rendered-events/route');
+    const { POST } = await import('@/app/api/workspace/services-rendered-events/route');
 
     dbMock.select
       .mockReturnValueOnce({
@@ -116,7 +116,7 @@ describe('POST /api/admin/services-rendered-events', () => {
       });
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([]) }) });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/services-rendered-events', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',
@@ -137,7 +137,7 @@ describe('POST /api/admin/services-rendered-events', () => {
   }, 30000);
 
   it('blocks Services Rendered recording when the source dispute belongs to a different Service Engagement', async () => {
-    const { POST } = await import('@/app/api/admin/services-rendered-events/route');
+    const { POST } = await import('@/app/api/workspace/services-rendered-events/route');
 
     dbMock.select.mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
@@ -154,7 +154,7 @@ describe('POST /api/admin/services-rendered-events', () => {
       }),
     });
 
-    const response = await POST(new NextRequest('http://localhost/api/admin/services-rendered-events', {
+    const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
       method: 'POST',
       body: JSON.stringify({
         client_id: 'client-1',

@@ -56,7 +56,7 @@ export default function EmailTemplatesPage() {
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('/api/admin/email-templates');
+      const response = await fetch('/api/workspace/email-templates');
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates || []);

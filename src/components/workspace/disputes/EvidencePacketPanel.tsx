@@ -88,7 +88,7 @@ export function EvidencePacketPanel({ clientId, disputeId }: EvidencePacketPanel
 
   const loadPackets = React.useCallback(async () => {
     const response = await fetch(
-      `/api/admin/evidence-packets?client_id=${encodeURIComponent(clientId)}&dispute_id=${encodeURIComponent(disputeId)}`,
+      `/api/workspace/evidence-packets?client_id=${encodeURIComponent(clientId)}&dispute_id=${encodeURIComponent(disputeId)}`,
     );
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) throw new Error(getErrorMessage(payload, 'Failed to load evidence packets'));
@@ -108,7 +108,7 @@ export function EvidencePacketPanel({ clientId, disputeId }: EvidencePacketPanel
       setLoading(true);
       setError(null);
       try {
-        const evidenceResponse = await fetch(`/api/admin/disputes/evidence?clientId=${encodeURIComponent(clientId)}`);
+        const evidenceResponse = await fetch(`/api/workspace/disputes/evidence?clientId=${encodeURIComponent(clientId)}`);
         const evidencePayload: unknown = await evidenceResponse.json().catch(() => null);
         if (!evidenceResponse.ok) {
           throw new Error(getErrorMessage(evidencePayload, 'Failed to load client evidence'));
@@ -149,7 +149,7 @@ export function EvidencePacketPanel({ clientId, disputeId }: EvidencePacketPanel
     setCreating(true);
     setError(null);
     try {
-      const response = await fetch('/api/admin/evidence-packets', {
+      const response = await fetch('/api/workspace/evidence-packets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

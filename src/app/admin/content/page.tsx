@@ -34,7 +34,7 @@ export default function ContentPage() {
   const fetchPages = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/pages?page=1&limit=100');
+      const response = await fetch('/api/workspace/pages?page=1&limit=100');
       if (response.ok) {
         const data = await response.json();
         setPages(data.items);
@@ -86,8 +86,8 @@ export default function ContentPage() {
     setSaving(true);
     try {
       const url = editingPage 
-        ? `/api/admin/pages/${editingPage.id}`
-        : '/api/admin/pages';
+        ? `/api/workspace/pages/${editingPage.id}`
+        : '/api/workspace/pages';
       
       const response = await fetch(url, {
         method: editingPage ? 'PUT' : 'POST',
@@ -108,7 +108,7 @@ export default function ContentPage() {
 
   const handleTogglePublish = async (page: Page) => {
     try {
-      const response = await fetch(`/api/admin/pages/${page.id}`, {
+      const response = await fetch(`/api/workspace/pages/${page.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_published: !page.is_published }),
@@ -129,7 +129,7 @@ export default function ContentPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      const response = await fetch(`/api/admin/pages/${pendingDeleteId}`, {
+      const response = await fetch(`/api/workspace/pages/${pendingDeleteId}`, {
         method: 'DELETE',
       });
 

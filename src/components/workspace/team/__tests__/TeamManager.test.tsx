@@ -71,7 +71,7 @@ describe('TeamManager', () => {
     await userEvent.selectOptions(roleSelect, 'admin');
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/admin/team', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/workspace/team', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: 'member-1', role: 'admin' }),

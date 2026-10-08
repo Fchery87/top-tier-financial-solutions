@@ -187,12 +187,12 @@ describe('WorkQueue', () => {
       render(<WorkQueue />);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/admin/disputes?awaiting_response=true');
-        expect(global.fetch).toHaveBeenCalledWith('/api/admin/disputes?overdue=true');
+        expect(global.fetch).toHaveBeenCalledWith('/api/workspace/disputes?awaiting_response=true');
+        expect(global.fetch).toHaveBeenCalledWith('/api/workspace/disputes?overdue=true');
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/admin/tasks?assignee_id=user-123')
+          expect.stringContaining('/api/workspace/tasks?assignee_id=user-123')
         );
-        expect(global.fetch).toHaveBeenCalledWith('/api/admin/clients?status=pending&limit=20');
+        expect(global.fetch).toHaveBeenCalledWith('/api/workspace/clients?status=pending&limit=20');
       });
     });
 
@@ -206,7 +206,7 @@ describe('WorkQueue', () => {
       render(<WorkQueue />);
 
       await waitFor(() => {
-        expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/admin/tasks'));
+        expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/workspace/tasks'));
       });
     });
 
@@ -472,7 +472,7 @@ describe('WorkQueue', () => {
       // Should make PUT request
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          '/api/admin/tasks/t1',
+          '/api/workspace/tasks/t1',
           expect.objectContaining({
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

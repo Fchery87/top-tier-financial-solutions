@@ -38,8 +38,8 @@ export function AdminAnalyticsPanel() {
     async function fetchAnalytics() {
       try {
         const [operatorResponse, clientOutcomeResponse] = await Promise.all([
-          fetch('/api/admin/operator-analytics'),
-          fetch('/api/admin/client-outcome-analytics'),
+          fetch('/api/workspace/operator-analytics'),
+          fetch('/api/workspace/client-outcome-analytics'),
         ]);
 
         if (cancelled) return;

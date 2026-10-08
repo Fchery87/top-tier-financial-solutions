@@ -18,6 +18,14 @@ describe('db-encryption safe decryption', () => {
     expect(result.lastName).toBeNull();
   });
 
+  it('returns a display-safe sentinel for ciphertext-shaped values that cannot decrypt', () => {
+    const result = decryptClientData({
+      firstName: `${'a'.repeat(32)}:${'b'.repeat(32)}`,
+    });
+
+    expect(result.firstName).toBe('[decryption-failed]');
+  });
+
   it('preserves original value when account/item/dispute decryption fails', () => {
     expect(decryptCreditAccountData({ creditorName: 'zzzz:ffff' }).creditorName).toBe('zzzz:ffff');
     expect(decryptNegativeItemData({ creditorName: 'zzzz:ffff' }).creditorName).toBe('zzzz:ffff');
@@ -38,10 +46,20 @@ describe('db-encryption safe decryption', () => {
     expect(decrypted.phone).toBe('555-1111');
   });
 
-  it('writes new client PII as a versioned payload and still reads an older CBC payload', () => {
-    const encrypted = encryptClientData({ firstName: 'Ada' });
-    expect(typeof encrypted.firstName === 'string' && encrypted.firstName.startsWith('v2:')).toBe(true);
-    expect(decryptClientData(encrypted).firstName).toBe('Ada');
+  it('decrypts versioned authenticated client values', () => {
+    const encrypted = encryptClientData({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      dateOfBirth: '1990-01-01',
+    });
+
+    expect(encrypted.dateOfBirth).toMatch(/^v3:test:/);
+    expect(decryptClientData(encrypted).dateOfBirth).toBe('1990-01-01');
+  });
+
+  it('reads client PII written in the earlier v2 GCM format', () => {
+    // Literal written by b090e81's encrypt() with the all-zero test key.
+    const v2FirstName = 'v2:dfe34b50cfb19f682dd7174c:1f60d4985a8c901a57fc5ae9dd1f4711:64282e';
+    expect(decryptClientData({ firstName: v2FirstName }).firstName).toBe('Ada');
   });
 });
-

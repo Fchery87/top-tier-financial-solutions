@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { blogPosts, blogCategories, user } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('Error fetching blog posts:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.blog.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
   }
 }

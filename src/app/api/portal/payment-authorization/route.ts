@@ -4,6 +4,7 @@ import { clients } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
+import { logServerEvent } from '@/lib/server-logger';
 import {
   AuthorizationConflictException,
   getActiveAuthorization,
@@ -64,7 +65,7 @@ export async function GET() {
     }
     return NextResponse.json({ authorization: toResponse(authorization) });
   } catch (error) {
-    console.error('Error loading payment authorization:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.payment.authorization.load.error', error });
     return NextResponse.json({ error: 'Failed to load payment authorization' }, { status: 500 });
   }
 }
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof AuthorizationConflictException) {
       return NextResponse.json({ error: 'authorization_conflict', code: 'authorization_conflict' }, { status: 409 });
     }
-    console.error('Error submitting payment authorization:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.payment.authorization.submit.error', error });
     return NextResponse.json({ error: 'Failed to save payment authorization' }, { status: 500 });
   }
 }
@@ -121,7 +122,7 @@ export async function DELETE() {
     }
     return NextResponse.json({ authorization: toResponse(revoked) });
   } catch (error) {
-    console.error('Error revoking payment authorization:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.payment.authorization.revoke.error', error });
     return NextResponse.json({ error: 'Failed to revoke payment authorization' }, { status: 500 });
   }
 }

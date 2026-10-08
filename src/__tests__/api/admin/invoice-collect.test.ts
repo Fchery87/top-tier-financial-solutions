@@ -60,7 +60,7 @@ function selectChain(rows: unknown[]) {
   };
 }
 
-describe('POST /api/admin/billing/invoices/[id]/collect', () => {
+describe('POST /api/workspace/billing/invoices/[id]/collect', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'staff-1', email: 'staff@example.com', role: 'staff' });
@@ -126,11 +126,11 @@ describe('POST /api/admin/billing/invoices/[id]/collect', () => {
   }
 
   it('refuses an open engagement and writes an audit row without updating the invoice', async () => {
-    const { POST } = await import('@/app/api/admin/billing/invoices/[id]/collect/route');
+    const { POST } = await import('@/app/api/workspace/billing/invoices/[id]/collect/route');
     mockFacts({ engagementStatus: 'active', closedAt: null, gatePassed: true });
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/billing/invoices/invoice-1/collect', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/billing/invoices/invoice-1/collect', { method: 'POST' }),
       { params: Promise.resolve({ id: 'invoice-1' }) },
     );
     const body = await response.json();
@@ -148,11 +148,11 @@ describe('POST /api/admin/billing/invoices/[id]/collect', () => {
   });
 
   it('refuses the instrument after the engagement is closed and writes no invoice update', async () => {
-    const { POST } = await import('@/app/api/admin/billing/invoices/[id]/collect/route');
+    const { POST } = await import('@/app/api/workspace/billing/invoices/[id]/collect/route');
     mockFacts({ engagementStatus: 'closed', closedAt: now, gatePassed: true });
 
     const response = await POST(
-      new NextRequest('http://localhost/api/admin/billing/invoices/invoice-1/collect', { method: 'POST' }),
+      new NextRequest('http://localhost/api/workspace/billing/invoices/invoice-1/collect', { method: 'POST' }),
       { params: Promise.resolve({ id: 'invoice-1' }) },
     );
     const body = await response.json();

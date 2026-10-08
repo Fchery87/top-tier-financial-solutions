@@ -44,7 +44,7 @@ interface OverviewTabProps {
   creditReports: CreditReport[];
   clientNotes: ClientNote[];
   clientTasks: Task[];
-  onClientUpdated: (updated: ClientDetail) => void;
+  onClientUpdated: () => void;
   onSendNudge: () => void;
   sendingNudge: boolean;
 }
@@ -144,13 +144,13 @@ export function OverviewTab({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/clients/${clientId}`, {
+      const response = await fetch(`/api/workspace/clients/${clientId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editedClient),
       });
       if (response.ok) {
-        onClientUpdated({ ...client, ...editedClient } as ClientDetail);
+        onClientUpdated();
         setEditMode(false);
       }
     } catch (error) {

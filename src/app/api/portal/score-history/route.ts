@@ -4,6 +4,7 @@ import { creditScoreHistory, clients } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { eq, desc } from 'drizzle-orm';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -77,7 +78,7 @@ export async function GET() {
       summary,
     });
   } catch (error) {
-    console.error('Error fetching score history:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.score.history.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch score history' }, { status: 500 });
   }
 }

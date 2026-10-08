@@ -61,6 +61,30 @@ describe('credit account ingest bureau presence', () => {
     });
   });
 
+  it('does not infer bureau presence when no parser or report provenance identifies one', () => {
+    const account: ParsedAccount = {
+      creditorName: 'Capital Bank',
+      accountNumber: '***1111',
+      accountType: 'Revolving',
+      accountStatus: 'open',
+      balance: 12345,
+      dateReported: new Date('2024-03-01T00:00:00.000Z'),
+      isNegative: false,
+    };
+
+    expect(getAccountPresence(account, null)).toEqual({
+      onTransunion: false,
+      onExperian: false,
+      onEquifax: false,
+      transunionDate: undefined,
+      experianDate: undefined,
+      equifaxDate: undefined,
+      transunionBalance: undefined,
+      experianBalance: undefined,
+      equifaxBalance: undefined,
+    });
+  });
+
   it('uses strong single-bureau basis when account bureau is parser-provided', () => {
     const account: ParsedAccount = {
       creditorName: 'Capital Bank',

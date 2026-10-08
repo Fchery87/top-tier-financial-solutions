@@ -6,6 +6,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { buildComplianceGateStatus } from '@/lib/compliance-gate';
 import { buildDocumentChecklist } from '@/lib/document-checklist';
+import { logServerEvent } from '@/lib/server-logger';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -77,7 +78,7 @@ export async function GET(_request: NextRequest) {
       document_checklist: buildDocumentChecklist(documents),
     });
   } catch (error) {
-    console.error('Error fetching portal onboarding blockers:', error);
+    logServerEvent({ level: 'error', event: 'server.app.api.portal.onboarding.error', error: error });
     return NextResponse.json({ error: 'Failed to fetch onboarding blockers' }, { status: 500 });
   }
 }
