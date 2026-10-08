@@ -4,6 +4,7 @@ import { FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { DataTable } from '@/components/workspace/DataTable';
 import { StatusBadge } from '@/components/workspace/StatusBadge';
 import { formatCurrency } from '@/lib/format';
+import { CollectInvoiceButton } from '@/components/workspace/billing/CollectInvoiceButton';
 
 interface Invoice {
   id: string;
@@ -97,6 +98,13 @@ const invoiceColumns = [
     header: 'Status',
     render: (item: Invoice) => (
       <StatusBadge status={item.status} variant={getStatusVariant(item.status)} />
+    ),
+  },
+  {
+    key: 'collect',
+    header: '',
+    render: (item: Invoice) => (
+      item.status === 'pending' ? <CollectInvoiceButton invoiceId={item.id} /> : null
     ),
   },
   {

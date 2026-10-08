@@ -4,7 +4,24 @@ type BillingReadinessParams = {
   hasVerifiedResult?: boolean;
 };
 
-export function evaluateBillingReadiness(params: BillingReadinessParams) {
+export type BillingReadinessCode =
+  | 'SERVICES_RENDERED_EVENT_REQUIRED'
+  | 'RESULTS_VERIFIED_BILLING_LOCK'
+  | null;
+
+type BillingReadiness =
+  | {
+      payable: false;
+      code: Exclude<BillingReadinessCode, null>;
+      reason: string;
+    }
+  | {
+      payable: true;
+      code: null;
+      reason: null;
+    };
+
+export function evaluateBillingReadiness(params: BillingReadinessParams): BillingReadiness {
   if (!params.hasQualifyingServicesRenderedEvent) {
     return {
       payable: false,

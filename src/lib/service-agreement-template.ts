@@ -1,3 +1,5 @@
+import { EXHIBIT_A_PAYMENT_COPY } from '@/lib/payment-authorization/exhibit-a';
+
 // NY GBL Article 28-BB Compliant Service Agreement Template
 // This template complies with New York General Business Law Article 28-BB (Credit Services Business)
 // and the federal Credit Repair Organizations Act (CROA)
@@ -315,11 +317,7 @@ export const NY_SERVICE_AGREEMENT_TEMPLATE = `
 
       <h3 style="font-size: 13px;">Payment Authorization:</h3>
       <div style="padding: 15px; background: #f9f9f9; border: 1px solid #ccc; border-radius: 5px;">
-        <p style="font-size: 12px; margin-bottom: 10px;"><strong>Payment Method:</strong> {{payment_method}}</p>
-        <p style="font-size: 12px; margin-bottom: 10px;"><strong>Bank Name:</strong> {{bank_name}}</p>
-        <p style="font-size: 12px; margin-bottom: 10px;"><strong>Routing Number:</strong> {{routing_number}}</p>
-        <p style="font-size: 12px; margin-bottom: 10px;"><strong>Account Number (Last 4):</strong> XXXX{{account_last4}}</p>
-        <p style="font-size: 12px; margin-bottom: 0;"><strong>Billing Date:</strong> {{billing_date}} of each month</p>
+        <p style="font-size: 12px; margin-bottom: 0;">${EXHIBIT_A_PAYMENT_COPY}</p>
       </div>
 
       <div style="margin-top: 20px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px;">
