@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
+const dbMock = vi.hoisted(() => ({ select: vi.fn(), insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) })) }));
 const requireCapabilityMock = vi.hoisted(() => vi.fn());
 const saveDisputeLetterMock = vi.hoisted(() => vi.fn());
 

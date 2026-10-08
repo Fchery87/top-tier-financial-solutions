@@ -5,6 +5,8 @@ import { disputeLetterLibrary, disputeLetterRevisions, disputes } from '@/db/sch
 import { requireCapability } from '@/lib/admin-session';
 import { buildLetterLintContextForDispute } from '@/lib/letter-lint-context';
 import { lintGeneratedLetter } from '@/lib/letter-lint';
+import { recordAdminActivity } from '@/lib/admin-activity';
+import { logRequest } from '@/lib/request-log';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -35,6 +37,7 @@ function parseReasonCodes(value: string | null): string[] {
 }
 
 export async function GET(_request: NextRequest, context: RouteContext) {
+  const started = Date.now();
   const user = await requireCapability('disputes:read');
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -42,6 +45,21 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, id)).limit(1);
     if (!dispute) return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+
+    await recordAdminActivity(db, {
+      actorUserId: user.id,
+      action: 'dispute_letter.viewed',
+      subjectType: 'dispute_letter',
+      subjectId: id,
+    });
+    logRequest({
+      requestId: _request.headers.get('x-request-id') ?? id,
+      method: 'GET',
+      path: `/api/admin/disputes/${id}/letter`,
+      status: 200,
+      durationMs: Date.now() - started,
+      actorId: user.id,
+    });
 
     const revisions = await db
       .select()
