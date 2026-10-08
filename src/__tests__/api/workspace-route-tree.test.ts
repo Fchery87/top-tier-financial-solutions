@@ -10,7 +10,6 @@ const legacyRouteRoot = join(appRoot, 'admin');
 
 const expectedRoutePaths = `agreements/[id]/route.ts
 agreements/route.ts
-agreements/sign/route.ts
 automation/dispute-escalations/run/route.ts
 automation/route.ts
 billing/invoices/[id]/payments/route.ts

@@ -54,6 +54,9 @@ export type ClientEncryptionFields = {
 
 export type ClientEncryptionInput = Partial<ClientEncryptionFields>;
 
+/** Value decryptClientData and friends return for a field that could not be decrypted. */
+export const DECRYPTION_FAILED = '[decryption-failed]';
+
 function safeDecryptValue(value: unknown): unknown {
   if (!value) return value;
 
@@ -69,7 +72,7 @@ function safeDecryptValue(value: unknown): unknown {
       event: 'server.lib.db.encryption.decrypt.failed',
       error,
     });
-    return '[decryption-failed]';
+    return DECRYPTION_FAILED;
   }
 }
 

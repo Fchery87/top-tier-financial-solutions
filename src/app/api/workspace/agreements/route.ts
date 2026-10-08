@@ -6,6 +6,9 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { DISCLOSURE_TEXTS, REQUIRED_DISCLOSURES_NY } from '@/lib/service-agreement-template';
 import { logServerEvent } from '@/lib/server-logger';
+import { loadFeePlan } from '@/lib/billing-facts';
+import { DECRYPTION_FAILED, decryptClientData } from '@/lib/db-encryption';
+import { feeTermsHtml, fillAgreementTemplate, renderFeeTerms } from '@/lib/agreement-content';
 
 // GET - List agreement templates or client agreements
 export async function GET(request: NextRequest) {
@@ -132,24 +135,51 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
 
-      // Get client
-      const client = await db
+      const [client] = await db
         .select()
         .from(clients)
         .where(eq(clients.id, clientId))
         .limit(1);
 
-      if (!client.length) {
+      if (!client) {
         return NextResponse.json({ error: 'Client not found' }, { status: 404 });
       }
 
-      // Replace placeholders in template content
-      let content = template[0].content;
-      content = content.replace(/\{\{client_name\}\}/g, `${client[0].firstName} ${client[0].lastName}`);
-      content = content.replace(/\{\{client_email\}\}/g, client[0].email);
-      content = content.replace(/\{\{client_phone\}\}/g, client[0].phone || '');
-      content = content.replace(/\{\{date\}\}/g, new Date().toLocaleDateString());
-      content = content.replace(/\{\{company_name\}\}/g, 'Top Tier Financial Solutions');
+      const feePlan = await loadFeePlan(clientId);
+      if (!feePlan) {
+        return NextResponse.json({
+          error: 'Set a fee plan on the client Billing tab before sending an agreement',
+          code: 'FEE_PLAN_REQUIRED',
+        }, { status: 409 });
+      }
+
+      const pii = decryptClientData(client) as typeof client;
+      // decryptClientData returns a sentinel instead of throwing when a key cannot decrypt a field.
+      // An agreement is a signed legal record, so never render that sentinel into one.
+      if ([pii.firstName, pii.lastName, pii.phone].includes(DECRYPTION_FAILED)) {
+        logServerEvent({
+          level: 'error',
+          event: 'server.app.api.workspace.agreements.client.decrypt.failed',
+          resourceType: 'client',
+          resourceId: clientId,
+        });
+        return NextResponse.json({
+          error: 'Client details could not be decrypted; agreement not sent',
+          code: 'CLIENT_PII_UNREADABLE',
+        }, { status: 500 });
+      }
+      const feeTermsSnapshot = renderFeeTerms(feePlan);
+      const content = fillAgreementTemplate(
+        template[0].content,
+        {
+          client_name: `${pii.firstName} ${pii.lastName}`,
+          client_email: pii.email,
+          client_phone: pii.phone || '',
+          date: new Date().toLocaleDateString('en-US'),
+          company_name: 'Top Tier Financial Solutions',
+        },
+        { service_package: feeTermsHtml(feeTermsSnapshot) },
+      );
 
       // Create agreement
       const agreementId = crypto.randomUUID();
@@ -163,6 +193,7 @@ export async function POST(request: NextRequest) {
         templateVersion: template[0].version,
         status: 'pending',
         content,
+        feeTermsSnapshot,
         sentAt: new Date(),
         sentById: session.user.id,
         expiresAt,
