@@ -82,7 +82,8 @@
     "@esbuild-kit/core-utils": {
       "esbuild": "^0.28.1"
     },
-    "brace-expansion": "^1.1.13"
+    "brace-expansion": "^1.1.13",
+    "eslint-plugin-react-hooks": "7.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
