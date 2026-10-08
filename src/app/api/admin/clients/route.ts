@@ -7,6 +7,7 @@ import { triggerAutomation } from '@/lib/email-service';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
 import { encryptClientData, decryptClientData } from '@/lib/db-encryption';
+import { parseClientPii } from '@/lib/client-pii';
 import { randomUUID } from 'crypto';
 
 type EncryptedClientPayload = {
@@ -150,31 +151,24 @@ async function postHandler(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { 
-      first_name, 
-      last_name, 
-      email, 
-      phone, 
-      notes, 
-      lead_id, 
-      user_id,
-      // New fields
-      street_address,
-      city,
-      state,
-      zip_code,
-      date_of_birth,
-      ssn_last_4
-    } = body;
-
-    if (!first_name || !last_name || !email) {
-      return NextResponse.json({ error: 'First name, last name, and email are required' }, { status: 400 });
+    const parsed = parseClientPii(body, 'create');
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-
-    // Validate SSN last 4 if provided (must be exactly 4 digits)
-    if (ssn_last_4 && !/^\d{4}$/.test(ssn_last_4)) {
-      return NextResponse.json({ error: 'SSN last 4 must be exactly 4 digits' }, { status: 400 });
-    }
+    const first_name = parsed.value.firstName ?? '';
+    const last_name = parsed.value.lastName ?? '';
+    const email = parsed.value.email ?? '';
+    const record = typeof body === 'object' && body !== null ? body as Record<string, unknown> : {};
+    const phone = parsed.value.phone ?? null;
+    const notes = parsed.value.notes ?? null;
+    const lead_id = typeof record.lead_id === 'string' ? record.lead_id : null;
+    const user_id = typeof record.user_id === 'string' ? record.user_id : null;
+    const street_address = parsed.value.streetAddress ?? null;
+    const city = parsed.value.city ?? null;
+    const state = parsed.value.state ?? null;
+    const zip_code = parsed.value.zipCode ?? null;
+    const date_of_birth = parsed.value.dateOfBirth ?? null;
+    const ssn_last_4 = parsed.value.ssnLast4 ?? null;
 
     const now = new Date();
 

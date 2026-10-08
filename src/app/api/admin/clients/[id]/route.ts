@@ -4,6 +4,9 @@ import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, 
 import { requireCapability } from '@/lib/admin-session';
 import { eq, desc, asc } from 'drizzle-orm';
 import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData } from '@/lib/db-encryption';
+import { parseClientPii } from '@/lib/client-pii';
+import { recordAdminActivity } from '@/lib/admin-activity';
+import { logRequest } from '@/lib/request-log';
 
 function toISOStringSafe(value: unknown): string | null {
   if (!value) return null;
@@ -16,6 +19,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const started = Date.now();
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -49,6 +53,21 @@ export async function GET(
     if (!clientResult) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
+
+    await recordAdminActivity(db, {
+      actorUserId: adminUser.id,
+      action: 'client.viewed',
+      subjectType: 'client',
+      subjectId: id,
+    });
+    logRequest({
+      requestId: request.headers.get('x-request-id') ?? id,
+      method: 'GET',
+      path: `/api/admin/clients/${id}`,
+      status: 200,
+      durationMs: Date.now() - started,
+      actorId: adminUser.id,
+    });
 
     // Decrypt client data
     const decryptedClient = decryptClientData({
@@ -428,56 +447,41 @@ export async function PUT(
 
   try {
     const body = await request.json();
+    const parsed = parseClientPii(body, 'update');
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
     const now = new Date();
 
     const updateData: Record<string, unknown> = { updatedAt: now };
 
-    // Encrypt PII fields if they're being updated
     const fieldsToEncrypt: Record<string, string | null> = {};
-
-    if (body.first_name !== undefined) {
-      fieldsToEncrypt.firstName = body.first_name;
-    }
-    if (body.last_name !== undefined) {
-      fieldsToEncrypt.lastName = body.last_name;
-    }
-    if (body.phone !== undefined) {
-      fieldsToEncrypt.phone = body.phone;
-    }
-    if (body.street_address !== undefined) {
-      fieldsToEncrypt.streetAddress = body.street_address;
-    }
-    if (body.city !== undefined) {
-      fieldsToEncrypt.city = body.city;
-    }
-    if (body.state !== undefined) {
-      fieldsToEncrypt.state = body.state;
-    }
-    if (body.zip_code !== undefined) {
-      fieldsToEncrypt.zipCode = body.zip_code;
-    }
-    if (body.date_of_birth !== undefined) {
-      fieldsToEncrypt.dateOfBirth = body.date_of_birth;
-    }
-    if (body.ssn_last_4 !== undefined) {
-      fieldsToEncrypt.ssnLast4 = body.ssn_last_4;
-    }
+    const assign = (field: 'firstName' | 'lastName' | 'phone' | 'streetAddress' | 'city' | 'state' | 'zipCode' | 'dateOfBirth' | 'ssnLast4') => {
+      if (parsed.value[field] !== undefined) fieldsToEncrypt[field] = parsed.value[field] ?? null;
+    };
+    assign('firstName');
+    assign('lastName');
+    assign('phone');
+    assign('streetAddress');
+    assign('city');
+    assign('state');
+    assign('zipCode');
+    assign('dateOfBirth');
+    assign('ssnLast4');
 
     // Encrypt if there are PII fields to update
     if (Object.keys(fieldsToEncrypt).length > 0) {
       const encrypted = encryptClientData(fieldsToEncrypt);
       Object.assign(updateData, encrypted);
-    } else {
-      // Non-encrypted fields
-      if (body.first_name !== undefined) updateData.firstName = body.first_name;
-      if (body.last_name !== undefined) updateData.lastName = body.last_name;
-      if (body.phone !== undefined) updateData.phone = body.phone;
     }
 
-    if (body.email !== undefined) updateData.email = body.email;
-    if (body.status !== undefined) updateData.status = body.status;
-    if (body.notes !== undefined) updateData.notes = body.notes;
-    if (body.user_id !== undefined) updateData.userId = body.user_id;
+    if (parsed.value.email !== undefined) updateData.email = parsed.value.email;
+    if (parsed.value.notes !== undefined) updateData.notes = parsed.value.notes;
+    if (typeof body === 'object' && body !== null) {
+      const record = body as Record<string, unknown>;
+      if (typeof record.status === 'string') updateData.status = record.status;
+      if (typeof record.user_id === 'string') updateData.userId = record.user_id;
+    }
 
     await db
       .update(clients)
