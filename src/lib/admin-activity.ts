@@ -9,7 +9,8 @@ export type AdminActivitySubjectType =
   | 'automation'
   | 'client_record'
   | 'credit_report'
-  | 'dispute_letter';
+  | 'dispute_letter'
+  | 'service_engagement';
 
 export interface AdminActivityInput {
   actorUserId: string | null;

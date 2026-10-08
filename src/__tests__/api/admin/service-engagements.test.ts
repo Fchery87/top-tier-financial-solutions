@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { READY_GATE_FACTS, gateRecordsFor } from '@/__tests__/fixtures/compliance-gate';
 
 const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
@@ -8,6 +9,11 @@ const dbMock = vi.hoisted(() => ({
 }));
 
 const requireCapabilityMock = vi.hoisted(() => vi.fn());
+const syncMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/compliance-gate-sync', () => ({
+  syncComplianceGate: syncMock,
+}));
 
 vi.mock('@/db/client', () => ({
   db: dbMock,
@@ -131,21 +137,19 @@ describe('PATCH /api/workspace/service-engagements', () => {
     const { PATCH } = await import('@/app/api/workspace/service-engagements/route');
 
     dbMock.select
-      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1' }]) }) }) })
-      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([
-        { checkKey: 'client_identity_linked', passed: true, checkedAt: new Date('2026-01-01T00:00:00.000Z'), notes: null },
-      ]) }) });
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1' }]) }) }) });
+    syncMock.mockResolvedValue(gateRecordsFor({ ...READY_GATE_FACTS, clientUserId: null }));
 
     const response = await PATCH(createRequest({ id: 'engagement-1', lifecycle_stage: 'ready_for_first_work' }));
     const body = await response.json();
 
     expect(response.status).toBe(409);
     expect(body.error).toBe('Compliance Gate must pass before Ready for First Work');
-    expect(body.blocking_checks).toContain('service_agreement_signed');
+    expect(syncMock).toHaveBeenCalledWith('engagement-1');
+    expect(body.blocking_checks).toEqual(['client_identity_linked']);
   }, 30000);
 
   it('allows ready_for_first_work when every compliance gate check passes', async () => {
-    const { COMPLIANCE_GATE_CHECKS } = await import('@/lib/compliance-gate');
     const { PATCH } = await import('@/app/api/workspace/service-engagements/route');
     const updated = [{
       id: 'engagement-1',
@@ -161,10 +165,8 @@ describe('PATCH /api/workspace/service-engagements', () => {
     }];
 
     dbMock.select
-      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1' }]) }) }) })
-      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(
-        COMPLIANCE_GATE_CHECKS.map((check) => ({ checkKey: check.key, passed: true, checkedAt: new Date('2026-01-01T00:00:00.000Z'), notes: null })),
-      ) }) });
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1' }]) }) }) });
+    syncMock.mockResolvedValue(gateRecordsFor());
     dbMock.update.mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue(updated) }) }) });
 
     const response = await PATCH(createRequest({ id: 'engagement-1', lifecycle_stage: 'ready_for_first_work' }));

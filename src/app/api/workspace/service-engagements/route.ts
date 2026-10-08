@@ -2,8 +2,9 @@ import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { clients, complianceGateChecks, serviceEngagements } from '@/db/schema';
+import { clients, serviceEngagements } from '@/db/schema';
 import { getBlockingComplianceGateChecks } from '@/lib/compliance-gate';
+import { syncComplianceGate } from '@/lib/compliance-gate-sync';
 import { requireCapability } from '@/lib/admin-session';
 import { logServerEvent } from '@/lib/server-logger';
 
@@ -139,17 +140,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (lifecycleStage === 'ready_for_first_work') {
-      const gateRecords = await db
-        .select({
-          checkKey: complianceGateChecks.checkKey,
-          passed: complianceGateChecks.passed,
-          checkedAt: complianceGateChecks.checkedAt,
-          notes: complianceGateChecks.notes,
-        })
-        .from(complianceGateChecks)
-        .where(eq(complianceGateChecks.engagementId, id));
+      const gateRecords = await syncComplianceGate(id);
 
-      const blockingChecks = getBlockingComplianceGateChecks(gateRecords);
+      const blockingChecks = getBlockingComplianceGateChecks(gateRecords ?? []);
       if (blockingChecks.length > 0) {
         return NextResponse.json({
           error: 'Compliance Gate must pass before Ready for First Work',

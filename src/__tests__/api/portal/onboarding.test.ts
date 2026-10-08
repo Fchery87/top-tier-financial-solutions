@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { READY_GATE_FACTS, gateRecordsFor } from '@/__tests__/fixtures/compliance-gate';
 
 const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
+}));
+
+const syncMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/compliance-gate-sync', () => ({
+  syncComplianceGate: syncMock,
 }));
 
 const authMock = vi.hoisted(() => ({
@@ -36,12 +43,15 @@ describe('GET /api/portal/onboarding', () => {
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1' }]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'engagement-1', lifecycleStage: 'agreement_signed' }]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([
-        { checkKey: 'client_identity_linked', passed: true, checkedAt: new Date('2026-01-01T00:00:00.000Z'), notes: 'internal note hidden' },
-        { checkKey: 'identity_document_uploaded', passed: false, checkedAt: null, notes: 'internal note hidden' },
-      ]) }) })
-      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([
         { fileType: 'identity_document' },
       ]) }) });
+    syncMock.mockResolvedValue(gateRecordsFor({
+      ...READY_GATE_FACTS,
+      documentChecklist: [
+        { key: 'identity_document', completed: false },
+        { key: 'proof_of_address', completed: true },
+      ],
+    }));
 
     const response = await GET(new NextRequest('http://localhost/api/portal/onboarding'));
     const body = await response.json();
@@ -52,17 +62,15 @@ describe('GET /api/portal/onboarding', () => {
       lifecycle_stage: 'agreement_signed',
       is_ready_for_first_work: false,
     });
-    expect(body.blockers).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        key: 'identity_document_uploaded',
-        label: 'Identity document uploaded',
-      }),
-    ]));
+    expect(syncMock).toHaveBeenCalledWith('engagement-1');
+    expect(body.blockers).toEqual([
+      { key: 'identity_document_uploaded', label: 'Identity document uploaded' },
+    ]);
     expect(body.document_checklist).toEqual(expect.arrayContaining([
       { key: 'identity_document', label: 'Identity document', completed: true },
       { key: 'proof_of_address', label: 'Proof of address', completed: false },
     ]));
-    expect(JSON.stringify(body)).not.toContain('internal note hidden');
+    expect(JSON.stringify(body)).not.toContain('No identity document uploaded');
   }, 30000);
 });
 

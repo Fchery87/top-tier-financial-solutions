@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { COMPLIANCE_GATE_CHECKS } from '@/lib/compliance-gate';
+import { READY_GATE_FACTS, gateRecordsFor } from '@/__tests__/fixtures/compliance-gate';
 
 const dbMock = vi.hoisted(() => ({
   select: vi.fn(),
@@ -8,12 +8,10 @@ const dbMock = vi.hoisted(() => ({
 }));
 
 const requireCapabilityMock = vi.hoisted(() => vi.fn());
+const syncMock = vi.hoisted(() => vi.fn());
 
-const passingGateRecords = COMPLIANCE_GATE_CHECKS.map((check) => ({
-  checkKey: check.key,
-  passed: true,
-  checkedAt: new Date('2026-01-01T00:00:00.000Z'),
-  notes: null,
+vi.mock('@/lib/compliance-gate-sync', () => ({
+  syncComplianceGate: syncMock,
 }));
 
 vi.mock('@/db/client', () => ({
@@ -57,12 +55,8 @@ describe('POST /api/workspace/services-rendered-events', () => {
             }]),
           }),
         }),
-      })
-      .mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(passingGateRecords),
-        }),
       });
+    syncMock.mockResolvedValue(gateRecordsFor());
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue(created) }) });
 
     const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
@@ -106,14 +100,8 @@ describe('POST /api/workspace/services-rendered-events', () => {
             }]),
           }),
         }),
-      })
-      .mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([
-            { checkKey: 'client_identity_linked', passed: true, checkedAt: new Date('2026-01-01T00:00:00.000Z'), notes: null },
-          ]),
-        }),
       });
+    syncMock.mockResolvedValue(gateRecordsFor({ ...READY_GATE_FACTS, signedAgreement: null }));
     dbMock.insert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([]) }) });
 
     const response = await POST(new NextRequest('http://localhost/api/workspace/services-rendered-events', {
@@ -132,7 +120,14 @@ describe('POST /api/workspace/services-rendered-events', () => {
       code: 'COMPLIANCE_GATE_BLOCKED',
       error: 'Compliance Gate must pass before recording Services Rendered',
     });
-    expect(body.blocking_checks).toContain('service_agreement_signed');
+    expect(syncMock).toHaveBeenCalledWith('engagement-1');
+    expect(body.blocking_checks).toEqual([
+      'service_agreement_signed',
+      'croa_disclosure_acknowledged',
+      'cancellation_deadline_calculated',
+      'cancellation_window_complete',
+      'fee_terms_disclosed',
+    ]);
     expect(dbMock.insert).not.toHaveBeenCalled();
   }, 30000);
 

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { clientDocuments, clients, complianceGateChecks, serviceEngagements } from '@/db/schema';
+import { clientDocuments, clients, serviceEngagements } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { buildComplianceGateStatus } from '@/lib/compliance-gate';
+import { syncComplianceGate } from '@/lib/compliance-gate-sync';
 import { buildDocumentChecklist } from '@/lib/document-checklist';
 import { logServerEvent } from '@/lib/server-logger';
 
@@ -50,17 +51,9 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ engagement_id: null, blockers: [], is_ready_for_first_work: false });
     }
 
-    const records = await db
-      .select({
-        checkKey: complianceGateChecks.checkKey,
-        passed: complianceGateChecks.passed,
-        checkedAt: complianceGateChecks.checkedAt,
-        notes: complianceGateChecks.notes,
-      })
-      .from(complianceGateChecks)
-      .where(eq(complianceGateChecks.engagementId, engagement.id));
+    const records = await syncComplianceGate(engagement.id);
 
-    const gate = buildComplianceGateStatus(records);
+    const gate = buildComplianceGateStatus(records ?? []);
     const blockers = gate.checks
       .filter((check) => !check.passed)
       .map((check) => ({ key: check.key, label: check.label }));

@@ -2,10 +2,11 @@ import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { complianceGateChecks, disputes, servicesRenderedEvents } from '@/db/schema';
+import { disputes, servicesRenderedEvents } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
 import { evaluateComplianceGateAction } from '@/lib/compliance-gate';
 import { logServerEvent } from '@/lib/server-logger';
+import { syncComplianceGate } from '@/lib/compliance-gate-sync';
 
 function formatEvent(event: typeof servicesRenderedEvents.$inferSelect) {
   return {
@@ -72,15 +73,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'First dispute package submitted requires a submitted dispute package' }, { status: 400 });
     }
 
-    const gateRecords = await db
-      .select({
-        checkKey: complianceGateChecks.checkKey,
-        passed: complianceGateChecks.passed,
-        checkedAt: complianceGateChecks.checkedAt,
-        notes: complianceGateChecks.notes,
-      })
-      .from(complianceGateChecks)
-      .where(eq(complianceGateChecks.engagementId, serviceEngagementId));
+    const gateRecords = await syncComplianceGate(serviceEngagementId);
+    if (!gateRecords) {
+      return NextResponse.json({ error: 'Service engagement not found' }, { status: 404 });
+    }
 
     const complianceDecision = evaluateComplianceGateAction({
       records: gateRecords,
