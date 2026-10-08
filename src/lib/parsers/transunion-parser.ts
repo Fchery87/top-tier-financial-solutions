@@ -10,6 +10,7 @@ import {
   type StandardizedAccount,
 } from './metro2-mapping';
 import { parseReportDate } from './report-date';
+import { applyExtractedAccountFields } from './account-fields';
 
 // TransUnion-specific CSS selectors
 const TU_SELECTORS = {
@@ -281,6 +282,8 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element, headers: Map<string,
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  account.sourceText = rowText;
+  applyExtractedAccountFields(account, rowText);
 
   return account;
 }
@@ -317,6 +320,7 @@ function parseTradelineSection($: cheerio.CheerioAPI, section: Element): ParsedA
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  applyExtractedAccountFields(account, sectionText);
 
   return account;
 }
@@ -350,6 +354,8 @@ function parseTextAccounts(text: string): ParsedAccount[] {
 
     account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
     account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+    account.sourceText = section;
+    applyExtractedAccountFields(account, section);
     accounts.push(account);
   }
 

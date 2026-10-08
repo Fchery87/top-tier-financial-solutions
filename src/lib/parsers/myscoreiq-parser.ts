@@ -18,6 +18,7 @@ import {
   type StandardizedAccount,
 } from './metro2-mapping';
 import { parseMonthYearDate, parseReportDate } from './report-date';
+import { applyExtractedAccountFields } from './account-fields';
 
 // MyScoreIQ-specific CSS selectors
 const MSIQ_SELECTORS = {
@@ -328,6 +329,7 @@ function parseAccountEntry($: cheerio.CheerioAPI, el: Element): ParsedAccount | 
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  applyExtractedAccountFields(account, elText);
 
   return account;
 }
@@ -369,6 +371,8 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element): ParsedAccount | nul
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  account.sourceText = rowText;
+  applyExtractedAccountFields(account, rowText);
 
   return account;
 }
@@ -399,6 +403,8 @@ function parseTextAccounts(text: string): ParsedAccount[] {
 
     account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
     account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+    account.sourceText = section;
+    applyExtractedAccountFields(account, section);
     accounts.push(account);
   }
 

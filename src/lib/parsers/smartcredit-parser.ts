@@ -18,6 +18,7 @@ import {
   type StandardizedAccount,
 } from './metro2-mapping';
 import { parseMonthYearDate, parseReportDate } from './report-date';
+import { applyExtractedAccountFields } from './account-fields';
 
 // SmartCredit-specific CSS selectors
 const SC_SELECTORS = {
@@ -284,6 +285,7 @@ function parseAccountElement($: cheerio.CheerioAPI, el: Element): ParsedAccount 
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  applyExtractedAccountFields(account, elText);
 
   return account;
 }
@@ -512,6 +514,8 @@ function extractAccountsFromText(text: string): ParsedAccount[] {
 
     account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
     account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+    account.sourceText = section;
+    applyExtractedAccountFields(account, section);
     accounts.push(account);
   }
 

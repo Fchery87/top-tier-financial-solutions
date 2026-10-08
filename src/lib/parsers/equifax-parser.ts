@@ -10,6 +10,7 @@ import {
   type StandardizedAccount,
 } from './metro2-mapping';
 import { parseReportDate } from './report-date';
+import { applyExtractedAccountFields } from './account-fields';
 
 // Equifax-specific CSS selectors
 const EQ_SELECTORS = {
@@ -292,6 +293,8 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element, headers: Map<string,
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  account.sourceText = rowText;
+  applyExtractedAccountFields(account, rowText);
 
   return account;
 }
@@ -328,6 +331,7 @@ function parseAccountSection($: cheerio.CheerioAPI, section: Element): ParsedAcc
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  applyExtractedAccountFields(account, sectionText);
 
   return account;
 }
@@ -361,6 +365,8 @@ function parseTextAccounts(text: string): ParsedAccount[] {
 
     account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
     account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+    account.sourceText = section;
+    applyExtractedAccountFields(account, section);
     accounts.push(account);
   }
 

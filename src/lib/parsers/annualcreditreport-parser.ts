@@ -10,6 +10,7 @@ import {
   type StandardizedAccount,
 } from './metro2-mapping';
 import { parseReportDate } from './report-date';
+import { applyExtractedAccountFields } from './account-fields';
 
 // AnnualCreditReport.com specific selectors
 const ACR_SELECTORS = {
@@ -264,6 +265,8 @@ function parseTableRow($: cheerio.CheerioAPI, row: Element, headers: Map<string,
   const standardizedAccount = toStandardizedAccount(account);
   account.isNegative = isAccountNegative(standardizedAccount);
   account.riskLevel = calculateRiskLevel(standardizedAccount);
+  account.sourceText = rowText;
+  applyExtractedAccountFields(account, rowText);
 
   return account;
 }
@@ -296,6 +299,7 @@ function parseAccountSection($: cheerio.CheerioAPI, section: Element): ParsedAcc
   const standardizedAccount = toStandardizedAccount(account);
   account.isNegative = isAccountNegative(standardizedAccount);
   account.riskLevel = calculateRiskLevel(standardizedAccount);
+  applyExtractedAccountFields(account, sectionText);
 
   return account;
 }
@@ -329,6 +333,8 @@ function parseTextAccounts(text: string): ParsedAccount[] {
     const standardizedAccount = toStandardizedAccount(account);
     account.isNegative = isAccountNegative(standardizedAccount);
     account.riskLevel = calculateRiskLevel(standardizedAccount);
+    account.sourceText = section;
+    applyExtractedAccountFields(account, section);
     accounts.push(account);
   }
 

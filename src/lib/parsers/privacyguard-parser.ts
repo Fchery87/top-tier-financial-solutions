@@ -11,6 +11,7 @@ import {
   calculateRiskLevel,
 } from './metro2-mapping';
 import { parseReportDate } from './report-date';
+import { applyExtractedAccountFields } from './account-fields';
 
 // PrivacyGuard-specific CSS selectors
 const PG_SELECTORS = {
@@ -252,6 +253,8 @@ function parseTableRowAccount($: cheerio.CheerioAPI, row: Element, headers: Map<
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  account.sourceText = rowText;
+  applyExtractedAccountFields(account, rowText);
 
   return account;
 }
@@ -282,6 +285,7 @@ function parseDetailSection($: cheerio.CheerioAPI, el: Element): ParsedAccount |
 
   account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
   account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+  applyExtractedAccountFields(account, elText);
 
   return account;
 }
@@ -312,6 +316,8 @@ function extractTextAccounts(text: string): ParsedAccount[] {
 
     account.isNegative = isAccountNegative(account as Partial<StandardizedAccount>);
     account.riskLevel = calculateRiskLevel(account as Partial<StandardizedAccount>);
+    account.sourceText = section;
+    applyExtractedAccountFields(account, section);
     accounts.push(account);
   }
 

@@ -30,6 +30,7 @@ import {
   calculateRiskLevel,
 } from './metro2-mapping';
 import { parseMonthYearDate, parseReportDate, parseYearDate } from './report-date';
+import { applyExtractedAccountFields } from './account-fields';
 
 // IdentityIQ-specific CSS selectors (matching actual HTML structure)
 const IIQ_SELECTORS = {
@@ -806,11 +807,15 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
             [bureau]: paymentHistoryToGrid(paymentHistory[bureau]),
           };
           // Store original creditor in remarks for now (could be added to ParsedAccount interface)
+          if (originalCreditor) {
+            account.originalCreditor = originalCreditor;
+          }
           if (originalCreditor && account.remarks) {
             account.remarks += ` | Original Creditor: ${originalCreditor}`;
           } else if (originalCreditor) {
             account.remarks = `Original Creditor: ${originalCreditor}`;
           }
+          applyExtractedAccountFields(account, accountSourceText);
           accounts.push(account);
         }
       }

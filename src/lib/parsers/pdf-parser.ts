@@ -1,4 +1,5 @@
 // PDF parsing utility - using pdf-parse v1.x simple API
+import { applyExtractedAccountFields } from './account-fields';
 import { detectPdfSource, type SourceDetectionResult } from './detect-source';
 import { parseReportDate } from './report-date';
 
@@ -95,6 +96,9 @@ export interface ParsedAccount {
   bureau?: string;
   bureauEvidence?: Partial<Record<ParsedAccountBureau, ParsedAccountBureauEvidence>>;
   paymentHistoryGrid?: Partial<Record<ParsedAccountBureau, PaymentHistoryGrid>>;
+  originalCreditor?: string;
+  dateOfFirstDelinquency?: Date;
+  bureauStatedRemovalDate?: Date;
   isNegative: boolean;
   riskLevel?: string;
   remarks?: string;
@@ -501,7 +505,7 @@ function parseAccountSection(section: string): ParsedAccount | null {
     else riskLevel = 'low';
   }
   
-  return {
+  const account: ParsedAccount = {
     creditorName,
     accountNumber,
     accountType,
@@ -511,7 +515,10 @@ function parseAccountSection(section: string): ParsedAccount | null {
     paymentStatus,
     isNegative,
     riskLevel,
+    sourceText: section,
   };
+  applyExtractedAccountFields(account, section);
+  return account;
 }
 
 function extractNegativeItems(text: string, accounts: ParsedAccount[]): ParsedNegativeItem[] {
