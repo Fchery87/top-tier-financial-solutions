@@ -41,16 +41,13 @@ function safeDecryptValue(value: unknown): unknown {
   if (!value) return value;
 
   const raw = String(value);
-  const parts = raw.split(':');
+  const parts = raw.startsWith('v2:') ? raw.slice(3).split(':') : raw.split(':');
+  const versioned = raw.startsWith('v2:');
+  const hex = /^[0-9a-f]+$/i;
+  const legacyCipher = !versioned && parts.length === 2 && parts[0].length === 32 && hex.test(parts[0]) && hex.test(parts[1]);
+  const versionedCipher = versioned && parts.length === 3 && parts[0].length === 24 && parts[1].length === 32 && parts.every((part) => hex.test(part));
 
-  // Only attempt decrypt for values that match our stored ciphertext shape:
-  // IV_HEX:ENCRYPTED_HEX where IV is 16 bytes (32 hex chars).
-  if (
-    parts.length !== 2 ||
-    parts[0].length !== 32 ||
-    !/^[0-9a-f]+$/i.test(parts[0]) ||
-    !/^[0-9a-f]+$/i.test(parts[1])
-  ) {
+  if (!legacyCipher && !versionedCipher) {
     return value;
   }
 

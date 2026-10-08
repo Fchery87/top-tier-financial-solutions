@@ -2,16 +2,18 @@ import crypto from 'crypto';
 
 /**
  * PII Encryption Service
- * Encrypts/decrypts sensitive data using AES-256-CBC
+ * Encrypts new values with AES-256-GCM. Decrypt still reads the older AES-256-CBC payload.
  *
  * Design: Each encrypted value includes its own IV (initialization vector)
  * so decryption doesn't require a separate IV
- * Format: IV_HEX:ENCRYPTED_HEX
+ * New format: v2:IV_HEX:TAG_HEX:CIPHER_HEX. Old format: IV_HEX:CIPHER_HEX.
  */
 
-const ALGORITHM = 'aes-256-cbc';
+const CBC_ALGORITHM = 'aes-256-cbc';
+const GCM_ALGORITHM = 'aes-256-gcm';
 const ENCODING = 'utf-8';
 const CIPHER_ENCODING = 'hex';
+const V2_PREFIX = 'v2:';
 
 // Get encryption key from environment
 function getEncryptionKey(): Buffer {
@@ -44,14 +46,14 @@ export function encrypt(plaintext: string | null | undefined): string | null {
 
   try {
     const key = getEncryptionKey();
-    const iv = crypto.randomBytes(16);
-
-    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-    let encrypted = cipher.update(plaintext, ENCODING, CIPHER_ENCODING);
-    encrypted += cipher.final(CIPHER_ENCODING);
-
-    // Return IV + encrypted data so we can decrypt later
-    return `${iv.toString(CIPHER_ENCODING)}:${encrypted}`;
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv(GCM_ALGORITHM, key, iv);
+    const encrypted = Buffer.concat([
+      cipher.update(plaintext, ENCODING),
+      cipher.final(),
+    ]);
+    const tag = cipher.getAuthTag();
+    return `${V2_PREFIX}${iv.toString(CIPHER_ENCODING)}:${tag.toString(CIPHER_ENCODING)}:${encrypted.toString(CIPHER_ENCODING)}`;
   } catch (error) {
     console.error('[Encryption Error]', error);
     throw error;
@@ -68,20 +70,29 @@ export function decrypt(ciphertext: string | null | undefined): string | null {
 
   try {
     const key = getEncryptionKey();
-    const parts = ciphertext.split(':');
+    if (ciphertext.startsWith(V2_PREFIX)) {
+      const parts = ciphertext.slice(V2_PREFIX.length).split(':');
+      if (parts.length !== 3) {
+        console.error('[Encryption Error] Invalid ciphertext format');
+        return null;
+      }
+      const iv = Buffer.from(parts[0], CIPHER_ENCODING);
+      const tag = Buffer.from(parts[1], CIPHER_ENCODING);
+      const encrypted = Buffer.from(parts[2], CIPHER_ENCODING);
+      const decipher = crypto.createDecipheriv(GCM_ALGORITHM, key, iv);
+      decipher.setAuthTag(tag);
+      return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString(ENCODING);
+    }
 
+    const parts = ciphertext.split(':');
     if (parts.length !== 2) {
       console.error('[Encryption Error] Invalid ciphertext format');
       return null;
     }
-
     const iv = Buffer.from(parts[0], CIPHER_ENCODING);
-    const encrypted = parts[1];
-
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    let decrypted = decipher.update(encrypted, CIPHER_ENCODING, ENCODING);
+    const decipher = crypto.createDecipheriv(CBC_ALGORITHM, key, iv);
+    let decrypted = decipher.update(parts[1], CIPHER_ENCODING, ENCODING);
     decrypted += decipher.final(ENCODING);
-
     return decrypted;
   } catch (error) {
     console.error('[Decryption Error]', error);

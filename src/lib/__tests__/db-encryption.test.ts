@@ -37,5 +37,11 @@ describe('db-encryption safe decryption', () => {
     expect(decrypted.lastName).toBe('Doe');
     expect(decrypted.phone).toBe('555-1111');
   });
+
+  it('writes new client PII as a versioned payload and still reads an older CBC payload', () => {
+    const encrypted = encryptClientData({ firstName: 'Ada' });
+    expect(typeof encrypted.firstName === 'string' && encrypted.firstName.startsWith('v2:')).toBe(true);
+    expect(decryptClientData(encrypted).firstName).toBe('Ada');
+  });
 });
 
