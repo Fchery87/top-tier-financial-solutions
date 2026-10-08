@@ -1,3 +1,7 @@
+import { eq } from 'drizzle-orm';
+import { db } from '@/db/client';
+import { evidencePackets } from '@/db/schema';
+
 // Dispute Evidence Requirements System
 // Maps reason codes to required/recommended documentation
 
@@ -57,6 +61,61 @@ export function verifyEvidencePacket(params: {
   };
 }
 
+export type EvidencePacketState =
+  | { kind: 'complete' }
+  | { kind: 'awaiting_client_confirmation' };
+
+/**
+ * State of a packet that already passed document checks.
+ * High-risk packets stay awaiting until the portal records the factual confirmation.
+ */
+export function deriveEvidencePacketState(params: {
+  claimType: string;
+  confirmations: unknown[];
+}): EvidencePacketState {
+  if (
+    HIGH_RISK_CLAIM_TYPES.has(params.claimType)
+    && !hasExplicitClientFactualConfirmation(params.confirmations)
+  ) {
+    return { kind: 'awaiting_client_confirmation' };
+  }
+
+  return { kind: 'complete' };
+}
+
+const CLIENT_FACTUAL_CONFIRMATION_KEY = 'client_factual_claim_confirmed';
+
+export function staffSuppliedFactualConfirmation(confirmations: unknown[]): boolean {
+  return confirmations.some((confirmation) => {
+    if (!confirmation || typeof confirmation !== 'object') return false;
+    return (confirmation as EvidencePacketConfirmation).key === CLIENT_FACTUAL_CONFIRMATION_KEY;
+  });
+}
+
+function parseStoredJsonArray(value: string | null): unknown[] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function findAwaitingClientConfirmation(disputeId: string): Promise<boolean> {
+  const packets = await db
+    .select({
+      claimType: evidencePackets.claimType,
+      confirmations: evidencePackets.confirmations,
+    })
+    .from(evidencePackets)
+    .where(eq(evidencePackets.disputeId, disputeId));
+
+  return packets.some((packet) => deriveEvidencePacketState({
+    claimType: packet.claimType,
+    confirmations: parseStoredJsonArray(packet.confirmations),
+  }).kind === 'awaiting_client_confirmation');
+}
 export type DocumentType = 
   | 'id_document'
   | 'proof_of_address'

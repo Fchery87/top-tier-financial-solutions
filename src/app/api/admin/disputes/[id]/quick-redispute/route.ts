@@ -8,6 +8,7 @@ import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
+import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
 
 export async function POST(
@@ -77,6 +78,11 @@ export async function POST(
         { error: reportGate.reason || 'The latest credit report must be approved before creating a re-dispute.' },
         { status: 409 }
       );
+    }
+
+    const awaitingConfirmation = await findAwaitingClientConfirmation(currentDispute.id);
+    if (awaitingConfirmation) {
+      return NextResponse.json({ error: 'High-risk evidence packet is awaiting client confirmation' }, { status: 409 });
     }
 
     if (escalationPlan.targetRecipient === 'cfpb') {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { verifyEvidencePacket } from '@/lib/dispute-evidence';
+import { deriveEvidencePacketState, verifyEvidencePacket } from '@/lib/dispute-evidence';
 
 describe('verifyEvidencePacket', () => {
   it('requires claim-specific evidence and explicit client factual confirmation for high-risk claims', () => {
@@ -27,5 +27,26 @@ describe('verifyEvidencePacket', () => {
       hasClientFactualConfirmation: true,
       violations: [],
     });
+  });
+});
+
+describe('deriveEvidencePacketState', () => {
+  it('waits for client confirmation on a high-risk claim without that confirmation', () => {
+    expect(deriveEvidencePacketState({
+      claimType: 'identity_theft',
+      confirmations: [{ key: 'client_authorized_review', confirmed: true }],
+    })).toEqual({ kind: 'awaiting_client_confirmation' });
+  });
+
+  it('is complete once the factual confirmation is stored or the claim is ordinary', () => {
+    expect(deriveEvidencePacketState({
+      claimType: 'never_late',
+      confirmations: [{ key: 'client_factual_claim_confirmed', confirmed: true }],
+    })).toEqual({ kind: 'complete' });
+
+    expect(deriveEvidencePacketState({
+      claimType: 'verification_required',
+      confirmations: [],
+    })).toEqual({ kind: 'complete' });
   });
 });

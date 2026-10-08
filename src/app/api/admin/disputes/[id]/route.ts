@@ -17,6 +17,7 @@ import {
   type ResponseReviewOutcome,
 } from '@/lib/response-review-recommendation';
 import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
+import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 
 const STRUCTURED_RESPONSE_OUTCOMES: ReadonlySet<string> = new Set([
   'deleted',
@@ -201,6 +202,14 @@ export async function PUT(
       if (letterResult.kind === 'conflict') return NextResponse.json({ error: 'conflict', ...letterResult }, { status: 409 });
       if (letterResult.kind === 'blocked') return NextResponse.json({ error: 'This letter references data that is not in the client file.', ...letterResult }, { status: 422 });
       if (letterResult.kind === 'warnings') return NextResponse.json({ error: 'needs_acknowledgement', ...letterResult }, { status: 409 });
+    }
+
+    const markingSent = status === 'sent' || (sentAt !== undefined && sentAt !== null);
+    if (markingSent) {
+      const awaitingConfirmation = await findAwaitingClientConfirmation(id);
+      if (awaitingConfirmation) {
+        return NextResponse.json({ error: 'High-risk evidence packet is awaiting client confirmation' }, { status: 409 });
+      }
     }
 
     const isMarkingSubmitted = status === 'sent' || status === 'submitted' || sentAt !== undefined;

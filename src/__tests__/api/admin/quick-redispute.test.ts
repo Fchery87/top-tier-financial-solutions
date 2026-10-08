@@ -94,6 +94,11 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
         amount: null,
         dateReported: null,
       }]))
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      })
       .mockReturnValueOnce(selectResult([{
         id: 'draft-1',
         round: 2,
@@ -125,6 +130,53 @@ describe('POST /api/admin/disputes/[id]/quick-redispute', () => {
       round: 2,
       priorDisputeId: 'dispute-1',
     }));
+  });
+
+
+  it('refuses a next-cycle draft while the prior dispute packet awaits client confirmation', async () => {
+    const { POST } = await import('@/app/api/admin/disputes/[id]/quick-redispute/route');
+    dbMock.select
+      .mockReturnValueOnce(selectResult([{
+        id: 'dispute-1',
+        clientId: 'client-1',
+        negativeItemId: 'item-1',
+        bureau: 'experian',
+        round: 1,
+        outcome: 'no_response',
+        responseDeadline: new Date('2026-02-01T00:00:00.000Z'),
+        responseReceivedAt: null,
+        responseDocumentUrl: null,
+      }]))
+      .mockReturnValueOnce(selectResult([]))
+      .mockReturnValueOnce(selectResult([{ id: 'client-1', firstName: 'Test', lastName: 'Client' }]))
+      .mockReturnValueOnce(selectResult([{
+        id: 'item-1',
+        creditorName: 'Fixture Bank',
+        originalCreditor: null,
+        creditAccountId: null,
+        itemType: 'collection',
+        amount: null,
+        dateReported: null,
+      }]))
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{
+            claimType: 'identity_theft',
+            confirmations: JSON.stringify([{ key: 'client_authorized_review', confirmed: true }]),
+          }]),
+        }),
+      });
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/admin/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: 'High-risk evidence packet is awaiting client confirmation',
+    });
+    expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
   });
 
   it('rejects verified drafts without recorded response evidence', async () => {

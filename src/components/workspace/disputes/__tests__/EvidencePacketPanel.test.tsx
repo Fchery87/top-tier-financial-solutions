@@ -52,6 +52,7 @@ describe('EvidencePacketPanel', () => {
           dispute_id: 'dispute-1',
           claim_type: 'verification_required',
           document_ids: ['doc-1'],
+          state: 'complete',
           confirmations: [{ key: 'client_authorized_review', confirmed: true }],
           created_by_id: 'staff-1',
           created_at: '2026-02-01T00:00:00.000Z',
@@ -72,15 +73,34 @@ describe('EvidencePacketPanel', () => {
     expect(await screen.findByText(/packet-1/i)).toBeInTheDocument();
   });
 
-  it('shows the client-confirmation requirement for high-risk claims', async () => {
+  it('creates a high-risk packet once a document is selected and shows a pending packet', async () => {
     vi.mocked(global.fetch)
-      .mockResolvedValueOnce(jsonResponse({ documents: [] }))
-      .mockResolvedValueOnce(jsonResponse({ packets: [] }));
+      .mockResolvedValueOnce(jsonResponse({
+        documents: [{
+          id: 'doc-1',
+          file_name: 'FTC report.pdf',
+          file_type: 'ftc_identity_theft_report',
+          created_at: '2026-02-01T00:00:00.000Z',
+        }],
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        packets: [{
+          id: 'packet-2',
+          claim_type: 'identity_theft',
+          document_ids: ['doc-1'],
+          state: 'awaiting_client_confirmation',
+          created_by_id: 'staff-1',
+          created_at: '2026-02-01T00:00:00.000Z',
+        }],
+      }));
 
     render(<EvidencePacketPanel clientId="client-1" disputeId="dispute-1" />);
 
     fireEvent.change(await screen.findByLabelText('Claim type'), { target: { value: 'identity_theft' } });
-
-    expect(screen.getByText(/client must confirm the factual claim through the portal/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create evidence packet' })).toBeDisabled();
+    fireEvent.click(screen.getByLabelText(/ftc report.pdf/i));
+    expect(screen.getByRole('button', { name: 'Create evidence packet' })).toBeEnabled();
+    expect(screen.getByText('Awaiting client confirmation')).toBeInTheDocument();
+    expect(screen.getByText(/packet is saved and waiting for the client to confirm the factual claim/i)).toBeInTheDocument();
   });
 });

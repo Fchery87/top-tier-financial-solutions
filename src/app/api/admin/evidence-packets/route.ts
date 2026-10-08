@@ -4,7 +4,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clientDocuments, clients, evidencePackets } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
-import { verifyEvidencePacket } from '@/lib/dispute-evidence';
+import { deriveEvidencePacketState, HIGH_RISK_CLAIM_TYPES, staffSuppliedFactualConfirmation, verifyEvidencePacket } from '@/lib/dispute-evidence';
 import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
 
 function parseJsonArray(value: string | null) {
@@ -18,13 +18,19 @@ function parseJsonArray(value: string | null) {
 }
 
 function formatPacket(packet: typeof evidencePackets.$inferSelect) {
+  const confirmations = parseJsonArray(packet.confirmations);
+  const state = deriveEvidencePacketState({
+    claimType: packet.claimType,
+    confirmations,
+  });
   return {
     id: packet.id,
     client_id: packet.clientId,
     dispute_id: packet.disputeId,
     claim_type: packet.claimType,
     document_ids: parseJsonArray(packet.documentIds),
-    confirmations: parseJsonArray(packet.confirmations),
+    confirmations,
+    state: state.kind,
     created_by_id: packet.createdById,
     created_at: packet.createdAt?.toISOString(),
     updated_at: packet.updatedAt?.toISOString(),
@@ -78,9 +84,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client ID and claim type are required' }, { status: 400 });
     }
 
+    if (HIGH_RISK_CLAIM_TYPES.has(claimType) && staffSuppliedFactualConfirmation(confirmations)) {
+      return NextResponse.json({ error: 'Staff cannot record the client factual confirmation' }, { status: 400 });
+    }
+
     const evidenceDecision = verifyEvidencePacket({ claimType, documentIds, confirmations });
-    if (!evidenceDecision.sufficient) {
-      return NextResponse.json({ error: evidenceDecision.violations[0].replace(/\.$/, '') }, { status: 400 });
+    const blockingViolations = HIGH_RISK_CLAIM_TYPES.has(claimType)
+      ? evidenceDecision.violations.filter((violation) => !violation.includes('explicit client factual confirmation'))
+      : evidenceDecision.violations;
+    if (blockingViolations.length > 0) {
+      return NextResponse.json({ error: blockingViolations[0].replace(/\.$/, '') }, { status: 400 });
     }
 
     const [client] = await db

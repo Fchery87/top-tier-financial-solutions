@@ -16,6 +16,7 @@ import PortalDocuments from '@/components/portal/PortalDocuments';
 import PortalAuditReportCard from '@/components/portal/PortalAuditReportCard';
 import PortalLetterConsent from '@/components/portal/PortalLetterConsent';
 import PortalFeedbackCard from '@/components/portal/PortalFeedbackCard';
+import PortalHighRiskConfirmations from '@/components/portal/PortalHighRiskConfirmations';
 import PortalUploadModal from '@/components/portal/PortalUploadModal';
 import PortalLetterPreview from '@/components/portal/PortalLetterPreview';
 import type {
@@ -121,6 +122,9 @@ export default function PortalPage() {
           {loading ? (
             <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>
           ) : cases.length === 0 ? (
+            <>
+            <PortalHighRiskConfirmations />
+            
             <Card className="p-12 text-center">
               <div className="max-w-md mx-auto">
                 <div className="w-16 h-16 rounded-lg bg-accent flex items-center justify-center mx-auto mb-6">
@@ -135,6 +139,7 @@ export default function PortalPage() {
                 </Button>
               </div>
             </Card>
+            </>
           ) : (
             <>
             {pendingLetters.length > 0 && (
@@ -163,6 +168,7 @@ export default function PortalPage() {
                   onSignatureChange={setSignature} onApprove={handleApproveLetters}
                   onLetterClick={setSelectedLetter}
                 />
+                <PortalHighRiskConfirmations />
                 <PortalFeedbackCard
                   feedbackEntry={feedbackEntry} feedbackRating={feedbackRating}
                   feedbackComment={feedbackComment} submittingFeedback={submittingFeedback}

@@ -11,6 +11,7 @@ import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
 import { approvedPolicyMatchesDisputeInputs } from '@/lib/dispute-policy-decision';
 import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
+import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 
 type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
 
@@ -147,6 +148,16 @@ export async function POST(request: NextRequest) {
         || craDispute.negativeItemId !== uniqueRequestedItemIds[0]
       ) {
         return NextResponse.json({ error: 'The prior CRA dispute does not match the selected item' }, { status: 409 });
+      }
+    }
+
+    const confirmationDisputeId = [body.disputeId, body.dispute_id, priorDisputeId].find(
+      (value): value is string => typeof value === 'string' && value.trim().length > 0,
+    );
+    if (confirmationDisputeId) {
+      const awaitingConfirmation = await findAwaitingClientConfirmation(confirmationDisputeId);
+      if (awaitingConfirmation) {
+        return NextResponse.json({ error: 'High-risk evidence packet is awaiting client confirmation' }, { status: 409 });
       }
     }
 

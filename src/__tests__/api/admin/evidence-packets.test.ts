@@ -60,48 +60,22 @@ describe('POST /api/admin/evidence-packets', () => {
       client_id: 'client-1',
       dispute_id: 'dispute-1',
       claim_type: 'verification_required',
+      state: 'complete',
       created_by_id: 'staff-1',
       document_ids: ['doc-1'],
       confirmations: [{ key: 'client_authorized_review', confirmed: true }],
     });
   }, 30000);
 
-  it('requires explicit client confirmation before creating a high-risk evidence packet', async () => {
-    const { POST } = await import('@/app/api/admin/evidence-packets/route');
-
-    dbMock.select
-      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', userId: 'user-1' }]) }) }) })
-      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ id: 'doc-1', userId: 'user-1', fileUrl: 'client-documents/user-1/evidence/doc-1.pdf' }]) }) });
-
-    const response = await POST(new NextRequest('http://localhost/api/admin/evidence-packets', {
-      method: 'POST',
-      body: JSON.stringify({
-        client_id: 'client-1',
-        dispute_id: 'dispute-1',
-        claim_type: 'identity_theft',
-        document_ids: ['doc-1'],
-        confirmations: [{ key: 'client_authorized_review', confirmed: true }],
-      }),
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'High-risk claims require explicit client factual confirmation' });
-    expect(dbMock.insert).not.toHaveBeenCalled();
-  }, 30000);
-
-  it('creates a high-risk evidence packet after explicit client factual confirmation', async () => {
+  it('creates a high-risk evidence packet that waits for client confirmation', async () => {
     const { POST } = await import('@/app/api/admin/evidence-packets/route');
     const created = [{
-      id: 'packet-2',
+      id: 'packet-high',
       clientId: 'client-1',
       disputeId: 'dispute-1',
       claimType: 'identity_theft',
       documentIds: JSON.stringify(['doc-1']),
-      confirmations: JSON.stringify([
-        { key: 'client_authorized_review', confirmed: true },
-        { key: 'client_factual_claim_confirmed', confirmed: true },
-      ]),
+      confirmations: JSON.stringify([{ key: 'client_authorized_review', confirmed: true }]),
       createdById: 'staff-1',
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -119,6 +93,29 @@ describe('POST /api/admin/evidence-packets', () => {
         dispute_id: 'dispute-1',
         claim_type: 'identity_theft',
         document_ids: ['doc-1'],
+        confirmations: [{ key: 'client_authorized_review', confirmed: true }],
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toMatchObject({
+      id: 'packet-high',
+      state: 'awaiting_client_confirmation',
+      confirmations: [{ key: 'client_authorized_review', confirmed: true }],
+    });
+  }, 30000);
+
+  it('rejects a high-risk evidence packet when staff supplies the factual confirmation', async () => {
+    const { POST } = await import('@/app/api/admin/evidence-packets/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/admin/evidence-packets', {
+      method: 'POST',
+      body: JSON.stringify({
+        client_id: 'client-1',
+        dispute_id: 'dispute-1',
+        claim_type: 'identity_theft',
+        document_ids: ['doc-1'],
         confirmations: [
           { key: 'client_authorized_review', confirmed: true },
           { key: 'client_factual_claim_confirmed', confirmed: true },
@@ -127,16 +124,9 @@ describe('POST /api/admin/evidence-packets', () => {
     }));
     const body = await response.json();
 
-    expect(response.status).toBe(201);
-    expect(body).toMatchObject({
-      id: 'packet-2',
-      created_by_id: 'staff-1',
-      claim_type: 'identity_theft',
-      confirmations: [
-        { key: 'client_authorized_review', confirmed: true },
-        { key: 'client_factual_claim_confirmed', confirmed: true },
-      ],
-    });
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'Staff cannot record the client factual confirmation' });
+    expect(dbMock.insert).not.toHaveBeenCalled();
   }, 30000);
 
   it('rejects evidence documents owned by another client', async () => {
@@ -193,6 +183,7 @@ describe('POST /api/admin/evidence-packets', () => {
         id: 'packet-1',
         client_id: 'client-1',
         dispute_id: 'dispute-1',
+        state: 'complete',
         created_by_id: 'staff-1',
       })],
     });

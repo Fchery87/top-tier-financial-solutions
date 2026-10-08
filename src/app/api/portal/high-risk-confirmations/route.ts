@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { auth } from '@/lib/auth';
 import { clients, evidencePackets } from '@/db/schema';
 import { headers } from 'next/headers';
-
-const HIGH_RISK_CLAIM_TYPES = new Set([
-  'identity_theft',
-  'fraud',
-  'not_mine',
-  'never_late',
-  'unauthorized_inquiry',
-]);
+import { deriveEvidencePacketState, hasExplicitClientFactualConfirmation, HIGH_RISK_CLAIM_TYPES } from '@/lib/dispute-evidence';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -33,6 +26,56 @@ function parseConfirmations(value: string | null) {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+
+export async function GET() {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const [client] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.userId, user.id))
+      .limit(1);
+
+    if (!client) {
+      return NextResponse.json({ error: 'Client profile not found' }, { status: 404 });
+    }
+
+    const rows = await db
+      .select({
+        id: evidencePackets.id,
+        claimType: evidencePackets.claimType,
+        disputeId: evidencePackets.disputeId,
+        createdAt: evidencePackets.createdAt,
+        confirmations: evidencePackets.confirmations,
+      })
+      .from(evidencePackets)
+      .where(eq(evidencePackets.clientId, client.id));
+
+    const packets = rows.flatMap((row) => {
+      const state = deriveEvidencePacketState({
+        claimType: row.claimType,
+        confirmations: parseConfirmations(row.confirmations),
+      });
+      if (state.kind !== 'awaiting_client_confirmation') return [];
+      return [{
+        id: row.id,
+        claim_type: row.claimType,
+        dispute_id: row.disputeId,
+        created_at: row.createdAt?.toISOString() ?? null,
+      }];
+    });
+
+    return NextResponse.json({ packets });
+  } catch (error) {
+    console.error('Error listing portal high-risk confirmations:', error);
+    return NextResponse.json({ error: 'Failed to list high-risk confirmations' }, { status: 500 });
   }
 }
 
@@ -83,7 +126,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Evidence packet does not require high-risk factual confirmation' }, { status: 400 });
     }
 
-    const confirmations = parseConfirmations(packet.confirmations).filter((confirmation) => {
+    const storedConfirmations = packet.confirmations ?? '[]';
+    const confirmations = parseConfirmations(storedConfirmations).filter((confirmation) => {
       if (!confirmation || typeof confirmation !== 'object') return true;
       return (confirmation as { key?: unknown }).key !== 'client_factual_claim_confirmed';
     });
@@ -99,13 +143,33 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    await db
+    const updated = await db
       .update(evidencePackets)
       .set({
         confirmations: JSON.stringify(nextConfirmations),
         updatedAt: now,
       })
-      .where(eq(evidencePackets.id, packet.id));
+      .where(and(
+        eq(evidencePackets.id, packet.id),
+        sql`${evidencePackets.confirmations} = ${storedConfirmations}`,
+      ))
+      .returning({ confirmations: evidencePackets.confirmations });
+
+    if (updated.length === 0) {
+      const [current] = await db
+        .select({ confirmations: evidencePackets.confirmations })
+        .from(evidencePackets)
+        .where(and(
+          eq(evidencePackets.id, packet.id),
+          eq(evidencePackets.clientId, client.id),
+        ))
+        .limit(1);
+      const currentConfirmations = parseConfirmations(current?.confirmations ?? null);
+      if (hasExplicitClientFactualConfirmation(currentConfirmations)) {
+        return NextResponse.json({ confirmations: currentConfirmations });
+      }
+      return NextResponse.json({ error: 'Evidence packet confirmation changed. Retry the confirmation.' }, { status: 409 });
+    }
 
     return NextResponse.json({ confirmations: nextConfirmations });
   } catch (error) {

@@ -17,6 +17,7 @@ interface EvidencePacket {
   id: string;
   claim_type: string;
   document_ids: string[];
+  state: 'complete' | 'awaiting_client_confirmation';
   created_by_id: string | null;
   created_at: string | null;
 }
@@ -32,6 +33,8 @@ const CLAIM_TYPES = [
   { value: 'identity_theft', label: 'Identity theft' },
   { value: 'fraud', label: 'Fraud' },
   { value: 'not_mine', label: 'Not mine' },
+  { value: 'never_late', label: 'Never late' },
+  { value: 'unauthorized_inquiry', label: 'Unauthorized inquiry' },
 ];
 
 function isEvidenceDocument(value: unknown): value is EvidenceDocument {
@@ -55,6 +58,8 @@ function isEvidencePacket(value: unknown): value is EvidencePacket {
     && typeof value.claim_type === 'string'
     && Array.isArray(value.document_ids)
     && value.document_ids.every((id) => typeof id === 'string')
+    && 'state' in value
+    && (value.state === 'complete' || value.state === 'awaiting_client_confirmation')
     && (!('created_by_id' in value) || typeof value.created_by_id === 'string' || value.created_by_id === null)
     && (!('created_at' in value) || typeof value.created_at === 'string' || value.created_at === null);
 }
@@ -141,7 +146,6 @@ export function EvidencePacketPanel({ clientId, disputeId }: EvidencePacketPanel
   };
 
   const createPacket = async () => {
-    if (isHighRisk) return;
     setCreating(true);
     setError(null);
     try {
@@ -198,9 +202,9 @@ export function EvidencePacketPanel({ clientId, disputeId }: EvidencePacketPanel
 
         {isHighRisk && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-            <p className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4" />Client confirmation required</p>
+            <p className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4" />Waiting for client confirmation</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              The client must confirm the factual claim through the portal before a high-risk packet can be created. Staff cannot bypass this requirement.
+              The packet is saved and waiting for the client to confirm the factual claim in the portal. Letters and sending stay blocked until then.
             </p>
           </div>
         )}
@@ -227,7 +231,7 @@ export function EvidencePacketPanel({ clientId, disputeId }: EvidencePacketPanel
           ))}
         </fieldset>
 
-        <Button onClick={createPacket} disabled={loading || creating || isHighRisk} className="w-full">
+        <Button onClick={createPacket} disabled={loading || creating || (isHighRisk && selectedDocumentIds.length === 0)} className="w-full">
           {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck2 className="mr-2 h-4 w-4" />}
           Create evidence packet
         </Button>
@@ -241,6 +245,9 @@ export function EvidencePacketPanel({ clientId, disputeId }: EvidencePacketPanel
               {packets.map((packet) => (
                 <li key={packet.id} className="rounded-md bg-muted/40 px-3 py-2 text-xs">
                   <span className="font-medium">Packet {packet.id}</span>
+                  {packet.state === 'awaiting_client_confirmation' && (
+                    <span className="ml-2 font-medium text-amber-700">Awaiting client confirmation</span>
+                  )}
                   <span className="ml-2 text-muted-foreground">{packet.claim_type} · {packet.document_ids.length} document{packet.document_ids.length === 1 ? '' : 's'} · {formatDate(packet.created_at)}</span>
                 </li>
               ))}

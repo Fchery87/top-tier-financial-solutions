@@ -32,7 +32,7 @@ describe('POST /api/portal/high-risk-confirmations', () => {
 
   it('records explicit factual confirmation on an evidence packet owned by the authenticated client', async () => {
     const { POST } = await import('@/app/api/portal/high-risk-confirmations/route');
-    const updateWhere = vi.fn().mockResolvedValue(undefined);
+    const updateWhere = vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ confirmations: '[]' }]) });
     const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
 
     dbMock.select
@@ -67,5 +67,41 @@ describe('POST /api/portal/high-risk-confirmations', () => {
     expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({
       confirmations: expect.stringContaining('client_factual_claim_confirmed'),
     }));
+    expect(updateWhere).toHaveBeenCalled();
+  }, 30000);
+
+  it('returns the existing factual confirmation without appending another one', async () => {
+    const { POST } = await import('@/app/api/portal/high-risk-confirmations/route');
+    const existing = [
+      { key: 'client_authorized_review', confirmed: true },
+      { key: 'client_factual_claim_confirmed', confirmed: true, source: 'portal', text: 'Already confirmed' },
+    ];
+    const updateWhere = vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([]) });
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+
+    dbMock.select
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1' }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
+        id: 'packet-1',
+        clientId: 'client-1',
+        claimType: 'fraud',
+        confirmations: JSON.stringify([{ key: 'client_authorized_review', confirmed: true }]),
+      }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{
+        confirmations: JSON.stringify(existing),
+      }]) }) }) });
+    dbMock.update.mockReturnValue({ set: updateSet });
+
+    const response = await POST(new NextRequest('http://localhost/api/portal/high-risk-confirmations', {
+      method: 'POST',
+      body: JSON.stringify({
+        evidence_packet_id: 'packet-1',
+        confirmation_text: 'Second attempt',
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ confirmations: existing });
+    expect(updateWhere).toHaveBeenCalled();
   }, 30000);
 });
