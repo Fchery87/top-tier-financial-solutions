@@ -316,6 +316,20 @@
       "when": 1791438583316,
       "tag": "0044_encryption_rotation_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1791452401830,
+      "tag": "0045_manual_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1791452416466,
+      "tag": "0046_backfill_invoice_engagement",
+      "breakpoints": true
     }
   ]
 }

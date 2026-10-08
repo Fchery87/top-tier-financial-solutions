@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, serial, text, timestamp, boolean, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, serial, text, timestamp, boolean, integer, index, uniqueIndex, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations, sql } from "drizzle-orm";
 
 // Enums
@@ -399,6 +399,12 @@ export const serviceEngagementStatusEnum = pgEnum('service_engagement_status', [
   'superseded',
 ]);
 
+export const salesChannelEnum = pgEnum('sales_channel', [
+  'telemarketing',
+  'online',
+  'in_person',
+]);
+
 // Client identity document type enum
 export const identityDocTypeEnum = pgEnum('identity_doc_type', [
   'government_id',      // Driver's license, state ID, passport
@@ -448,6 +454,14 @@ export const serviceEngagements = pgTable('service_engagements', {
   openedAt: timestamp('opened_at').defaultNow().notNull(),
   closedAt: timestamp('closed_at'),
   closureReason: text('closure_reason'),
+  // Null means staff have not recorded how the sale was made; invoices stay blocked until they do.
+  salesChannel: salesChannelEnum('sales_channel'),
+  servicePeriodEndsAt: timestamp('service_period_ends_at'),
+  resultsAchievedAt: timestamp('results_achieved_at'),
+  resultsVerificationReportId: text('results_verification_report_id').references((): AnyPgColumn => creditReports.id, { onDelete: 'set null' }),
+  resultsVerificationReportDate: timestamp('results_verification_report_date'),
+  resultsVerifiedById: text('results_verified_by_id').references(() => user.id, { onDelete: 'set null' }),
+  resultsVerifiedAt: timestamp('results_verified_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
@@ -468,6 +482,7 @@ export const complianceGateChecks = pgTable('compliance_gate_checks', {
 }, (table) => [
   index('compliance_gate_checks_engagementId_idx').on(table.engagementId),
   index('compliance_gate_checks_checkKey_idx').on(table.checkKey),
+  uniqueIndex('compliance_gate_checks_engagement_check_key').on(table.engagementId, table.checkKey),
 ]);
 
 // Client identity documents (ID, SSN card, proof of address for disputes)
@@ -1362,6 +1377,7 @@ export const clientAgreements = pgTable('client_agreements', {
   sentAt: timestamp('sent_at'), // When agreement was sent to client
   sentById: text('sent_by_id').references(() => user.id, { onDelete: 'set null' }),
   expiresAt: timestamp('expires_at'), // When unsigned agreement expires
+  feeTermsSnapshot: text('fee_terms_snapshot'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
@@ -1424,6 +1440,8 @@ export const invoices = pgTable('invoices', {
   id: text('id').primaryKey(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
   billingProfileId: text('billing_profile_id').references(() => clientBillingProfiles.id, { onDelete: 'set null' }),
+  serviceEngagementId: text('service_engagement_id').references(() => serviceEngagements.id, { onDelete: 'set null' }),
+  servicesRenderedEventId: text('services_rendered_event_id').references(() => servicesRenderedEvents.id, { onDelete: 'set null' }),
   invoiceNumber: text('invoice_number').notNull().unique(),
   amount: integer('amount').notNull(), // Amount in cents
   status: invoiceStatusEnum('status').default('draft'),
@@ -1447,6 +1465,40 @@ export const invoices = pgTable('invoices', {
   index("invoices_clientId_idx").on(table.clientId),
   index("invoices_status_idx").on(table.status),
   index("invoices_invoiceNumber_idx").on(table.invoiceNumber),
+  index('invoices_serviceEngagementId_idx').on(table.serviceEngagementId),
+  // A voided invoice releases its event so the work can be re-invoiced correctly.
+  uniqueIndex('invoices_one_open_per_services_rendered_event')
+    .on(table.servicesRenderedEventId)
+    .where(sql`${table.servicesRenderedEventId} IS NOT NULL AND ${table.status} <> 'void'`),
+]);
+
+export const invoicePaymentKindEnum = pgEnum('invoice_payment_kind', ['payment', 'refund']);
+export const invoicePaymentMethodEnum = pgEnum('invoice_payment_method', [
+  'zelle',
+  'check',
+  'cash',
+  'bank_ach',
+  'card_external',
+  'other',
+]);
+
+// Money received or returned outside the app. Rows are never edited; invoice status is derived from them.
+export const invoicePayments = pgTable('invoice_payments', {
+  id: text('id').primaryKey(),
+  invoiceId: text('invoice_id').notNull().references(() => invoices.id, { onDelete: 'restrict' }),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
+  kind: invoicePaymentKindEnum('kind').notNull(),
+  method: invoicePaymentMethodEnum('method').notNull(),
+  amountCents: integer('amount_cents').notNull(),
+  reference: text('reference'),
+  receivedAt: timestamp('received_at').notNull(),
+  notes: text('notes'),
+  recordedById: text('recorded_by_id').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('invoice_payments_invoiceId_idx').on(table.invoiceId),
+  index('invoice_payments_clientId_idx').on(table.clientId),
+  check('invoice_payments_amount_positive', sql`${table.amountCents} > 0`),
 ]);
 
 export const servicesRenderedEvents = pgTable('services_rendered_events', {
