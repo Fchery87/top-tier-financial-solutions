@@ -9,6 +9,7 @@ import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-rendering/l
 import { generateLetterDraft, LetterDraftError } from './letter-rendering/provider-adapter';
 import type { LetterResponseFormat } from './letter-rendering/types';
 import { buildMultiItemDisputeLetterPrompt } from './letter-rendering/build-multi-item-dispute-letter-prompt';
+import { formatCalendarDate, formatLetterDate } from './letter-rendering/letter-dates';
 
 export { renderGeneratedLetter } from './letter-rendering/render-generated-letter';
 export { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
@@ -143,10 +144,6 @@ async function recordLibraryUsage(selection?: Selection): Promise<void> {
     .catch(error => logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: error }));
 }
 
-function formatDate(): string {
-  return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
 function formatCurrency(cents: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
@@ -191,7 +188,7 @@ function formatRecipientAddress(targetRecipient: GenerateLetterParams['targetRec
 }
 
 function buildNeutralFallbackLetter(params: GenerateLetterParams): string {
-  const currentDate = formatDate();
+  const currentDate = formatLetterDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0
     ? params.metro2Violations.filter(Boolean)
@@ -229,7 +226,7 @@ ${params.itemData.originalCreditor ? `Original Creditor: ${params.itemData.origi
 ${maskedAccountNumber ? `Account Number: ${maskedAccountNumber}` : ''}
 Item Type: ${formatItemType(params.itemData.itemType)}
 ${params.itemData.amount ? `Reported Amount: ${formatCurrency(params.itemData.amount)}` : ''}
-${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
+${params.itemData.dateReported ? `Date Reported: ${formatCalendarDate(params.itemData.dateReported)}` : ''}
 
 REASON FOR DISPUTE:
 ${reasonDescription}
@@ -316,7 +313,7 @@ export function safeParseJsonObject<T>(raw: string): T | null {
 function postProcessLetter(letter: string, params: GenerateLetterParams): string {
   return renderGeneratedLetterDeterministically({
     draftText: letter,
-    renderedOn: formatDate(),
+    renderedOn: formatLetterDate(),
     recipientAddress: params.targetRecipient === 'bureau'
       ? BUREAU_ADDRESSES[params.itemData.bureau.toLowerCase()]
       : undefined,
@@ -393,7 +390,7 @@ export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLe
 function postProcessMultiItemLetter(letter: string, params: GenerateMultiItemLetterParams): string {
   return renderGeneratedLetterDeterministically({
     draftText: letter,
-    renderedOn: formatDate(),
+    renderedOn: formatLetterDate(),
     recipientAddress: params.targetRecipient === 'bureau'
       ? BUREAU_ADDRESSES[params.bureau.toLowerCase()]
       : undefined,
@@ -401,7 +398,7 @@ function postProcessMultiItemLetter(letter: string, params: GenerateMultiItemLet
 }
 
 function generateMultiItemFallbackLetter(params: GenerateMultiItemLetterParams): string {
-  const currentDate = formatDate();
+  const currentDate = formatLetterDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
     ? params.metro2Violations.filter(Boolean) 
@@ -421,7 +418,7 @@ ${item.originalCreditor ? `Original Creditor: ${item.originalCreditor}` : ''}
 ${maskedAccountNumber ? `Account Number: ${maskedAccountNumber}` : ''}
 Item Type: ${formatItemType(item.itemType)}
 ${item.amount ? `Reported Amount: ${formatCurrency(item.amount)}` : ''}
-${item.dateReported ? `Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`;
+${item.dateReported ? `Date Reported: ${formatCalendarDate(item.dateReported)}` : ''}`;
   }).join('\n');
   const creditorList = params.items.map(item => item.creditorName).join(', ');
   let metro2ViolationsText = '';
@@ -663,7 +660,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     const reportingLimit = isBankruptcy ? 10 : 7;
 
     if (yearsSinceActivity >= reportingLimit) {
-      metro2Violations.push(`This ${itemType} has been reporting for ${Math.floor(yearsSinceActivity)} years - exceeds FCRA ${reportingLimit}-year limit (last activity: ${effectiveDate.toLocaleDateString()})`);
+      metro2Violations.push(`This ${itemType} has been reporting for ${Math.floor(yearsSinceActivity)} years - exceeds FCRA ${reportingLimit}-year limit (last activity: ${formatCalendarDate(effectiveDate)})`);
       fcraIssues.push(`FCRA § 605(a): Negative information exceeds ${reportingLimit}-year reporting limit`);
       reasonCodes.push('obsolete');
       notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - past FCRA reporting limit`);
@@ -673,7 +670,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     }
 
     if (itemType === 'inquiry' && yearsSinceActivity >= 2) {
-      metro2Violations.push(`Hard inquiry from ${effectiveDate.toLocaleDateString()} exceeds 2-year reporting limit`);
+      metro2Violations.push(`Hard inquiry from ${formatCalendarDate(effectiveDate)} exceeds 2-year reporting limit`);
       fcraIssues.push('FCRA § 605(a)(3): Hard inquiries exceeding 2-year period must be removed');
       reasonCodes.push('obsolete');
       violationSeverities.push(0.85); // Very high severity
@@ -689,7 +686,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   if (openedDate && reportDate && (itemType === 'collection' || itemType === 'charge_off')) {
     const yearsBetween = (reportDate.getTime() - openedDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
     if (yearsBetween > 2) {
-      notes.push(`Account opened ${openedDate.toLocaleDateString()} but reported ${reportDate.toLocaleDateString()} - ${Math.floor(yearsBetween)} year gap may require DOFD verification`);
+      notes.push(`Account opened ${formatCalendarDate(openedDate)} but reported ${formatCalendarDate(reportDate)} - ${Math.floor(yearsBetween)} year gap may require DOFD verification`);
     }
   }
 
@@ -1272,7 +1269,7 @@ Return ONLY the JSON object, no markdown formatting.`;
     let disputeLetter = parsedResponse.dispute_letter;
     if (disputeLetter && itemsWithIssues > 0) {
       // Add date if missing
-      const currentDate = formatDate();
+      const currentDate = formatLetterDate();
       if (!disputeLetter.includes(currentDate) && !disputeLetter.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b/)) {
         disputeLetter = currentDate + '\n\n' + disputeLetter;
       }

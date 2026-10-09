@@ -1,5 +1,6 @@
 import type { Selection } from '@/lib/letter-library-selector';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-prompt-data';
+import { formatCalendarDate, formatLetterDate } from './letter-dates';
 
 export interface MultiItemDisputeLetterPromptInput {
   round: number;
@@ -18,14 +19,6 @@ export interface MultiItemDisputeLetterPromptInput {
   customReason?: string;
   metro2Violations?: string[];
   librarySelection?: Selection;
-}
-
-function formatDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 function formatCurrency(cents: number): string {
@@ -73,7 +66,7 @@ export function buildMultiItemDisputeLetterPrompt(params: MultiItemDisputeLetter
     : 'Credit Dispute Department';
   const itemsList = params.items.map((item, index) => {
     const maskedAccountNumber = item.accountNumber ? `****${item.accountNumber.slice(-4)}` : '';
-    return `Account ${index + 1}:\n- Creditor: ${item.creditorName}\n${item.originalCreditor ? `- Original Creditor: ${item.originalCreditor}\n` : ''}${maskedAccountNumber ? `- Account Number: ${maskedAccountNumber}\n` : ''}- Type: ${formatItemType(item.itemType)}\n${item.amount ? `- Amount: ${formatCurrency(item.amount)}\n` : ''}${item.dateReported ? `- Date Reported: ${new Date(item.dateReported).toLocaleDateString()}` : ''}`.trim();
+    return `Account ${index + 1}:\n- Creditor: ${item.creditorName}\n${item.originalCreditor ? `- Original Creditor: ${item.originalCreditor}\n` : ''}${maskedAccountNumber ? `- Account Number: ${maskedAccountNumber}\n` : ''}- Type: ${formatItemType(item.itemType)}\n${item.amount ? `- Amount: ${formatCurrency(item.amount)}\n` : ''}${item.dateReported ? `- Date Reported: ${formatCalendarDate(item.dateReported)}` : ''}`.trim();
   }).join('\n\n');
   const defaultStrategy = params.round >= 3
     ? 'This is a direct furnisher escalation. Keep the tone factual and request investigation under FCRA Section 623(a)(8).'
@@ -93,7 +86,7 @@ RULES
 - Keep the tone professional, specific, and factual.
 
 LETTER CONTEXT
-Date: ${formatDate()}
+Date: ${formatLetterDate()}
 Recipient:\n${recipientAddress}
 Bureau: ${params.bureau.toUpperCase()}
 Round: ${params.round}

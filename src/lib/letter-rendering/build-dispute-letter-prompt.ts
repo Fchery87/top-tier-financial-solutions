@@ -1,5 +1,6 @@
 import type { Selection } from '@/lib/letter-library-selector';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-prompt-data';
+import { formatCalendarDate, formatLetterDate } from './letter-dates';
 
 export interface DisputeLetterPromptInput {
   round: number;
@@ -18,14 +19,6 @@ export interface DisputeLetterPromptInput {
   customReason?: string;
   metro2Violations?: string[];
   librarySelection?: Selection;
-}
-
-function formatDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 function formatCurrency(cents: number): string {
@@ -103,7 +96,7 @@ RULES
 - If this is Round 3 or later, keep the focus on a direct furnisher investigation request.
 
 LETTER CONTEXT
-Date: ${formatDate()}
+Date: ${formatLetterDate()}
 Recipient:
 ${recipientAddress}
 Target: ${targetLabel}
@@ -114,7 +107,7 @@ ${params.itemData.originalCreditor ? `Original Creditor: ${params.itemData.origi
 ${params.itemData.accountNumber ? `Account Number: ****${params.itemData.accountNumber.slice(-4)}` : ''}
 Item Type: ${formatItemType(params.itemData.itemType)}
 ${params.itemData.amount ? `Reported Amount: ${formatCurrency(params.itemData.amount)}` : ''}
-${params.itemData.dateReported ? `Date Reported: ${new Date(params.itemData.dateReported).toLocaleDateString()}` : ''}
+${params.itemData.dateReported ? `Date Reported: ${formatCalendarDate(params.itemData.dateReported)}` : ''}
 Reason Description: ${reasonDescription}
 ${params.customReason ? `Additional Context: ${params.customReason}` : ''}
 ${metro2Section || 'No specific Metro 2 issue list was provided. Request verification of the reported data for accuracy and completeness.'}
