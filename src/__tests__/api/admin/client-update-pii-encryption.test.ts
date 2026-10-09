@@ -35,6 +35,8 @@ vi.mock('@/lib/auth', () => ({
   auth: authMock,
 }));
 
+// The staff user under test has enrolled in MFA (required for team roles).
+vi.mock('@/lib/mfa-status', () => ({ getTwoFactorEnabled: vi.fn(async () => true) }));
 vi.mock('@/lib/admin-auth', () => adminAuthMock);
 
 vi.mock('@/lib/db-encryption', () => encryptionMock);

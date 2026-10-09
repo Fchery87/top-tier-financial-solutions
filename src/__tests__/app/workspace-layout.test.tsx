@@ -5,6 +5,7 @@ vi.mock('@/lib/auth', () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
 vi.mock('@/lib/admin-auth', () => ({ getUserRole: vi.fn() }));
+vi.mock('@/lib/mfa-status', () => ({ getTwoFactorEnabled: vi.fn() }));
 vi.mock('@/components/workspace/WorkspaceShell', () => ({
   WorkspaceShell: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="workspace-shell">{children}</div>
@@ -31,6 +32,7 @@ vi.mock('next/navigation', () => ({
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getUserRole } from '@/lib/admin-auth';
+import { getTwoFactorEnabled } from '@/lib/mfa-status';
 import WorkspaceLayout from '@/app/workspace/layout';
 
 const children = <div data-testid="child">child content</div>;
@@ -40,6 +42,7 @@ beforeEach(() => {
   vi.mocked(redirect).mockImplementation((url: string) => {
     throw new RedirectSignal(url);
   });
+  vi.mocked(getTwoFactorEnabled).mockResolvedValue(true);
 });
 
 describe('WorkspaceLayout', () => {
@@ -89,5 +92,29 @@ describe('WorkspaceLayout', () => {
       userId: 'u1',
       userEmail: 'staff@example.com',
     });
+  });
+
+  it.each(['staff', 'admin', 'super_admin'] as const)(
+    'redirects a %s without two-factor to the enrollment page',
+    async (role) => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { id: 'u1', email: 'team@example.com' },
+      } as never);
+      vi.mocked(getUserRole).mockResolvedValue(role);
+      vi.mocked(getTwoFactorEnabled).mockResolvedValue(false);
+
+      await expect(WorkspaceLayout({ children })).rejects.toThrow('REDIRECT:/settings/security');
+      expect(getTwoFactorEnabled).toHaveBeenCalledWith('u1');
+    },
+  );
+
+  it('redirects to the enrollment page when the two-factor flag cannot be read', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'u1', email: 'team@example.com' },
+    } as never);
+    vi.mocked(getUserRole).mockResolvedValue('super_admin');
+    vi.mocked(getTwoFactorEnabled).mockResolvedValue(null);
+
+    await expect(WorkspaceLayout({ children })).rejects.toThrow('REDIRECT:/settings/security');
   });
 });

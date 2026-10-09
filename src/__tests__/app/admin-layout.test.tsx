@@ -5,6 +5,7 @@ vi.mock('@/lib/auth', () => ({
   auth: { api: { getSession: vi.fn() } },
 }));
 vi.mock('@/lib/admin-auth', () => ({ getUserRole: vi.fn() }));
+vi.mock('@/lib/mfa-status', () => ({ getTwoFactorEnabled: vi.fn() }));
 
 // The real next/navigation redirect() throws internally to unwind rendering —
 // callers never see it return. Mimic that here so a layout that forgets to
@@ -26,6 +27,7 @@ vi.mock('next/navigation', () => ({
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getUserRole } from '@/lib/admin-auth';
+import { getTwoFactorEnabled } from '@/lib/mfa-status';
 import AdminLayout from '@/app/admin/layout';
 import { WorkspaceShell } from '@/components/workspace/WorkspaceShell';
 
@@ -36,6 +38,7 @@ beforeEach(() => {
   vi.mocked(redirect).mockImplementation((url: string) => {
     throw new RedirectSignal(url);
   });
+  vi.mocked(getTwoFactorEnabled).mockResolvedValue(true);
 });
 
 describe('AdminLayout', () => {
@@ -106,5 +109,29 @@ describe('AdminLayout', () => {
     expect(element.type).toBe(WorkspaceShell);
     expect(element.props.role).toBe('super_admin');
     expect(element.props.children).toBe(children);
+  });
+
+  it.each(['staff', 'admin', 'super_admin'] as const)(
+    'redirects a %s without two-factor to the enrollment page',
+    async (role) => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { id: 'u1', email: 'team@example.com' },
+      } as never);
+      vi.mocked(getUserRole).mockResolvedValue(role);
+      vi.mocked(getTwoFactorEnabled).mockResolvedValue(false);
+
+      await expect(AdminLayout({ children })).rejects.toThrow('REDIRECT:/settings/security');
+      expect(getTwoFactorEnabled).toHaveBeenCalledWith('u1');
+    },
+  );
+
+  it('redirects to the enrollment page when the two-factor flag cannot be read', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'u1', email: 'team@example.com' },
+    } as never);
+    vi.mocked(getUserRole).mockResolvedValue('super_admin');
+    vi.mocked(getTwoFactorEnabled).mockResolvedValue(null);
+
+    await expect(AdminLayout({ children })).rejects.toThrow('REDIRECT:/settings/security');
   });
 });
