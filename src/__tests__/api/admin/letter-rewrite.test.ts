@@ -42,12 +42,12 @@ const negativeItem = {
   bureau: 'experian',
 };
 
-function mockDisputeQueries() {
+function mockDisputeQueries(disputeRow: typeof dispute = dispute) {
   dbMock.select
     .mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([dispute]),
+          limit: vi.fn().mockResolvedValue([disputeRow]),
         }),
       }),
     })
@@ -90,6 +90,31 @@ beforeEach(() => {
 });
 
 describe('POST /api/workspace/disputes/[id]/letter/rewrite', () => {
+  const RENDERED_HEADER = 'Jane Sample\n100 Main St\nAlbany, NY 12207\nSSN (last 4): XXX-XX-1234\n\nOctober 8, 2026\n\nExperian\nP.O. Box 4500\nAllen, TX 75013';
+  const RENDERED_BODY = 'Re: Dispute\n\nPlease investigate Example Creditor.\n\nSincerely,\n\nJane Sample';
+
+  it('sends only the letter body to the provider, never the code-rendered consumer header', async () => {
+    mockDisputeQueries({ ...dispute, letterContent: `${RENDERED_HEADER}\n\n${RENDERED_BODY}` });
+    rewriteLetterMock.mockResolvedValue({ letter: 'x', blocked: true, findings: [], attempts: 1 });
+
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
+    await POST(request({ mode: 'rewrite' }), { params: Promise.resolve({ id: 'dispute-1' }) });
+
+    expect(rewriteLetterMock).toHaveBeenCalledWith(expect.objectContaining({ currentLetter: RENDERED_BODY }));
+  });
+
+  it('refuses a selection that reaches into the consumer header', async () => {
+    const letterContent = `${RENDERED_HEADER}\n\n${RENDERED_BODY}`;
+    mockDisputeQueries({ ...dispute, letterContent });
+
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/letter/rewrite/route');
+    const response = await POST(request({ mode: 'rewrite', selectedText: '100 Main St' }), { params: Promise.resolve({ id: 'dispute-1' }) });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain('letter header is rendered from the client profile');
+    expect(rewriteLetterMock).not.toHaveBeenCalled();
+  });
+
   it('does not persist a rewrite that fabricates source data', async () => {
     mockDisputeQueries();
     rewriteLetterMock.mockResolvedValue({

@@ -7,6 +7,7 @@ import { buildLetterLintContextForDispute } from '@/lib/letter-lint-context';
 import { buildRewritePrompt, rewriteLetter, type LetterTone, type RewriteMode } from '@/lib/letter-rewriter';
 import { saveDisputeLetter } from '@/lib/dispute-letter-workflow';
 import { logServerEvent } from '@/lib/server-logger';
+import { splitRenderedLetter } from '@/lib/letter-rendering/render-generated-letter';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -112,9 +113,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
       selectedEnd = firstIndex + selectedText.length;
     }
 
+    // The consumer header (address, DOB, SSN) is rendered by code and never
+    // sent to the provider: rewrite only the body and keep the header as is.
+    const rendered = splitRenderedLetter(dispute.letterContent);
+    const bodyStart = rendered ? rendered.header.length + 2 : 0;
+    if (selectedStart !== undefined && selectedStart < bodyStart) {
+      return NextResponse.json({ error: 'The letter header is rendered from the client profile and cannot be rewritten. Select text in the letter body.' }, { status: 400 });
+    }
+
     const sourceText = selectedStart !== undefined && selectedEnd !== undefined
       ? dispute.letterContent.slice(selectedStart, selectedEnd)
-      : dispute.letterContent;
+      : rendered?.body ?? dispute.letterContent;
     const result = await rewriteLetter({
       currentLetter: sourceText,
       mode,
@@ -129,7 +138,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const updatedLetter = selectedStart !== undefined && selectedEnd !== undefined
       ? `${dispute.letterContent.slice(0, selectedStart)}${result.letter}${dispute.letterContent.slice(selectedEnd)}`
-      : result.letter;
+      : rendered ? `${rendered.header}\n\n${result.letter}` : result.letter;
     const saveResult = await saveDisputeLetter({
       disputeId: id,
       content: updatedLetter,
