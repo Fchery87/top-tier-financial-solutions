@@ -2,9 +2,9 @@ import type { Blocker, PayableDecision } from '@/lib/billing-readiness';
 
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'void' | 'refunded';
 export type LedgerEntryKind = 'payment' | 'refund';
-export type PaymentMethod = 'zelle' | 'check' | 'cash' | 'bank_ach' | 'card_external' | 'other';
+export type PaymentMethod = 'zelle' | 'check' | 'bank_ach' | 'card_external' | 'other';
 
-export const PAYMENT_METHODS: readonly PaymentMethod[] = ['zelle', 'check', 'cash', 'bank_ach', 'card_external', 'other'];
+export const PAYMENT_METHODS: readonly PaymentMethod[] = ['zelle', 'check', 'bank_ach', 'card_external', 'other'];
 
 export type LedgerInvoice = {
   amountCents: number;

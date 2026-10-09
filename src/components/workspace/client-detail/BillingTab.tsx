@@ -34,7 +34,6 @@ const METHOD_OPTIONS = [
   { value: 'check', label: 'Check' },
   { value: 'bank_ach', label: 'Bank transfer (client-initiated)' },
   { value: 'card_external', label: 'Card (external terminal)' },
-  { value: 'cash', label: 'Cash' },
   { value: 'other', label: 'Other' },
 ];
 

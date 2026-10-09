@@ -1462,7 +1462,7 @@ export const invoices = pgTable('invoices', {
   // Payment processor reference
   externalPaymentId: text('external_payment_id'), // Transaction ID from processor
   paymentProcessor: text('payment_processor'),
-  paymentMethod: text('payment_method'), // 'card' | 'ach' | 'check' | 'cash'
+  paymentMethod: text('payment_method'), // 'card' | 'ach' | 'check'
   // Refund tracking
   refundedAt: timestamp('refunded_at'),
   refundAmount: integer('refund_amount'),
@@ -1484,7 +1484,6 @@ export const invoicePaymentKindEnum = pgEnum('invoice_payment_kind', ['payment',
 export const invoicePaymentMethodEnum = pgEnum('invoice_payment_method', [
   'zelle',
   'check',
-  'cash',
   'bank_ach',
   'card_external',
   'other',

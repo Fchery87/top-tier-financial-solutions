@@ -344,6 +344,13 @@
       "when": 1791508779331,
       "tag": "0048_evidence_packet_item_link",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1791523116608,
+      "tag": "0049_remove_cash_payment_method",
+      "breakpoints": true
     }
   ]
 }
