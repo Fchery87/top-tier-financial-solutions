@@ -930,10 +930,16 @@ export const letterApprovals = pgTable('letter_approvals', {
   index('letter_approvals_batchId_idx').on(table.batchId),
 ]);
 
+// Which table a disputed item lives in: negative_items, personal_info_disputes
+// or inquiry_disputes. The tables differ, so `item_id` carries no foreign key.
+export const evidencePacketItemKindEnum = pgEnum('evidence_packet_item_kind', ['tradeline', 'personal', 'inquiry']);
+
 export const evidencePackets = pgTable('evidence_packets', {
   id: text('id').primaryKey(),
   clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
   disputeId: text('dispute_id').references(() => disputes.id, { onDelete: 'cascade' }),
+  itemKind: evidencePacketItemKindEnum('item_kind'),
+  itemId: text('item_id'),
   claimType: text('claim_type').notNull(),
   documentIds: text('document_ids').default('[]').notNull(),
   confirmations: text('confirmations').default('[]').notNull(),
@@ -944,6 +950,8 @@ export const evidencePackets = pgTable('evidence_packets', {
   index('evidence_packets_clientId_idx').on(table.clientId),
   index('evidence_packets_disputeId_idx').on(table.disputeId),
   index('evidence_packets_createdById_idx').on(table.createdById),
+  index('evidence_packets_client_item_idx').on(table.clientId, table.itemKind, table.itemId),
+  check('evidence_packets_item_link_check', sql`(${table.itemKind} IS NULL) = (${table.itemId} IS NULL)`),
 ]);
 
 // Deprecated placeholder table. Use disputeLetterLibrary for generation
