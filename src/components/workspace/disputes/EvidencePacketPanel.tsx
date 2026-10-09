@@ -4,7 +4,7 @@ import * as React from 'react';
 import { AlertTriangle, FileCheck2, Loader2, PackageCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { HIGH_RISK_CLAIM_TYPES } from '@/lib/dispute-evidence';
+import { HIGH_RISK_CLAIM_LABELS, HIGH_RISK_CLAIM_TYPE_LIST, HIGH_RISK_CLAIM_TYPES } from '@/lib/high-risk-claim-registry';
 
 interface EvidenceDocument {
   id: string;
@@ -30,11 +30,7 @@ interface EvidencePacketPanelProps {
 const CLAIM_TYPES = [
   { value: 'verification_required', label: 'Verification required' },
   { value: 'inaccurate_reporting', label: 'Inaccurate reporting' },
-  { value: 'identity_theft', label: 'Identity theft' },
-  { value: 'fraud', label: 'Fraud' },
-  { value: 'not_mine', label: 'Not mine' },
-  { value: 'never_late', label: 'Never late' },
-  { value: 'unauthorized_inquiry', label: 'Unauthorized inquiry' },
+  ...HIGH_RISK_CLAIM_TYPE_LIST.map(value => ({ value, label: HIGH_RISK_CLAIM_LABELS[value] })),
 ];
 
 function isEvidenceDocument(value: unknown): value is EvidenceDocument {

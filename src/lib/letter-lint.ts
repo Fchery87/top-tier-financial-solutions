@@ -1,3 +1,5 @@
+import { OWNERSHIP_CLAIM_TYPES } from '@/lib/high-risk-claim-registry';
+
 export interface LetterLintItemContext {
   creditorName?: string;
   originalCreditor?: string;
@@ -93,9 +95,7 @@ export function lintGeneratedLetter(letter: string, context: LetterLintContext):
   const normalizedReasonCodes = new Set(context.reasonCodes);
 
   if (OWNERSHIP_DENIAL_PATTERN.test(letter)) {
-    const allowed = normalizedReasonCodes.has('not_mine')
-      || normalizedReasonCodes.has('mixed_file')
-      || normalizedReasonCodes.has('identity_theft');
+    const allowed = OWNERSHIP_CLAIM_TYPES.some(code => normalizedReasonCodes.has(code));
     if (!allowed) {
       findings.push({
         code: 'ownership_denial',
@@ -105,7 +105,7 @@ export function lintGeneratedLetter(letter: string, context: LetterLintContext):
     }
   }
 
-  if (IDENTITY_THEFT_PATTERN.test(letter) && !context.identityTheftFlag && !normalizedReasonCodes.has('identity_theft')) {
+  if (IDENTITY_THEFT_PATTERN.test(letter) && !context.identityTheftFlag && !normalizedReasonCodes.has('identity_theft') && !normalizedReasonCodes.has('fraud')) {
     findings.push({
       code: 'undocumented_identity_theft',
       severity: 'block',

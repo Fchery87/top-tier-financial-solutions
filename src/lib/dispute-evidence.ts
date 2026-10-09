@@ -1,6 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { evidencePackets } from '@/db/schema';
+import { HIGH_RISK_CLAIM_TYPES } from '@/lib/high-risk-claim-registry';
+
+export { HIGH_RISK_CLAIM_TYPES };
 
 // Dispute Evidence Requirements System
 // Maps reason codes to required/recommended documentation
@@ -11,14 +14,6 @@ export interface EvidenceRequirement {
   prompt: string;
   warningIfMissing?: string;
 }
-
-export const HIGH_RISK_CLAIM_TYPES = new Set([
-  'identity_theft',
-  'fraud',
-  'not_mine',
-  'never_late',
-  'unauthorized_inquiry',
-]);
 
 export type EvidencePacketConfirmation = {
   key?: unknown;

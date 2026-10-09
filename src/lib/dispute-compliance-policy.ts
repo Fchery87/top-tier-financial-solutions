@@ -1,9 +1,4 @@
-const HIGH_RISK_REASON_CODES = new Set([
-  'identity_theft',
-  'not_mine',
-  'never_late',
-  'mixed_file',
-]);
+import { HIGH_RISK_CLAIM_TYPES as HIGH_RISK_REASON_CODES } from '@/lib/high-risk-claim-registry';
 
 export interface DisputeComplianceInput {
   reasonCodes: string[];

@@ -1,6 +1,8 @@
 // Dispute Wizard Validation Framework
 // Provides comprehensive validation for all wizard steps
 
+import { HIGH_RISK_CLAIM_TYPES } from '@/lib/high-risk-claim-registry';
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -25,17 +27,9 @@ export interface StepValidationContext {
   selectedEvidenceIds?: string[];
 }
 
-// High-risk reason codes that REQUIRE evidence
-const HIGH_RISK_CODES = new Set([
-  'identity_theft',
-  'not_mine',
-  'mixed_file',
-]);
-
-// Medium-risk codes that STRONGLY benefit from evidence
+// Medium-risk codes that STRONGLY benefit from evidence. Advisory only.
 const MEDIUM_RISK_CODES = new Set([
   'paid_collection',
-  'never_late',
   'closed_by_consumer',
 ]);
 
@@ -180,7 +174,7 @@ export function validateEvidenceRequirements(
   const recommendedEvidenceMissing: string[] = [];
 
   // Check for high-risk codes without evidence
-  const highRiskCodesPresent = reasonCodes.filter((code) => HIGH_RISK_CODES.has(code));
+  const highRiskCodesPresent = reasonCodes.filter((code) => HIGH_RISK_CLAIM_TYPES.has(code));
 
   if (highRiskCodesPresent.length > 0 && (!selectedEvidenceIds || selectedEvidenceIds.length === 0)) {
     blockingReasons.push(
@@ -200,6 +194,9 @@ export function validateEvidenceRequirements(
     if (highRiskCodesPresent.includes('mixed_file')) {
       requiredEvidenceMissing.push('ID documentation and proof of correct identity');
     }
+    if (highRiskCodesPresent.includes('never_late')) {
+      requiredEvidenceMissing.push('Payment history showing on-time payments');
+    }
   }
 
   // Check for medium-risk codes and recommend evidence
@@ -213,9 +210,6 @@ export function validateEvidenceRequirements(
     if (mediumRiskCodesPresent.includes('paid_collection')) {
       recommendedEvidenceMissing.push('Payment receipt or settlement letter');
     }
-    if (mediumRiskCodesPresent.includes('never_late')) {
-      recommendedEvidenceMissing.push('Payment history showing on-time payments');
-    }
     if (mediumRiskCodesPresent.includes('closed_by_consumer')) {
       recommendedEvidenceMissing.push('Account closure confirmation letter');
     }
@@ -228,7 +222,7 @@ export function validateEvidenceRequirements(
     blockingReasons,
     requiredEvidenceMissing,
     recommendedEvidenceMissing,
-    canOverride: blockingReasons.length > 0, // Allow admin override
+    canOverride: false,
   };
 }
 
@@ -333,7 +327,7 @@ export function getRequiredEvidenceForReasonCodes(codes: string[]): {
  * Check if a specific dispute reason code is high-risk
  */
 export function isHighRiskCode(code: string): boolean {
-  return HIGH_RISK_CODES.has(code);
+  return HIGH_RISK_CLAIM_TYPES.has(code);
 }
 
 /**

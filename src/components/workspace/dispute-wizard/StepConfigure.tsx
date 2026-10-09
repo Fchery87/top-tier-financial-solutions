@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useWizardContext } from './WizardContext';
+import { isHighRiskClaimType } from '@/lib/high-risk-claim-registry';
 import { BUREAUS, SECONDARY_BUREAUS } from './types';
 
 interface CfpbEligibilityPreview {
@@ -360,7 +361,7 @@ export function StepConfigure() {
             </div>
           )}
 
-          {selectedReasonCodes.some(c => ['identity_theft', 'not_mine', 'never_late', 'mixed_file'].includes(c)) && selectedEvidenceIds.length === 0 && (
+          {selectedReasonCodes.some(isHighRiskClaimType) && selectedEvidenceIds.length === 0 && (
             <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />

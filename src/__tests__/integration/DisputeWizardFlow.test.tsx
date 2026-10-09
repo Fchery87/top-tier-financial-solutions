@@ -240,9 +240,9 @@ describe('DisputeWizard Integration - Evidence Validation', () => {
       expect(result).toBe(true);
     });
 
-    it('should identify never_late as medium-risk', () => {
-      const result = isMediumRiskCode('never_late');
-      expect(result).toBe(true);
+    it('should identify never_late as high-risk, not medium-risk', () => {
+      expect(isMediumRiskCode('never_late')).toBe(false);
+      expect(isHighRiskCode('never_late')).toBe(true);
     });
 
     it('should not identify factual codes as medium-risk', () => {
@@ -331,10 +331,10 @@ describe('DisputeWizard Integration - Evidence Validation', () => {
       expect(result.warnings.length).toBeGreaterThan(0);
     });
 
-    it('should allow admin override for high-risk codes', () => {
+    it('should not allow an admin override for high-risk codes', () => {
       const result = validateEvidenceRequirements(['identity_theft'], []);
 
-      expect(result.canOverride).toBe(true);
+      expect(result.canOverride).toBe(false);
     });
   });
 });
