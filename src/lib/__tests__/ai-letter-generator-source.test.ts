@@ -95,3 +95,14 @@ describe('letter generation source', () => {
     expect(generateLetterDraftMock).not.toHaveBeenCalled();
   });
 });
+
+describe('letterGenerationNotice', () => {
+  it('explains a template fallback and stays silent for AI letters', async () => {
+    const { letterGenerationNotice } = await import('@/lib/letter-generation-notice');
+    expect(letterGenerationNotice('template_fallback', 'truncated')).toBe(
+      'AI generation failed (the AI response was cut off); a template letter was used. Review it before sending.',
+    );
+    expect(letterGenerationNotice('ai', null)).toBeNull();
+    expect(letterGenerationNotice('manual', null)).toBeNull();
+  });
+});

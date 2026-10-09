@@ -19,6 +19,7 @@ import { DisputeDetailPanel } from '@/components/workspace/disputes/DisputeDetai
 import { ResponseReviewQueue } from '@/components/workspace/disputes/ResponseReviewQueue';
 import { findDisputeFromQuery } from '@/lib/workspace-dispute-navigation';
 import { toast } from 'sonner';
+import { letterGenerationNotice } from '@/lib/letter-generation-notice';
 
 interface Dispute {
   id: string; client_id: string; client_name: string; negative_item_id: string | null;
@@ -155,6 +156,8 @@ export default function DisputesPage() {
       }
       const data = await resp.json();
       if (data?.message) toast.success(data.message);
+      const notice = letterGenerationNotice(data?.generation_source, data?.generation_failure_reason);
+      if (notice) toast.warning(notice);
       fetchDisputes();
     } catch (error) {
       console.error('Error creating quick re-dispute:', error);

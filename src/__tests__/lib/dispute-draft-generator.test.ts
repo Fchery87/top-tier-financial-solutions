@@ -38,6 +38,7 @@ describe('persistGeneratedDisputeDraft', () => {
       round: 1,
       reasonCodes: ['verification_required'],
       policyDecision: APPROVED_DECISION,
+      generatedByAi: true,
       letterContent: 'A compliant letter',
       accountNumber: '123456789',
       items: [{
@@ -116,6 +117,7 @@ describe('persistGeneratedDisputeDraft', () => {
       round: 1,
       reasonCodes: ['verification_required'],
       policyDecision: APPROVED_DECISION,
+      generatedByAi: true,
       letterContent: 'A regenerated letter',
       items: [{ kind: 'tradeline', bureau: 'experian', creditorName: 'Example Bank' }],
     });
@@ -141,6 +143,7 @@ describe('persistGeneratedDisputeDraft', () => {
       round: 1,
       reasonCodes: ['not_mine'],
       policyDecision: { ...APPROVED_DECISION, approved: false, violations: ['High-risk claims require claim-specific evidence.'] },
+      generatedByAi: false,
       letterContent: 'A letter',
       items: [{ kind: 'tradeline', bureau: 'experian' }],
     })).rejects.toThrow('An approved dispute policy decision is required');

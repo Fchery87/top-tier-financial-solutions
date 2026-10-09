@@ -44,7 +44,7 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
       rationale: ['matches bureau and reason'],
       runnersUp: [{ id: 'library-2', score: 6 }],
     });
-    generateUniqueDisputeLetterMock.mockResolvedValue('Generated draft letter');
+    generateUniqueDisputeLetterMock.mockResolvedValue({ letter: 'Generated draft letter', source: 'ai' });
     dbMock.select.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({

@@ -184,7 +184,7 @@ export async function runDisputeEscalationAutomation(
       methodology: letterParams.methodology,
     });
 
-    const letterContent = await generateUniqueDisputeLetter({ ...letterParams, librarySelection });
+    const generation = await generateUniqueDisputeLetter({ ...letterParams, librarySelection });
 
     const createdAt = new Date();
     const persistedDraft = await persistGeneratedDisputeDraft({
@@ -195,10 +195,10 @@ export async function runDisputeEscalationAutomation(
       disputeType: plan.disputeType,
       round: plan.nextRound,
       escalationPath: plan.targetRecipient,
-      letterContent,
+      letterContent: generation.letter,
       creditorName: negativeItem.creditorName,
       accountNumber: creditAccount?.accountNumber || null,
-      generatedByAi: true,
+      generatedByAi: generation.source === 'ai',
       methodology: plan.methodology,
       priorDisputeId: dispute.id,
       reasonCodes: plan.reasonCodes,

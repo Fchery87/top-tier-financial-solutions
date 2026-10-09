@@ -120,7 +120,7 @@ export async function POST(
       methodology: escalationPlan.methodology,
     });
 
-    const letterContent = await generateUniqueDisputeLetter({
+    const generation = await generateUniqueDisputeLetter({
       disputeType: escalationPlan.disputeType,
       round: escalationPlan.nextRound,
       targetRecipient: escalationPlan.targetRecipient,
@@ -148,7 +148,8 @@ export async function POST(
       disputeType: escalationPlan.disputeType,
       round: escalationPlan.nextRound,
       escalationPath: escalationPlan.targetRecipient,
-      letterContent,
+      letterContent: generation.letter,
+      generatedByAi: generation.source === 'ai',
       creditorName: negativeItem.creditorName,
       accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
       methodology: escalationPlan.methodology,
@@ -181,6 +182,8 @@ export async function POST(
         dispute_type: created.disputeType,
         status: created.status,
       },
+      generation_source: generation.source,
+      generation_failure_reason: generation.failureReason ?? null,
     });
   } catch (error) {
     logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.id.quick.redispute.error', error: error });

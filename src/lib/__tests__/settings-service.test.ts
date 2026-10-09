@@ -47,6 +47,7 @@ describe('LLM API key storage', () => {
       .mockResolvedValueOnce([{ settingType: 'string', settingValue: encryptedKey }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
     dbMock.select.mockReturnValue(createSelectChain(limitMock));
 

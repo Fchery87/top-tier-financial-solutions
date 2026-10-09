@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { GeneratedLetter } from '../types';
+import { letterGenerationNotice } from '@/lib/letter-generation-notice';
 import type { LetterGenerationRequestPlan } from '../types/letter-generation';
 
 interface GenerateLettersFromPlanOptions {
@@ -56,6 +57,7 @@ export function useLetterGeneration() {
           combined: request.combined,
           revision: typeof data.revision === 'number' ? data.revision : undefined,
           librarySelection: data.library_selection,
+          generationNotice: letterGenerationNotice(data.generation_source, data.generation_failure_reason),
         });
       } catch (error) {
         options.onError?.(error, request);

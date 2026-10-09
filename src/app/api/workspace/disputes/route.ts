@@ -222,7 +222,8 @@ async function postHandler(request: NextRequest) {
         methodology: methodology || undefined,
       });
 
-    const generatedLetterContent = letterContent || await generateUniqueDisputeLetter({
+    const manualLetterContent = typeof letterContent === 'string' && letterContent ? letterContent : null;
+    const generation = manualLetterContent ? null : await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
       round: round || 1,
       targetRecipient: targetRecipient || 'bureau',
@@ -242,6 +243,7 @@ async function postHandler(request: NextRequest) {
       customReason: disputeReason,
       librarySelection: generationSelection,
     });
+    const generatedLetterContent = manualLetterContent ?? generation?.letter ?? '';
 
     const normalizedConfidence = analysisConfidence !== undefined && analysisConfidence !== null
       ? Math.round(analysisConfidence)
@@ -282,7 +284,7 @@ async function postHandler(request: NextRequest) {
       escalationPath: escalationPath || targetRecipient || 'bureau',
       methodology,
       letterContent: generatedLetterContent,
-      generatedByAi: !letterContent,
+      generatedByAi: generation?.source === 'ai',
       status: status || 'draft',
       revisionSource: letterContent ? 'manual' : 'generated',
       creditorName: creditorNameValue,
@@ -384,6 +386,8 @@ async function postHandler(request: NextRequest) {
       response_deadline: createdDispute.responseDeadline?.toISOString(),
       reason_codes: createdDispute.reasonCodes,
       policy_decision: createdDispute.policyDecision ? JSON.parse(createdDispute.policyDecision) : null,
+      generation_source: generation ? generation.source : 'manual',
+      generation_failure_reason: generation?.failureReason ?? null,
       analysis_confidence: createdDispute.analysisConfidence,
       auto_selected: createdDispute.autoSelected,
       created_at: createdDispute.createdAt?.toISOString(),

@@ -6,15 +6,91 @@ import { logServerEvent } from '@/lib/server-logger';
 import { renderGeneratedLetter as renderGeneratedLetterDeterministically } from './letter-rendering/render-generated-letter';
 import { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-rendering/letter-prompt-data';
-import { generateLetterDraft } from './letter-rendering/provider-adapter';
+import { generateLetterDraft, LetterDraftError } from './letter-rendering/provider-adapter';
+import type { LetterResponseFormat } from './letter-rendering/types';
 import { buildMultiItemDisputeLetterPrompt } from './letter-rendering/build-multi-item-dispute-letter-prompt';
 
 export { renderGeneratedLetter } from './letter-rendering/render-generated-letter';
 export { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
 export { REASON_CODE_DESCRIPTIONS } from './letter-rendering/letter-prompt-data';
 
-export async function generateWithLLM(prompt: string, config: LLMConfig): Promise<string> {
-  return generateLetterDraft({ prompt, config });
+export async function generateWithLLM(prompt: string, config: LLMConfig, responseFormat: LetterResponseFormat): Promise<string> {
+  return generateLetterDraft({ prompt, config, responseFormat });
+}
+
+/**
+ * Why a letter request fell back to the deterministic template:
+ * - missing_api_key: no provider key is configured
+ * - configuration: the provider configuration is unusable
+ * - truncated: the provider stopped at its token limit
+ * - empty_response: the provider returned no text
+ * - provider_error: the provider call failed
+ * - lint_failed: the AI draft failed deterministic output linting
+ */
+export type LetterFallbackReason =
+  | 'missing_api_key'
+  | 'configuration'
+  | 'truncated'
+  | 'empty_response'
+  | 'provider_error'
+  | 'lint_failed';
+
+export type LetterGenerationSource = 'ai' | 'template_fallback';
+
+export interface LetterGenerationResult {
+  letter: string;
+  source: LetterGenerationSource;
+  failureReason?: LetterFallbackReason;
+}
+
+function providerFailureReason(error: unknown): LetterFallbackReason {
+  return error instanceof LetterDraftError ? error.reason : 'provider_error';
+}
+
+/**
+ * Runs the provider then renders and lints its draft. Any failure falls back
+ * to the deterministic template, and the result says so truthfully.
+ */
+async function renderWithFallback(options: {
+  llmConfig: LLMConfig;
+  buildPrompt: () => string;
+  render: (draft: string) => string;
+  fallback: () => string;
+  lint: (letter: string) => void;
+  librarySelection?: Selection;
+}): Promise<LetterGenerationResult> {
+  const fallbackResult = (failureReason: LetterFallbackReason, error?: unknown): LetterGenerationResult => {
+    logServerEvent({ level: failureReason === 'missing_api_key' ? 'warn' : 'error', event: 'server.lib.ai.letter.generator.template_fallback', error: error ?? failureReason });
+    const letter = options.fallback();
+    options.lint(letter);
+    return { letter, source: 'template_fallback', failureReason };
+  };
+
+  const result = await generateOrFallBack(options, fallbackResult);
+  await recordLibraryUsage(options.librarySelection);
+  return result;
+}
+
+async function generateOrFallBack(
+  options: { llmConfig: LLMConfig; buildPrompt: () => string; render: (draft: string) => string; lint: (letter: string) => void },
+  fallbackResult: (failureReason: LetterFallbackReason, error?: unknown) => LetterGenerationResult,
+): Promise<LetterGenerationResult> {
+  if (!options.llmConfig.apiKey) return fallbackResult('missing_api_key');
+
+  let draft: string;
+  try {
+    draft = await generateWithLLM(options.buildPrompt(), options.llmConfig, 'text');
+  } catch (error) {
+    return fallbackResult(providerFailureReason(error), error);
+  }
+
+  try {
+    const letter = options.render(draft);
+    options.lint(letter);
+    return { letter, source: 'ai' };
+  } catch (error) {
+    return fallbackResult('lint_failed', error);
+  }
 }
 
 interface ClientInfo {
@@ -247,31 +323,15 @@ function postProcessLetter(letter: string, params: GenerateLetterParams): string
   });
 }
 
-export async function generateUniqueDisputeLetter(params: GenerateLetterParams): Promise<string> {
-  const llmConfig = await getLLMConfig();
-
-  if (!llmConfig.apiKey) {
-    logServerEvent({ level: 'warn', event: 'server.lib.ai.letter.generator.warn' });
-    const fallbackLetter = buildNeutralFallbackLetter(params);
-    assertLetterLint(fallbackLetter, buildLetterLintContext(params));
-    await recordLibraryUsage(params.librarySelection);
-    return fallbackLetter;
-  }
-
-  try {
-    const prompt = buildManualLetterPrompt(params);
-    const letterText = await generateWithLLM(prompt, llmConfig);
-    const processedLetter = postProcessLetter(letterText, params);
-    assertLetterLint(processedLetter, buildLetterLintContext(params));
-    await recordLibraryUsage(params.librarySelection);
-    return processedLetter;
-  } catch (error) {
-    logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: error });
-    const fallbackLetter = buildNeutralFallbackLetter(params);
-    assertLetterLint(fallbackLetter, buildLetterLintContext(params));
-    await recordLibraryUsage(params.librarySelection);
-    return fallbackLetter;
-  }
+export async function generateUniqueDisputeLetter(params: GenerateLetterParams): Promise<LetterGenerationResult> {
+  return renderWithFallback({
+    llmConfig: await getLLMConfig(),
+    buildPrompt: () => buildManualLetterPrompt(params),
+    render: (draft) => postProcessLetter(draft, params),
+    fallback: () => buildNeutralFallbackLetter(params),
+    lint: (letter) => assertLetterLint(letter, buildLetterLintContext(params)),
+    librarySelection: params.librarySelection,
+  });
 }
 
 export const DISPUTE_REASON_CODES = [
@@ -319,31 +379,15 @@ interface GenerateMultiItemLetterParams {
   librarySelection?: Selection;
 }
 
-export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLetterParams): Promise<string> {
-  const llmConfig = await getLLMConfig();
-
-  if (!llmConfig.apiKey) {
-    logServerEvent({ level: 'warn', event: 'server.lib.ai.letter.generator.warn' });
-    const fallbackLetter = generateMultiItemFallbackLetter(params);
-    assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
-    await recordLibraryUsage(params.librarySelection);
-    return fallbackLetter;
-  }
-
-  try {
-    const prompt = buildMultiItemDisputeLetterPrompt(params);
-    const letterText = await generateWithLLM(prompt, llmConfig);
-    const processedLetter = postProcessMultiItemLetter(letterText, params);
-    assertLetterLint(processedLetter, buildMultiItemLetterLintContext(params));
-    await recordLibraryUsage(params.librarySelection);
-    return processedLetter;
-  } catch (error) {
-    logServerEvent({ level: 'error', event: 'server.lib.ai.letter.generator.error', error: error });
-    const fallbackLetter = generateMultiItemFallbackLetter(params);
-    assertLetterLint(fallbackLetter, buildMultiItemLetterLintContext(params));
-    await recordLibraryUsage(params.librarySelection);
-    return fallbackLetter;
-  }
+export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLetterParams): Promise<LetterGenerationResult> {
+  return renderWithFallback({
+    llmConfig: await getLLMConfig(),
+    buildPrompt: () => buildMultiItemDisputeLetterPrompt(params),
+    render: (draft) => postProcessMultiItemLetter(draft, params),
+    fallback: () => generateMultiItemFallbackLetter(params),
+    lint: (letter) => assertLetterLint(letter, buildMultiItemLetterLintContext(params)),
+    librarySelection: params.librarySelection,
+  });
 }
 
 function postProcessMultiItemLetter(letter: string, params: GenerateMultiItemLetterParams): string {
@@ -1177,7 +1221,7 @@ Return ONLY the JSON object, no markdown formatting.`;
     const fullPrompt = METRO2_ANALYSIS_SYSTEM_PROMPT + '\n\n---\n\n' + userPrompt;
     let responseText = '';
 
-    responseText = await generateWithLLM(fullPrompt, llmConfig);
+    responseText = await generateWithLLM(fullPrompt, llmConfig, 'json');
     
     responseText = responseText.trim();
 

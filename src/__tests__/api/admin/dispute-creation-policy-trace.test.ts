@@ -56,7 +56,7 @@ describe('POST /api/workspace/disputes policy traceability', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     adminSessionMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
-    generateUniqueDisputeLetterMock.mockResolvedValue('Generated approved dispute letter');
+    generateUniqueDisputeLetterMock.mockResolvedValue({ letter: 'Generated approved dispute letter', source: 'ai' });
     requireLatestApprovedReportForClientMock.mockResolvedValue({
       allowed: true,
       reportId: 'report-1',

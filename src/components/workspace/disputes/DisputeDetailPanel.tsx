@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { toast } from 'sonner';
 import { LetterStudio } from '@/components/workspace/disputes/LetterStudio';
 import { EvidencePacketPanel } from '@/components/workspace/disputes/EvidencePacketPanel';
+import { letterGenerationNotice } from '@/lib/letter-generation-notice';
 
 interface Dispute {
   id: string;
@@ -320,6 +321,9 @@ export function DisputeDetailPanel({ open, dispute, onClose, onResponseLogged }:
       }
 
       toast.success('Recommended draft created.');
+      const generation = data as { generation_source?: unknown; generation_failure_reason?: unknown } | null;
+      const notice = letterGenerationNotice(generation?.generation_source, generation?.generation_failure_reason);
+      if (notice) toast.warning(notice);
       onResponseLogged();
       onClose();
     } catch (error) {

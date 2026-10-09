@@ -38,7 +38,7 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1' });
     requireLatestApprovedReportForClientMock.mockResolvedValue({ allowed: true });
     selectLibraryForGenerationMock.mockResolvedValue({ selection: 'fixture' });
-    generateUniqueDisputeLetterMock.mockResolvedValue('Generated letter');
+    generateUniqueDisputeLetterMock.mockResolvedValue({ letter: 'Generated letter', source: 'ai' });
     persistGeneratedDisputeDraftMock.mockResolvedValue({ disputeId: 'draft-1' });
   });
 
@@ -120,6 +120,8 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
         dispute_type: 'method_of_verification',
         status: 'draft',
       },
+      generation_source: 'ai',
+      generation_failure_reason: null,
     });
     expect(generateUniqueDisputeLetterMock).toHaveBeenCalledWith(expect.objectContaining({
       round: 2,
@@ -129,6 +131,7 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     expect(persistGeneratedDisputeDraftMock).toHaveBeenCalledWith(expect.objectContaining({
       round: 2,
       priorDisputeId: 'dispute-1',
+      generatedByAi: true,
       policyDecision: expect.objectContaining({
         approved: true,
         reasonCodes: expect.arrayContaining(['request_verification_method']),

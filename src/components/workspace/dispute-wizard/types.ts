@@ -155,6 +155,8 @@ export interface GeneratedLetter {
   combined: boolean;
   revision?: number;
   librarySelection?: unknown;
+  /** Set when AI generation failed and the server used a template letter. */
+  generationNotice?: string | null;
 }
 
 export type ItemTab = 'tradelines' | 'personal' | 'inquiries';

@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
         reasonCodes,
         methodology: methodology || undefined,
       });
-      const letterContent = await generateMultiItemDisputeLetter({
+      const generation = await generateMultiItemDisputeLetter({
         disputeType: disputeType || 'standard',
         round: round || 1,
         targetRecipient: targetRecipient || 'bureau',
@@ -289,8 +289,8 @@ export async function POST(request: NextRequest) {
         escalationPath: targetRecipient || 'bureau',
         priorDisputeId: priorDisputeId || null,
         methodology: methodology || null,
-        letterContent,
-        generatedByAi: true,
+        letterContent: generation.letter,
+        generatedByAi: generation.source === 'ai',
         creditorName: validItems.length === 1 ? validItems[0]?.creditorName : null,
         accountNumber: validItems.length === 1 ? validItems[0]?.accountNumber : null,
         items: validItems.map(mapPayloadToSnapshot),
@@ -301,7 +301,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         dispute_id: persistedDraft.disputeId,
         revision: persistedDraft.revision,
-        letter_content: letterContent,
+        letter_content: generation.letter,
+        generation_source: generation.source,
+        generation_failure_reason: generation.failureReason ?? null,
         client_name: `${client.firstName} ${client.lastName}`,
         bureau: bureau,
         round: round || 1,
@@ -351,7 +353,7 @@ export async function POST(request: NextRequest) {
       methodology: methodology || undefined,
     });
 
-    const letterContent = await generateUniqueDisputeLetter({
+    const generation = await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
       round: round || 1,
       targetRecipient: targetRecipient || 'bureau',
@@ -404,8 +406,8 @@ export async function POST(request: NextRequest) {
       escalationPath: targetRecipient || 'bureau',
       priorDisputeId: priorDisputeId || null,
       methodology: methodology || null,
-      letterContent,
-      generatedByAi: true,
+      letterContent: generation.letter,
+      generatedByAi: generation.source === 'ai',
       creditorName: payloadData.creditorName,
       accountNumber: payloadData.accountNumber,
       items: [mapPayloadToSnapshot(snapshotItem)],
@@ -416,7 +418,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       dispute_id: persistedDraft.disputeId,
       revision: persistedDraft.revision,
-      letter_content: letterContent,
+      letter_content: generation.letter,
+      generation_source: generation.source,
+      generation_failure_reason: generation.failureReason ?? null,
       client_name: `${client.firstName} ${client.lastName}`,
       bureau: bureau,
       round: round || 1,

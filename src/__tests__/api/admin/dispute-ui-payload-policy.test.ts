@@ -122,8 +122,8 @@ describe('dispute screens -> server-decided dispute policy', () => {
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
     requireLatestApprovedReportForClientMock.mockResolvedValue({ allowed: true });
     selectLibraryForGenerationMock.mockResolvedValue({ chosen: null, score: 0, rationale: [], runnersUp: [] });
-    generateUniqueDisputeLetterMock.mockResolvedValue('Generated single-item letter');
-    generateMultiItemDisputeLetterMock.mockResolvedValue('Generated combined letter');
+    generateUniqueDisputeLetterMock.mockResolvedValue({ letter: 'Generated single-item letter', source: 'ai' });
+    generateMultiItemDisputeLetterMock.mockResolvedValue({ letter: 'Generated combined letter', source: 'ai' });
     mockClientLookup();
     txMock.insert.mockImplementation(() => ({ values: vi.fn().mockResolvedValue(undefined) }));
     dbMock.transaction.mockImplementation(async (callback: (tx: typeof txMock) => Promise<unknown>) => callback(txMock));

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, CheckCircle, Loader2, Copy, Download, Paperclip, Upload, Zap, X } from 'lucide-react';
+import { Sparkles, CheckCircle, Loader2, Copy, Download, Paperclip, Upload, Zap, X, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -187,6 +187,12 @@ export function StepReview() {
                     <Button variant="ghost" size="sm" onClick={() => downloadLetter(letter.content, letter.combined ? `dispute-${letter.bureau}-combined-${payloadItems.length}-items.txt` : `dispute-${letter.bureau}-${primaryItem?.creditorName || 'item'}.txt`)}><Download className="w-4 h-4 mr-1" />Download</Button>
                   </div>
                 </div>
+                {letter.generationNotice && (
+                  <div role="status" className="mx-4 mt-4 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{letter.generationNotice}</span>
+                  </div>
+                )}
                 <div className="p-4">
                   <LetterStudio
                     disputeId={letter.id}

@@ -63,7 +63,7 @@ export async function rewriteLetter(params: RewriteParams): Promise<RewriteResul
   let lastFindings: LetterLintFinding[] = [];
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const raw = await generateWithLLM(buildRewritePrompt(params), config);
+    const raw = await generateWithLLM(buildRewritePrompt(params), config, 'json');
     const parsed = safeParseJsonObject<{ letter?: unknown }>(raw);
     if (!parsed || typeof parsed.letter !== 'string' || !parsed.letter.trim()) {
       lastFindings = [{ code: 'invalid_model_output', severity: 'block', message: 'The model did not return a usable letter.' }];

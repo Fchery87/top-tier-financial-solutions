@@ -47,6 +47,7 @@ describe('letter rewriter', () => {
     expect(result.attempts).toBe(1);
     expect(result.findings[0]?.code).toBe('threat_language');
     expect(generateWithLLMMock).toHaveBeenCalledOnce();
+    expect(generateWithLLMMock).toHaveBeenCalledWith(expect.any(String), expect.anything(), 'json');
   });
 
   it('retries once when the model fabricates a creditor', async () => {

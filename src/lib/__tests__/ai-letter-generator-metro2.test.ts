@@ -56,6 +56,7 @@ describe('generateFactualMetro2DisputeLetter', () => {
         temperature: 0.2,
         maxTokens: 600,
       },
+      responseFormat: 'json',
     });
     expect(result).toMatchObject({
       itemsWithIssues: 1,

@@ -35,7 +35,8 @@ export interface PersistGeneratedDisputeDraftInput {
   methodology?: string | null;
   letterContent: string;
   letterTemplateId?: string | null;
-  generatedByAi?: boolean;
+  /** True only when the persisted letter is the provider's draft, not a template fallback. */
+  generatedByAi: boolean;
   creditorName?: string | null;
   accountNumber?: string | null;
   items: DraftItemSnapshotInput[];
@@ -109,7 +110,7 @@ function draftValues(input: PersistGeneratedDisputeDraftInput, now: Date) {
       items: input.items,
     }),
     letterTemplateId: input.letterTemplateId || input.selection?.chosen?.id || null,
-    generatedByAi: input.generatedByAi ?? true,
+    generatedByAi: input.generatedByAi,
     methodology: input.methodology || null,
     priorDisputeId: input.priorDisputeId || null,
     analysisConfidence: input.analysisConfidence ?? null,

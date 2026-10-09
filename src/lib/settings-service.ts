@@ -40,7 +40,6 @@ export const DEFAULT_LLM_MODELS = {
   openai: 'gpt-5',
   anthropic: 'claude-sonnet-5',
   zhipu: 'glm-4-flash',
-  custom: 'gemini-2.5-flash',
 } as const;
 type CachedSetting = { value: SettingValue; expiresAt: number };
 
@@ -53,7 +52,9 @@ export const DEFAULT_LLM_TEMPERATURE = 0.7;
 export const DEFAULT_LLM_MAX_TOKENS = 4096;
 const LLM_API_KEY_SETTING = 'llm.api_key';
 
+/** Custom providers have no default model; one must be configured. */
 export function getDefaultLLMModel(provider: LLMConfig['provider']): string {
+  if (provider === 'custom') return '';
   return DEFAULT_LLM_MODELS[provider] || DEFAULT_LLM_MODELS.google;
 }
 
@@ -270,13 +271,37 @@ export async function getSettingsByCategory(category: string): Promise<Array<typ
 // LLM Configuration Helpers
 // ============================================
 
+export type LLMApiProtocol = 'openai' | 'anthropic';
+export const LLM_API_PROTOCOLS: readonly LLMApiProtocol[] = ['openai', 'anthropic'];
+
 export interface LLMConfig {
   provider: 'google' | 'openai' | 'anthropic' | 'zhipu' | 'custom';
   model: string;
   apiKey?: string; // From env or database
   apiEndpoint?: string; // For custom providers
+  /** Wire protocol of a custom provider's endpoint; unset for first-party providers. */
+  apiProtocol?: LLMApiProtocol;
   temperature?: number;
   maxTokens?: number;
+}
+
+/**
+ * The protocol a custom provider speaks: the stored `llm.api_protocol` when
+ * valid, otherwise inferred from the endpoint (a URL path ending in
+ * `/anthropic` speaks the Anthropic Messages API; anything else is treated as
+ * OpenAI-compatible). This is the only place the inference happens.
+ */
+export function resolveLLMApiProtocol(storedProtocol: unknown, apiEndpoint: string | undefined): LLMApiProtocol {
+  if (typeof storedProtocol === 'string' && (LLM_API_PROTOCOLS as readonly string[]).includes(storedProtocol)) {
+    return storedProtocol as LLMApiProtocol;
+  }
+  if (!apiEndpoint) return 'openai';
+  try {
+    const path = new URL(apiEndpoint).pathname.replace(/\/+$/, '');
+    return path.endsWith('/anthropic') ? 'anthropic' : 'openai';
+  } catch {
+    return 'openai';
+  }
 }
 
 /**
@@ -291,6 +316,7 @@ export async function getLLMConfig(): Promise<LLMConfig> {
   );
   const apiKeyFromDb = await getSetting('llm.api_key');
   const apiEndpoint = await getSetting('llm.api_endpoint');
+  const storedApiProtocol = await getSetting('llm.api_protocol');
   const temperature = await getSettingWithDefault<number>('llm.temperature', 0.7);
   const maxTokens = await getSettingWithDefault<number>('llm.max_tokens', 4096);
 
@@ -315,11 +341,14 @@ export async function getLLMConfig(): Promise<LLMConfig> {
     }
   }
 
+  const endpoint = typeof apiEndpoint === 'string' && apiEndpoint ? apiEndpoint : undefined;
+
   return {
     provider,
     model,
     apiKey,
-    apiEndpoint: typeof apiEndpoint === 'string' ? apiEndpoint : undefined,
+    apiEndpoint: endpoint,
+    apiProtocol: provider === 'custom' ? resolveLLMApiProtocol(storedApiProtocol, endpoint) : undefined,
     temperature,
     maxTokens,
   };
@@ -344,6 +373,9 @@ export async function updateLLMConfig(
   }
   if (config.apiEndpoint !== undefined) {
     await setSetting('llm.api_endpoint', config.apiEndpoint, 'string', 'llm', 'Custom LLM API endpoint', false, userId, executor);
+  }
+  if (config.apiProtocol !== undefined) {
+    await setSetting('llm.api_protocol', config.apiProtocol, 'string', 'llm', 'Custom LLM API protocol (openai, anthropic)', false, userId, executor);
   }
   if (config.temperature !== undefined) {
     await setSetting('llm.temperature', config.temperature, 'number', 'llm', 'LLM temperature (0-1)', false, userId, executor);
