@@ -1,5 +1,4 @@
 import type { BetterAuthOptions } from "better-auth";
-import { admin } from "better-auth/plugins";
 
 const appBaseUrl =
   process.env.BETTER_AUTH_BASE_URL ||
@@ -13,12 +12,12 @@ export function buildAuthOptions() {
     emailAndPassword: {
       enabled: true,
     },
-    plugins: [admin()],
     user: {
       additionalFields: {
         role: {
           type: "string",
           defaultValue: "user",
+          input: false,
         },
       },
     },

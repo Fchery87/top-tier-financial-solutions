@@ -40,19 +40,17 @@ async function signUp(auth: ReturnType<typeof createTestAuth>['auth'], body: Rec
 }
 
 describe('auth admin surface', () => {
-  it('refuses a role supplied at sign-up', async () => {
+  it('never lets sign-up choose a role', async () => {
     const { auth, store } = createTestAuth();
 
-    const { response } = await signUp(auth, {
+    await signUp(auth, {
       email: 'attacker@example.com',
       password: 'correct-horse-battery',
       name: 'Attacker',
       role: 'super_admin',
     });
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'FIELD_NOT_ALLOWED' });
-    expect(store.user).toHaveLength(0);
+    expect(store.user.map((user) => user.role)).toEqual(['user']);
   });
 
   it.each([
