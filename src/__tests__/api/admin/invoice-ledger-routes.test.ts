@@ -213,6 +213,18 @@ describe('POST /api/workspace/billing/invoices/[id]/payments', () => {
     expect(dbMock.select).not.toHaveBeenCalled();
   });
 
+  it('refuses cash, which the service agreement forbids', async () => {
+    const { POST } = await import('@/app/api/workspace/billing/invoices/[id]/payments/route');
+
+    const response = await POST(postPayment({ ...payment, method: 'cash' }), context);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: 'method must be one of zelle, check, bank_ach, card_external, other',
+    });
+    expect(dbMock.select).not.toHaveBeenCalled();
+  });
+
   it('returns 404 for an unknown invoice', async () => {
     const { POST } = await import('@/app/api/workspace/billing/invoices/[id]/payments/route');
     dbMock.select.mockReturnValueOnce(queryChain([]));
