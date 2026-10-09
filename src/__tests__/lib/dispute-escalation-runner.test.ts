@@ -68,7 +68,9 @@ describe('runDisputeEscalationAutomation', () => {
     dbMock.select
       .mockReturnValueOnce(query([candidate]))
       .mockReturnValueOnce(limitedQuery([]))
-      .mockReturnValueOnce(limitedQuery([{ id: 'item-1', creditAccountId: null, creditorName: 'Example Bank', originalCreditor: null, itemType: 'collection', amount: 100, dateReported: null }]));
+      .mockReturnValueOnce(limitedQuery([{ id: 'item-1', creditAccountId: null, creditorName: 'Example Bank', originalCreditor: null, itemType: 'collection', amount: 100, dateReported: null }]))
+      // The item's evidence packets: none, so the high-risk plan has no client confirmation.
+      .mockReturnValueOnce(query([]));
     buildEscalationPlanMock.mockReturnValue({
       nextRound: 2,
       targetRecipient: 'bureau',
