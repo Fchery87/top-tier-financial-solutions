@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { getLLMConfig } from '@/lib/settings-service';
+import { getLLMConfig, type LLMConfig } from '@/lib/settings-service';
+import { generateLetterDraft, LetterDraftError } from '@/lib/letter-rendering/provider-adapter';
 import { logServerEvent } from '@/lib/server-logger';
+
+const PROVIDER_LABELS: Record<LLMConfig['provider'], string> = {
+  google: 'Google Gemini',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic Claude',
+  zhipu: 'Zhipu AI (GLM)',
+  custom: 'Custom Provider',
+};
 
 // Check if user is super admin
 async function checkSuperAdmin() {
@@ -41,99 +50,28 @@ export async function POST(_request: NextRequest) {
       }, { status: 400 });
     }
 
-    const testPrompt = 'Say "test successful" in exactly those two words.';
+    // Same code path as letter generation, so a passing test means letters
+    // can be generated with this configuration (custom providers included).
+    const text = await generateLetterDraft({
+      prompt: 'Say "test successful" in exactly those two words.',
+      config,
+      responseFormat: 'text',
+    });
 
-    // Test based on provider
-    switch (config.provider) {
-      case 'google': {
-        const { GoogleGenAI } = await import('@google/genai');
-        const genAI = new GoogleGenAI({ apiKey: config.apiKey });
-        const response = await genAI.models.generateContent({
-          model: config.model,
-          contents: testPrompt,
-        });
-        const text = typeof response.text === 'string' ? response.text : '';
-        
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Connection successful',
-          provider: 'Google Gemini',
-          model: config.model,
-          response: text.substring(0, 100),
-        });
-      }
-
-      case 'openai': {
-        const OpenAI = (await import('openai')).default;
-        const openai = new OpenAI({ apiKey: config.apiKey });
-        const response = await openai.chat.completions.create({
-          model: config.model || 'gpt-5',
-          messages: [{ role: 'user', content: testPrompt }],
-          max_tokens: 50,
-        });
-        const text = response.choices[0]?.message?.content || '';
-        
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Connection successful',
-          provider: 'OpenAI',
-          model: config.model,
-          response: text.substring(0, 100),
-        });
-      }
-
-      case 'anthropic': {
-        const Anthropic = (await import('@anthropic-ai/sdk')).default;
-        const anthropic = new Anthropic({ apiKey: config.apiKey });
-        const response = await anthropic.messages.create({
-          model: config.model || 'claude-sonnet-4-6',
-          max_tokens: 50,
-          messages: [{ role: 'user', content: testPrompt }],
-        });
-        const textBlock = response.content.find(block => block.type === 'text');
-        const text = textBlock?.type === 'text' ? textBlock.text : '';
-        
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Connection successful',
-          provider: 'Anthropic Claude',
-          model: config.model,
-          response: text.substring(0, 100),
-        });
-      }
-
-      case 'zhipu': {
-        const OpenAI = (await import('openai')).default;
-        const baseURL = config.apiEndpoint || 'https://api.z.ai/api/paas/v4';
-        const client = new OpenAI({ 
-          apiKey: config.apiKey,
-          baseURL,
-        });
-        const response = await client.chat.completions.create({
-          model: config.model || 'glm-4-flash',
-          messages: [{ role: 'user', content: testPrompt }],
-          max_tokens: 50,
-        });
-        const text = response.choices[0]?.message?.content || '';
-        
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Connection successful',
-          provider: 'Zhipu AI (GLM)',
-          model: config.model,
-          endpoint: baseURL,
-          response: text.substring(0, 100),
-        });
-      }
-
-      default:
-        return NextResponse.json({ 
-          success: false, 
-          message: `Unknown provider: ${config.provider}` 
-        }, { status: 400 });
-    }
+    return NextResponse.json({
+      success: true,
+      message: 'Connection successful',
+      provider: PROVIDER_LABELS[config.provider],
+      model: config.model,
+      endpoint: config.apiEndpoint,
+      protocol: config.apiProtocol,
+      response: text.substring(0, 100),
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Connection test failed';
+    if (error instanceof LetterDraftError && error.reason === 'configuration') {
+      return NextResponse.json({ success: false, error: message }, { status: 400 });
+    }
     logServerEvent({ level: 'error', event: 'server.app.api.admin.settings.llm.test.error', error: error });
     return NextResponse.json({ 
       success: false, 

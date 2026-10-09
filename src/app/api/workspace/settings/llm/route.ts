@@ -15,6 +15,7 @@ const llmUpdateSchema = z.object({
   apiEndpoint: z.url().refine((value) => new URL(value).protocol === 'https:', {
     message: 'LLM endpoint must use HTTPS',
   }).optional(),
+  apiProtocol: z.enum(['openai', 'anthropic']).optional(),
   temperature: z.number().finite().min(0).max(2).optional(),
   maxTokens: z.number().int().min(1).max(100_000).optional(),
 }).strict();
@@ -76,6 +77,9 @@ export async function PUT(request: NextRequest) {
     }
     if (rawBody.apiEndpoint !== undefined) {
       updates.apiEndpoint = rawBody.apiEndpoint;
+    }
+    if (rawBody.apiProtocol !== undefined) {
+      updates.apiProtocol = rawBody.apiProtocol;
     }
     if (rawBody.temperature !== undefined) {
       updates.temperature = rawBody.temperature;

@@ -12,9 +12,28 @@ interface LLMConfig {
   model: string;
   apiKey?: string;
   apiEndpoint?: string;
+  apiProtocol?: 'openai' | 'anthropic';
   temperature: number;
   maxTokens: number;
   hasApiKey: boolean;
+}
+
+const DEEPSEEK_PRESET = {
+  apiEndpoint: 'https://api.deepseek.com/anthropic',
+  apiProtocol: 'anthropic' as const,
+  models: [
+    { value: 'deepseek-flash', label: 'DeepSeek V4.1 Flash' },
+    { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+  ],
+};
+
+function isDeepSeekEndpoint(endpoint: string | undefined): boolean {
+  if (!endpoint) return false;
+  try {
+    return new URL(endpoint).hostname === 'api.deepseek.com';
+  } catch {
+    return false;
+  }
 }
 
 interface LLMConfigSectionProps {
@@ -169,7 +188,7 @@ export function LLMConfigSection({
             ) : (
               <Input
                 type="text"
-                value={getCurrentValue('model')}
+                value={getCurrentValue('model') || ''}
                 onChange={(e) => onConfigChange('model', e.target.value)}
                 placeholder="model-name"
               />
@@ -183,10 +202,76 @@ export function LLMConfigSection({
                 ? 'Claude 3.5 Sonnet recommended for dispute letters. Excellent at formal writing.'
                 : getCurrentValue('provider') === 'zhipu'
                 ? 'GLM-4 recommended. Flash is fastest, Plus is most capable.'
-                : 'Enter the model identifier for your provider'
+                : 'Required. Enter the exact model identifier your provider expects.'
               }
             </p>
           </div>
+
+          {getCurrentValue('provider') === 'custom' && (
+            <div className="space-y-4 rounded-lg border border-border p-4">
+              <div>
+                <label htmlFor="llm-custom-preset" className="block text-sm font-medium text-foreground mb-2">
+                  Preset
+                </label>
+                <select
+                  id="llm-custom-preset"
+                  value={isDeepSeekEndpoint(config?.apiEndpoint) ? 'deepseek' : ''}
+                  onChange={(e) => {
+                    if (e.target.value !== 'deepseek') return;
+                    onConfigChange('apiEndpoint', DEEPSEEK_PRESET.apiEndpoint);
+                    onConfigChange('apiProtocol', DEEPSEEK_PRESET.apiProtocol);
+                    if (!DEEPSEEK_PRESET.models.some(model => model.value === config?.model)) {
+                      onConfigChange('model', DEEPSEEK_PRESET.models[0].value);
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Manual configuration</option>
+                  <option value="deepseek">DeepSeek</option>
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  A preset fills in the endpoint and protocol. You can still edit every field.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="llm-api-protocol" className="block text-sm font-medium text-foreground mb-2">
+                  API Protocol
+                </label>
+                <select
+                  id="llm-api-protocol"
+                  value={config?.apiProtocol || 'openai'}
+                  onChange={(e) => onConfigChange('apiProtocol', e.target.value)}
+                  className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="openai">OpenAI-compatible (Chat Completions)</option>
+                  <option value="anthropic">Anthropic-compatible (Messages)</option>
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  When unset, an endpoint whose path ends in /anthropic uses the Anthropic protocol.
+                </p>
+              </div>
+
+              {isDeepSeekEndpoint(config?.apiEndpoint) && (
+                <div>
+                  <label htmlFor="llm-deepseek-model" className="block text-sm font-medium text-foreground mb-2">
+                    DeepSeek Model
+                  </label>
+                  <select
+                    id="llm-deepseek-model"
+                    value={DEEPSEEK_PRESET.models.some(model => model.value === config?.model) ? config?.model : ''}
+                    onChange={(e) => { if (e.target.value) onConfigChange('model', e.target.value); }}
+                    className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Other (use the model name above)</option>
+                    {DEEPSEEK_PRESET.models.map(model => (
+                      <option key={model.value} value={model.value}>{model.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
 
           {(getCurrentValue('provider') === 'zhipu' || getCurrentValue('provider') === 'custom') && (
             <div>
@@ -205,7 +290,7 @@ export function LLMConfigSection({
               <p className="text-xs text-muted-foreground mt-1">
                 {getCurrentValue('provider') === 'zhipu'
                   ? 'For Z.ai use: https://api.z.ai/api/paas/v4'
-                  : 'The base URL for the API (OpenAI-compatible format)'
+                  : 'Required. The base URL of the provider API.'
                 }
               </p>
             </div>

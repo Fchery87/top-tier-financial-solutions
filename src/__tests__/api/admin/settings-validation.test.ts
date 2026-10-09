@@ -68,6 +68,7 @@ describe('settings write validation', () => {
       { maxTokens: 0 },
       { maxTokens: 1.5 },
       { maxTokens: 100_001 },
+      { apiProtocol: 'grpc' },
     ];
 
     for (const payload of invalidPayloads) {
@@ -98,5 +99,24 @@ describe('settings write validation', () => {
     expect(body.config.apiKey).toBeUndefined();
     expect(body.config.hasApiKey).toBe(true);
     expect(JSON.stringify(body)).not.toContain('secret-api-key-value');
+  });
+
+  it('saves the custom provider API protocol', async () => {
+    dbMock.transaction.mockImplementation(async (operation) => operation({}));
+    settingsServiceMock.getLLMConfig.mockResolvedValue({ provider: 'custom', model: 'deepseek-flash', apiProtocol: 'anthropic' });
+    const { PUT } = await import('@/app/api/workspace/settings/llm/route');
+
+    const response = await PUT(jsonRequest('http://localhost/api/workspace/settings/llm', 'PUT', {
+      provider: 'custom',
+      apiEndpoint: 'https://api.deepseek.com/anthropic',
+      apiProtocol: 'anthropic',
+    }));
+
+    expect(response.status).toBe(200);
+    expect(settingsServiceMock.updateLLMConfig).toHaveBeenCalledWith(
+      { provider: 'custom', apiEndpoint: 'https://api.deepseek.com/anthropic', apiProtocol: 'anthropic' },
+      'admin-1',
+      expect.anything(),
+    );
   });
 });

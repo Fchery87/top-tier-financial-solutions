@@ -24,6 +24,7 @@ interface LLMConfig {
   model: string;
   apiKey?: string;
   apiEndpoint?: string;
+  apiProtocol?: 'openai' | 'anthropic';
   temperature: number;
   maxTokens: number;
   hasApiKey: boolean;
@@ -298,7 +299,7 @@ export default function SettingsPage() {
         </motion.div>
       )}
 
-      <LLMConfigSection config={llmConfig} onConfigChange={handleConfigChange} onSave={handleSaveAll} onTest={handleTestConnection} saving={saving} testing={testing} hasChanges={hasChanges} />
+      <LLMConfigSection config={llmConfig ? { ...llmConfig, ...editedConfig } : null} onConfigChange={handleConfigChange} onSave={handleSaveAll} onTest={handleTestConnection} saving={saving} testing={testing} hasChanges={hasChanges} />
       <DashboardPrefsSection preferences={dashboardPrefs} onChange={(prefs) => { setDashboardPrefs(prefs); setDashboardHasChanges(true); setTestResult(null); }} />
 
       <SystemSettingsSection settings={allSettings} />
