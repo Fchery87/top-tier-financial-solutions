@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { db } from '@/db/client';
 import { clientDocuments, clients, disputes, negativeItems, disputeOutcomes, slaDefinitions, slaInstances } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -39,7 +40,7 @@ export async function GET(
 ) {
   const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id } = await params;
@@ -127,7 +128,7 @@ export async function PUT(
 ) {
   const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id } = await params;
@@ -601,7 +602,7 @@ export async function DELETE(
 ) {
   const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id } = await params;

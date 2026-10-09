@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { disputeLetterRevisions } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { saveDisputeLetter } from '@/lib/dispute-letter-workflow';
 import { logServerEvent } from '@/lib/server-logger';
 
@@ -16,7 +17,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const user = await requireCapability('letters:write');
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   const { id, revisionId } = await context.params;
   try {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, creditReports, creditAnalyses, creditAccounts, negativeItems, disputes, creditScoreHistory, user, personalInfoDisputes, inquiryDisputes, clientAgreements, tasks, clientCases } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq, desc, asc } from 'drizzle-orm';
 import { decryptClientData, decryptCreditAccountData, decryptNegativeItemData, decryptDisputeData, encryptClientData, type ClientEncryptionInput } from '@/lib/db-encryption';
 import { logServerEvent } from '@/lib/server-logger';
@@ -41,7 +42,7 @@ export async function GET(
 ) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id } = await params;
@@ -463,7 +464,7 @@ export async function PUT(
 ) {
   const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id } = await params;
@@ -547,7 +548,7 @@ export async function DELETE(
 ) {
   const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id } = await params;

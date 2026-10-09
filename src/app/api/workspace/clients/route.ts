@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, consultationRequests, user } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { desc, asc, count, eq, or, ilike, and } from 'drizzle-orm';
 import { triggerAutomation } from '@/lib/email-service';
 import { rateLimited } from '@/lib/rate-limit-middleware';
@@ -31,7 +32,7 @@ const clientCreateSchema = z.object({
 async function getHandler(request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const searchParams = request.nextUrl.searchParams;
@@ -152,7 +153,7 @@ async function getHandler(request: NextRequest) {
 async function postHandler(request: NextRequest) {
   const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {

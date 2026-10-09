@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, creditReports, negativeItems, creditAccounts, creditScoreHistory } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq, desc } from 'drizzle-orm';
 import { compareApprovedCreditReportPulls } from '@/lib/credit-report-pull-comparison';
 import { logServerEvent } from '@/lib/server-logger';
@@ -12,7 +13,7 @@ export async function GET(
 ) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id: clientId } = await params;

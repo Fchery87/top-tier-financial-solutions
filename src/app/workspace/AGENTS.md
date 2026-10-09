@@ -29,16 +29,19 @@ API routes under `src/app/api/admin/` are capability-gated (via `requireCapabili
 ```typescript
 // Shape A — shared helper. ✅ DO: Copy from src/app/api/admin/clients/route.ts
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 
 async function getHandler(request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
   // ...
 }
 ```
 Team roles are `user`, `staff`, `admin`, and `super_admin`; use `isTeamRole()` for navigation and `can()`/`requireCapability()` for authorization. This per-request API guard is separate from the page-level auth in `src/app/workspace/layout.tsx` and `src/app/admin/layout.tsx`.
+
+MFA is required for team roles (`decideMfaRequirement` in `src/lib/mfa.ts`). `requireCapability()` returns null for a team member who has not enrolled; wrapping the denial in `capabilityDeniedResponse()` turns that case into 403 `{ code: 'MFA_ENROLLMENT_REQUIRED' }`. The workspace and admin layouts redirect such users to `/settings/security`, which must stay outside these layouts so enrollment is always reachable.
 
 ### Database Query Pattern
 Use Drizzle ORM with consistent error handling:

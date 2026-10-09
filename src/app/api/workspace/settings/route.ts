@@ -4,6 +4,7 @@ import { systemSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteSetting, getSettingsByCategory, setSetting } from '@/lib/settings-service';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { logServerEvent } from '@/lib/server-logger';
 import { boundedJsonValue, readJsonBody, type BoundedJsonValue } from '@/lib/request-validation';
@@ -28,7 +29,7 @@ const settingsWriteSchema = z.object({
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
@@ -128,7 +129,7 @@ export async function PUT(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {

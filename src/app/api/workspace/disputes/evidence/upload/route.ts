@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clientCases, clientDocuments, clients } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { uploadLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { uploadToR2 } from '@/lib/r2-storage';
@@ -85,7 +86,7 @@ function readFiles(formData: FormData): FilesResult {
 async function postHandler(request: NextRequest) {
   const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {

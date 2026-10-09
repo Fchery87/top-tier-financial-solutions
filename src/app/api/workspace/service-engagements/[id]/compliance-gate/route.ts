@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildComplianceGateStatus, isAttestedCheckKey } from '@/lib/compliance-gate';
 import { attestComplianceGateCheck, syncComplianceGate } from '@/lib/compliance-gate-sync';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { logServerEvent } from '@/lib/server-logger';
 
 type RouteContext = {
@@ -11,7 +12,7 @@ type RouteContext = {
 export async function GET(_request: NextRequest, context: RouteContext) {
   const adminUser = await requireCapability('agreements:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const { id } = await context.params;
@@ -35,7 +36,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 export async function POST(request: NextRequest, context: RouteContext) {
   const adminUser = await requireCapability('agreements:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const { id } = await context.params;

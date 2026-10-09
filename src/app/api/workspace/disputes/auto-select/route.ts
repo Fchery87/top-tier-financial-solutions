@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { db } from '@/db/client';
 import { creditAccounts, negativeItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -16,7 +17,7 @@ import { logServerEvent } from '@/lib/server-logger';
 export async function POST(request: Request) {
   const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {

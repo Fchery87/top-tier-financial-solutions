@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { logServerEvent } from '@/lib/server-logger';
 import { applyLedgerCommand } from '@/lib/billing-store';
 import { PAYMENT_METHODS, type PaymentMethod } from '@/lib/invoice-ledger';
@@ -14,7 +15,7 @@ function optionalText(value: unknown): string | null {
 export async function POST(request: NextRequest, context: RouteContext) {
   const adminUser = await requireCapability('billing:client');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const { id } = await context.params;

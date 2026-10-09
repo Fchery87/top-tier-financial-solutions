@@ -7,6 +7,7 @@ import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/dispute-evidence';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { decideHighRiskClaims, disputeItemRefs, highRiskConfirmationRequiredBody, type DisputeItemRef } from '@/lib/high-risk-claim-gate';
 import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
@@ -58,7 +59,7 @@ async function validateAdmin() {
 export async function POST(request: NextRequest) {
   const adminUser = await validateAdmin();
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
@@ -456,7 +457,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   const adminUser = await validateAdmin();
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
   }
 
   // Return available reason codes

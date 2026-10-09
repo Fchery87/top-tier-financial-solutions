@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, tasks } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq } from 'drizzle-orm';
 import { triggerAutomation } from '@/lib/email-service';
 import { logServerEvent } from '@/lib/server-logger';
@@ -12,7 +13,7 @@ export async function POST(
 ) {
   const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id } = await params;

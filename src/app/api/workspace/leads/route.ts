@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { consultationRequests } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { desc, count, eq } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET(request: NextRequest) {
   const user = await requireCapability('leads:read');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const searchParams = request.nextUrl.searchParams;

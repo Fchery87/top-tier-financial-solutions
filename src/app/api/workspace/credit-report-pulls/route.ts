@@ -3,6 +3,7 @@ import { asc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { creditReports } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { logServerEvent } from '@/lib/server-logger';
 
 function formatPull(report: typeof creditReports.$inferSelect) {
@@ -22,7 +23,7 @@ function formatPull(report: typeof creditReports.$inferSelect) {
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const serviceEngagementId = request.nextUrl.searchParams.get('service_engagement_id');

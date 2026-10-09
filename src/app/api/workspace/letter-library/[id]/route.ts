@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { disputeLetterLibrary } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { isRecord, parsePayload, serializeRow } from '../route';
 import { logServerEvent } from '@/lib/server-logger';
@@ -22,7 +23,7 @@ async function findRow(id: string) {
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   const user = await requireCapability('templates:read');
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   const { id } = await context.params;
   try {
@@ -37,7 +38,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   const user = await requireCapability('templates:write');
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   const { id } = await context.params;
   try {
@@ -88,7 +89,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   const user = await requireCapability('templates:write');
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   const { id } = await context.params;
   try {

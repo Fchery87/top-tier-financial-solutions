@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { testimonials } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq, desc, count } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { logServerEvent } from '@/lib/server-logger';
@@ -9,7 +10,7 @@ import { logServerEvent } from '@/lib/server-logger';
 export async function GET(request: NextRequest) {
   const user = await requireCapability('content:read');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const searchParams = request.nextUrl.searchParams;
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await requireCapability('content:write');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {

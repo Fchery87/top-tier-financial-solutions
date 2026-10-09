@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { describeBlocker } from '@/lib/billing-readiness';
 import { createInvoice } from '@/lib/billing-store';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { formatClientDisplayIdentity } from '@/lib/client-display-identity';
 import { logServerEvent } from '@/lib/server-logger';
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'invoices';
     const adminUser = await requireCapability(type === 'fee_configs' ? 'billing:system' : 'billing:client');
     if (!adminUser) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
     }
 
     const clientId = searchParams.get('client_id');
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const adminUser = await requireCapability(body.type === 'fee_config' ? 'billing:system' : 'billing:client');
     if (!adminUser) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
     }
 
     const { type } = body;

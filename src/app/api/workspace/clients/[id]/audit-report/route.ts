@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clients, creditAnalyses, negativeItems, creditAccounts, auditReports, creditReports } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { generateAuditReportHTML, calculateProjectedScoreIncrease, type AuditReportData } from '@/lib/audit-report';
@@ -20,7 +21,7 @@ export async function GET(
 ) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id: clientId } = await params;
@@ -248,7 +249,7 @@ export async function POST(
 ) {
   const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { id: clientId } = await params;

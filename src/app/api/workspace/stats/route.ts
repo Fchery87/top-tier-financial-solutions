@@ -14,13 +14,14 @@ import {
   tasks
 } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { count, eq, and, or, desc, isNull, lt, gte, lte } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
 
 export async function GET() {
   const user = await requireCapability('clients:read');
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {

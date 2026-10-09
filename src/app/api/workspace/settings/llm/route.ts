@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getLLMConfig, updateLLMConfig, clearSettingsCache, type LLMConfig } from '@/lib/settings-service';
 import { db } from '@/db/client';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { logServerEvent } from '@/lib/server-logger';
 import { readJsonBody } from '@/lib/request-validation';
@@ -35,7 +36,7 @@ function safeLLMConfig(config: LLMConfig) {
 export async function GET(_request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
@@ -55,7 +56,7 @@ export async function GET(_request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {

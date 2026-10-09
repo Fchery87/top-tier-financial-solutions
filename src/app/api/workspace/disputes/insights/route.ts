@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { db } from '@/db/client';
 import { disputes, disputeOutcomes } from '@/db/schema';
 import { and, gte } from 'drizzle-orm';
@@ -20,7 +21,7 @@ function isMissingRelationError(error: unknown): boolean {
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const { searchParams } = new URL(request.url);

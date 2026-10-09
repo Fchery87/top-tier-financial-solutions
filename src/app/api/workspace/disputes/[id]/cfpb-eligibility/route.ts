@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 
 interface RouteContext {
@@ -8,7 +9,7 @@ interface RouteContext {
 
 export async function GET(request: NextRequest, context: RouteContext) {
   const adminUser = await requireCapability('disputes:read');
-  if (!adminUser) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!adminUser) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   const { id } = await context.params;
   const clientId = request.nextUrl.searchParams.get('clientId')?.trim() || '';

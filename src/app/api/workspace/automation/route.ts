@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { db } from '@/db/client';
 import { disputes, emailSendLog, emailAutomationRules } from '@/db/schema';
 import { and, or, gte, count, desc, eq, inArray, isNull, lte } from 'drizzle-orm';
@@ -12,7 +13,7 @@ const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run
 export async function GET(_request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {

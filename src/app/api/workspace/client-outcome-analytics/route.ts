@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { creditReports, disputeOutcomes } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { logServerEvent } from '@/lib/server-logger';
 
 const bureauKeys = ['experian', 'transunion', 'equifax'] as const;
@@ -20,7 +21,7 @@ function emptyBureauProgress() {
 export async function GET(_request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {

@@ -8,6 +8,7 @@ import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
 import { decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import type { Capability } from '@/lib/capabilities';
 import { decideHighRiskClaims, highRiskConfirmationRequiredBody } from '@/lib/high-risk-claim-gate';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
@@ -58,7 +59,7 @@ function safeDecryptCreditorName(creditorName: string | null): string | null {
 async function postHandler(request: NextRequest) {
   const adminUser = await validateAdmin('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
@@ -409,7 +410,7 @@ async function postHandler(request: NextRequest) {
 async function getHandler(request: NextRequest) {
   const adminUser = await validateAdmin('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const { searchParams } = new URL(request.url);

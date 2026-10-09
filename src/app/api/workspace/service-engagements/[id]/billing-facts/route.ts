@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { logServerEvent } from '@/lib/server-logger';
 import { SALES_CHANNELS, type SalesChannel } from '@/lib/billing-readiness';
 import { updateEngagementBillingFacts, type BillingFactsPatch } from '@/lib/billing-store';
@@ -48,7 +49,7 @@ function parsePatch(body: Record<string, unknown>): ParsedPatch {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   const adminUser = await requireCapability('billing:client');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const { id } = await context.params;

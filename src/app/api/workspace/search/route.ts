@@ -4,6 +4,7 @@ import { desc, eq } from 'drizzle-orm';
 import { clients, disputes } from '@/db/schema';
 import { db } from '@/db/client';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { decryptClientData, decryptDisputeData } from '@/lib/db-encryption';
 import {
   normalizeWorkspaceSearchQuery,
@@ -25,7 +26,7 @@ async function getHandler(request: NextRequest) {
   ]);
 
   if (!clientReader && !disputeReader) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const normalizedQuery = normalizeWorkspaceSearchQuery(request.nextUrl.searchParams.get('q') || '');

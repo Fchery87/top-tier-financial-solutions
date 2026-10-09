@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { clientIdentityDocuments, clients } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { uploadToR2 } from '@/lib/r2-storage';
@@ -44,7 +45,7 @@ function formText(formData: FormData, name: string): FormTextResult {
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('clients:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   const searchParams = request.nextUrl.searchParams;

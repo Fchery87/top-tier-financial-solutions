@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { disputes, tasks, clientAgreements, clients } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { and, gte, lte, eq, isNull, or } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
 
@@ -22,7 +23,7 @@ async function validateAdminAccess() {
 export async function GET(_request: NextRequest) {
   const authorized = await validateAdminAccess();
   if (!authorized) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {

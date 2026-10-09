@@ -4,6 +4,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clientDocuments, clients, evidencePackets } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { deriveEvidencePacketState, deriveItemClaimConfirmation, HIGH_RISK_CLAIM_TYPES, staffSuppliedFactualConfirmation, verifyEvidencePacket } from '@/lib/dispute-evidence';
 import { isItemOwnedByClient, type DisputeItemRef } from '@/lib/high-risk-claim-gate';
 import { isDisputeItemKind, type ItemClaimConfirmation } from '@/lib/high-risk-claim-registry';
@@ -59,7 +60,7 @@ function formatPacket(packet: typeof evidencePackets.$inferSelect) {
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('disputes:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const clientId = request.nextUrl.searchParams.get('client_id');
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('disputes:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {

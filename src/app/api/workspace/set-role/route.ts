@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { auth } from '@/lib/auth';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { changeUserRole } from '@/lib/team-role-management';
 import { readJsonBody } from '@/lib/request-validation';
 import { z } from 'zod';
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
   if (!isBootstrap) {
     const adminUser = await requireCapability('team:manage');
     if (!adminUser) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      return capabilityDeniedResponse(NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 }));
     }
   }
 

@@ -3,6 +3,7 @@ import { and, count, eq, isNull, lt, lte, or } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { creditReports, disputeCycles, disputes, servicesRenderedEvents, tasks } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { logServerEvent } from '@/lib/server-logger';
 
 function firstCount(rows: { count: number }[]) {
@@ -12,7 +13,7 @@ function firstCount(rows: { count: number }[]) {
 export async function GET(_request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   }
 
   try {

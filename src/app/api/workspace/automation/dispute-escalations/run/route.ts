@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { db } from '@/db/client';
 import {
@@ -11,7 +12,7 @@ import { logServerEvent } from '@/lib/server-logger';
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('settings:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 
 import { db } from '@/db/client';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { changeUserRole } from '@/lib/team-role-management';
 
 interface TeamMemberResponse {
@@ -78,7 +79,7 @@ function isRoleUpdateRequest(value: unknown): value is { user_id: string; role: 
 export async function GET() {
   const adminUser = await requireCapability('team:manage');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const result = await db.execute(sql`
@@ -123,7 +124,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   const adminUser = await requireCapability('team:manage');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   let body: unknown;

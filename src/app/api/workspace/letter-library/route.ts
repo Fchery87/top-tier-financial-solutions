@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { db } from '@/db/client';
 import { disputeLetterLibrary } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { recordAdminActivity } from '@/lib/admin-activity';
 import { logServerEvent } from '@/lib/server-logger';
 
@@ -93,7 +94,7 @@ export function parsePayload(body: Record<string, unknown>) {
 
 export async function GET() {
   const user = await requireCapability('templates:read');
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   try {
     const rows = await db.select().from(disputeLetterLibrary).orderBy(desc(disputeLetterLibrary.updatedAt));
@@ -106,7 +107,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const user = await requireCapability('templates:write');
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   try {
     const rawBody: unknown = await request.json();

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { disputes } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { buildLetterLintContextForDispute } from '@/lib/letter-lint-context';
 import { lintGeneratedLetter } from '@/lib/letter-lint';
 import { logServerEvent } from '@/lib/server-logger';
@@ -27,7 +28,7 @@ function parseReasonCodes(value: string | null): string[] {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const user = await requireCapability('letters:write');
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
 
   const { id } = await context.params;
   try {

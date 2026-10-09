@@ -6,6 +6,7 @@ import { clients, serviceEngagements } from '@/db/schema';
 import { getBlockingComplianceGateChecks } from '@/lib/compliance-gate';
 import { syncComplianceGate } from '@/lib/compliance-gate-sync';
 import { requireCapability } from '@/lib/admin-session';
+import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { logServerEvent } from '@/lib/server-logger';
 
 const allowedServiceTypes = new Set(['credit_audit', 'credit_restoration']);
@@ -28,7 +29,7 @@ function formatEngagement(engagement: typeof serviceEngagements.$inferSelect) {
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('agreements:read');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   const clientId = request.nextUrl.searchParams.get('client_id');
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const adminUser = await requireCapability('agreements:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const adminUser = await requireCapability('agreements:write');
   if (!adminUser) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return capabilityDeniedResponse(NextResponse.json({ error: 'Forbidden' }, { status: 403 }));
   }
 
   try {
