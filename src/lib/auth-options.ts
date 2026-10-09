@@ -1,4 +1,9 @@
 import type { BetterAuthOptions } from "better-auth";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { twoFactor } from "better-auth/plugins/two-factor";
+import { isMfaRequiredForRole } from "./mfa";
+
+export const TWO_FACTOR_ISSUER = "Top Tier Financial Solutions";
 
 const appBaseUrl =
   process.env.BETTER_AUTH_BASE_URL ||
@@ -32,5 +37,30 @@ export function buildAuthOptions() {
     trustedOrigins: [
       appBaseUrl,
     ],
+    plugins: [
+      twoFactor({
+        issuer: TWO_FACTOR_ISSUER,
+        // Backup codes stay on the plugin default: generated server-side and
+        // stored encrypted with the auth secret. TOTP secrets are always
+        // encrypted by the plugin. No SMS/email OTP: sendOTP is not configured.
+      }),
+    ],
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/two-factor/disable") return;
+        // MFA is required for team roles, so they may never turn it off.
+        // Read the role from the database, not the session cookie cache.
+        const session = await getSessionFromCtx(ctx);
+        if (!session) return;
+        const freshUser = await ctx.context.internalAdapter.findUserById(session.user.id);
+        const role = (freshUser as { role?: unknown } | null)?.role;
+        if (isMfaRequiredForRole(role)) {
+          throw APIError.from("FORBIDDEN", {
+            code: "MFA_REQUIRED_FOR_ROLE",
+            message: "Two-factor authentication is required for team accounts and cannot be turned off.",
+          });
+        }
+      }),
+    },
   } satisfies Omit<BetterAuthOptions, "database">;
 }
