@@ -16,6 +16,7 @@ import PortalDocuments from '@/components/portal/PortalDocuments';
 import PortalAuditReportCard from '@/components/portal/PortalAuditReportCard';
 import PortalLetterConsent from '@/components/portal/PortalLetterConsent';
 import PortalFeedbackCard from '@/components/portal/PortalFeedbackCard';
+import PortalTwoFactorCard from '@/components/portal/PortalTwoFactorCard';
 import PortalHighRiskConfirmations from '@/components/portal/PortalHighRiskConfirmations';
 import PortalUploadModal from '@/components/portal/PortalUploadModal';
 import PortalLetterPreview from '@/components/portal/PortalLetterPreview';
@@ -175,6 +176,7 @@ export default function PortalPage() {
                   onRatingChange={setFeedbackRating} onCommentChange={setFeedbackComment}
                   onSubmit={handleSubmitFeedback}
                 />
+                <PortalTwoFactorCard />
                 <Card>
                   <CardHeader><CardTitle className="text-xl">Quick Actions</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
