@@ -90,6 +90,60 @@ describe('runDisputeEscalationAutomation', () => {
     expect(dbMock.update).not.toHaveBeenCalled();
   });
 
+  it('skips a candidate whose client has no address and records why', async () => {
+    const candidate = {
+      id: 'dispute-4',
+      clientId: 'client-1',
+      negativeItemId: 'item-1',
+      bureau: 'experian',
+      round: 1,
+      status: 'sent',
+      responseReceivedAt: null,
+      escalationReadyAt: new Date('2026-08-01T00:00:00.000Z'),
+      evidenceDocumentIds: null,
+      outcome: null,
+    };
+    dbMock.select
+      .mockReturnValueOnce(query([candidate]))
+      .mockReturnValueOnce(limitedQuery([]))
+      .mockReturnValueOnce(limitedQuery([{ id: 'item-1', creditAccountId: null, creditorName: 'Example Bank', originalCreditor: null, itemType: 'collection', amount: 100, dateReported: null }]))
+      .mockReturnValueOnce(limitedQuery([{ firstName: 'Jane', lastName: 'Client', streetAddress: null, city: null, state: null, zipCode: null, dateOfBirth: null, ssnLast4: null }]));
+    buildEscalationPlanMock.mockReturnValue({
+      nextRound: 2,
+      targetRecipient: 'bureau',
+      disputeType: 'method_of_verification',
+      methodology: 'method_of_verification',
+      reasonCodes: ['verification_required'],
+      customReason: 'No response',
+    });
+
+    const { runDisputeEscalationAutomation } = await import('@/lib/dispute-escalation-runner');
+    const { generateUniqueDisputeLetter } = await import('@/lib/ai-letter-generator');
+    const { persistGeneratedDisputeDraft } = await import('@/lib/dispute-draft-generator');
+    const result = await runDisputeEscalationAutomation({ dryRun: false });
+
+    expect(result).toMatchObject({
+      checked: 1,
+      escalated: 0,
+      skipped: 1,
+      skip_reasons: [{
+        dispute_id: 'dispute-4',
+        reason: 'letter_identity_incomplete',
+        missing: ['streetAddress', 'city', 'state', 'zip'],
+      }],
+    });
+    expect(generateUniqueDisputeLetter).not.toHaveBeenCalled();
+    expect(persistGeneratedDisputeDraft).not.toHaveBeenCalled();
+    expect(dbMock.update).not.toHaveBeenCalled();
+    expect(setSettingMock).toHaveBeenCalledWith(
+      'automation.dispute_escalations.last_run',
+      expect.objectContaining({ skipped: 1, skipReasons: result.skip_reasons }),
+      'json',
+      'compliance',
+      expect.any(String),
+    );
+  });
+
   it('defers an ineligible CFPB candidate and records its next eligibility date', async () => {
     const eligibleAt = new Date('2026-09-01T00:00:00.000Z');
     const candidate = {
