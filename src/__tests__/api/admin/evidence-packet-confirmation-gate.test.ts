@@ -51,7 +51,6 @@ const approvedRequest = {
   bureau: 'experian',
   reasonCodes: ['verification_required'],
   evidenceDocumentIds: [],
-  clientConfirmedOwnershipClaims: false,
 };
 
 describe('high-risk confirmation gates', () => {

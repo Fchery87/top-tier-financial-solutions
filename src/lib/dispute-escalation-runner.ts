@@ -7,7 +7,7 @@ import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { setSetting } from '@/lib/settings-service';
 import { buildEscalationPlan, getDisputeSlaInstanceId, type EscalationPlan } from '@/lib/dispute-automation';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
-import { decideDisputePolicy, hasStoredEvidencePacket } from '@/lib/dispute-policy-decision';
+import { decideHighRiskClaims } from '@/lib/high-risk-claim-gate';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { tryLoadLetterConsumerIdentity, type LetterConsumerIdentity, type LetterIdentityField } from '@/lib/letter-consumer-identity';
 import { logServerEvent } from '@/lib/server-logger';
@@ -154,17 +154,18 @@ export async function runDisputeEscalationAutomation(
     }
 
     // Automated escalations get the same server-side policy decision as staff
-    // requests. Without stored client factual confirmation, a high-risk plan
-    // is refused and left for staff review.
-    const policyDecision = decideDisputePolicy({
+    // requests. A high-risk plan without the item's client-confirmed packet is
+    // left for staff review.
+    const claimDecision = await decideHighRiskClaims({
+      clientId: dispute.clientId,
       reasonCodes: plan.reasonCodes,
-      hasEvidencePacket: hasStoredEvidencePacket(dispute.evidenceDocumentIds),
-      hasClientFactualConfirmation: false,
+      items: [{ kind: 'tradeline', id: negativeItem.id }],
     });
-    if (!policyDecision.approved) {
+    if (claimDecision.kind !== 'approved') {
       skippedCount += 1;
       continue;
     }
+    const { policyDecision, evidencePacketIds } = claimDecision;
 
     // The letter is written from the decrypted identity. Without a name and
     // full address there is no letter to draft; staff must complete the profile.
@@ -220,6 +221,7 @@ export async function runDisputeEscalationAutomation(
       priorDisputeId: dispute.id,
       reasonCodes: plan.reasonCodes,
       policyDecision,
+      evidencePacketIds,
       items: [{
         kind: 'tradeline',
         bureau: dispute.bureau,

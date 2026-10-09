@@ -15,7 +15,6 @@ const requireCapabilityMock = vi.hoisted(() => vi.fn());
 const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const selectLibraryForGenerationMock = vi.hoisted(() => vi.fn());
 const requireLatestApprovedReportForClientMock = vi.hoisted(() => vi.fn());
-const evaluateDisputeComplianceMock = vi.hoisted(() => vi.fn());
 const decideEscalationMock = vi.hoisted(() => vi.fn());
 const loadDisputeChainMock = vi.hoisted(() => vi.fn());
 
@@ -28,7 +27,6 @@ vi.mock('@/lib/ai-letter-generator', () => ({
 }));
 vi.mock('@/lib/letter-generation-library', () => ({ selectLibraryForGeneration: selectLibraryForGenerationMock }));
 vi.mock('@/lib/parser-review-gate', () => ({ requireLatestApprovedReportForClient: requireLatestApprovedReportForClientMock }));
-vi.mock('@/lib/dispute-compliance-policy', () => ({ evaluateDisputeCompliance: evaluateDisputeComplianceMock }));
 vi.mock('@/lib/dispute-escalation-decision', () => ({ decideEscalation: decideEscalationMock, loadDisputeChain: loadDisputeChainMock }));
 
 describe('POST /api/workspace/disputes/drafts/generate', () => {
@@ -36,7 +34,6 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
     vi.resetAllMocks();
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
     requireLatestApprovedReportForClientMock.mockResolvedValue({ allowed: true });
-    evaluateDisputeComplianceMock.mockReturnValue({ isCompliant: true, violations: [] });
     loadDisputeChainMock.mockResolvedValue([]);
     selectLibraryForGenerationMock.mockResolvedValue({
       chosen: { id: 'library-1', name: 'Verification strategy' },

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { disputes, clients, negativeItems, slaDefinitions, slaInstances } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { disputes, clients, clientDocuments, negativeItems, slaDefinitions, slaInstances } from '@/db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { rateLimited } from '@/lib/rate-limit-middleware';
@@ -9,8 +9,7 @@ import { sensitiveLimiter } from '@/lib/rate-limit';
 import { decryptDisputeData, decryptClientData } from '@/lib/db-encryption';
 import { requireCapability } from '@/lib/admin-session';
 import type { Capability } from '@/lib/capabilities';
-import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
-import { decideDisputePolicy } from '@/lib/dispute-policy-decision';
+import { decideHighRiskClaims, highRiskConfirmationRequiredBody } from '@/lib/high-risk-claim-gate';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
@@ -88,7 +87,6 @@ async function postHandler(request: NextRequest) {
       targetRecipient,
       analysisConfidence,
       autoSelected,
-      clientConfirmedOwnershipClaims,
       priorDisputeId,
     } = body;
 
@@ -119,32 +117,23 @@ async function postHandler(request: NextRequest) {
       );
     }
 
-    // Policy is decided here from the request's facts; a caller-supplied
-    // `policyDecision` is never trusted (ADR 0001).
-    const policyDecision = decideDisputePolicy({
+    // Policy is decided here from the database; a caller-supplied
+    // `policyDecision` or confirmation flag is never trusted (ADR 0001).
+    const claimDecision = await decideHighRiskClaims({
+      clientId,
       reasonCodes: normalizedReasonCodes,
-      hasEvidencePacket: Array.isArray(evidenceDocumentIds) && evidenceDocumentIds.length > 0,
-      hasClientFactualConfirmation: clientConfirmedOwnershipClaims === true,
+      items: typeof negativeItemId === 'string' && negativeItemId ? [{ kind: 'tradeline', id: negativeItemId }] : [],
     });
-    if (!policyDecision.approved) {
+    if (claimDecision.kind === 'confirmation_required') {
+      return NextResponse.json(highRiskConfirmationRequiredBody(claimDecision.blockers), { status: 409 });
+    }
+    if (claimDecision.kind === 'not_approved') {
       return NextResponse.json(
-        { error: 'Dispute policy decision was not approved', violations: policyDecision.violations },
+        { error: 'Dispute policy decision was not approved', violations: claimDecision.violations },
         { status: 400 }
       );
     }
-
-    const compliance = evaluateDisputeCompliance({
-      reasonCodes: normalizedReasonCodes,
-      evidenceDocumentIds,
-      clientConfirmedOwnershipClaims,
-    });
-
-    if (!compliance.isCompliant) {
-      return NextResponse.json(
-        { error: 'Dispute failed compliance checks', violations: compliance.violations },
-        { status: 400 }
-      );
-    }
+    const { policyDecision, evidencePacketIds } = claimDecision;
 
     // Get client info
     const [client] = await db
@@ -155,6 +144,21 @@ async function postHandler(request: NextRequest) {
 
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    const enclosureIds: string[] = Array.isArray(evidenceDocumentIds)
+      ? evidenceDocumentIds.filter((id: unknown): id is string => typeof id === 'string')
+      : [];
+    if (enclosureIds.length > 0) {
+      const ownedIds = new Set((await db
+        .select({ id: clientDocuments.id, userId: clientDocuments.userId })
+        .from(clientDocuments)
+        .where(inArray(clientDocuments.id, enclosureIds)))
+        .filter(doc => client.userId !== null && doc.userId === client.userId)
+        .map(doc => doc.id));
+      if (enclosureIds.some(id => !ownedIds.has(id))) {
+        return NextResponse.json({ error: 'Evidence documents must belong to the client' }, { status: 400 });
+      }
     }
 
     // Get negative item info if provided
@@ -303,6 +307,7 @@ async function postHandler(request: NextRequest) {
       priorDisputeId,
       analysisConfidence: normalizedConfidence,
       autoSelected: !!autoSelected,
+      evidencePacketIds,
     });
     const id = persistedDraft.disputeId;
 

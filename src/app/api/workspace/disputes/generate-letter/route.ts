@@ -7,15 +7,14 @@ import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/dispute-evidence';
 import { requireCapability } from '@/lib/admin-session';
-import { evaluateDisputeCompliance } from '@/lib/dispute-compliance-policy';
-import { decideDisputePolicy } from '@/lib/dispute-policy-decision';
+import { decideHighRiskClaims, disputeItemRefs, highRiskConfirmationRequiredBody, type DisputeItemRef } from '@/lib/high-risk-claim-gate';
 import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib/dispute-draft-generator';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { logServerEvent } from '@/lib/server-logger';
 import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
-type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
+import type { DisputeItemKind } from '@/lib/high-risk-claim-registry';
 
 interface DisputeItemPayload {
   id: string;
@@ -30,6 +29,26 @@ interface DisputeItemPayload {
   inquiryDate?: string | null;
   dateReported?: string | null;
   riskSeverity?: string | null;
+}
+
+/** The items the letter will be about, as the two branches below choose them. */
+function letterItemRefs(body: {
+  combineItems?: unknown;
+  disputeItems?: unknown;
+  negativeItemIds?: unknown;
+  negativeItemId?: unknown;
+}): DisputeItemRef[] {
+  const payloadRefs = disputeItemRefs(body.disputeItems);
+  const negativeItemIds = Array.isArray(body.negativeItemIds)
+    ? body.negativeItemIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    : [];
+  if (body.combineItems && (payloadRefs.length > 0 || negativeItemIds.length > 0)) {
+    return payloadRefs.length > 0 ? payloadRefs : negativeItemIds.map(id => ({ kind: 'tradeline' as const, id }));
+  }
+  if (payloadRefs.length > 0) return [payloadRefs[0]];
+  return typeof body.negativeItemId === 'string' && body.negativeItemId
+    ? [{ kind: 'tradeline', id: body.negativeItemId }]
+    : [];
 }
 
 async function validateAdmin() {
@@ -60,8 +79,7 @@ export async function POST(request: NextRequest) {
       metro2Violations, // NEW: Specific Metro 2 field violations
       priorDisputeDate, // NEW: For method of verification letters
       priorDisputeResult, // NEW: Result of prior dispute
-      evidenceDocumentIds, // Optional: evidence attachments (clientDocuments IDs)
-      clientConfirmedOwnershipClaims,
+      evidenceDocumentIds, // Optional: enclosures (clientDocuments IDs); never evidence of a claim
       priorDisputeId,
     } = body;
 
@@ -79,32 +97,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Policy is decided here from the request's facts; a caller-supplied
-    // `policyDecision` is never trusted (ADR 0001).
-    const policyDecision = decideDisputePolicy({
+    // Policy is decided here from the database; a caller-supplied
+    // `policyDecision` or confirmation flag is never trusted (ADR 0001).
+    const claimDecision = await decideHighRiskClaims({
+      clientId,
       reasonCodes,
-      hasEvidencePacket: Array.isArray(evidenceDocumentIds) && evidenceDocumentIds.length > 0,
-      hasClientFactualConfirmation: clientConfirmedOwnershipClaims === true,
+      items: letterItemRefs(body),
     });
-    if (!policyDecision.approved) {
+    if (claimDecision.kind === 'confirmation_required') {
+      return NextResponse.json(highRiskConfirmationRequiredBody(claimDecision.blockers), { status: 409 });
+    }
+    if (claimDecision.kind === 'not_approved') {
       return NextResponse.json(
-        { error: 'Dispute policy decision was not approved', violations: policyDecision.violations },
+        { error: 'Dispute policy decision was not approved', violations: claimDecision.violations },
         { status: 400 }
       );
     }
-
-    const compliance = evaluateDisputeCompliance({
-      reasonCodes,
-      evidenceDocumentIds,
-      clientConfirmedOwnershipClaims,
-    });
-
-    if (!compliance.isCompliant) {
-      return NextResponse.json(
-        { error: 'Dispute failed compliance checks', violations: compliance.violations },
-        { status: 400 }
-      );
-    }
+    const { policyDecision, evidencePacketIds } = claimDecision;
 
     if (targetRecipient === 'cfpb') {
       const requestedItemIds = [
@@ -184,14 +193,21 @@ export async function POST(request: NextRequest) {
     }
     const consumer = identityResult.identity;
 
-    // Fetch evidence documents if provided to build enclosures list
     let enclosures: { documentType: string; documentName: string }[] = [];
-    if (evidenceDocumentIds && evidenceDocumentIds.length > 0) {
-      const evidenceDocs = await db
+    const enclosureIds: string[] = Array.isArray(evidenceDocumentIds)
+      ? evidenceDocumentIds.filter((id: unknown): id is string => typeof id === 'string')
+      : [];
+    if (enclosureIds.length > 0) {
+      const evidenceDocs = (await db
         .select()
         .from(clientDocuments)
-        .where(inArray(clientDocuments.id, evidenceDocumentIds));
-      
+        .where(inArray(clientDocuments.id, enclosureIds)))
+        .filter(doc => client.userId !== null && doc.userId === client.userId);
+      const ownedIds = new Set(evidenceDocs.map(doc => doc.id));
+      if (enclosureIds.some(id => !ownedIds.has(id))) {
+        return NextResponse.json({ error: 'Evidence documents must belong to the client' }, { status: 400 });
+      }
+
       enclosures = evidenceDocs.map(doc => ({
         documentType: doc.fileType || 'other',
         documentName: DOCUMENT_TYPE_LABELS[doc.fileType as keyof typeof DOCUMENT_TYPE_LABELS] || doc.fileName,
@@ -299,6 +315,7 @@ export async function POST(request: NextRequest) {
         items: validItems.map(mapPayloadToSnapshot),
         selection: combinedSelection,
         actorUserId: adminUser.id,
+        evidencePacketIds,
       });
 
       return NextResponse.json({
@@ -410,6 +427,7 @@ export async function POST(request: NextRequest) {
       items: [mapPayloadToSnapshot(snapshotItem)],
       selection,
       actorUserId: adminUser.id,
+      evidencePacketIds,
     });
 
     return NextResponse.json({

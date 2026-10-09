@@ -189,4 +189,104 @@ describe('POST /api/workspace/evidence-packets', () => {
     });
     expect(requireCapabilityMock).toHaveBeenCalledWith('disputes:read');
   });
+
+  function limitRows(rows: unknown[]) {
+    return { from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue(rows) }) }) };
+  }
+
+  it('links a high-risk packet to the disputed item after checking the item belongs to the client', async () => {
+    const { POST } = await import('@/app/api/workspace/evidence-packets/route');
+    const values = vi.fn().mockImplementation((row: Record<string, unknown>) => ({ returning: vi.fn().mockResolvedValue([row]) }));
+    dbMock.select
+      .mockReturnValueOnce(limitRows([{ id: 'client-1', userId: 'user-1' }]))
+      .mockReturnValueOnce(limitRows([{ id: 'inq-1', clientId: 'client-1' }]))
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ id: 'doc-1', userId: 'user-1', fileUrl: 'client-documents/user-1/evidence/doc-1.pdf' }]) }) });
+    dbMock.insert.mockReturnValue({ values });
+
+    const response = await POST(new NextRequest('http://localhost/api/workspace/evidence-packets', {
+      method: 'POST',
+      body: JSON.stringify({
+        client_id: 'client-1',
+        item_kind: 'inquiry',
+        item_id: 'inq-1',
+        claim_type: 'unauthorized_inquiry',
+        document_ids: ['doc-1'],
+      }),
+    }));
+
+    expect(response.status).toBe(201);
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ itemKind: 'inquiry', itemId: 'inq-1', disputeId: null }));
+    await expect(response.json()).resolves.toMatchObject({ item_kind: 'inquiry', item_id: 'inq-1', state: 'awaiting_client_confirmation' });
+  });
+
+  it('refuses an item that belongs to another client', async () => {
+    const { POST } = await import('@/app/api/workspace/evidence-packets/route');
+    dbMock.select
+      .mockReturnValueOnce(limitRows([{ id: 'client-1', userId: 'user-1' }]))
+      .mockReturnValueOnce(limitRows([]));
+
+    const response = await POST(new NextRequest('http://localhost/api/workspace/evidence-packets', {
+      method: 'POST',
+      body: JSON.stringify({
+        client_id: 'client-1',
+        item_kind: 'tradeline',
+        item_id: 'neg-of-client-2',
+        claim_type: 'not_mine',
+        document_ids: ['doc-1'],
+      }),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'The disputed item does not belong to the client' });
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses an item kind without an item id', async () => {
+    const { POST } = await import('@/app/api/workspace/evidence-packets/route');
+
+    const response = await POST(new NextRequest('http://localhost/api/workspace/evidence-packets', {
+      method: 'POST',
+      body: JSON.stringify({ client_id: 'client-1', item_kind: 'tradeline', claim_type: 'not_mine', document_ids: ['doc-1'] }),
+    }));
+
+    expect(response.status).toBe(400);
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
+  it('lists an item\'s packets with each claim\'s confirmation state', async () => {
+    const { GET } = await import('@/app/api/workspace/evidence-packets/route');
+    const row = {
+      clientId: 'client-1',
+      disputeId: null,
+      itemKind: 'tradeline',
+      itemId: 'neg-1',
+      documentIds: JSON.stringify(['doc-1']),
+      createdById: 'staff-1',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    dbMock.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockResolvedValue([
+            { ...row, id: 'packet-1', claimType: 'not_mine', confirmations: JSON.stringify([]) },
+            { ...row, id: 'packet-2', claimType: 'never_late', confirmations: JSON.stringify([{ key: 'client_factual_claim_confirmed', confirmed: true }]) },
+            { ...row, id: 'packet-other-item', itemId: 'neg-2', claimType: 'fraud', confirmations: JSON.stringify([]) },
+          ]),
+        }),
+      }),
+    });
+
+    const response = await GET(new NextRequest(
+      'http://localhost/api/workspace/evidence-packets?client_id=client-1&item_kind=tradeline&item_id=neg-1',
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.packets.map((packet: { id: string }) => packet.id)).toEqual(['packet-1', 'packet-2']);
+    expect(body.claims).toEqual({
+      not_mine: { state: 'awaiting_client_confirmation', packetId: 'packet-1' },
+      never_late: { state: 'confirmed', packetId: 'packet-2' },
+    });
+  });
 });

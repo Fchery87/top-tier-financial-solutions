@@ -82,14 +82,3 @@ export function decideDisputePolicy(request: DisputePolicyRequest): DisputePolic
     violations,
   };
 }
-
-/** True when a persisted dispute's `evidenceDocumentIds` JSON names at least one document. */
-export function hasStoredEvidencePacket(evidenceDocumentIds: string | null | undefined): boolean {
-  if (!evidenceDocumentIds) return false;
-  try {
-    const parsed: unknown = JSON.parse(evidenceDocumentIds);
-    return Array.isArray(parsed) && parsed.length > 0;
-  } catch {
-    return false;
-  }
-}

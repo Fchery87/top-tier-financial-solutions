@@ -29,7 +29,7 @@ describe('POST /api/workspace/disputes/generate-letter', () => {
     requireCapabilityMock.mockResolvedValue({ id: 'admin-1', email: 'admin@example.com', role: 'super_admin' });
   });
 
-  it('decides policy on the server and refuses a high-risk claim without evidence or confirmation', async () => {
+  it('decides policy on the server and refuses a high-risk claim that names no item', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/generate-letter/route');
 
     const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/generate-letter', {
@@ -42,13 +42,11 @@ describe('POST /api/workspace/disputes/generate-letter', () => {
     }));
     const body = await response.json();
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
     expect(body).toEqual({
-      error: 'Dispute policy decision was not approved',
-      violations: [
-        'High-risk claims require claim-specific evidence.',
-        'High-risk claims require explicit client factual confirmation.',
-      ],
+      error: 'Client confirmation is required for high-risk claims',
+      code: 'HIGH_RISK_CONFIRMATION_REQUIRED',
+      items: [{ itemId: null, itemKind: null, claimType: 'never_late', state: 'no_packet' }],
     });
     expect(dbMock.select).not.toHaveBeenCalled();
     expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
@@ -77,10 +75,11 @@ describe('POST /api/workspace/disputes/generate-letter', () => {
     }));
     const body = await response.json();
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
     expect(body).toEqual({
-      error: 'Dispute policy decision was not approved',
-      violations: ['High-risk claims require claim-specific evidence.'],
+      error: 'Client confirmation is required for high-risk claims',
+      code: 'HIGH_RISK_CONFIRMATION_REQUIRED',
+      items: [{ itemId: null, itemKind: null, claimType: 'never_late', state: 'no_packet' }],
     });
     expect(dbMock.select).not.toHaveBeenCalled();
     expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();

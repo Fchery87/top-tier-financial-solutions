@@ -1,7 +1,7 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db } from '@/db/client';
-import { disputeLetterRevisions, disputes } from '@/db/schema';
+import { disputeLetterRevisions, disputes, evidencePackets } from '@/db/schema';
 import type { LetterLintFinding } from '@/lib/letter-lint';
 import type { Selection } from '@/lib/letter-library-selector';
 import type { LetterRevisionSource } from '@/lib/dispute-letter-workflow';
@@ -48,6 +48,8 @@ export interface PersistGeneratedDisputeDraftInput {
   autoSelected?: boolean;
   status?: string | null;
   revisionSource?: LetterRevisionSource;
+  /** Confirmed high-risk packets the letter relies on. Unlinked ones are linked to this dispute. */
+  evidencePacketIds?: string[];
 }
 
 export interface PersistedDisputeDraft {
@@ -176,6 +178,14 @@ export async function persistGeneratedDisputeDraft(
       createdBy: input.actorUserId || null,
       createdAt: now,
     });
+
+    if (input.evidencePacketIds && input.evidencePacketIds.length > 0) {
+      // A packet keeps its first dispute: one item claim can back several bureau letters.
+      await tx
+        .update(evidencePackets)
+        .set({ disputeId, updatedAt: now })
+        .where(and(inArray(evidencePackets.id, input.evidencePacketIds), isNull(evidencePackets.disputeId)));
+    }
 
     return { disputeId, revision };
   });

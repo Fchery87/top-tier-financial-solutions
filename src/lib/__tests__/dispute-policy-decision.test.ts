@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decideDisputePolicy, evaluateDisputePolicy, hasStoredEvidencePacket } from '@/lib/dispute-policy-decision';
+import { decideDisputePolicy, evaluateDisputePolicy } from '@/lib/dispute-policy-decision';
 
 describe('evaluateDisputePolicy', () => {
   it('approves an ordinary verification dispute without AI policy decisions', () => {
@@ -107,14 +107,5 @@ describe('decideDisputePolicy', () => {
       approved: false,
       violations: ['At least one dispute reason code is required.'],
     });
-  });
-});
-
-describe('hasStoredEvidencePacket', () => {
-  it('reads persisted evidence document ID JSON', () => {
-    expect(hasStoredEvidencePacket(JSON.stringify(['doc-1']))).toBe(true);
-    expect(hasStoredEvidencePacket('[]')).toBe(false);
-    expect(hasStoredEvidencePacket(null)).toBe(false);
-    expect(hasStoredEvidencePacket('not json')).toBe(false);
   });
 });

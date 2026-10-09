@@ -7,7 +7,7 @@ import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
-import { decideDisputePolicy, hasStoredEvidencePacket } from '@/lib/dispute-policy-decision';
+import { decideHighRiskClaims, highRiskConfirmationRequiredBody } from '@/lib/high-risk-claim-gate';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
@@ -97,20 +97,22 @@ export async function POST(
         return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
       }
     }
-    // The next-cycle draft carries forward the prior dispute's evidence; there
-    // is no stored client factual confirmation to carry, so high-risk codes
-    // are refused here (ADR 0001).
-    const policyDecision = decideDisputePolicy({
+    // A high-risk code needs the item's client-confirmed packet (ADR 0001).
+    const claimDecision = await decideHighRiskClaims({
+      clientId: currentDispute.clientId,
       reasonCodes: escalationPlan.reasonCodes,
-      hasEvidencePacket: hasStoredEvidencePacket(currentDispute.evidenceDocumentIds),
-      hasClientFactualConfirmation: false,
+      items: [{ kind: 'tradeline', id: negativeItem.id }],
     });
-    if (!policyDecision.approved) {
+    if (claimDecision.kind === 'confirmation_required') {
+      return NextResponse.json(highRiskConfirmationRequiredBody(claimDecision.blockers), { status: 409 });
+    }
+    if (claimDecision.kind === 'not_approved') {
       return NextResponse.json(
-        { error: 'Dispute policy decision was not approved', violations: policyDecision.violations },
+        { error: 'Dispute policy decision was not approved', violations: claimDecision.violations },
         { status: 400 }
       );
     }
+    const { policyDecision, evidencePacketIds } = claimDecision;
 
     const identityResult = await tryLoadLetterConsumerIdentity(currentDispute.clientId);
     if (!identityResult.ok) {
@@ -176,6 +178,7 @@ export async function POST(
       }],
       selection: librarySelection,
       actorUserId: adminUser.id,
+      evidencePacketIds,
     });
 
     const [created] = await db.select().from(disputes).where(eq(disputes.id, persistedDraft.disputeId)).limit(1);

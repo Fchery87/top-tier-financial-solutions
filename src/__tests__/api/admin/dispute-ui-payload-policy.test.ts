@@ -173,7 +173,8 @@ describe('dispute screens -> server-decided dispute policy', () => {
       });
     }, 30000);
 
-    it('refuses a forged approved policyDecision for a high-risk claim without evidence', async () => {
+    it('refuses a forged approved policyDecision for a high-risk claim without a confirmed packet', async () => {
+      dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) });
       const result = await postGenerateLetter({
         clientId: 'client-1',
         bureau: 'experian',
@@ -190,8 +191,8 @@ describe('dispute screens -> server-decided dispute policy', () => {
         },
       });
 
-      expect(result.status).toBe(400);
-      expect(result.body.violations).toContain('High-risk claims require claim-specific evidence.');
+      expect(result.status).toBe(409);
+      expect(result.body.items).toEqual([{ itemId: 'neg-1', itemKind: 'tradeline', claimType: 'not_mine', state: 'no_packet' }]);
       expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
       expect(dbMock.transaction).not.toHaveBeenCalled();
     }, 30000);
@@ -267,7 +268,8 @@ describe('dispute screens -> server-decided dispute policy', () => {
       expect(dbMock.transaction).not.toHaveBeenCalled();
     }, 30000);
 
-    it('refuses a forged approved policyDecision for a high-risk claim without evidence', async () => {
+    it('refuses a forged approved policyDecision for a high-risk claim without a confirmed packet', async () => {
+      dbMock.select.mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) });
       const result = await postCreateDispute({
         clientId: 'client-1',
         negativeItemId: 'neg-1',
@@ -285,8 +287,8 @@ describe('dispute screens -> server-decided dispute policy', () => {
         },
       });
 
-      expect(result.status).toBe(400);
-      expect(result.body.violations).toContain('High-risk claims require claim-specific evidence.');
+      expect(result.status).toBe(409);
+      expect(result.body.items).toEqual([{ itemId: 'neg-1', itemKind: 'tradeline', claimType: 'identity_theft', state: 'no_packet' }]);
       expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
       expect(dbMock.transaction).not.toHaveBeenCalled();
     }, 30000);

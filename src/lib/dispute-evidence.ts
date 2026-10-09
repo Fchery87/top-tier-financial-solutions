@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { evidencePackets } from '@/db/schema';
-import { HIGH_RISK_CLAIM_TYPES } from '@/lib/high-risk-claim-registry';
+import { HIGH_RISK_CLAIM_TYPES, type ItemClaimConfirmation } from '@/lib/high-risk-claim-registry';
 
 export { HIGH_RISK_CLAIM_TYPES };
 
@@ -95,6 +95,40 @@ function parseStoredJsonArray(value: string | null): unknown[] {
   } catch {
     return [];
   }
+}
+
+export interface StoredEvidencePacket {
+  id: string;
+  claimType: string;
+  documentIds: string | null;
+  confirmations: string | null;
+}
+
+/**
+ * Where one (client, item, claim type) stands, from that claim's packets.
+ * A confirmed packet wins over an awaiting one, which wins over one without documents.
+ */
+export function deriveItemClaimConfirmation(packets: StoredEvidencePacket[]): ItemClaimConfirmation {
+  let awaitingPacketId: string | null = null;
+  let missingDocumentsPacketId: string | null = null;
+
+  for (const packet of packets) {
+    const documentIds = parseStoredJsonArray(packet.documentIds).filter((id): id is string => typeof id === 'string');
+    const confirmations = parseStoredJsonArray(packet.confirmations);
+    const check = verifyEvidencePacket({ claimType: packet.claimType, documentIds, confirmations });
+    if (!check.hasClaimSpecificEvidence) {
+      missingDocumentsPacketId ??= packet.id;
+      continue;
+    }
+    if (deriveEvidencePacketState({ claimType: packet.claimType, confirmations }).kind === 'complete') {
+      return { state: 'confirmed', packetId: packet.id };
+    }
+    awaitingPacketId ??= packet.id;
+  }
+
+  if (awaitingPacketId) return { state: 'awaiting_client_confirmation', packetId: awaitingPacketId };
+  if (missingDocumentsPacketId) return { state: 'missing_documents', packetId: missingDocumentsPacketId };
+  return { state: 'none' };
 }
 
 export async function findAwaitingClientConfirmation(disputeId: string): Promise<boolean> {

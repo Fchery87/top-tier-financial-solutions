@@ -4,7 +4,9 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { clientDocuments, clients, evidencePackets } from '@/db/schema';
 import { requireCapability } from '@/lib/admin-session';
-import { deriveEvidencePacketState, HIGH_RISK_CLAIM_TYPES, staffSuppliedFactualConfirmation, verifyEvidencePacket } from '@/lib/dispute-evidence';
+import { deriveEvidencePacketState, deriveItemClaimConfirmation, HIGH_RISK_CLAIM_TYPES, staffSuppliedFactualConfirmation, verifyEvidencePacket } from '@/lib/dispute-evidence';
+import { isItemOwnedByClient, type DisputeItemRef } from '@/lib/high-risk-claim-gate';
+import { isDisputeItemKind, type ItemClaimConfirmation } from '@/lib/high-risk-claim-registry';
 import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
 import { logServerEvent } from '@/lib/server-logger';
 
@@ -18,6 +20,20 @@ function parseJsonArray(value: string | null) {
   }
 }
 
+type ItemLinkParse =
+  | { kind: 'none' }
+  | { kind: 'item'; item: DisputeItemRef }
+  | { kind: 'invalid' };
+
+/** `item_kind` and `item_id` come together, or not at all. */
+function parseItemLink(itemKind: unknown, itemId: unknown): ItemLinkParse {
+  const hasKind = itemKind !== undefined && itemKind !== null && itemKind !== '';
+  const hasId = itemId !== undefined && itemId !== null && itemId !== '';
+  if (!hasKind && !hasId) return { kind: 'none' };
+  if (!isDisputeItemKind(itemKind) || typeof itemId !== 'string' || !itemId.trim()) return { kind: 'invalid' };
+  return { kind: 'item', item: { kind: itemKind, id: itemId.trim() } };
+}
+
 function formatPacket(packet: typeof evidencePackets.$inferSelect) {
   const confirmations = parseJsonArray(packet.confirmations);
   const state = deriveEvidencePacketState({
@@ -28,6 +44,8 @@ function formatPacket(packet: typeof evidencePackets.$inferSelect) {
     id: packet.id,
     client_id: packet.clientId,
     dispute_id: packet.disputeId,
+    item_kind: packet.itemKind,
+    item_id: packet.itemId,
     claim_type: packet.claimType,
     document_ids: parseJsonArray(packet.documentIds),
     confirmations,
@@ -49,18 +67,37 @@ export async function GET(request: NextRequest) {
   if (!clientId) {
     return NextResponse.json({ error: 'client_id is required' }, { status: 400 });
   }
+  const itemLink = parseItemLink(
+    request.nextUrl.searchParams.get('item_kind'),
+    request.nextUrl.searchParams.get('item_id'),
+  );
+  if (itemLink.kind === 'invalid') {
+    return NextResponse.json({ error: 'item_kind and item_id must be given together' }, { status: 400 });
+  }
 
   try {
-    const packets = await db
+    const packets = (await db
       .select()
       .from(evidencePackets)
       .where(and(
         eq(evidencePackets.clientId, clientId),
         disputeId ? eq(evidencePackets.disputeId, disputeId) : undefined,
+        itemLink.kind === 'item' ? eq(evidencePackets.itemKind, itemLink.item.kind) : undefined,
+        itemLink.kind === 'item' ? eq(evidencePackets.itemId, itemLink.item.id) : undefined,
       ))
-      .orderBy(desc(evidencePackets.createdAt));
+      .orderBy(desc(evidencePackets.createdAt)))
+      .filter((packet) => itemLink.kind !== 'item'
+        || (packet.itemKind === itemLink.item.kind && packet.itemId === itemLink.item.id));
 
-    return NextResponse.json({ packets: packets.map(formatPacket) });
+    if (itemLink.kind !== 'item') {
+      return NextResponse.json({ packets: packets.map(formatPacket) });
+    }
+
+    const claims: Record<string, ItemClaimConfirmation> = {};
+    for (const claimType of new Set(packets.map((packet) => packet.claimType))) {
+      claims[claimType] = deriveItemClaimConfirmation(packets.filter((packet) => packet.claimType === claimType));
+    }
+    return NextResponse.json({ packets: packets.map(formatPacket), claims });
   } catch (error) {
     logServerEvent({ level: 'error', event: 'server.app.api.admin.evidence.packets.error', error: error });
     return NextResponse.json({ error: 'Failed to list evidence packets' }, { status: 500 });
@@ -80,9 +117,14 @@ export async function POST(request: NextRequest) {
     const claimType = body.claim_type;
     const documentIds: string[] = Array.isArray(body.document_ids) ? body.document_ids : [];
     const confirmations = Array.isArray(body.confirmations) ? body.confirmations : [];
+    const itemLink = parseItemLink(body.item_kind, body.item_id);
 
     if (!clientId || !claimType) {
       return NextResponse.json({ error: 'Client ID and claim type are required' }, { status: 400 });
+    }
+
+    if (itemLink.kind === 'invalid') {
+      return NextResponse.json({ error: 'item_kind and item_id must be given together' }, { status: 400 });
     }
 
     if (HIGH_RISK_CLAIM_TYPES.has(claimType) && staffSuppliedFactualConfirmation(confirmations)) {
@@ -105,6 +147,10 @@ export async function POST(request: NextRequest) {
 
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    if (itemLink.kind === 'item' && !(await isItemOwnedByClient(itemLink.item, clientId))) {
+      return NextResponse.json({ error: 'The disputed item does not belong to the client' }, { status: 400 });
     }
 
     if (documentIds.length > 0) {
@@ -135,6 +181,8 @@ export async function POST(request: NextRequest) {
       id: randomUUID(),
       clientId,
       disputeId,
+      itemKind: itemLink.kind === 'item' ? itemLink.item.kind : null,
+      itemId: itemLink.kind === 'item' ? itemLink.item.id : null,
       claimType,
       documentIds: JSON.stringify(documentIds),
       confirmations: JSON.stringify(confirmations),
