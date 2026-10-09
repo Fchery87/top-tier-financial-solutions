@@ -97,6 +97,35 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
     });
   });
 
+  it('persists a template fallback as not AI-generated and reports the source', async () => {
+    generateUniqueDisputeLetterMock.mockResolvedValue({
+      letter: 'Template fallback letter',
+      source: 'template_fallback',
+      failureReason: 'truncated',
+    });
+    const { POST } = await import('@/app/api/workspace/disputes/drafts/generate/route');
+    const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/drafts/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        clientId: 'client-1',
+        bureau: 'experian',
+        disputeItems: [{ id: 'item-1', kind: 'tradeline', creditorName: 'Example Bank', itemType: 'collection' }],
+        reasonCodes: ['verification_required'],
+      }),
+    }));
+
+    const body = await response.json();
+    const disputeValues = txMock.insert.mock.results[0]?.value.values.mock.calls[0]?.[0];
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      letter_content: 'Template fallback letter',
+      generation_source: 'template_fallback',
+      generation_failure_reason: 'truncated',
+    });
+    expect(disputeValues).toMatchObject({ letterContent: 'Template fallback letter', generatedByAi: false });
+  });
+
   it('blocks CFPB generation when the predecessor ID is missing', async () => {
     const { POST } = await import('@/app/api/workspace/disputes/drafts/generate/route');
     const response = await POST(new NextRequest('http://localhost/api/workspace/disputes/drafts/generate', {

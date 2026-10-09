@@ -58,6 +58,84 @@ describe('LLM API key storage', () => {
   });
 });
 
+function settingKeyOf(condition: unknown): string | undefined {
+  const chunks = (condition as { queryChunks?: unknown[] })?.queryChunks || [];
+  for (const chunk of chunks) {
+    const value = (chunk as { value?: unknown })?.value;
+    if (typeof value === 'string' && value.startsWith('llm.')) return value;
+  }
+  return undefined;
+}
+
+function mockSettings(values: Record<string, { settingType: string; settingValue: string }>) {
+  dbMock.select.mockImplementation(() => ({
+    from: () => ({
+      where: (condition: unknown) => ({
+        limit: async () => {
+          const key = settingKeyOf(condition);
+          return key && values[key] ? [values[key]] : [];
+        },
+      }),
+    }),
+  }));
+}
+
+const str = (settingValue: string) => ({ settingType: 'string', settingValue });
+
+describe('getLLMConfig API protocol', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    clearSettingsCache();
+  });
+
+  it('infers the Anthropic protocol for a custom endpoint whose path ends in /anthropic', async () => {
+    mockSettings({
+      'llm.provider': str('custom'),
+      'llm.model': str('deepseek-flash'),
+      'llm.api_endpoint': str('https://api.deepseek.com/anthropic'),
+    });
+
+    await expect(getLLMConfig()).resolves.toMatchObject({ provider: 'custom', apiProtocol: 'anthropic' });
+  });
+
+  it('infers the OpenAI protocol for any other custom endpoint', async () => {
+    mockSettings({
+      'llm.provider': str('custom'),
+      'llm.model': str('deepseek-flash'),
+      'llm.api_endpoint': str('https://api.deepseek.com/v1'),
+    });
+
+    await expect(getLLMConfig()).resolves.toMatchObject({ apiProtocol: 'openai' });
+  });
+
+  it('uses an explicit llm.api_protocol setting over inference', async () => {
+    mockSettings({
+      'llm.provider': str('custom'),
+      'llm.model': str('m'),
+      'llm.api_endpoint': str('https://api.example.com/anthropic'),
+      'llm.api_protocol': str('openai'),
+    });
+
+    await expect(getLLMConfig()).resolves.toMatchObject({ apiProtocol: 'openai' });
+  });
+
+  it('has no default model for a custom provider', async () => {
+    mockSettings({
+      'llm.provider': str('custom'),
+      'llm.api_endpoint': str('https://api.deepseek.com/anthropic'),
+    });
+
+    await expect(getLLMConfig()).resolves.toMatchObject({ model: '' });
+  });
+
+  it('sets no protocol for first-party providers', async () => {
+    mockSettings({ 'llm.provider': str('google') });
+
+    const config = await getLLMConfig();
+    expect(config.apiProtocol).toBeUndefined();
+  });
+});
+
 function createSettingsExecutor({
   existingRows,
   valuesMock,
