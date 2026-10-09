@@ -163,6 +163,21 @@ export default function SettingsPage() {
                       Active
                     </div>
                   </div>
+                  <Link
+                    href="/settings/security"
+                    className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors border border-border/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-foreground">Two-factor authentication</p>
+                        <p className="text-sm text-muted-foreground">
+                          Add a code from an authenticator app to your sign-in
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </Link>
                 </CardContent>
               </Card>
             </motion.div>
