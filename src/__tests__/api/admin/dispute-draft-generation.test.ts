@@ -48,7 +48,7 @@ describe('POST /api/workspace/disputes/drafts/generate', () => {
     dbMock.select.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ id: 'client-1', firstName: 'Jane', lastName: 'Client' }]),
+          limit: vi.fn().mockResolvedValue([{ id: 'client-1', firstName: 'Jane', lastName: 'Client', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zipCode: '12207' }]),
         }),
       }),
     });

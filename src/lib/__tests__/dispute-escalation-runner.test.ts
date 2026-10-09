@@ -10,7 +10,7 @@ beforeAll(async () => {
 describe('buildEscalationLetterParams', () => {
   it('uses the linked masked account number instead of an internal id fragment', () => {
     const params = buildEscalationLetterParams({
-      client: { firstName: 'Jane', lastName: 'Doe' },
+      consumer: { fullName: 'Jane Doe', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
       dispute: { bureau: 'experian' },
       negativeItem: {
         id: '7f3aa2d6-1fb6-4fd4-9171-ff1122334455',
@@ -38,7 +38,7 @@ describe('buildEscalationLetterParams', () => {
 
   it('omits the account number when no linked account number exists', () => {
     const params = buildEscalationLetterParams({
-      client: { firstName: 'Jane', lastName: 'Doe' },
+      consumer: { fullName: 'Jane Doe', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
       dispute: { bureau: 'experian' },
       negativeItem: {
         id: '7f3aa2d6-1fb6-4fd4-9171-ff1122334455',

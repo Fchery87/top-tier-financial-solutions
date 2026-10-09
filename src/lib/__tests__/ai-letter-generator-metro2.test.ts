@@ -33,7 +33,7 @@ describe('generateFactualMetro2DisputeLetter', () => {
     }));
 
     const result = await generateFactualMetro2DisputeLetter({
-      consumerName: 'Ada Lovelace',
+      consumer: { fullName: 'Ada Lovelace', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
       recipientType: 'bureau',
       recipientName: 'Experian',
       bureau: 'experian',
@@ -63,5 +63,10 @@ describe('generateFactualMetro2DisputeLetter', () => {
       totalItems: 1,
     });
     expect(result.disputeLetter).toContain('Please investigate the reported balance.');
+    expect(result.disputeLetter?.startsWith('Ada Lovelace\n100 Main St\nAlbany, NY 12207')).toBe(true);
+    const prompt = generateLetterDraftMock.mock.calls[0]?.[0]?.prompt as string;
+    expect(prompt).toContain('Full Name: Ada Lovelace');
+    expect(prompt).not.toContain('100 Main St');
+    expect(prompt).not.toContain('12207');
   });
 });

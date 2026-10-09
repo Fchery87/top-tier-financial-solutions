@@ -36,7 +36,7 @@ const singleParams = {
   disputeType: 'standard',
   round: 1,
   targetRecipient: 'bureau' as const,
-  clientData: { name: 'Jane Sample' },
+  clientData: { fullName: 'Jane Sample', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
   itemData: { creditorName: 'Example Bank', itemType: 'late_payment', bureau: 'experian' },
   reasonCodes: ['verification_required'],
 };
@@ -45,7 +45,7 @@ const multiParams = {
   disputeType: 'standard',
   round: 1,
   targetRecipient: 'bureau' as const,
-  clientData: { name: 'Jane Sample' },
+  clientData: { fullName: 'Jane Sample', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
   items: [{ creditorName: 'Example Bank', itemType: 'late_payment', bureau: 'experian' }],
   bureau: 'experian',
   reasonCodes: ['verification_required'],

@@ -48,9 +48,12 @@ vi.mock('@/lib/rate-limit', () => ({
 }));
 
 vi.mock('@/lib/db-encryption', () => ({
+  DECRYPTION_FAILED: '[decryption-failed]',
   decryptDisputeData: (data: unknown) => data,
   decryptClientData: (data: unknown) => data,
 }));
+
+const CLIENT_IDENTITY_ROW = { firstName: 'Jane', lastName: 'Client', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zipCode: '12207', dateOfBirth: null, ssnLast4: null };
 
 describe('POST /api/workspace/disputes policy traceability', () => {
   beforeEach(() => {
@@ -99,6 +102,7 @@ describe('POST /api/workspace/disputes policy traceability', () => {
 
     dbMock.select
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', firstName: 'Jane', lastName: 'Client' }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([CLIENT_IDENTITY_ROW]) }) }) })
       .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([createdDispute]) }) }) });
     txMock.insert.mockReturnValue({ values: vi.fn((values) => { insertedValues.push(values); return Promise.resolve(); }) });
     dbMock.update.mockReturnValue({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })) });

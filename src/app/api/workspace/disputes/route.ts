@@ -20,6 +20,7 @@ import {
   getDisputeSlaInstanceId,
 } from '@/lib/dispute-automation';
 import { logServerEvent } from '@/lib/server-logger';
+import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity, type LetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
 async function validateAdmin(capability: Capability) {
   return requireCapability(capability);
@@ -34,17 +35,7 @@ function isMissingColumnError(error: unknown): boolean {
 function safeDecryptClientName(client: { firstName: string; lastName: string } | null): string {
   if (!client) return 'Unknown';
   try {
-    const decryptedClient = decryptClientData({
-      firstName: client.firstName,
-      lastName: client.lastName,
-      phone: undefined,
-      streetAddress: undefined,
-      city: undefined,
-      state: undefined,
-      zipCode: undefined,
-      dateOfBirth: undefined,
-      ssnLast4: undefined,
-    });
+    const decryptedClient = decryptClientData({ firstName: client.firstName, lastName: client.lastName });
     return `${decryptedClient.firstName} ${decryptedClient.lastName}`;
   } catch (error) {
     // Keep endpoint functional when ENCRYPTION_KEY is not configured in local/dev.
@@ -210,6 +201,18 @@ async function postHandler(request: NextRequest) {
       }
     }
 
+    const manualLetterContent = typeof letterContent === 'string' && letterContent ? letterContent : null;
+    let consumer: LetterConsumerIdentity | null = null;
+    // A generated letter is written from the decrypted identity; a manual
+    // letter is the caller's own text.
+    if (!manualLetterContent) {
+      const identityResult = await tryLoadLetterConsumerIdentity(clientId);
+      if (!identityResult.ok) {
+        return NextResponse.json(letterIdentityIncompleteBody(identityResult.error), { status: 409 });
+      }
+      consumer = identityResult.identity;
+    }
+
     // Generate dispute letter using AI generator with FCRA/CRSA/Metro2 compliance (unless caller provided content)
     const generationSelection = letterContent
       ? { chosen: null, score: 0, rationale: [], runnersUp: [] }
@@ -222,14 +225,11 @@ async function postHandler(request: NextRequest) {
         methodology: methodology || undefined,
       });
 
-    const manualLetterContent = typeof letterContent === 'string' && letterContent ? letterContent : null;
-    const generation = manualLetterContent ? null : await generateUniqueDisputeLetter({
+    const generation = !consumer ? null : await generateUniqueDisputeLetter({
       disputeType: disputeType || 'standard',
       round: round || 1,
       targetRecipient: targetRecipient || 'bureau',
-      clientData: {
-        name: `${client.firstName} ${client.lastName}`,
-      },
+      clientData: consumer,
       itemData: {
         creditorName: negativeItem?.creditorName || 'Unknown Creditor',
         originalCreditor: negativeItem?.originalCreditor || undefined,

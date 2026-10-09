@@ -99,6 +99,7 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
           where: vi.fn().mockResolvedValue([]),
         }),
       })
+      .mockReturnValueOnce(selectResult([{ firstName: 'Test', lastName: 'Client', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zipCode: '12207', dateOfBirth: null, ssnLast4: null }]))
       .mockReturnValueOnce(selectResult([{
         id: 'draft-1',
         round: 2,
@@ -127,6 +128,7 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
       round: 2,
       targetRecipient: 'bureau',
       disputeType: 'method_of_verification',
+      clientData: { fullName: 'Test Client', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
     }));
     expect(persistGeneratedDisputeDraftMock).toHaveBeenCalledWith(expect.objectContaining({
       round: 2,

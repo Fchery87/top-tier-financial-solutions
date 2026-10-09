@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { and, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { clients, disputes, negativeItems, creditAccounts, slaInstances, tasks } from '@/db/schema';
+import { disputes, negativeItems, creditAccounts, slaInstances, tasks } from '@/db/schema';
 import { generateUniqueDisputeLetter } from '@/lib/ai-letter-generator';
 import { selectLibraryForGeneration } from '@/lib/letter-generation-library';
 import { setSetting } from '@/lib/settings-service';
@@ -9,11 +9,20 @@ import { buildEscalationPlan, getDisputeSlaInstanceId, type EscalationPlan } fro
 import { persistGeneratedDisputeDraft } from '@/lib/dispute-draft-generator';
 import { decideDisputePolicy, hasStoredEvidencePacket } from '@/lib/dispute-policy-decision';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
+import { tryLoadLetterConsumerIdentity, type LetterConsumerIdentity, type LetterIdentityField } from '@/lib/letter-consumer-identity';
+import { logServerEvent } from '@/lib/server-logger';
 
 export const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run';
 
 export interface RunDisputeEscalationOptions {
   dryRun: boolean;
+}
+
+/** Why a candidate was skipped, when staff must act on it. */
+export interface EscalationSkipReason {
+  dispute_id: string;
+  reason: 'letter_identity_incomplete';
+  missing: LetterIdentityField[];
 }
 
 export interface RunDisputeEscalationResult {
@@ -23,12 +32,13 @@ export interface RunDisputeEscalationResult {
   escalated: number;
   would_escalate: number;
   skipped: number;
+  skip_reasons: EscalationSkipReason[];
   deferred: number;
   next_eligibility_at: string | null;
 }
 
 interface EscalationLetterParamsInput {
-  client: Pick<typeof clients.$inferSelect, 'firstName' | 'lastName'>;
+  consumer: LetterConsumerIdentity;
   dispute: Pick<typeof disputes.$inferSelect, 'bureau'>;
   negativeItem: Pick<
     typeof negativeItems.$inferSelect,
@@ -44,9 +54,7 @@ export function buildEscalationLetterParams(input: EscalationLetterParamsInput) 
     round: input.plan.nextRound,
     targetRecipient: input.plan.targetRecipient,
     methodology: input.plan.methodology,
-    clientData: {
-      name: `${input.client.firstName} ${input.client.lastName}`,
-    },
+    clientData: input.consumer,
     itemData: {
       creditorName: input.negativeItem.creditorName,
       originalCreditor: input.negativeItem.originalCreditor || undefined,
@@ -84,6 +92,7 @@ export async function runDisputeEscalationAutomation(
   let escalatedCount = 0;
   let wouldEscalateCount = 0;
   let skippedCount = 0;
+  const skipReasons: EscalationSkipReason[] = [];
   let deferredCount = 0;
   let nextEligibilityAt: Date | null = null;
 
@@ -109,12 +118,6 @@ export async function runDisputeEscalationAutomation(
       continue;
     }
 
-    const [client] = await db
-      .select()
-      .from(clients)
-      .where(eq(clients.id, dispute.clientId))
-      .limit(1);
-
     const [negativeItem] = await db
       .select()
       .from(negativeItems)
@@ -129,7 +132,7 @@ export async function runDisputeEscalationAutomation(
           .limit(1)
       : [null];
 
-    if (!client || !negativeItem) {
+    if (!negativeItem) {
       skippedCount += 1;
       continue;
     }
@@ -163,13 +166,27 @@ export async function runDisputeEscalationAutomation(
       continue;
     }
 
+    // The letter is written from the decrypted identity. Without a name and
+    // full address there is no letter to draft; staff must complete the profile.
+    const identityResult = await tryLoadLetterConsumerIdentity(dispute.clientId);
+    if (!identityResult.ok) {
+      skippedCount += 1;
+      skipReasons.push({ dispute_id: dispute.id, reason: 'letter_identity_incomplete', missing: identityResult.error.missing });
+      logServerEvent({
+        level: 'warn',
+        event: 'server.lib.dispute.escalation.skipped.letter_identity_incomplete',
+        metadata: { disputeId: dispute.id, missing: identityResult.error.missing.join(',') },
+      });
+      continue;
+    }
+
     if (options.dryRun) {
       wouldEscalateCount += 1;
       continue;
     }
 
     const letterParams = buildEscalationLetterParams({
-      client,
+      consumer: identityResult.identity,
       dispute,
       negativeItem,
       creditAccount: creditAccount || null,
@@ -273,6 +290,7 @@ export async function runDisputeEscalationAutomation(
     escalated: escalatedCount,
     would_escalate: wouldEscalateCount,
     skipped: skippedCount,
+    skip_reasons: skipReasons,
     deferred: deferredCount,
     next_eligibility_at: nextEligibilityAt?.toISOString() || null,
   };
@@ -287,6 +305,7 @@ export async function runDisputeEscalationAutomation(
       escalated: result.escalated,
       wouldEscalate: result.would_escalate,
       skipped: result.skipped,
+      skipReasons: result.skip_reasons,
       deferred: result.deferred,
       nextEligibilityAt: result.next_eligibility_at,
       error: null,
@@ -310,6 +329,7 @@ export async function writeDisputeEscalationFailure(error: unknown) {
       escalated: 0,
       wouldEscalate: 0,
       skipped: 0,
+      skipReasons: [],
       deferred: 0,
       nextEligibilityAt: null,
       error: error instanceof Error ? error.message : 'Unknown error',

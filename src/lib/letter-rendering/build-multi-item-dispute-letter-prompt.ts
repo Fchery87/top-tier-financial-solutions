@@ -1,6 +1,6 @@
 import type { Selection } from '@/lib/letter-library-selector';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-prompt-data';
-import { formatCalendarDate, formatLetterDate } from './letter-dates';
+import { formatCalendarDate } from './letter-dates';
 
 export interface MultiItemDisputeLetterPromptInput {
   round: number;
@@ -84,10 +84,11 @@ RULES
 - Do not demand deletion as the only outcome; request investigation and correction or removal if unverifiable.
 - Do not cite Metro 2 field numbers. Refer only to segment and field names when needed.
 - Keep the tone professional, specific, and factual.
+- Begin at the "Re:" subject line or the salutation. Do not write a sender header, the client's address, a date line, or the recipient's address; those are added to the letter separately.
+- End with "Sincerely," followed by the client's name.
 
 LETTER CONTEXT
-Date: ${formatLetterDate()}
-Recipient:\n${recipientAddress}
+Recipient (for the salutation only):\n${recipientAddress}
 Bureau: ${params.bureau.toUpperCase()}
 Round: ${params.round}
 Client Name: ${params.clientData.name}
@@ -106,5 +107,5 @@ ${legalCitations.length > 0
     ? `RELEVANT AUTHORITY\nGround the request in: ${legalCitations.join(', ')}.\nCite at most two, in plain language. Do not stack citations.`
     : ''}
 
-Return only the completed letter text.`;
+Return only the letter text, from the subject line or salutation through the signature.`;
 }

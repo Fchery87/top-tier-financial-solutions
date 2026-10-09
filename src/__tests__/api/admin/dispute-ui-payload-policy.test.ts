@@ -33,6 +33,7 @@ vi.mock('@/lib/parser-review-gate', () => ({ requireLatestApprovedReportForClien
 vi.mock('@/lib/rate-limit-middleware', () => ({ rateLimited: () => (handler: unknown) => handler }));
 vi.mock('@/lib/rate-limit', () => ({ sensitiveLimiter: {} }));
 vi.mock('@/lib/db-encryption', () => ({
+  DECRYPTION_FAILED: '[decryption-failed]',
   decryptDisputeData: (data: unknown) => data,
   decryptClientData: (data: unknown) => data,
 }));
@@ -44,6 +45,8 @@ const ORDINARY_DECISION_BASE = {
   targetRecipient: 'bureau',
   violations: [],
 };
+
+const CLIENT_ROW = { id: 'client-1', firstName: 'Jane', lastName: 'Sample', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zipCode: '12207' };
 
 const tradeline: NegativeItem = {
   id: 'neg-1',
@@ -97,7 +100,7 @@ function mockClientLookup() {
   dbMock.select.mockReturnValue({
     from: vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({
-        limit: vi.fn().mockResolvedValue([{ id: 'client-1', firstName: 'Jane', lastName: 'Sample' }]),
+        limit: vi.fn().mockResolvedValue([CLIENT_ROW]),
       }),
     }),
   });
@@ -214,8 +217,9 @@ describe('dispute screens -> server-decided dispute policy', () => {
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       };
       dbMock.select
-        .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1', firstName: 'Jane', lastName: 'Sample' }]) }) }) })
+        .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([CLIENT_ROW]) }) }) })
         .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'neg-1', creditorName: 'Bank One', itemType: 'collection', amount: 500 }]) }) }) })
+        .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([CLIENT_ROW]) }) }) })
         .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([createdDispute]) }) }) });
 
       const body = buildCreateDisputeRequestBody({
@@ -233,6 +237,34 @@ describe('dispute screens -> server-decided dispute policy', () => {
         ...ORDINARY_DECISION_BASE,
         reasonCodes: ['verification_required'],
       });
+    }, 30000);
+
+    it('refuses with 409 before generating when the client has no address', async () => {
+      const noAddress = { ...CLIENT_ROW, streetAddress: null, city: null, state: null, zipCode: null };
+      dbMock.select
+        .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([noAddress]) }) }) })
+        .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'neg-1', creditorName: 'Bank One', itemType: 'collection', amount: 500 }]) }) }) })
+        .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([noAddress]) }) }) });
+
+      const result = await postCreateDispute(buildCreateDisputeRequestBody({
+        clientId: 'client-1',
+        negativeItemId: 'neg-1',
+        bureau: 'experian',
+        disputeReason: 'This collection is inaccurate.',
+        disputeType: 'standard',
+        reasonCode: 'verification_required',
+      }));
+
+      expect(result).toEqual({
+        status: 409,
+        body: {
+          error: 'Client address is required before generating a letter',
+          code: 'LETTER_IDENTITY_INCOMPLETE',
+          missing: ['streetAddress', 'city', 'state', 'zip'],
+        },
+      });
+      expect(generateUniqueDisputeLetterMock).not.toHaveBeenCalled();
+      expect(dbMock.transaction).not.toHaveBeenCalled();
     }, 30000);
 
     it('refuses a forged approved policyDecision for a high-risk claim without evidence', async () => {

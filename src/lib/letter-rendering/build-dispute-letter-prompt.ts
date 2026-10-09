@@ -1,6 +1,6 @@
 import type { Selection } from '@/lib/letter-library-selector';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-prompt-data';
-import { formatCalendarDate, formatLetterDate } from './letter-dates';
+import { formatCalendarDate } from './letter-dates';
 
 export interface DisputeLetterPromptInput {
   round: number;
@@ -91,13 +91,14 @@ RULES
 - Do not claim identity theft, fraud, or ownership denial unless the provided reasons explicitly support it.
 - Do not cite Metro 2 field numbers. Refer only to segment and field names when needed.
 - Keep the tone professional, specific, and factual.
+- Begin at the "Re:" subject line or the salutation. Do not write a sender header, the client's address, a date line, or the recipient's address; those are added to the letter separately.
+- End with "Sincerely," followed by the client's name.
 - Ask for investigation, verification, and correction or removal if the information cannot be verified.
 - If this is Round 2, include a request for the method of verification.
 - If this is Round 3 or later, keep the focus on a direct furnisher investigation request.
 
 LETTER CONTEXT
-Date: ${formatLetterDate()}
-Recipient:
+Recipient (for the salutation only):
 ${recipientAddress}
 Target: ${targetLabel}
 Round: ${params.round}
@@ -116,5 +117,5 @@ ROUND STRATEGY
 ${strategy}
 ${libraryAuthority}
 
-Return only the completed letter text.`;
+Return only the letter text, from the subject line or salutation through the signature.`;
 }

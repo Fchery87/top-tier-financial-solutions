@@ -12,6 +12,7 @@ import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-dec
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
 import { logServerEvent } from '@/lib/server-logger';
+import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
 export async function POST(
   _request: NextRequest,
@@ -111,6 +112,11 @@ export async function POST(
       );
     }
 
+    const identityResult = await tryLoadLetterConsumerIdentity(currentDispute.clientId);
+    if (!identityResult.ok) {
+      return NextResponse.json(letterIdentityIncompleteBody(identityResult.error), { status: 409 });
+    }
+
     const librarySelection = await selectLibraryForGeneration({
       round: escalationPlan.nextRound,
       targetRecipient: escalationPlan.targetRecipient,
@@ -125,7 +131,7 @@ export async function POST(
       round: escalationPlan.nextRound,
       targetRecipient: escalationPlan.targetRecipient,
       methodology: escalationPlan.methodology,
-      clientData: { name: `${client.firstName} ${client.lastName}` },
+      clientData: identityResult.identity,
       itemData: {
         creditorName: negativeItem.creditorName,
         originalCreditor: negativeItem.originalCreditor || undefined,

@@ -7,7 +7,7 @@ import { renderGeneratedLetter as renderGeneratedLetterDeterministically } from 
 import { buildDisputeLetterPrompt } from './letter-rendering/build-dispute-letter-prompt';
 import { BUREAU_ADDRESSES, REASON_CODE_DESCRIPTIONS } from './letter-rendering/letter-prompt-data';
 import { generateLetterDraft, LetterDraftError } from './letter-rendering/provider-adapter';
-import type { LetterResponseFormat } from './letter-rendering/types';
+import type { LetterConsumerIdentity, LetterResponseFormat } from './letter-rendering/types';
 import { buildMultiItemDisputeLetterPrompt } from './letter-rendering/build-multi-item-dispute-letter-prompt';
 import { formatCalendarDate, formatLetterDate } from './letter-rendering/letter-dates';
 
@@ -94,15 +94,8 @@ async function generateOrFallBack(
   }
 }
 
-interface ClientInfo {
-  name: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  ssnLastFour?: string;
-  dateOfBirth?: string;
-}
+/** The decrypted consumer a letter is from; see `loadLetterConsumerIdentity`. */
+type ClientInfo = LetterConsumerIdentity;
 
 interface NegativeItemInfo {
   creditorName: string;
@@ -187,13 +180,12 @@ function formatRecipientAddress(targetRecipient: GenerateLetterParams['targetRec
   return `${creditorName}\nCredit Dispute Department`;
 }
 
+/** The template body; `renderLetter` adds the consumer header, date and recipient. */
 function buildNeutralFallbackLetter(params: GenerateLetterParams): string {
-  const currentDate = formatLetterDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0
     ? params.metro2Violations.filter(Boolean)
     : [];
-  const recipientAddress = formatRecipientAddress(params.targetRecipient, params.itemData.bureau, params.itemData.creditorName);
   const maskedAccountNumber = params.itemData.accountNumber
     ? `****${params.itemData.accountNumber.slice(-4)}`
     : '';
@@ -207,11 +199,7 @@ function buildNeutralFallbackLetter(params: GenerateLetterParams): string {
     metro2ViolationsText = `\nSPECIFIC REPORTING CONCERNS IDENTIFIED:\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}`;
   }
 
-  return `${currentDate}
-
-${recipientAddress}
-
-Re: FCRA Dispute - Request for Investigation and Verification
+  return `Re: FCRA Dispute - Request for Investigation and Verification
 Account: ${params.itemData.creditorName}
 ${maskedAccountNumber ? `Account Number: ${maskedAccountNumber}` : ''}
 Dispute Round: ${params.round}
@@ -246,15 +234,14 @@ Please respond within the time allowed by the Fair Credit Reporting Act.
 
 Sincerely,
 
-${params.clientData.name}
-${params.clientData.address ? params.clientData.address : ''}
-${params.clientData.city && params.clientData.state && params.clientData.zip ? `${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}` : ''}
+${params.clientData.fullName}
 
 ${buildEnclosuresSection(params.enclosures)}`;
 }
 
+/** Only the consumer's name reaches the provider; address, DOB and SSN are rendered by code. */
 export function buildManualLetterPrompt(params: GenerateLetterParams): string {
-  return buildDisputeLetterPrompt(params);
+  return buildDisputeLetterPrompt({ ...params, clientData: { name: params.clientData.fullName } });
 }
 
 function buildLetterLintContext(params: GenerateLetterParams) {
@@ -310,13 +297,12 @@ export function safeParseJsonObject<T>(raw: string): T | null {
   }
 }
 
-function postProcessLetter(letter: string, params: GenerateLetterParams): string {
+function renderSingleItemLetter(body: string, params: GenerateLetterParams): string {
   return renderGeneratedLetterDeterministically({
-    draftText: letter,
+    draftText: body,
+    consumer: params.clientData,
     renderedOn: formatLetterDate(),
-    recipientAddress: params.targetRecipient === 'bureau'
-      ? BUREAU_ADDRESSES[params.itemData.bureau.toLowerCase()]
-      : undefined,
+    recipientAddress: formatRecipientAddress(params.targetRecipient, params.itemData.bureau, params.itemData.creditorName),
   });
 }
 
@@ -324,8 +310,8 @@ export async function generateUniqueDisputeLetter(params: GenerateLetterParams):
   return renderWithFallback({
     llmConfig: await getLLMConfig(),
     buildPrompt: () => buildManualLetterPrompt(params),
-    render: (draft) => postProcessLetter(draft, params),
-    fallback: () => buildNeutralFallbackLetter(params),
+    render: (draft) => renderSingleItemLetter(draft, params),
+    fallback: () => renderSingleItemLetter(buildNeutralFallbackLetter(params), params),
     lint: (letter) => assertLetterLint(letter, buildLetterLintContext(params)),
     librarySelection: params.librarySelection,
   });
@@ -379,36 +365,35 @@ interface GenerateMultiItemLetterParams {
 export async function generateMultiItemDisputeLetter(params: GenerateMultiItemLetterParams): Promise<LetterGenerationResult> {
   return renderWithFallback({
     llmConfig: await getLLMConfig(),
-    buildPrompt: () => buildMultiItemDisputeLetterPrompt(params),
-    render: (draft) => postProcessMultiItemLetter(draft, params),
-    fallback: () => generateMultiItemFallbackLetter(params),
+    buildPrompt: () => buildMultiItemDisputeLetterPrompt({ ...params, clientData: { name: params.clientData.fullName } }),
+    render: (draft) => renderMultiItemLetter(draft, params),
+    fallback: () => renderMultiItemLetter(generateMultiItemFallbackLetter(params), params),
     lint: (letter) => assertLetterLint(letter, buildMultiItemLetterLintContext(params)),
     librarySelection: params.librarySelection,
   });
 }
 
-function postProcessMultiItemLetter(letter: string, params: GenerateMultiItemLetterParams): string {
+function multiItemRecipientAddress(params: GenerateMultiItemLetterParams): string {
+  return params.targetRecipient === 'bureau'
+    ? BUREAU_ADDRESSES[params.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion
+    : 'Credit Dispute Department';
+}
+
+function renderMultiItemLetter(body: string, params: GenerateMultiItemLetterParams): string {
   return renderGeneratedLetterDeterministically({
-    draftText: letter,
+    draftText: body,
+    consumer: params.clientData,
     renderedOn: formatLetterDate(),
-    recipientAddress: params.targetRecipient === 'bureau'
-      ? BUREAU_ADDRESSES[params.bureau.toLowerCase()]
-      : undefined,
+    recipientAddress: multiItemRecipientAddress(params),
   });
 }
 
+/** The template body; `renderMultiItemLetter` adds the consumer header, date and recipient. */
 function generateMultiItemFallbackLetter(params: GenerateMultiItemLetterParams): string {
-  const currentDate = formatLetterDate();
   const reasonDescription = getReasonDescriptions(params.reasonCodes);
   const metro2ViolationsRaw = params.metro2Violations && params.metro2Violations.length > 0 
     ? params.metro2Violations.filter(Boolean) 
     : [];
-  let recipientAddress = '';
-  if (params.targetRecipient === 'bureau') {
-    recipientAddress = BUREAU_ADDRESSES[params.bureau.toLowerCase()] || BUREAU_ADDRESSES.transunion;
-  } else {
-    recipientAddress = `Credit Dispute Department`;
-  }
   const itemsSection = params.items.map((item, index) => {
     const maskedAccountNumber = item.accountNumber ? `****${item.accountNumber.slice(-4)}` : '';
     return `
@@ -425,11 +410,7 @@ ${item.dateReported ? `Date Reported: ${formatCalendarDate(item.dateReported)}` 
   if (metro2ViolationsRaw.length > 0) {
     metro2ViolationsText = `\nSPECIFIC REPORTING CONCERNS IDENTIFIED:\n${metro2ViolationsRaw.map((v, i) => `${i + 1}. ${v}`).join('\n')}`;
   }
-  return `${currentDate}
-
-${recipientAddress}
-
-Re: FCRA Dispute - Request for Investigation and Verification of Multiple Accounts
+  return `Re: FCRA Dispute - Request for Investigation and Verification of Multiple Accounts
 Disputed Accounts: ${creditorList}
 Number of Accounts: ${params.items.length}
 Dispute Round: ${params.round}
@@ -459,9 +440,7 @@ Please respond within the time allowed by the Fair Credit Reporting Act.
 
 Sincerely,
 
-${params.clientData.name}
-${params.clientData.address ? params.clientData.address : ''}
-${params.clientData.city && params.clientData.state && params.clientData.zip ? `${params.clientData.city}, ${params.clientData.state} ${params.clientData.zip}` : ''}
+${params.clientData.fullName}
 
 ${buildEnclosuresSection(params.enclosures)}`;
 }
@@ -1112,7 +1091,10 @@ Return a JSON object with this exact structure:
 
 For the dispute_letter (if issues found):
 - Write in consumer's voice ("I am writing to dispute...")
-- Include consumer identifying info (name, address, SSN last 4, DOB)
+- Begin at the "Re:" subject line or the salutation. Do NOT write a sender
+  header, the consumer's address, date of birth, SSN, a date line, or the
+  recipient's address; those are added to the letter separately
+- End with "Sincerely," followed by the consumer's full name
 - Clearly identify each account with issues
 - For EACH issue, cite specific data points (dates, balances, statuses)
 - Request investigation and correction/removal if unverifiable
@@ -1135,10 +1117,8 @@ STYLE REQUIREMENTS
  * Only generates letters for items where issues can be PROVEN from the data
  */
 export async function generateFactualMetro2DisputeLetter(params: {
-  consumerName: string;
-  consumerAddress?: string;
-  consumerDob?: string;
-  consumerSsnLast4?: string;
+  /** Decrypted consumer; only `fullName` is sent to the provider. */
+  consumer: LetterConsumerIdentity;
   recipientType: 'bureau' | 'furnisher';
   recipientName: string;
   bureau: string;
@@ -1183,10 +1163,7 @@ Dispute Round: ${params.round}
 
 CONSUMER PROFILE
 -----------------
-Full Name: ${params.consumerName}
-Address: ${params.consumerAddress || 'On file'}
-Date of Birth: ${params.consumerDob || 'On file'}
-SSN Last 4: ${params.consumerSsnLast4 || 'On file'}
+Full Name: ${params.consumer.fullName}
 
 NEGATIVE ITEMS DATA (STRUCTURED)
 ---------------------------------
@@ -1268,17 +1245,12 @@ Return ONLY the JSON object, no markdown formatting.`;
     // Post-process the letter if it exists
     let disputeLetter = parsedResponse.dispute_letter;
     if (disputeLetter && itemsWithIssues > 0) {
-      // Add date if missing
-      const currentDate = formatLetterDate();
-      if (!disputeLetter.includes(currentDate) && !disputeLetter.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b/)) {
-        disputeLetter = currentDate + '\n\n' + disputeLetter;
-      }
-      // Add bureau address if missing
-      if (bureauAddress && !disputeLetter.includes(bureauAddress.split('\n')[0])) {
-        const lines = disputeLetter.split('\n');
-        lines.splice(1, 0, '', bureauAddress);
-        disputeLetter = lines.join('\n');
-      }
+      disputeLetter = renderGeneratedLetterDeterministically({
+        draftText: disputeLetter,
+        consumer: params.consumer,
+        renderedOn: formatLetterDate(),
+        recipientAddress: bureauAddress || params.recipientName,
+      });
       const lintResult = lintGeneratedLetter(disputeLetter, {
         reasonCodes: ['verification_required'],
         items: params.negativeItems.map(item => ({

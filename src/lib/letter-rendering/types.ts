@@ -24,3 +24,17 @@ export const LETTER_PROVIDER_DEFAULT_MODELS = {
   anthropic: 'claude-sonnet-5',
   zhipu: 'glm-4-flash',
 } as const;
+
+/**
+ * Who a dispute letter is from, decrypted. Code renders it into the letter;
+ * only `fullName` is ever sent to a provider.
+ */
+export interface LetterConsumerIdentity {
+  fullName: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zip: string;
+  dateOfBirth?: string;
+  ssnLast4?: string;
+}

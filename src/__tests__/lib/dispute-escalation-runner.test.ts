@@ -68,7 +68,6 @@ describe('runDisputeEscalationAutomation', () => {
     dbMock.select
       .mockReturnValueOnce(query([candidate]))
       .mockReturnValueOnce(limitedQuery([]))
-      .mockReturnValueOnce(limitedQuery([{ id: 'client-1', firstName: 'Jane', lastName: 'Client' }]))
       .mockReturnValueOnce(limitedQuery([{ id: 'item-1', creditAccountId: null, creditorName: 'Example Bank', originalCreditor: null, itemType: 'collection', amount: 100, dateReported: null }]));
     buildEscalationPlanMock.mockReturnValue({
       nextRound: 2,
@@ -162,7 +161,6 @@ describe('runDisputeEscalationAutomation', () => {
     dbMock.select
       .mockReturnValueOnce(query([candidate]))
       .mockReturnValueOnce(limitedQuery([]))
-      .mockReturnValueOnce(limitedQuery([{ id: 'client-1', firstName: 'Jane', lastName: 'Client' }]))
       .mockReturnValueOnce(limitedQuery([{ id: 'item-1', creditAccountId: null, creditorName: 'Example Bank', originalCreditor: null, itemType: 'collection', amount: 100, dateReported: null }]));
     decideEscalationMock.mockReturnValue({
       kind: 'blocked',
@@ -196,7 +194,7 @@ describe('buildEscalationLetterParams', () => {
   it('keeps the selected plan and bureau item data intact for generation', async () => {
     const { buildEscalationLetterParams } = await import('@/lib/dispute-escalation-runner');
     const result = buildEscalationLetterParams({
-      client: { firstName: 'Jane', lastName: 'Client' },
+      consumer: { fullName: 'Jane Client', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
       dispute: { bureau: 'experian' },
       negativeItem: {
         id: 'item-1',
@@ -220,7 +218,7 @@ describe('buildEscalationLetterParams', () => {
     expect(result).toMatchObject({
       round: 3,
       targetRecipient: 'creditor',
-      clientData: { name: 'Jane Client' },
+      clientData: { fullName: 'Jane Client' },
       itemData: {
         creditorName: 'Example Bank',
         originalCreditor: 'Original Bank',

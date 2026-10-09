@@ -13,6 +13,7 @@ import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { logServerEvent } from '@/lib/server-logger';
+import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
 type DisputeItemKind = 'tradeline' | 'personal' | 'inquiry';
 
@@ -175,6 +176,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
+    // Every letter is written from the decrypted identity; refuse before
+    // generating rather than print ciphertext or a letter with no address.
+    const identityResult = await tryLoadLetterConsumerIdentity(clientId);
+    if (!identityResult.ok) {
+      return NextResponse.json(letterIdentityIncompleteBody(identityResult.error), { status: 409 });
+    }
+    const consumer = identityResult.identity;
+
     // Fetch evidence documents if provided to build enclosures list
     let enclosures: { documentType: string; documentName: string }[] = [];
     if (evidenceDocumentIds && evidenceDocumentIds.length > 0) {
@@ -258,13 +267,7 @@ export async function POST(request: NextRequest) {
         disputeType: disputeType || 'standard',
         round: round || 1,
         targetRecipient: targetRecipient || 'bureau',
-        clientData: {
-          name: `${client.firstName} ${client.lastName}`,
-          address: undefined,
-          city: undefined,
-          state: undefined,
-          zip: undefined,
-        },
+        clientData: consumer,
         items: validItems.map(item => ({
           ...mapPayloadToItemData(item),
         })),
@@ -304,7 +307,7 @@ export async function POST(request: NextRequest) {
         letter_content: generation.letter,
         generation_source: generation.source,
         generation_failure_reason: generation.failureReason ?? null,
-        client_name: `${client.firstName} ${client.lastName}`,
+        client_name: consumer.fullName,
         bureau: bureau,
         round: round || 1,
         dispute_type: disputeType || 'standard',
@@ -362,13 +365,7 @@ export async function POST(request: NextRequest) {
       priorDisputeDate: priorDisputeDate,
       priorDisputeResult: priorDisputeResult,
       enclosures: enclosures,
-      clientData: {
-        name: `${client.firstName} ${client.lastName}`,
-        address: undefined,
-        city: undefined,
-        state: undefined,
-        zip: undefined,
-      },
+      clientData: consumer,
       itemData: {
         creditorName: payloadData.creditorName,
         originalCreditor: payloadData.originalCreditor,
@@ -421,7 +418,7 @@ export async function POST(request: NextRequest) {
       letter_content: generation.letter,
       generation_source: generation.source,
       generation_failure_reason: generation.failureReason ?? null,
-      client_name: `${client.firstName} ${client.lastName}`,
+      client_name: consumer.fullName,
       bureau: bureau,
       round: round || 1,
       dispute_type: disputeType || 'standard',

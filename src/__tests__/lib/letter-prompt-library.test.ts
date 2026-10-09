@@ -15,7 +15,7 @@ const baseParams = {
   disputeType: 'standard',
   round: 2,
   targetRecipient: 'bureau' as const,
-  clientData: { name: 'Alex Example' },
+  clientData: { fullName: 'Alex Example', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zip: '12207' },
   itemData: {
     creditorName: 'Example Creditor',
     itemType: 'collection',
