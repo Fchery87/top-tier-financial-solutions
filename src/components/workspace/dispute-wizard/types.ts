@@ -1,4 +1,5 @@
 import { Users, FileText, Target, CheckCircle } from 'lucide-react';
+import type { HighRiskClaimType, ItemClaimConfirmation } from '@/lib/high-risk-claim-registry';
 
 export interface Client {
   id: string;
@@ -142,6 +143,23 @@ export interface DisputeItemPayload {
   isPastFcraLimit?: boolean | null;
   daysSinceInquiry?: number | null;
   riskSeverity?: string | null;
+}
+
+/**
+ * One high-risk claim on one selected item, and where the client's confirmation
+ * of it stands. `confirmation` comes from the evidence-packets GET; `loading`
+ * is true until that answer arrives.
+ */
+export interface HighRiskItemClaim {
+  key: string;
+  itemKind: DisputeItemKind;
+  itemId: string;
+  itemLabel: string;
+  /** Bureau code, or several joined by commas for a tradeline on more than one bureau. */
+  bureau: string | null;
+  claimType: HighRiskClaimType;
+  confirmation: ItemClaimConfirmation;
+  loading?: boolean;
 }
 
 export interface GeneratedLetter {

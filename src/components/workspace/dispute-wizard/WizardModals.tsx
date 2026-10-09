@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, AlertTriangle, Loader2, Paperclip, Zap } from 'lucide-react';
+import { AlertCircle, Loader2, Paperclip, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EvidenceUploadModal } from '@/components/workspace/EvidenceUploadModal';
@@ -22,9 +22,6 @@ export function WizardModals() {
     setActiveTab, setItemDisputeInstructions, setDisputeRound, setTargetRecipient,
     setSelectedBureaus, setGenerationMethod, setCombineItemsPerBureau, setSelectedMethodology,
     setRequestManualReview, setSelectedEvidenceIds, setCurrentStep, setSelectedReasonCodes,
-    showEvidenceBlockingModal, setShowEvidenceBlockingModal,
-    evidenceBlockingStatus, setEvidenceBlockingStatus,
-    setEvidenceOverrideConfirmed,
     showEvidenceUploadModal, setShowEvidenceUploadModal,
     selectedReasonCodes, evidenceDocuments, handleUploadEvidence, handleRemoveEvidence,
     negativeItems, personalInfoItems, inquiryItems,
@@ -129,34 +126,6 @@ export function WizardModals() {
                 >
                   Resume Draft
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Evidence Blocking Modal */}
-      {showEvidenceBlockingModal && evidenceBlockingStatus && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl bg-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="w-5 h-5" />Evidence Required for High-Risk Disputes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                <p className="text-sm text-destructive font-medium mb-3">⚠️ This dispute uses high-risk reason codes that require supporting evidence:</p>
-                <ul className="space-y-2">{evidenceBlockingStatus.blockingReasons.map((reason, idx) => <li key={idx} className="text-sm text-destructive">• {reason}</li>)}</ul>
-              </div>
-              {evidenceBlockingStatus.requiredEvidenceMissing.length > 0 && (
-                <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-4">
-                  <p className="text-sm text-foreground font-medium mb-2">Required Evidence:</p>
-                  <ul className="space-y-1">{evidenceBlockingStatus.requiredEvidenceMissing.map((doc, idx) => <li key={idx} className="text-sm text-muted-foreground">• {doc}</li>)}</ul>
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground">Please upload the required evidence documents before proceeding. Evidence significantly strengthens high-risk disputes.</p>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => { setShowEvidenceBlockingModal(false); setEvidenceBlockingStatus(null); setShowEvidenceUploadModal(true); }}>Cancel & Upload Evidence</Button>
-                <Button onClick={() => { setEvidenceOverrideConfirmed(true); setShowEvidenceBlockingModal(false); setTimeout(() => { const btn = document.querySelector('[data-generate-button]') as HTMLButtonElement; btn?.click(); }, 0); }} className="bg-warning text-warning-foreground hover:bg-warning/90">Proceed Without Evidence (Admin Override)</Button>
               </div>
             </CardContent>
           </Card>

@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { type EvidenceValidationResult } from '@/lib/dispute-wizard-validation';
 import { useWizardDraft, type DraftMetadata } from '@/hooks/useWizardDraft';
 import { type StepStatus } from '@/components/workspace/DisputeWizardProgressBar';
 import { useLetterGeneration } from './hooks/useLetterGeneration';
@@ -21,7 +20,7 @@ import { useWizardDraftRecovery } from './hooks/useWizardDraftRecovery';
 import { useWizardOperationError } from './hooks/useWizardOperationError';
 import { useWizardInitialLoad } from './hooks/useWizardInitialLoad';
 import { useSelectedClientDataLoad } from './hooks/useSelectedClientDataLoad';
-import { useGenerateDisputeLetters } from './hooks/useGenerateDisputeLetters';
+import { useGenerateDisputeLetters, type GenerateLettersAnalysis, type GenerateLettersOptions } from './hooks/useGenerateDisputeLetters';
 import { useWizardKeyboardNavigation } from './hooks/useWizardKeyboardNavigation';
 import { useWizardNavigation } from './hooks/useWizardNavigation';
 import {
@@ -41,6 +40,7 @@ import {
   type TargetRecipient,
   type GenerationMethod,
   type AnalysisAggressiveness,
+  type HighRiskItemClaim,
   itemAppearsOnBureau,
 } from './types';
 
@@ -153,8 +153,6 @@ interface WizardContextValue {
   setSelectedEvidenceIds: React.Dispatch<React.SetStateAction<string[]>>;
   loadingEvidence: boolean;
   setLoadingEvidence: React.Dispatch<React.SetStateAction<boolean>>;
-  evidenceOverrideConfirmed: boolean;
-  setEvidenceOverrideConfirmed: React.Dispatch<React.SetStateAction<boolean>>;
   showEvidenceUploadModal: boolean;
   setShowEvidenceUploadModal: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -162,10 +160,13 @@ interface WizardContextValue {
   setValidationErrors: React.Dispatch<React.SetStateAction<Record<number, string[]>>>;
   validationWarnings: Record<number, string[]>;
   setValidationWarnings: React.Dispatch<React.SetStateAction<Record<number, string[]>>>;
-  evidenceBlockingStatus: EvidenceValidationResult | null;
-  setEvidenceBlockingStatus: React.Dispatch<React.SetStateAction<EvidenceValidationResult | null>>;
-  showEvidenceBlockingModal: boolean;
-  setShowEvidenceBlockingModal: React.Dispatch<React.SetStateAction<boolean>>;
+  /** One entry per (selected item, high-risk claim type), with the client's confirmation state. */
+  highRiskClaims: HighRiskItemClaim[];
+  /** Selected items with no unconfirmed high-risk claim. */
+  readyItemCount: number;
+  requestingConfirmationKey: string | null;
+  requestClientConfirmation: (claim: HighRiskItemClaim, documentIds: string[]) => Promise<void>;
+  refreshClientConfirmation: (claim: Pick<HighRiskItemClaim, 'itemKind' | 'itemId'>) => void;
 
   operationError: string | null;
   setOperationError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -206,7 +207,7 @@ interface WizardContextValue {
   fetchReasonCodes: (methodology?: string) => Promise<void>;
   analyzeItemsWithAI: (retryFailedOnly?: boolean) => Promise<{ analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null>;
   autoSelectDisputableItems: () => Promise<void>;
-  generateLetters: (analysisData?: { analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null) => Promise<void>;
+  generateLetters: (analysisData?: GenerateLettersAnalysis, options?: GenerateLettersOptions) => Promise<void>;
   handleSelectClient: (client: Client) => void;
   handleToggleItem: (itemId: string) => void;
   handleToggleBureau: (bureau: string) => void;
@@ -440,8 +441,6 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setSelectedEvidenceIds,
     loadingEvidence,
     setLoadingEvidence,
-    evidenceOverrideConfirmed,
-    setEvidenceOverrideConfirmed,
     showEvidenceUploadModal,
     setShowEvidenceUploadModal,
     fetchEvidence,
@@ -498,11 +497,12 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   });
 
   const {
-    evidenceBlockingStatus,
-    setEvidenceBlockingStatus,
-    showEvidenceBlockingModal,
-    setShowEvidenceBlockingModal,
     generateLetters,
+    highRiskClaims,
+    readyItemCount,
+    requestingConfirmationKey,
+    requestClientConfirmation,
+    refreshClientConfirmation,
   } = useGenerateDisputeLetters({
     selectedClient,
     negativeItems,
@@ -525,7 +525,6 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     combineItemsPerBureau,
     selectedEvidenceIds,
     requestManualReview,
-    evidenceOverrideConfirmed,
     getInstructionText,
     hasItemInstruction,
     getItemReasonCode,
@@ -592,9 +591,9 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     discrepancySummary, setDiscrepancySummary, loadingDiscrepancies, setLoadingDiscrepancies,
     triageQuickActions, setTriageQuickActions, historicalRecommendations,
     evidenceDocuments, setEvidenceDocuments, selectedEvidenceIds, setSelectedEvidenceIds, loadingEvidence, setLoadingEvidence,
-    evidenceOverrideConfirmed, setEvidenceOverrideConfirmed, showEvidenceUploadModal, setShowEvidenceUploadModal,
+    showEvidenceUploadModal, setShowEvidenceUploadModal,
     validationErrors, setValidationErrors, validationWarnings, setValidationWarnings,
-    evidenceBlockingStatus, setEvidenceBlockingStatus, showEvidenceBlockingModal, setShowEvidenceBlockingModal,
+    highRiskClaims, readyItemCount, requestingConfirmationKey, requestClientConfirmation, refreshClientConfirmation,
     operationError, setOperationError, showErrorModal, setShowErrorModal,
     showDraftRecovery, setShowDraftRecovery, draftMetadata, setDraftMetadata,
     selectedReasonCodes, setSelectedReasonCodes, selectedDisputeType,

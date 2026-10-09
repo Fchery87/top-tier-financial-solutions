@@ -1,12 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { Check, Loader2, Sparkles, FileText, Paperclip, Upload, AlertTriangle } from 'lucide-react';
+import { Check, Loader2, Sparkles, FileText, Paperclip, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useWizardContext } from './WizardContext';
-import { isHighRiskClaimType } from '@/lib/high-risk-claim-registry';
+import { EvidenceDocumentPicker } from './EvidenceDocumentPicker';
+import { HighRiskConfirmationPanel } from './HighRiskConfirmationPanel';
 import { BUREAUS, SECONDARY_BUREAUS } from './types';
 
 interface CfpbEligibilityPreview {
@@ -28,9 +29,9 @@ export function StepConfigure() {
     handleToggleBureau,
     selectedItems, selectedPersonalItems, selectedInquiryItems,
     evidenceDocuments, selectedEvidenceIds, setSelectedEvidenceIds,
-    loadingEvidence, evidenceOverrideConfirmed, setEvidenceOverrideConfirmed,
+    loadingEvidence,
     setShowEvidenceUploadModal,
-    selectedReasonCodes,
+    highRiskClaims, requestingConfirmationKey, requestClientConfirmation, refreshClientConfirmation,
     creditReports, selectedReportId, setSelectedReportId,
     discrepancySummary, loadingDiscrepancies,
     confidenceThreshold, setConfidenceThreshold,
@@ -346,36 +347,20 @@ export function StepConfigure() {
               <p className="text-xs mt-1">Standard enclosures (ID, proof of address) will be included automatically.</p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              {evidenceDocuments.map((doc) => {
-                const isSelected = selectedEvidenceIds.includes(doc.id);
-                return (
-                  <div key={doc.id} className={`p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'}`} onClick={() => setSelectedEvidenceIds(prev => isSelected ? prev.filter(id => id !== doc.id) : [...prev, doc.id])}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isSelected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'}`}>{isSelected && <Check className="w-3 h-3 text-primary" />}</div>
-                      <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{doc.file_name}</p><p className="text-xs text-muted-foreground">{doc.file_type}</p></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <EvidenceDocumentPicker
+              documents={evidenceDocuments}
+              selectedIds={selectedEvidenceIds}
+              onToggle={(documentId) => setSelectedEvidenceIds(prev => prev.includes(documentId) ? prev.filter(id => id !== documentId) : [...prev, documentId])}
+            />
           )}
 
-          {selectedReasonCodes.some(isHighRiskClaimType) && selectedEvidenceIds.length === 0 && (
-            <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-warning">Evidence Required for High-Risk Claims</p>
-                  <p className="text-xs text-muted-foreground mt-1">The selected reason codes require supporting documentation.</p>
-                  <label className="flex items-center gap-2 mt-2">
-                    <input type="checkbox" checked={evidenceOverrideConfirmed} onChange={(e) => setEvidenceOverrideConfirmed(e.target.checked)} className="rounded border-warning" />
-                    <span className="text-xs text-warning">I confirm client has provided verbal verification of these claims</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
+          <HighRiskConfirmationPanel
+            claims={highRiskClaims}
+            evidenceDocuments={evidenceDocuments}
+            onRequestConfirmation={(claim, documentIds) => void requestClientConfirmation(claim, documentIds)}
+            onRefresh={refreshClientConfirmation}
+            requestingKey={requestingConfirmationKey}
+          />
 
           <Button variant="outline" className="w-full" onClick={() => setShowEvidenceUploadModal(true)}>
             <Upload className="w-4 h-4 mr-2" />Upload Evidence Documents

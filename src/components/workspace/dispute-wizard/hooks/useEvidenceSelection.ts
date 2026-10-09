@@ -10,7 +10,6 @@ export function useEvidenceSelection({ getClientId, onOperationError }: Evidence
   const [evidenceDocuments, setEvidenceDocuments] = React.useState<EvidenceDocument[]>([]);
   const [selectedEvidenceIds, setSelectedEvidenceIds] = React.useState<string[]>([]);
   const [loadingEvidence, setLoadingEvidence] = React.useState(false);
-  const [evidenceOverrideConfirmed, setEvidenceOverrideConfirmed] = React.useState(false);
   const [showEvidenceUploadModal, setShowEvidenceUploadModal] = React.useState(false);
 
   const fetchEvidence = React.useCallback(async (clientId: string) => {
@@ -82,8 +81,6 @@ export function useEvidenceSelection({ getClientId, onOperationError }: Evidence
     setSelectedEvidenceIds,
     loadingEvidence,
     setLoadingEvidence,
-    evidenceOverrideConfirmed,
-    setEvidenceOverrideConfirmed,
     showEvidenceUploadModal,
     setShowEvidenceUploadModal,
     fetchEvidence,

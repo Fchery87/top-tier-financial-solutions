@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { GeneratedLetter } from '../types';
 import { letterGenerationNotice } from '@/lib/letter-generation-notice';
 import type { LetterGenerationRequestPlan } from '../types/letter-generation';
+import { HighRiskConfirmationRequiredError } from '../services/highRiskClaims';
 
 interface GenerateLettersFromPlanOptions {
   onError?: (error: unknown, request: LetterGenerationRequestPlan) => void;
@@ -37,6 +38,8 @@ export function useLetterGeneration() {
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
+          const confirmationError = HighRiskConfirmationRequiredError.fromResponse(response.status, data, request.items);
+          if (confirmationError) throw confirmationError;
           const violations: string[] = Array.isArray(data.violations) ? data.violations : [];
           const message = typeof data.error === 'string' ? data.error : 'Failed to generate dispute draft';
           throw new Error([message, ...violations].join(' '));

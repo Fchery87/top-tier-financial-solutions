@@ -35,10 +35,11 @@ function buildContext(targetRecipient: 'bureau' | 'creditor' | 'collector' | 'cf
     selectedEvidenceIds: [],
     setSelectedEvidenceIds: vi.fn(),
     loadingEvidence: false,
-    evidenceOverrideConfirmed: false,
-    setEvidenceOverrideConfirmed: vi.fn(),
     setShowEvidenceUploadModal: vi.fn(),
-    selectedReasonCodes: [],
+    highRiskClaims: [] as unknown[],
+    requestingConfirmationKey: null,
+    requestClientConfirmation: vi.fn(),
+    refreshClientConfirmation: vi.fn(),
     creditReports: [],
     selectedReportId: null,
     setSelectedReportId: vi.fn(),
@@ -91,5 +92,28 @@ describe('StepConfigure direct-dispute advisory', () => {
     await waitFor(() => expect(screen.getByTestId('cfpb-eligibility-preview')).toBeInTheDocument());
     expect(screen.getByTestId('cfpb-eligibility-preview')).toHaveTextContent('still pending');
     expect(screen.getByTestId('cfpb-eligibility-preview')).toHaveTextContent('August 15, 2026');
+  });
+});
+
+describe('StepConfigure client confirmation', () => {
+  it('shows a client confirmation panel per high-risk item and no staff override', () => {
+    useWizardContextMock.mockReturnValue({
+      ...buildContext('bureau'),
+      highRiskClaims: [{
+        key: 'inquiry:inq-1:unauthorized_inquiry',
+        itemKind: 'inquiry',
+        itemId: 'inq-1',
+        itemLabel: 'Inquiry Bank',
+        bureau: 'equifax',
+        claimType: 'unauthorized_inquiry',
+        confirmation: { state: 'awaiting_client_confirmation', packetId: 'packet-1' },
+      }],
+    });
+
+    render(<StepConfigure />);
+
+    expect(screen.getByTestId('client-confirmation-inquiry:inq-1:unauthorized_inquiry')).toHaveTextContent('Inquiry Bank · Equifax · Unauthorized inquiry');
+    expect(screen.queryByText(/verbal verification/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/override/i)).not.toBeInTheDocument();
   });
 });

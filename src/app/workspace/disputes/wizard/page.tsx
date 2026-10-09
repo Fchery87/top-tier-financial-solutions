@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, CheckCircle, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AdminPageHeader } from '@/components/workspace/AdminPageHeader';
@@ -14,16 +14,14 @@ import { StepClientSelect } from '@/components/workspace/dispute-wizard/StepClie
 import { StepItemSelect } from '@/components/workspace/dispute-wizard/StepItemSelect';
 import { StepConfigure } from '@/components/workspace/dispute-wizard/StepConfigure';
 import { StepReview } from '@/components/workspace/dispute-wizard/StepReview';
+import { WizardGenerateControls } from '@/components/workspace/dispute-wizard/WizardGenerateControls';
 import { WIZARD_STEPS } from '@/components/workspace/dispute-wizard/types';
 
 function DisputeWizardContent() {
   const router = useRouter();
   const {
     currentStep, setCurrentStep, maxSteps,
-    generating, analyzingItems, analysisProgress, estimatedTimeRemaining,
-    generationProgress, generationMethod,
     validateCurrentStep, canProceed,
-    analyzeItemsWithAI, generateLetters,
     buildStepStatuses, handleStepClick,
   } = useWizardContext();
 
@@ -66,34 +64,13 @@ function DisputeWizardContent() {
       </motion.div>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <Button variant="outline" onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))} disabled={currentStep === 1} title="Keyboard shortcut: Escape">
           <ArrowLeft className="w-4 h-4 mr-2" />Back<span className="hidden sm:inline ml-2 text-xs text-muted-foreground">(Esc)</span>
         </Button>
 
         {currentStep === 3 ? (
-          <Button
-            data-generate-button
-            onClick={async () => {
-              if (!validateCurrentStep()) return;
-              let analysisData = null;
-              if (generationMethod === 'ai') analysisData = await analyzeItemsWithAI();
-              await generateLetters(analysisData);
-            }}
-            disabled={!canProceed() || generating || analyzingItems}
-          >
-            {analyzingItems ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing Items... ({Math.round(analysisProgress)}%)
-                {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && <span className="ml-2 text-xs opacity-75">~{estimatedTimeRemaining}s</span>}
-              </>
-            ) : generating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating ({generationProgress}%)</>
-            ) : (
-              <><Sparkles className="w-4 h-4 mr-2" />{generationMethod === 'ai' ? 'Analyze & Generate' : 'Generate Letters'}</>
-            )}
-          </Button>
+          <WizardGenerateControls />
         ) : currentStep === 4 ? (
           <Button onClick={() => router.push('/workspace/clients')}>
             <CheckCircle className="w-4 h-4 mr-2" />Done
