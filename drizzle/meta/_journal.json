@@ -351,6 +351,13 @@
       "when": 1791523116608,
       "tag": "0049_remove_cash_payment_method",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791525955041,
+      "tag": "0050_two_factor",
+      "breakpoints": true
     }
   ]
 }
