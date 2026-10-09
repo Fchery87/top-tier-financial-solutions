@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '@/lib/auth-client';
+import { resolvePostSignInLanding } from '@/lib/post-sign-in-landing';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/Logo';
 import { Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
@@ -26,14 +27,14 @@ export default function SignInPage() {
         password,
       });
 
+      const next = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null;
       if (result.error) {
         setError(result.error.message || 'Invalid email or password');
+      } else if (needsSecondFactor(result.data)) {
+        // Password accepted, but no session yet: the account needs its second factor.
+        router.push(`/two-factor${next ? `?next=${encodeURIComponent(next)}` : ''}`);
       } else {
-        const next = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null;
-        const landingResponse = await fetch(`/api/auth/landing${next ? `?next=${encodeURIComponent(next)}` : ''}`);
-        const landingData: unknown = await landingResponse.json().catch(() => null);
-        const landing = isRecord(landingData) && typeof landingData.landing === 'string' ? landingData.landing : '/';
-        router.push(landing);
+        router.push(await resolvePostSignInLanding(next));
         router.refresh();
       }
     } catch {
@@ -139,6 +140,6 @@ export default function SignInPage() {
   );
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+function needsSecondFactor(data: unknown): boolean {
+  return typeof data === 'object' && data !== null && 'twoFactorRedirect' in data && data.twoFactorRedirect === true;
 }
