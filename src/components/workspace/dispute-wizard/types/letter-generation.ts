@@ -43,6 +43,8 @@ export interface LetterGenerationBuilderInput {
   /** Template mode: the reason code the staff member chose for a tradeline, if any. */
   getItemReasonCode: (itemId: string) => string | null;
   itemAppearsOnBureau: (item: NegativeItem, bureau: string) => boolean;
+  /** Item keys (see `disputeItemKey`) to leave out, such as items still awaiting client confirmation. */
+  excludedItemKeys?: ReadonlySet<string>;
 }
 
 export interface LetterGenerationRequestBody {

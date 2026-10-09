@@ -224,6 +224,79 @@ describe('buildLetterGenerationPayload', () => {
     ]);
   });
 
+  it('gives each tradeline its own analysis codes in AI mode', () => {
+    const second: NegativeItem = { ...tradeline, id: 'neg-2', creditor_name: 'Card Co' };
+    const plan = buildLetterGenerationPayload(baseInput({
+      negativeItems: [tradeline, second],
+      selectedItems: ['neg-1', 'neg-2'],
+      combineItemsPerBureau: false,
+      selectedBureaus: ['experian'],
+      effectiveAnalyses: [analysis, { ...analysis, itemId: 'neg-2', autoReasonCodes: ['not_mine'] }],
+      effectiveSummary: { ...summary, allReasonCodes: ['metro2_violation', 'not_mine'] },
+    }));
+
+    expect(plan.requests.map(request => [request.itemId, request.body.reasonCodes])).toEqual([
+      ['neg-1', ['metro2_violation']],
+      ['neg-2', ['not_mine']],
+    ]);
+  });
+
+  it('never spreads a summary-level high-risk code to a tradeline without its own analysis', () => {
+    const plan = buildLetterGenerationPayload(baseInput({
+      combineItemsPerBureau: false,
+      selectedBureaus: ['experian'],
+      effectiveAnalyses: [],
+      effectiveSummary: { ...summary, allReasonCodes: ['not_mine', 'metro2_violation'] },
+    }));
+
+    expect(plan.requests[0].body.reasonCodes).toEqual(['metro2_violation']);
+  });
+
+  it('splits high-risk items out of a combined letter into letters of their own', () => {
+    const notMine: NegativeItem = { ...tradeline, id: 'neg-2', creditor_name: 'Card Co' };
+    const unauthorized: InquiryItem = { ...inquiry, id: 'inq-2', bureau: 'experian', is_past_fcra_limit: false };
+    const plan = buildLetterGenerationPayload(baseInput({
+      generationMethod: 'template',
+      negativeItems: [tradeline, notMine],
+      selectedItems: ['neg-1', 'neg-2'],
+      inquiryItems: [unauthorized],
+      selectedInquiryItems: ['inq-2'],
+      selectedBureaus: ['experian'],
+      getItemReasonCode: itemId => (itemId === 'neg-2' ? 'not_mine' : 'wrong_balance'),
+    }));
+
+    expect(plan.requests.map(request => [request.combined, request.items.map(item => item.id), request.body.reasonCodes])).toEqual([
+      [true, ['neg-1'], ['wrong_balance']],
+      [false, ['neg-2'], ['not_mine']],
+      [false, ['inq-2'], ['unauthorized_inquiry', 'verification_required']],
+    ]);
+    expect(plan.requests[0].body.combineItems).toBe(true);
+    expect(plan.requests[1].body).not.toHaveProperty('combineItems');
+  });
+
+  it('leaves out excluded items so the ready ones still generate', () => {
+    const notMine: NegativeItem = { ...tradeline, id: 'neg-2', creditor_name: 'Card Co' };
+    const plan = buildLetterGenerationPayload(baseInput({
+      generationMethod: 'template',
+      negativeItems: [tradeline, notMine],
+      selectedItems: ['neg-1', 'neg-2'],
+      selectedBureaus: ['experian'],
+      getItemReasonCode: itemId => (itemId === 'neg-2' ? 'not_mine' : 'wrong_balance'),
+      excludedItemKeys: new Set(['tradeline:neg-2']),
+    }));
+
+    expect(plan.selectedDisputeItems.map(entry => entry.payload.id)).toEqual(['neg-1']);
+    expect(plan.reasonCodesToUse).toEqual(['wrong_balance']);
+    expect(plan.requests.map(request => request.items.map(item => item.id))).toEqual([['neg-1']]);
+  });
+
+  it('sends no client confirmation flag in any request body', () => {
+    const plan = buildLetterGenerationPayload(baseInput({ generationMethod: 'template', getItemReasonCode: () => 'not_mine' }));
+    for (const request of plan.requests) {
+      expect(request.body).not.toHaveProperty('clientConfirmedOwnershipClaims');
+    }
+  });
+
   it('returns no requests when no selected dispute items exist', () => {
     const plan = buildLetterGenerationPayload(baseInput({
       negativeItems: [],

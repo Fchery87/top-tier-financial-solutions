@@ -1,9 +1,16 @@
-import type { AIAnalysisSummary, DisputeItemPayload, InquiryItem, NegativeItem, PersonalInfoItem } from '../types';
+import { isHighRiskClaimType } from '@/lib/high-risk-claim-registry';
+import type { AIAnalysisSummary, DisputeItemKind, DisputeItemPayload, InquiryItem, NegativeItem, PersonalInfoItem } from '../types';
 import type {
   LetterGenerationBuilderInput,
   LetterGenerationPayloadPlan,
+  LetterGenerationRequestPlan,
   SelectedDisputeItemEntry,
 } from '../types/letter-generation';
+
+/** How the wizard names one selected item across tables: `tradeline:<id>`, `inquiry:<id>`, `personal:<id>`. */
+export function disputeItemKey(kind: DisputeItemKind, id: string): string {
+  return `${kind}:${id}`;
+}
 
 function toTradelinePayload(item: NegativeItem): DisputeItemPayload {
   return {
@@ -43,7 +50,8 @@ function toInquiryPayload(item: InquiryItem): DisputeItemPayload {
   };
 }
 
-function buildSelectedDisputeItems(input: LetterGenerationBuilderInput): SelectedDisputeItemEntry[] {
+/** Every item the staff member selected, in tradeline, personal, inquiry order. */
+export function buildSelectedDisputeItems(input: LetterGenerationBuilderInput): SelectedDisputeItemEntry[] {
   const selectedTradelines = input.negativeItems.filter(item => input.selectedItems.includes(item.id));
   const selectedPersonal = input.personalInfoItems.filter(item => input.selectedPersonalItems.includes(item.id));
   const selectedInquiries = input.inquiryItems.filter(item => input.selectedInquiryItems.includes(item.id));
@@ -61,36 +69,40 @@ function inquiryReasonCodes(item: InquiryItem): string[] {
   return [item.is_past_fcra_limit ? 'obsolete' : 'unauthorized_inquiry', 'verification_required'];
 }
 
-function buildAiReasonCodes(input: LetterGenerationBuilderInput): string[] {
-  const reasonCodeSet = new Set(input.effectiveSummary?.allReasonCodes || ['verification_required', 'inaccurate_reporting']);
-  const hasSelectedPersonal = input.personalInfoItems.some(item => input.selectedPersonalItems.includes(item.id));
-  const selectedInquiries = input.inquiryItems.filter(item => input.selectedInquiryItems.includes(item.id));
+const DEFAULT_TRADELINE_REASON_CODES = ['verification_required', 'inaccurate_reporting'];
 
-  if (hasSelectedPersonal) PERSONAL_INFO_REASON_CODES.forEach(code => reasonCodeSet.add(code));
-
-  if (selectedInquiries.length > 0) {
-    reasonCodeSet.add(selectedInquiries.some(item => item.is_past_fcra_limit) ? 'obsolete' : 'unauthorized_inquiry');
-    reasonCodeSet.add('verification_required');
-  }
-
-  return Array.from(reasonCodeSet);
+/**
+ * AI mode: a tradeline carries the codes its own analysis chose. Without an
+ * analysis it falls back to the summary's ordinary codes; a summary-level
+ * high-risk code never spreads to an item the analysis did not flag.
+ */
+function aiTradelineReasonCodes(input: LetterGenerationBuilderInput, itemId: string): string[] {
+  const analysis = input.effectiveAnalyses.find(result => result.itemId === itemId);
+  if (analysis && analysis.autoReasonCodes.length > 0) return analysis.autoReasonCodes;
+  const summaryCodes = (input.effectiveSummary?.allReasonCodes ?? []).filter(code => !isHighRiskClaimType(code));
+  return summaryCodes.length > 0 ? summaryCodes : DEFAULT_TRADELINE_REASON_CODES;
 }
 
 /**
- * Template mode: a tradeline's reason code is the one the staff member chose
- * for its dispute instruction. Personal-information and inquiry codes follow
- * deterministically from the item data, as in AI mode.
+ * The reason codes for one item. Personal-information and inquiry codes follow
+ * from the item data. A tradeline's code is the one the staff member chose
+ * (template mode) or its own analysis chose (AI mode).
  */
-function templateEntryReasonCodes(input: LetterGenerationBuilderInput, entry: SelectedDisputeItemEntry): string[] {
+export function entryReasonCodes(input: LetterGenerationBuilderInput, entry: SelectedDisputeItemEntry): string[] {
   if (entry.kind === 'personal') return PERSONAL_INFO_REASON_CODES;
   if (entry.kind === 'inquiry') return inquiryReasonCodes(entry.raw as InquiryItem);
+  if (input.generationMethod === 'ai') return aiTradelineReasonCodes(input, entry.payload.id);
   const code = input.getItemReasonCode(entry.payload.id);
   return code ? [code] : [];
 }
 
 function reasonCodesForEntries(input: LetterGenerationBuilderInput, entries: SelectedDisputeItemEntry[]): string[] {
-  if (input.generationMethod === 'ai') return buildAiReasonCodes(input);
-  return Array.from(new Set(entries.flatMap(entry => templateEntryReasonCodes(input, entry))));
+  return Array.from(new Set(entries.flatMap(entry => entryReasonCodes(input, entry))));
+}
+
+/** True when the item carries a claim that needs the client's own confirmation. */
+export function entryHasHighRiskClaim(input: LetterGenerationBuilderInput, entry: SelectedDisputeItemEntry): boolean {
+  return entryReasonCodes(input, entry).some(isHighRiskClaimType);
 }
 
 function buildPerItemInstructions(input: LetterGenerationBuilderInput): Record<string, string> {
@@ -117,59 +129,61 @@ function methodology(input: LetterGenerationBuilderInput, summary: AIAnalysisSum
   return input.generationMethod === 'ai' ? (summary?.recommendedMethodology || input.selectedMethodology) : input.selectedMethodology;
 }
 
-export function buildLetterGenerationPayload(input: LetterGenerationBuilderInput): LetterGenerationPayloadPlan {
-  const selectedDisputeItems = buildSelectedDisputeItems(input);
-  const reasonCodesToUse = reasonCodesForEntries(input, selectedDisputeItems);
-  const methodologyToUse = methodology(input, input.effectiveSummary);
-  const bureausToUse = input.targetRecipient === 'bureau' ? input.selectedBureaus : ['direct'];
-  const perItemInstructions = buildPerItemInstructions(input);
-  const perItemInstructionsOrUndefined = input.generationMethod === 'template' ? perItemInstructions : undefined;
-  const evidenceIds = evidenceDocumentIds(input);
+interface RequestContext {
+  methodologyToUse: string;
+  bureausToUse: string[];
+  perItemInstructions: Record<string, string> | undefined;
+  evidenceIds: string[] | undefined;
+}
 
-  if (selectedDisputeItems.length === 0) {
-    return { selectedDisputeItems, reasonCodesToUse, methodologyToUse, requests: [] };
-  }
-
-  if (input.combineItemsPerBureau && input.targetRecipient === 'bureau') {
-    const bureausWithItems = bureausToUse.filter(bureau => selectedDisputeItems.some(entry => itemAppliesToBureau(input, entry, bureau)));
-    const requests = bureausWithItems.map(bureau => {
-      const entriesForThisBureau = selectedDisputeItems.filter(entry => itemAppliesToBureau(input, entry, bureau));
-      const itemsForThisBureau = entriesForThisBureau.map(entry => entry.payload);
-      return {
-        key: `combined-${bureau}-${itemsForThisBureau.map(item => item.id).join('-')}`,
+function combinedRequests(
+  input: LetterGenerationBuilderInput,
+  entries: SelectedDisputeItemEntry[],
+  context: RequestContext,
+): LetterGenerationRequestPlan[] {
+  const bureausWithItems = context.bureausToUse.filter(bureau => entries.some(entry => itemAppliesToBureau(input, entry, bureau)));
+  return bureausWithItems.map(bureau => {
+    const entriesForThisBureau = entries.filter(entry => itemAppliesToBureau(input, entry, bureau));
+    const itemsForThisBureau = entriesForThisBureau.map(entry => entry.payload);
+    return {
+      key: `combined-${bureau}-${itemsForThisBureau.map(item => item.id).join('-')}`,
+      bureau,
+      combined: true,
+      itemId: itemsForThisBureau[0]?.id || '',
+      itemIds: itemsForThisBureau.map(item => item.id),
+      items: itemsForThisBureau,
+      body: {
+        clientId: input.selectedClientId,
+        disputeItems: itemsForThisBureau,
         bureau,
-        combined: true,
-        itemId: itemsForThisBureau[0]?.id || '',
-        itemIds: itemsForThisBureau.map(item => item.id),
-        items: itemsForThisBureau,
-        body: {
-          clientId: input.selectedClientId,
-          disputeItems: itemsForThisBureau,
-          bureau,
-          disputeType: input.selectedDisputeType,
-          round: input.disputeRound,
-          targetRecipient: input.targetRecipient,
-          priorDisputeId: input.priorDisputeId || undefined,
-          reasonCodes: reasonCodesForEntries(input, entriesForThisBureau),
-          customReason: input.customReason || undefined,
-          combineItems: true,
-          methodology: methodologyToUse,
-          perItemInstructions: perItemInstructionsOrUndefined,
-          metro2Violations: input.generationMethod === 'ai' ? input.effectiveSummary?.allMetro2Violations : undefined,
-          evidenceDocumentIds: evidenceIds,
-          requestManualReview: input.requestManualReview,
-        },
-      };
-    });
-    return { selectedDisputeItems, reasonCodesToUse, methodologyToUse, requests };
-  }
+        disputeType: input.selectedDisputeType,
+        round: input.disputeRound,
+        targetRecipient: input.targetRecipient,
+        priorDisputeId: input.priorDisputeId || undefined,
+        reasonCodes: reasonCodesForEntries(input, entriesForThisBureau),
+        customReason: input.customReason || undefined,
+        combineItems: true,
+        methodology: context.methodologyToUse,
+        perItemInstructions: context.perItemInstructions,
+        metro2Violations: input.generationMethod === 'ai' ? input.effectiveSummary?.allMetro2Violations : undefined,
+        evidenceDocumentIds: context.evidenceIds,
+        requestManualReview: input.requestManualReview,
+      },
+    };
+  });
+}
 
-  const itemBureauPairs = selectedDisputeItems.flatMap(entry => {
+function singleRequests(
+  input: LetterGenerationBuilderInput,
+  entries: SelectedDisputeItemEntry[],
+  context: RequestContext,
+): LetterGenerationRequestPlan[] {
+  const itemBureauPairs = entries.flatMap(entry => {
     if (input.targetRecipient !== 'bureau') return [{ entry, bureau: entry.payload.bureau || 'transunion' }];
-    return bureausToUse.filter(bureau => itemAppliesToBureau(input, entry, bureau)).map(bureau => ({ entry, bureau }));
+    return context.bureausToUse.filter(bureau => itemAppliesToBureau(input, entry, bureau)).map(bureau => ({ entry, bureau }));
   });
 
-  const requests = itemBureauPairs.map(({ entry, bureau }) => {
+  return itemBureauPairs.map(({ entry, bureau }) => {
     const itemInstruction = input.generationMethod === 'template' && entry.kind === 'tradeline'
       ? input.getInstructionText(entry.payload.id)
       : input.customReason || undefined;
@@ -189,21 +203,58 @@ export function buildLetterGenerationPayload(input: LetterGenerationBuilderInput
         round: input.disputeRound,
         targetRecipient: input.targetRecipient,
         priorDisputeId: input.priorDisputeId || undefined,
-        reasonCodes: reasonCodesForEntries(input, [entry]),
+        reasonCodes: entryReasonCodes(input, entry),
         customReason: itemInstruction || undefined,
         creditorName: entry.payload.creditorName,
         itemType: entry.payload.itemType,
         amount: entry.payload.amount,
-        methodology: methodologyToUse,
+        methodology: context.methodologyToUse,
         disputeInstruction: itemInstruction,
         metro2Violations: input.generationMethod === 'ai' && entry.kind === 'tradeline'
           ? input.effectiveAnalyses.find(analysis => analysis.itemId === entry.payload.id)?.metro2Violations
           : undefined,
-        evidenceDocumentIds: evidenceIds,
+        evidenceDocumentIds: context.evidenceIds,
         requestManualReview: input.requestManualReview,
       },
     };
   });
+}
 
+/**
+ * Plans one request per letter. Each request carries only its own items'
+ * reason codes, because the server applies every code in a request to every
+ * item in it. In combine mode an item with a high-risk claim therefore gets
+ * its own letter, so a blocked item never blocks the combined one.
+ * `excludedItemKeys` leaves out items that cannot be generated yet.
+ */
+export function buildLetterGenerationPayload(input: LetterGenerationBuilderInput): LetterGenerationPayloadPlan {
+  const excluded = input.excludedItemKeys;
+  const selectedDisputeItems = buildSelectedDisputeItems(input)
+    .filter(entry => !excluded?.has(disputeItemKey(entry.kind, entry.payload.id)));
+  const reasonCodesToUse = reasonCodesForEntries(input, selectedDisputeItems);
+  const methodologyToUse = methodology(input, input.effectiveSummary);
+  const perItemInstructions = buildPerItemInstructions(input);
+  const context: RequestContext = {
+    methodologyToUse,
+    bureausToUse: input.targetRecipient === 'bureau' ? input.selectedBureaus : ['direct'],
+    perItemInstructions: input.generationMethod === 'template' ? perItemInstructions : undefined,
+    evidenceIds: evidenceDocumentIds(input),
+  };
+
+  if (selectedDisputeItems.length === 0) {
+    return { selectedDisputeItems, reasonCodesToUse, methodologyToUse, requests: [] };
+  }
+
+  if (input.combineItemsPerBureau && input.targetRecipient === 'bureau') {
+    const highRisk = selectedDisputeItems.filter(entry => entryHasHighRiskClaim(input, entry));
+    const ordinary = selectedDisputeItems.filter(entry => !entryHasHighRiskClaim(input, entry));
+    const requests = [
+      ...combinedRequests(input, ordinary, context),
+      ...singleRequests(input, highRisk, context),
+    ];
+    return { selectedDisputeItems, reasonCodesToUse, methodologyToUse, requests };
+  }
+
+  const requests = singleRequests(input, selectedDisputeItems, context);
   return { selectedDisputeItems, reasonCodesToUse, methodologyToUse, requests };
 }
