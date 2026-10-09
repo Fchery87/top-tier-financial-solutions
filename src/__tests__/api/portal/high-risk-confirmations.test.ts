@@ -105,3 +105,52 @@ describe('POST /api/portal/high-risk-confirmations', () => {
     expect(updateWhere).toHaveBeenCalled();
   }, 30000);
 });
+
+describe('GET /api/portal/high-risk-confirmations', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    authMock.api.getSession.mockResolvedValue({ user: { id: 'user-1', email: 'client@example.com' } });
+  });
+
+  it('names the disputed item and its bureau for each claim awaiting the client', async () => {
+    const { GET } = await import('@/app/api/portal/high-risk-confirmations/route');
+    dbMock.select
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1' }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([
+        { id: 'packet-1', claimType: 'unauthorized_inquiry', disputeId: null, itemKind: 'inquiry', itemId: 'inq-1', createdAt: new Date('2026-10-01T00:00:00Z'), confirmations: '[]' },
+        { id: 'packet-2', claimType: 'not_mine', disputeId: null, itemKind: 'tradeline', itemId: 'neg-1', createdAt: null, confirmations: JSON.stringify([{ key: 'client_factual_claim_confirmed', confirmed: true }]) },
+      ]) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([
+        { id: 'inq-1', clientId: 'client-1', creditorName: 'Inquiry Bank', bureau: 'equifax' },
+      ]) }) });
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.packets).toEqual([{
+      id: 'packet-1',
+      claim_type: 'unauthorized_inquiry',
+      dispute_id: null,
+      item: { kind: 'inquiry', name: 'Inquiry Bank', bureaus: ['equifax'] },
+      created_at: '2026-10-01T00:00:00.000Z',
+    }]);
+    expect(dbMock.select).toHaveBeenCalledTimes(3);
+  }, 30000);
+
+  it('never names an item that belongs to another client', async () => {
+    const { GET } = await import('@/app/api/portal/high-risk-confirmations/route');
+    dbMock.select
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: 'client-1' }]) }) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([
+        { id: 'packet-1', claimType: 'unauthorized_inquiry', disputeId: null, itemKind: 'inquiry', itemId: 'inq-9', createdAt: null, confirmations: '[]' },
+      ]) }) })
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([
+        { id: 'inq-9', clientId: 'client-2', creditorName: 'Someone Else', bureau: 'equifax' },
+      ]) }) });
+
+    const body = await (await GET()).json();
+
+    expect(body.packets[0].item).toBeNull();
+  });
+});
