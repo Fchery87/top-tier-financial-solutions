@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { auth } from '@/lib/auth';
-import { clients, evidencePackets } from '@/db/schema';
+import { clients, evidencePackets, inquiryDisputes, negativeItems, personalInfoDisputes } from '@/db/schema';
+import { decryptNegativeItemData } from '@/lib/db-encryption';
+import type { DisputeItemKind } from '@/lib/high-risk-claim-registry';
 import { headers } from 'next/headers';
 import { deriveEvidencePacketState, hasExplicitClientFactualConfirmation, HIGH_RISK_CLAIM_TYPES } from '@/lib/dispute-evidence';
 import { logServerEvent } from '@/lib/server-logger';
@@ -37,6 +39,75 @@ function parseConfirmations(value: string | null) {
   }
 }
 
+/** What the client sees for the disputed item: whose account or inquiry, and on which bureaus. */
+interface PortalClaimItem {
+  kind: DisputeItemKind;
+  name: string;
+  bureaus: string[];
+}
+
+function tradelineBureaus(row: { bureau: string | null; onTransunion: boolean | null; onExperian: boolean | null; onEquifax: boolean | null }): string[] {
+  const flagged = [
+    row.onTransunion ? 'transunion' : null,
+    row.onExperian ? 'experian' : null,
+    row.onEquifax ? 'equifax' : null,
+  ].filter((bureau): bureau is string => bureau !== null);
+  if (flagged.length > 0) return flagged;
+  return row.bureau && row.bureau !== 'combined' ? [row.bureau] : [];
+}
+
+/** Loads the client's own items that the packets are about, keyed by `${kind}:${id}`. */
+async function loadClaimItems(clientId: string, refs: { kind: DisputeItemKind; id: string }[]): Promise<Map<string, PortalClaimItem>> {
+  const items = new Map<string, PortalClaimItem>();
+  const idsOf = (kind: DisputeItemKind) => Array.from(new Set(refs.filter((ref) => ref.kind === kind).map((ref) => ref.id)));
+
+  const tradelineIds = idsOf('tradeline');
+  if (tradelineIds.length > 0) {
+    const rows = await db
+      .select({
+        id: negativeItems.id,
+        clientId: negativeItems.clientId,
+        creditorName: negativeItems.creditorName,
+        bureau: negativeItems.bureau,
+        onTransunion: negativeItems.onTransunion,
+        onExperian: negativeItems.onExperian,
+        onEquifax: negativeItems.onEquifax,
+      })
+      .from(negativeItems)
+      .where(and(eq(negativeItems.clientId, clientId), inArray(negativeItems.id, tradelineIds)));
+    for (const row of rows) {
+      if (row.clientId !== clientId) continue;
+      const decrypted = decryptNegativeItemData({ creditorName: row.creditorName });
+      items.set(`tradeline:${row.id}`, { kind: 'tradeline', name: String(decrypted.creditorName ?? ''), bureaus: tradelineBureaus(row) });
+    }
+  }
+
+  const inquiryIds = idsOf('inquiry');
+  if (inquiryIds.length > 0) {
+    const rows = await db
+      .select({ id: inquiryDisputes.id, clientId: inquiryDisputes.clientId, creditorName: inquiryDisputes.creditorName, bureau: inquiryDisputes.bureau })
+      .from(inquiryDisputes)
+      .where(and(eq(inquiryDisputes.clientId, clientId), inArray(inquiryDisputes.id, inquiryIds)));
+    for (const row of rows) {
+      if (row.clientId !== clientId) continue;
+      items.set(`inquiry:${row.id}`, { kind: 'inquiry', name: row.creditorName, bureaus: row.bureau ? [row.bureau] : [] });
+    }
+  }
+
+  const personalIds = idsOf('personal');
+  if (personalIds.length > 0) {
+    const rows = await db
+      .select({ id: personalInfoDisputes.id, clientId: personalInfoDisputes.clientId, type: personalInfoDisputes.type, value: personalInfoDisputes.value, bureau: personalInfoDisputes.bureau })
+      .from(personalInfoDisputes)
+      .where(and(eq(personalInfoDisputes.clientId, clientId), inArray(personalInfoDisputes.id, personalIds)));
+    for (const row of rows) {
+      if (row.clientId !== clientId) continue;
+      items.set(`personal:${row.id}`, { kind: 'personal', name: `${row.type.replaceAll('_', ' ')}: ${row.value}`, bureaus: [row.bureau] });
+    }
+  }
+
+  return items;
+}
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -60,25 +131,29 @@ export async function GET() {
         id: evidencePackets.id,
         claimType: evidencePackets.claimType,
         disputeId: evidencePackets.disputeId,
+        itemKind: evidencePackets.itemKind,
+        itemId: evidencePackets.itemId,
         createdAt: evidencePackets.createdAt,
         confirmations: evidencePackets.confirmations,
       })
       .from(evidencePackets)
       .where(eq(evidencePackets.clientId, client.id));
 
-    const packets = rows.flatMap((row) => {
-      const state = deriveEvidencePacketState({
-        claimType: row.claimType,
-        confirmations: parseConfirmations(row.confirmations),
-      });
-      if (state.kind !== 'awaiting_client_confirmation') return [];
-      return [{
-        id: row.id,
-        claim_type: row.claimType,
-        dispute_id: row.disputeId,
-        created_at: row.createdAt?.toISOString() ?? null,
-      }];
-    });
+    const awaiting = rows.filter((row) => deriveEvidencePacketState({
+      claimType: row.claimType,
+      confirmations: parseConfirmations(row.confirmations),
+    }).kind === 'awaiting_client_confirmation');
+    const items = await loadClaimItems(client.id, awaiting.flatMap((row) => (
+      row.itemKind && row.itemId ? [{ kind: row.itemKind, id: row.itemId }] : []
+    )));
+
+    const packets = awaiting.map((row) => ({
+      id: row.id,
+      claim_type: row.claimType,
+      dispute_id: row.disputeId,
+      item: row.itemKind && row.itemId ? items.get(`${row.itemKind}:${row.itemId}`) ?? null : null,
+      created_at: row.createdAt?.toISOString() ?? null,
+    }));
 
     return NextResponse.json({ packets });
   } catch (error) {

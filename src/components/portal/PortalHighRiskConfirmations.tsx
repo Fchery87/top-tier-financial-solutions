@@ -5,12 +5,49 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
+import {
+  HIGH_RISK_CLAIM_LABELS,
+  HIGH_RISK_CLAIM_STATEMENTS,
+  isDisputeItemKind,
+  isHighRiskClaimType,
+  type DisputeItemKind,
+} from '@/lib/high-risk-claim-registry';
+
+interface ClaimItem {
+  kind: DisputeItemKind;
+  name: string;
+  bureaus: string[];
+}
 
 interface AwaitingPacket {
   id: string;
   claim_type: string;
   dispute_id: string | null;
+  item: ClaimItem | null;
   created_at: string | null;
+}
+
+const BUREAU_NAMES: Record<string, string> = {
+  transunion: 'TransUnion',
+  experian: 'Experian',
+  equifax: 'Equifax',
+};
+
+const ITEM_KIND_NAMES: Record<DisputeItemKind, string> = {
+  tradeline: 'Account',
+  inquiry: 'Credit inquiry',
+  personal: 'Personal information',
+};
+
+function parseClaimItem(value: unknown): ClaimItem | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { kind, name, bureaus } = value as { kind?: unknown; name?: unknown; bureaus?: unknown };
+  if (!isDisputeItemKind(kind) || typeof name !== 'string') return null;
+  return {
+    kind,
+    name,
+    bureaus: Array.isArray(bureaus) ? bureaus.filter((bureau): bureau is string => typeof bureau === 'string') : [],
+  };
 }
 
 function isAwaitingPacket(value: unknown): value is AwaitingPacket {
@@ -25,7 +62,15 @@ function isAwaitingPacket(value: unknown): value is AwaitingPacket {
 }
 
 function claimLabel(claimType: string): string {
-  return claimType.replaceAll('_', ' ');
+  return isHighRiskClaimType(claimType) ? HIGH_RISK_CLAIM_LABELS[claimType] : claimType.replaceAll('_', ' ');
+}
+
+function claimStatement(claimType: string): string | null {
+  return isHighRiskClaimType(claimType) ? HIGH_RISK_CLAIM_STATEMENTS[claimType] : null;
+}
+
+function bureauNames(bureaus: string[]): string {
+  return bureaus.map((bureau) => BUREAU_NAMES[bureau.toLowerCase()] ?? bureau).join(', ');
 }
 
 export default function PortalHighRiskConfirmations() {
@@ -47,7 +92,10 @@ export default function PortalHighRiskConfirmations() {
           && 'packets' in payload
           && Array.isArray(payload.packets)
         ) {
-          setPackets(payload.packets.filter(isAwaitingPacket));
+          setPackets(payload.packets.filter(isAwaitingPacket).map((packet: AwaitingPacket & { item?: unknown }) => ({
+            ...packet,
+            item: parseClaimItem(packet.item),
+          })));
         }
       } catch (error) {
         console.error('Error loading high-risk confirmations:', error);
@@ -113,7 +161,22 @@ export default function PortalHighRiskConfirmations() {
       <CardContent className="space-y-4">
         {packets.map((packet) => (
           <div key={packet.id} className="space-y-2 rounded-lg border border-border/60 bg-muted/40 p-3">
-            <p className="text-sm font-medium capitalize text-foreground">{claimLabel(packet.claim_type)}</p>
+            <div className="space-y-1">
+              {packet.item ? (
+                <p className="text-sm font-medium text-foreground" data-testid={`confirmation-item-${packet.id}`}>
+                  {ITEM_KIND_NAMES[packet.item.kind]}: {packet.item.name}
+                  {packet.item.bureaus.length > 0 && (
+                    <span className="font-normal text-muted-foreground"> · reported by {bureauNames(packet.item.bureaus)}</span>
+                  )}
+                </p>
+              ) : null}
+              <p className="text-sm text-foreground">
+                <span className="font-medium">Claim:</span> {claimLabel(packet.claim_type)}
+              </p>
+              {claimStatement(packet.claim_type) && (
+                <p className="text-sm text-muted-foreground">You are confirming: “{claimStatement(packet.claim_type)}”</p>
+              )}
+            </div>
             <label className="text-xs font-medium text-muted-foreground" htmlFor={`confirm-${packet.id}`}>
               Confirm this factual claim in your own words
             </label>
