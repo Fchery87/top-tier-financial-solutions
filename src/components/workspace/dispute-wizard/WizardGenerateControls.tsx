@@ -17,7 +17,7 @@ export function WizardGenerateControls() {
     generationProgress, generationMethod, combineItemsPerBureau,
     validateCurrentStep, canProceed,
     analyzeItemsWithAI, generateLetters,
-    highRiskClaims, readyItemCount,
+    highRiskClaims, readyItemCount, generationFailure,
   } = useWizardContext();
 
   const blockers = highRiskClaims.filter(isClaimBlocked);
@@ -55,6 +55,11 @@ export function WizardGenerateControls() {
           )}
         </Button>
       </div>
+      {generationFailure && (
+        <div data-testid="generation-failure" role="alert" className="max-w-xl text-right text-xs text-destructive">
+          {generationFailure}
+        </div>
+      )}
       {blockers.length > 0 && (
         <div data-testid="high-risk-blockers" className="max-w-xl text-right text-xs text-muted-foreground" aria-live="polite">
           <p className="font-medium text-warning">Waiting on client confirmation:</p>

@@ -208,6 +208,7 @@ interface WizardContextValue {
   analyzeItemsWithAI: (retryFailedOnly?: boolean) => Promise<{ analyses: AIAnalysisResult[]; summary: AIAnalysisSummary } | null>;
   autoSelectDisputableItems: () => Promise<void>;
   generateLetters: (analysisData?: GenerateLettersAnalysis, options?: GenerateLettersOptions) => Promise<void>;
+  generationFailure: string | null;
   handleSelectClient: (client: Client) => void;
   handleToggleItem: (itemId: string) => void;
   handleToggleBureau: (bureau: string) => void;
@@ -498,6 +499,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   const {
     generateLetters,
+    generationFailure,
     highRiskClaims,
     readyItemCount,
     requestingConfirmationKey,
@@ -600,7 +602,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     generatedLetters, setGeneratedLetters, generating, setGenerating, generationProgress, setGenerationProgress,
     bulkTrackingNumber, setBulkTrackingNumber, bulkSendDate, setBulkSendDate, markingAsSent, setMarkingAsSent, bulkSentSuccess, setBulkSentSuccess,
     fetchClients, fetchNegativeItems, fetchDiscrepancies, fetchTriage, fetchEvidence, fetchMethodologies, fetchReasonCodes,
-    analyzeItemsWithAI, autoSelectDisputableItems, generateLetters, handleSelectClient, handleToggleItem, handleToggleBureau,
+    analyzeItemsWithAI, autoSelectDisputableItems, generateLetters, generationFailure, handleSelectClient, handleToggleItem, handleToggleBureau,
     handleUploadEvidence, handleRemoveEvidence, handleBulkMarkAsSent,
     validateCurrentStep, canProceed, getStepValidation, updateItemInstruction, updateItemCustomReasonCode, getInstructionText, copyToClipboard, downloadLetter,
     buildStepStatuses, handleStepClick, renderValidationMessages, saveAnalysisPreferences, wizardDraft, reasonCodes, customReason,

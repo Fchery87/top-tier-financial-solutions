@@ -50,7 +50,7 @@ interface UseGenerateDisputeLettersOptions {
   generateLettersFromPlan: (
     requests: LetterGenerationRequestPlan[],
     options?: { onError?: (error: unknown, request: LetterGenerationRequestPlan) => void },
-  ) => Promise<unknown>;
+  ) => Promise<{ letters: unknown[] }>;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   reviewStepId: number;
 }
@@ -92,6 +92,8 @@ export function useGenerateDisputeLetters({
   setCurrentStep,
   reviewStepId,
 }: UseGenerateDisputeLettersOptions) {
+  const [generationFailure, setGenerationFailure] = React.useState<string | null>(null);
+
   const builderInput: LetterGenerationBuilderInput | null = React.useMemo(() => {
     if (!selectedClient) return null;
     return {
@@ -168,6 +170,7 @@ export function useGenerateDisputeLetters({
 
   const generateLetters = React.useCallback(async (analysisData?: GenerateLettersAnalysis, options: GenerateLettersOptions = {}) => {
     if (!builderInput) return;
+    setGenerationFailure(null);
 
     const input: LetterGenerationBuilderInput = {
       ...builderInput,
@@ -186,24 +189,39 @@ export function useGenerateDisputeLetters({
       ...input,
       excludedItemKeys: blocked.length > 0 ? new Set(blocked.map(itemKeyOfClaim)) : undefined,
     });
-    if (generationPlan.selectedDisputeItems.length === 0) return;
+    if (generationPlan.selectedDisputeItems.length === 0) {
+      setGenerationFailure('Select at least one item before generating letters.');
+      return;
+    }
 
-    await generateLettersFromPlan(generationPlan.requests, {
+    let firstFailure: string | null = null;
+    const { letters } = await generateLettersFromPlan(generationPlan.requests, {
       onError: (error, request) => {
         if (error instanceof HighRiskConfirmationRequiredError) {
-          toast.error(`Could not generate the ${request.bureau} letter. ${error.message}`);
+          const message = `Could not generate the ${request.bureau} letter. ${error.message}`;
+          toast.error(message);
+          firstFailure ??= message;
           for (const item of request.items) refreshClientConfirmation({ itemKind: item.kind, itemId: item.id });
           return;
         }
         console.error(request.combined ? 'Error generating combined letter:' : 'Error generating letter:', error);
-        toast.error(`Could not generate the ${request.bureau} letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const message = `Could not generate the ${request.bureau} letter: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        toast.error(message);
+        firstFailure ??= message;
       },
     });
+
+    // Nothing to review, so stay on the configure step where the failure is shown.
+    if (letters.length === 0) {
+      setGenerationFailure(firstFailure ?? 'No letters were generated. Check the selected items and try again.');
+      return;
+    }
     setCurrentStep(reviewStepId);
   }, [builderInput, confirmationFor, generateLettersFromPlan, refreshClientConfirmation, setCurrentStep, reviewStepId]);
 
   return {
     generateLetters,
+    generationFailure,
     highRiskClaims,
     readyItemCount,
     requestingConfirmationKey,
