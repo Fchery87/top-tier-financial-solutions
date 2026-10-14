@@ -71,7 +71,7 @@ export function buildMultiItemDisputeLetterPrompt(params: MultiItemDisputeLetter
   const defaultStrategy = params.round >= 3
     ? 'This is a direct furnisher escalation. Keep the tone factual and request investigation under FCRA Section 623(a)(8).'
     : params.round === 2
-      ? 'This is a method-of-verification follow-up. Request the prior investigation method under FCRA Section 611(a)(6)(B)(iii).'
+      ? 'This is a method-of-verification follow-up. Request a description of the prior reinvestigation procedure under FCRA Section 611(a)(7).'
       : 'This is an initial factual dispute. Request investigation and correction or removal if unverifiable.';
   const strategy = params.librarySelection?.chosen?.promptContext || defaultStrategy;
   const legalCitations = params.librarySelection?.chosen?.legalCitations?.filter(Boolean).slice(0, 2) || [];
@@ -84,6 +84,8 @@ RULES
 - Do not demand deletion as the only outcome; request investigation and correction or removal if unverifiable.
 - Do not cite Metro 2 field numbers. Refer only to segment and field names when needed.
 - Keep the tone professional, specific, and factual.
+- For each disputed detail, name the reported value and why it is inaccurate or incomplete, using only values given in the account details, reasons, or violations above. Never state a reported value that is not provided. Do not fall back to a bare demand for verification when the data shows a specific problem.
+- Do not demand original contracts, ledgers, or other documents from a credit bureau. The FCRA requires a reasonable reinvestigation, not production of documents.
 - Begin at the "Re:" subject line or the salutation. Do not write a sender header, the client's address, a date line, or the recipient's address; those are added to the letter separately.
 - End with "Sincerely," followed by the client's name.
 

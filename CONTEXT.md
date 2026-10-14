@@ -150,9 +150,73 @@ The required review step after a bureau, furnisher, collector, or creditor respo
 
 During Response Review, staff records the response, classifies the outcome, attaches the response document, updates score or report changes when applicable, and lets the system compute the next decision.
 
-Possible next decisions include closing the item, updating the item, escalating to the next Dispute Cycle, requesting method of verification, sending a furnisher dispute, or marking the item as not worth further action.
+Possible next decisions include closing the item, updating the item, escalating to the next Dispute Cycle, requesting method of verification, sending a New-Evidence Bureau Dispute, filing a Regulator Complaint, or marking the item as not worth further action.
 
 Every response must go through Response Review before a next Dispute Cycle is created.
+
+### Bureau Dispute
+
+A dispute sent to a credit bureau. It is the only dispute this business prepares that obligates the furnisher to investigate, because the bureau's notice is what triggers the furnisher's duty.
+
+### Direct Dispute
+
+A dispute sent straight to a furnisher instead of through a bureau.
+
+A furnisher may ignore a Direct Dispute that a credit repair organization submitted, prepared, or supplied the form for. A Direct Dispute this business prepares is therefore a courtesy request with no duty to investigate behind it, and letters must never claim otherwise. It is never a default Dispute Cycle step. Staff may send one manually.
+
+### New-Evidence Bureau Dispute
+
+A repeat Bureau Dispute on an item that was already Verified, which carries at least one fact the earlier disputes did not.
+
+It replaces the old third-round letter to the furnisher. When there is no new fact, the next step is a Regulator Complaint instead.
+
+### Regulator Complaint
+
+A complaint filed with a regulator such as the CFPB about how a bureau or furnisher handled a dispute. It is a complaint packet, not a dispute letter.
+
+### Date of First Delinquency (DOFD)
+
+The month the consumer first fell behind and never caught up before the account went to collection or charge-off. It starts the seven-year reporting period.
+
+Each bureau may report a different DOFD for the same account. Last activity and the date reported are never a DOFD.
+
+### Cross-Bureau Mismatch
+
+The same account reported with different values by different bureaus in comparable Credit Report Pulls. Separate single-bureau pulls are comparable when they were taken no more than 30 days apart and the account is confidently matched between them.
+
+At most one of the values can be right, so a Cross-Bureau Mismatch is an objective finding. An account that appears on some bureaus but not others is not a mismatch, because furnishers do not have to report to every bureau.
+
+### Finding
+
+A specific, checkable problem with how an item is reported, stated with the reported value and why it is wrong. Findings are detected in every Dispute Cycle from the first, not only when an item escalates.
+
+### Objective Finding
+
+A Finding anyone can confirm from the reports alone. Examples are a Cross-Bureau Mismatch, an impossible order of dates, amounts that contradict each other, or a change between Credit Report Pulls. Letters lead with Objective Findings.
+
+### Interpretive Finding
+
+A Finding that rests on how a reporting guideline should be read, such as a scheduled payment on a charged-off account. An item whose only Findings are interpretive is held for staff review instead of going into a letter automatically.
+
+### New Fact
+
+A Finding or document that no earlier letter on the same item cited, in any Dispute Cycle of the Service Engagement. Rewording an earlier argument is not a New Fact.
+
+### Item Timeline
+
+Every Credit Report Pull of a Service Engagement in which an item appears or should appear, in date order. Changes between pulls are judged against the whole Item Timeline, not only the previous pull.
+
+### Reinsertion
+
+An item that was deleted from a bureau and later reappears on that bureau within the same Item Timeline. The bureau must notify the consumer in writing within five business days of reinserting an item.
+
+### Bureau Reporting Policy
+
+A reporting limit the bureaus adopted voluntarily, such as not reporting paid medical collections. Letters present it as the bureau's own published policy, never as law.
+
+### Medical Debt State Rule
+
+A state law that limits reporting of medical debt for that state's residents. The state is the Client's current residence when the dispute is prepared. Medical debt charged to a general-purpose credit card is outside these rules.
 
 ### Submission Tracking
 

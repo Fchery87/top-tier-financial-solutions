@@ -28,7 +28,8 @@ Implementation rules:
 - Shared logic lives in `src/lib/fcra-clock.ts`
 - `fcra_compliance_items.dofd_confidence` stores the source used for the clock
 - When the best available source is `dateReported`, the item may still be estimated as expired, but the system must not label it as an `FCRA VIOLATION` automatically
-- LLM payloads must never label `dateReported` as DOFD
+- LLM payloads must never label `dateReported` or `dateOfLastActivity` as DOFD
+- `bureauStatedRemovalDate` is the expiry itself. The other three are start dates, and the reporting period is added to them. Collections and charge-offs also get the 180-day start of 15 U.S.C. § 1681c(c). The clock returns `expiresOn`, never a start date, so callers cannot repeat the 2026-10 bug where seven years were added to a removal date
 
 ## Consequences
 

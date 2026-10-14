@@ -5,15 +5,18 @@ export type ObsolescenceClockConfidence =
   | 'date_reported';
 
 export interface ObsolescenceClockInput {
+  itemType: string;
   bureauStatedRemovalDate?: string | Date | null;
   dateOfFirstDelinquency?: string | Date | null;
   dateOfLastActivity?: string | Date | null;
   dateReported?: string | Date | null;
 }
 
-export interface ObsolescenceClockResult {
-  baseDate: Date | null;
-  confidence: ObsolescenceClockConfidence | null;
+/** When an item stops being reportable, and which on-report date that answer rests on. */
+export interface ObsolescenceClock {
+  expiresOn: Date;
+  confidence: ObsolescenceClockConfidence;
+  reportingLimitYears: number;
 }
 
 export interface FcraComplianceStatusInput {
@@ -28,6 +31,11 @@ export interface FcraComplianceStatusResult {
   notes: string | null;
 }
 
+// 15 U.S.C. § 1681c(c): for collections and charge-offs the seven years begin
+// 180 days after the delinquency that preceded them.
+const COLLECTION_GRACE_DAYS = 180;
+const DAY_MS = 1000 * 60 * 60 * 24;
+
 function toValidDate(value: string | Date | null | undefined): Date | null {
   if (!value) {
     return null;
@@ -37,29 +45,53 @@ function toValidDate(value: string | Date | null | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function getObsolescenceClock(input: ObsolescenceClockInput): ObsolescenceClockResult {
-  const orderedSources: Array<{
-    confidence: ObsolescenceClockConfidence;
-    value: string | Date | null | undefined;
-  }> = [
-    { confidence: 'bureau_removal_date', value: input.bureauStatedRemovalDate },
+/** 15 U.S.C. § 1681c(a). Chapter 13 uses the bureaus' seven-year practice; other bankruptcies get the statutory ten. */
+export function getReportingLimitYears(itemType: string): number {
+  const type = itemType.toLowerCase();
+  if (!type.includes('bankruptcy')) return 7;
+  return /chapter_?13|chapter 13|ch_?13/.test(type) ? 7 : 10;
+}
+
+function runsFromCollectionGrace(itemType: string): boolean {
+  const type = itemType.toLowerCase();
+  return type === 'collection' || type === 'charge_off';
+}
+
+/**
+ * A bureau's "on record until" date is the expiry itself. Every other date is the
+ * start of the clock, so the reporting period is added to it.
+ */
+export function getObsolescenceClock(input: ObsolescenceClockInput): ObsolescenceClock | null {
+  const reportingLimitYears = getReportingLimitYears(input.itemType);
+
+  const removalDate = toValidDate(input.bureauStatedRemovalDate);
+  if (removalDate) {
+    return { expiresOn: removalDate, confidence: 'bureau_removal_date', reportingLimitYears };
+  }
+
+  const startSources: Array<{ confidence: ObsolescenceClockConfidence; value: string | Date | null | undefined }> = [
     { confidence: 'dofd', value: input.dateOfFirstDelinquency },
     { confidence: 'last_activity', value: input.dateOfLastActivity },
     { confidence: 'date_reported', value: input.dateReported },
   ];
 
-  for (const source of orderedSources) {
-    const baseDate = toValidDate(source.value);
-    if (baseDate) {
-      return { baseDate, confidence: source.confidence };
+  for (const source of startSources) {
+    const start = toValidDate(source.value);
+    if (!start) continue;
+
+    const expiresOn = new Date(start);
+    expiresOn.setUTCFullYear(expiresOn.getUTCFullYear() + reportingLimitYears);
+    if (runsFromCollectionGrace(input.itemType)) {
+      expiresOn.setUTCDate(expiresOn.getUTCDate() + COLLECTION_GRACE_DAYS);
     }
+    return { expiresOn, confidence: source.confidence, reportingLimitYears };
   }
 
-  return { baseDate: null, confidence: null };
+  return null;
 }
 
-export function getObsolescenceBaseDate(input: ObsolescenceClockInput): Date | null {
-  return getObsolescenceClock(input).baseDate;
+export function daysUntilExpiration(clock: ObsolescenceClock, now: Date = new Date()): number {
+  return Math.ceil((clock.expiresOn.getTime() - now.getTime()) / DAY_MS);
 }
 
 export function buildFcraComplianceStatus(input: FcraComplianceStatusInput): FcraComplianceStatusResult {

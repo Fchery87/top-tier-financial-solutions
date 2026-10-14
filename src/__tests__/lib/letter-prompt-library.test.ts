@@ -28,7 +28,7 @@ describe('library strategy prompt enrichment', () => {
   it('preserves the existing round strategy when no library row is selected', () => {
     const prompt = buildManualLetterPrompt(baseParams);
 
-    expect(prompt).toContain('ROUND STRATEGY\nThis is a method-of-verification follow-up. Request the prior investigation method under FCRA Section 611(a)(6)(B)(iii).');
+    expect(prompt).toContain('ROUND STRATEGY\nThis is a method-of-verification follow-up. Request a description of the prior reinvestigation procedure under FCRA Section 611(a)(7).');
     expect(prompt).not.toContain('RELEVANT AUTHORITY');
   });
 

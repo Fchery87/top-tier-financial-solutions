@@ -35,7 +35,22 @@ describe('convertToMetro2Format', () => {
       'experian',
     );
 
-    expect(withLastActivity.dateOfFirstDelinquency).toBe('2018-02-15');
+    expect(withLastActivity.dateOfFirstDelinquency).toBeUndefined();
+  });
+
+  it('keeps the reported DOFD even when the bureau also states a removal date', () => {
+    const withRemovalDate = convertToMetro2Format(
+      {
+        id: 'neg-1234',
+        creditorName: 'Example Creditor',
+        itemType: 'collection',
+        dateOfFirstDelinquency: '2019-04-01',
+        bureauStatedRemovalDate: '2026-04-01',
+      },
+      'experian',
+    );
+
+    expect(withRemovalDate.dateOfFirstDelinquency).toBe('2019-04-01');
   });
 
   it('preserves a real masked account number when present', () => {
