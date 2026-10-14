@@ -1,20 +1,18 @@
 # Top Tier Financial Solutions - Agent Development Guide
 
 ## Project Snapshot
-Next.js 16 full-stack application with Python FastAPI backend for credit repair management. Features admin dashboard, client portal, and public website with AI-powered dispute generation and multi-bureau credit report analysis.
+Next.js 16 full-stack application for credit repair management. Features admin dashboard, client portal, and public website with AI-powered dispute generation and multi-bureau credit report analysis.
 
 ## Root Setup Commands
 ```bash
-# Install all dependencies (Node.js + Python)
+# Install dependencies
 npm install
-pip install -r requirements.txt
 
 # Database setup
 npm run db:migrate
 
 # Start development servers
 npm run dev                    # Next.js frontend
-npm run fastapi-dev           # Python FastAPI backend (separate terminal)
 
 # Full validation
 npm run validate              # Lint + Typecheck + Test + Build
@@ -56,14 +54,12 @@ This repo uses a single-context domain documentation layout. See `docs/agents/do
 - React Components: `src/components/` → [see src/components/AGENTS.md](src/components/AGENTS.md)
 - Core Logic: `src/lib/` → [see src/lib/AGENTS.md](src/lib/AGENTS.md)
 - Database: `db/` → [see db/AGENTS.md](db/AGENTS.md)
-- Python Backend: `api/` → [see api/AGENTS.md](api/AGENTS.md)
 
 ### Quick Find Commands
 - Search for a function: `rg -n "functionName" src/`
 - Find a React component: `rg -n "export.*Component" src/components`
 - Find API routes: `rg -n "export (GET|POST|PUT|DELETE)" src/app/api`
 - Find database schema: `rg -n "pgTable" db/`
-- Find Python endpoints: `rg -n "@app\.(get|post|put|delete)" api/`
 - Find test files: `find src -name "*.test.{ts,tsx}"`
 - Find parser fixtures/routing tests: `rg -n "source-routing|detect-source|report-date|fixtures" src/lib/parsers/__tests__`
 

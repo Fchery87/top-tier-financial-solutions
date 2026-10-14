@@ -22,7 +22,7 @@ npm run db:migrate
 
 `drizzle-kit push` diffs `db/schema.ts` directly against the live database and applies the difference. On this project that is **destructive**, for two reasons:
 
-1. **`admin_users` is not dead.** It is intentionally absent from `db/schema.ts` because it belongs to the optional FastAPI service (`api/models.py` → `AdminUser`, used by `api/auth.py` for authentication). Push proposes `DROP TABLE "admin_users" CASCADE`, which would destroy FastAPI auth. With `--force` it would do so without asking.
+1. **`admin_users` is a leftover table.** It belonged to the Python FastAPI service, which was removed from the repo. The table is intentionally absent from `db/schema.ts`, and it may still hold data. Push proposes `DROP TABLE "admin_users" CASCADE`. With `--force` it would do so without asking. Drop it deliberately in a reviewed migration, never through push.
 2. **Cosmetic constraint-name churn.** Part of the schema history was hand-applied SQL, so many constraints carry Postgres default names (`*_fkey`, `*_key`) instead of Drizzle's generated names (`*_fk`, `*_unique`). Push wants to drop and recreate all of them. They are functionally identical — this diff noise is expected and safe to ignore.
 
 If you need to inspect drift, run `npx drizzle-kit push` interactively, read the proposed statements, and answer **no**.

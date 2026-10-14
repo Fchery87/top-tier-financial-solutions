@@ -15,12 +15,9 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "fastapi-dev": "./venv/bin/pip install -r requirements.txt && ./venv/bin/python3 -m uvicorn api.index:app --reload",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:python": "./venv/bin/ruff check api/",
-    "lint:python:fix": "./venv/bin/ruff check api/ --fix",
     "pretypecheck": "rm -rf .next/dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=1/2 && vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=2/2 && vitest run --pool=threads --maxWorkers=1 src/__tests__/api/admin/dispute-submission-tracking.test.ts src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx",

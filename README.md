@@ -119,7 +119,6 @@ See [`docs/DESIGN-SYSTEM.md`](./docs/DESIGN-SYSTEM.md) for the full token table,
 
 - Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS v4. Typography: Satoshi (self-hosted) + Instrument Serif + Geist Mono. Framer Motion for modal/transition motion only (ambient/decorative animation is static CSS).
 - Backend: Next.js App Router and API routes as the primary application backend.
-- Legacy service: optional Python FastAPI backend for older or auxiliary workflows.
 - Database: Neon PostgreSQL with Drizzle ORM and Drizzle Kit migrations.
 - Authentication: Better Auth.
 - File storage: Cloudflare R2 using S3-compatible APIs.
@@ -156,12 +155,6 @@ Start the Next.js development server:
 npm run dev
 ```
 
-Start the optional legacy FastAPI service only when working on Python-backed flows:
-
-```bash
-npm run fastapi-dev
-```
-
 ## Environment Variables
 
 Use `env.example` as the source of truth for required variables.
@@ -183,7 +176,6 @@ Never commit secrets. Use local environment files for development and managed en
 
 ```bash
 npm run dev            # Start the Next.js development server
-npm run fastapi-dev    # Start the optional legacy FastAPI backend
 npm run build          # Build the production Next.js app
 npm run start          # Start the production server after build
 npm run lint           # Run ESLint
@@ -193,14 +185,13 @@ npm run test:e2e       # Run Playwright end-to-end tests
 npm run validate       # Run lint, typecheck, tests, and build
 npm run db:generate    # Generate Drizzle migrations from schema changes
 npm run db:migrate     # Apply Drizzle migrations (the only supported path — see docs/DATABASE.md)
-npm run db:push        # DO NOT USE: would drop the FastAPI admin_users table (see docs/DATABASE.md)
+npm run db:push        # DO NOT USE: would drop the legacy admin_users table (see docs/DATABASE.md)
 npm run db:studio      # Open Drizzle Studio
 ```
 
 ## Project Map
 
 ```text
-api/              Optional legacy Python FastAPI backend
 db/               Database schema and database client setup
 drizzle/          Generated SQL migrations and migration metadata
 public/           Static assets served by Next.js
