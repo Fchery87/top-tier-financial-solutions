@@ -36,6 +36,7 @@
     "db:audit-deprecated-letter-table": "tsx scripts/audit-deprecated-letter-templates.ts",
     "db:pilot-letter-library": "tsx scripts/run-letter-library-pilot.ts",
     "security:rotate-encryption": "tsx scripts/rotate-encryption-keys.ts",
+    "security:reset-mfa": "tsx scripts/reset-mfa.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
