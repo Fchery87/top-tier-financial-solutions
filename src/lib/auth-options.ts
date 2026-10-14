@@ -47,6 +47,12 @@ export function buildAuthOptions() {
     ],
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === "/two-factor/verify-totp" || ctx.path === "/two-factor/verify-backup-code") {
+          // No trusted devices: every sign-in asks for the second factor.
+          // Enforced here so a hand-built request cannot opt in.
+          if (ctx.body) ctx.body.trustDevice = false;
+          return;
+        }
         if (ctx.path !== "/two-factor/disable") return;
         // MFA is required for team roles, so they may never turn it off.
         // Read the role from the database, not the session cookie cache.

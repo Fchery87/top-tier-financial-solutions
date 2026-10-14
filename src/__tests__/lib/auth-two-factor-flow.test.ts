@@ -172,6 +172,25 @@ describe('two-factor authentication flow (real better-auth handler)', () => {
     expect(second.jar.has('session_token')).toBe(false);
   });
 
+  it.each(['verify-totp', 'verify-backup-code'])(
+    'never trusts a device after %s, even when the client asks for it',
+    async (endpoint) => {
+      const { auth, email, totpURI, backupCodes } = await enrolledUser();
+      const { jar } = await signInExpectingChallenge(auth, email);
+      const code = endpoint === 'verify-totp' ? await totpFromUri(totpURI) : backupCodes[0];
+
+      const verify = await post(auth, jar, `/two-factor/${endpoint}`, { code, trustDevice: true });
+
+      expect(verify.response.status).toBe(200);
+      expect(jar.has('session_token')).toBe(true);
+      expect(jar.has('trust_device')).toBe(false);
+
+      await post(auth, jar, '/sign-out');
+      const again = await signInExpectingChallenge(auth, email);
+      expect(again.signIn.data).toEqual({ twoFactorRedirect: true, twoFactorMethods: ['totp'] });
+    },
+  );
+
   it('refuses a wrong TOTP code', async () => {
     const { auth, email, totpURI } = await enrolledUser();
     const { jar } = await signInExpectingChallenge(auth, email);

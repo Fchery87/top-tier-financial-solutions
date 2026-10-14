@@ -15,7 +15,6 @@ type Method = 'totp' | 'backup';
 export default function TwoFactorChallengePage() {
   const [method, setMethod] = useState<Method>('totp');
   const [code, setCode] = useState('');
-  const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -35,8 +34,8 @@ export default function TwoFactorChallengePage() {
       const trimmed = code.trim();
       const result =
         method === 'totp'
-          ? await twoFactor.verifyTotp({ code: trimmed.replace(/\s+/g, ''), trustDevice })
-          : await twoFactor.verifyBackupCode({ code: trimmed, trustDevice });
+          ? await twoFactor.verifyTotp({ code: trimmed.replace(/\s+/g, '') })
+          : await twoFactor.verifyBackupCode({ code: trimmed });
 
       if (result.error) {
         setError(describeTwoFactorError(result.error));
@@ -104,21 +103,6 @@ export default function TwoFactorChallengePage() {
               />
             </div>
           </div>
-
-          <label className="flex items-start gap-3 text-sm text-foreground">
-            <input
-              type="checkbox"
-              checked={trustDevice}
-              onChange={(e) => setTrustDevice(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-border"
-            />
-            <span>
-              Trust this device for 30 days
-              <span className="block text-muted-foreground">
-                Only on a private device you use yourself. You will still need your password.
-              </span>
-            </span>
-          </label>
 
           <Button
             type="submit"
