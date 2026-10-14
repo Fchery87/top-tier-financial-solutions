@@ -91,7 +91,7 @@ RULES
 - Do not claim identity theft, fraud, or ownership denial unless the provided reasons explicitly support it.
 - Do not cite Metro 2 field numbers. Refer only to segment and field names when needed.
 - Keep the tone professional, specific, and factual.
-- For each disputed detail, name the reported value and why it is inaccurate or incomplete. Do not fall back to a bare demand for verification when the data shows a specific problem.
+- For each disputed detail, name the reported value and why it is inaccurate or incomplete, using only values given in the account details, reasons, or violations above. Never state a reported value that is not provided. Do not fall back to a bare demand for verification when the data shows a specific problem.
 - Do not demand original contracts, ledgers, or other documents from a credit bureau. The FCRA requires a reasonable reinvestigation, not production of documents.
 - Begin at the "Re:" subject line or the salutation. Do not write a sender header, the client's address, a date line, or the recipient's address; those are added to the letter separately.
 - End with "Sincerely," followed by the client's name.

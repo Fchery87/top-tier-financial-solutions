@@ -42,7 +42,7 @@ export const PRESET_DISPUTE_INSTRUCTIONS: PresetDisputeInstruction[] = [
   { code: 'metro2_violation', label: '✓ Metro 2 Compliance Violation', description: 'This account contains Metro 2 format compliance violations and does not meet the maximum possible accuracy standard required under FCRA Section 607(b).', category: 'factual' },
   { code: 'inaccurate_reporting', label: '✓ Inaccurate Information', description: 'The information being reported contains inaccuracies. I am disputing the accuracy of this data under FCRA Section 623 and demanding a reasonable investigation.', category: 'factual' },
   { code: 'incomplete_data', label: '✓ Incomplete Data Fields', description: 'This account is being reported with incomplete information, missing required Metro 2 data fields necessary for accurate credit reporting.', category: 'factual' },
-  { code: 'missing_dofd', label: '✓ Missing Date of First Delinquency', description: 'This derogatory account lacks the required Date of First Delinquency (DOFD) field, which is mandatory under FCRA Section 605 for calculating the 7-year reporting period.', category: 'factual' },
+  { code: 'missing_dofd', label: '✓ Missing Date of First Delinquency', description: 'This collection or charged-off account does not report a Date of First Delinquency (DOFD). FCRA Section 623(a)(5) requires the furnisher to report it, and the 7-year reporting period runs from it.', category: 'factual' },
   { code: 'status_inconsistency', label: '✓ Status Code Inconsistency', description: 'The Account Status Code is inconsistent with the Payment Rating and payment history pattern. This internal data inconsistency violates Metro 2 format requirements.', category: 'factual' },
 
   // === SITUATIONAL: Use when specific conditions apply ===
