@@ -38,7 +38,7 @@ export type SettingsMutationExecutor = {
 export const DEFAULT_LLM_MODELS = {
   google: 'gemini-2.5-flash',
   openai: 'gpt-5',
-  anthropic: 'claude-sonnet-5',
+  anthropic: 'claude-sonnet-5-5',
   zhipu: 'glm-4-flash',
 } as const;
 type CachedSetting = { value: SettingValue; expiresAt: number };

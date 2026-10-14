@@ -147,14 +147,11 @@ export function LLMConfigSection({
                 onChange={(e) => onConfigChange('model', e.target.value)}
                 className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <optgroup label="Claude 3.5 (Latest)">
-                  <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Recommended)</option>
-                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast)</option>
-                </optgroup>
-                <optgroup label="Claude 3 (Stable)">
-                  <option value="claude-3-opus-20240229">Claude 3 Opus (Most Capable)</option>
-                  <option value="claude-3-sonnet-20240229">Claude 3 Sonnet (Balanced)</option>
-                  <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fast)</option>
+                <optgroup label="Claude 5 family">
+                  <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (Recommended)</option>
+                  <option value="claude-opus-5-5">Claude Opus 5.5 (Most Capable)</option>
+                  <option value="claude-haiku-5-5">Claude Haiku 5.5 (Fast)</option>
+                  <option value="claude-fable-5-1">Claude Fable 5.1</option>
                 </optgroup>
               </select>
             ) : getCurrentValue('provider') === 'zhipu' ? (

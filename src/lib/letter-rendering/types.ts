@@ -21,7 +21,7 @@ export interface LetterProviderConfig {
 export const LETTER_PROVIDER_DEFAULT_MODELS = {
   google: 'gemini-2.5-flash',
   openai: 'gpt-5',
-  anthropic: 'claude-sonnet-5',
+  anthropic: 'claude-sonnet-5-5',
   zhipu: 'glm-4-flash',
 } as const;
 
