@@ -11,6 +11,7 @@ import {
 } from '@/lib/ai-letter-generator';
 import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { logServerEvent } from '@/lib/server-logger';
+import { loadClientResidenceState } from '@/lib/letter-consumer-identity';
 
 export async function POST(request: Request) {
   const user = await requireCapability('disputes:write');
@@ -84,8 +85,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const clientState = await loadClientResidenceState(clientId);
+
     // Transform items for analysis with all available Metro 2 data
     const itemsForAnalysis = items.map(item => ({
+      clientState,
       id: item.id,
       creditorName: item.creditorName,
       originalCreditor: item.originalCreditor,

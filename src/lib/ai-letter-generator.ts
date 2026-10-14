@@ -1,3 +1,4 @@
+import { assessMedicalDebt } from './medical-dispute-rules';
 import { daysUntilExpiration, getObsolescenceClock, type ObsolescenceClockConfidence } from './fcra-clock';
 import { getLLMConfig, type LLMConfig } from './settings-service';
 import { lintGeneratedLetter } from './letter-lint';
@@ -488,6 +489,8 @@ interface AnalyzeItemParams {
   paymentHistoryGrid?: Record<string, string> | null;
   dateOpened?: string | null;
   remarks?: string | null;
+  /** The Client's current state of residence, for Medical Debt State Rules. */
+  clientState?: string | null;
 }
 
 const OBSOLESCENCE_SOURCE_LABELS: Record<ObsolescenceClockConfidence, string> = {
@@ -694,6 +697,30 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   if (isThirdPartyCollector && item.remarks && item.remarks.toLowerCase().includes('sold')) {
     notes.push('P3.5: Collection account marked as sold - may require original creditor identity for validation');
     violationSeverities.push(0.15);
+  }
+
+  // ---- CHECK 4B: Medical debt ----
+  const medicalDebt = assessMedicalDebt({
+    accountType: item.accountType,
+    creditorName: item.creditorName,
+    originalCreditor: item.originalCreditor,
+    itemType,
+    accountStatus,
+    amount,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency,
+    clientState: item.clientState,
+    now,
+  });
+  for (const finding of medicalDebt.findings) {
+    metro2Violations.push(finding.text);
+    reasonCodes.push(finding.code);
+    violationSeverities.push(finding.code === 'medical_state_rule' ? 0.8 : 0.6);
+  }
+  if (medicalDebt.findings.some(finding => finding.code === 'medical_state_rule')) {
+    notes.push('Medical Debt State Rule wording has not been reviewed by counsel yet');
+  }
+  if (medicalDebt.classification === 'possible') {
+    notes.push('Possible medical debt: only the creditor name suggests it. Confirm with the client before using medical-debt rules.');
   }
 
   // ---- CHECK 5: Data Completeness ----

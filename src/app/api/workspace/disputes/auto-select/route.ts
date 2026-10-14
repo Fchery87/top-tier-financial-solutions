@@ -13,6 +13,7 @@ import { requireLatestApprovedReportForClient } from '@/lib/parser-review-gate';
 import { buildCreditorStrategyInsights, getRecommendedMethodologyForCreditor } from '@/lib/creditor-strategy-insights';
 import { disputeOutcomes } from '@/db/schema';
 import { logServerEvent } from '@/lib/server-logger';
+import { loadClientResidenceState } from '@/lib/letter-consumer-identity';
 
 export async function POST(request: Request) {
   const adminUser = await requireCapability('disputes:write');
@@ -72,8 +73,10 @@ export async function POST(request: Request) {
       });
     }
 
+    const clientState = await loadClientResidenceState(clientId);
     const analyses = analyzeNegativeItems(
       items.map((item) => ({
+        clientState,
         id: item.id,
         creditorName: item.creditorName,
         originalCreditor: item.originalCreditor,
