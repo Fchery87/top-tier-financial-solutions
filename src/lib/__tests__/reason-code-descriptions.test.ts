@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildEscalationPlan } from '@/lib/dispute-automation';
+import { lintGeneratedLetter } from '@/lib/letter-lint';
 
 let DISPUTE_REASON_CODES: typeof import('@/lib/ai-letter-generator').DISPUTE_REASON_CODES;
 let REASON_CODE_DESCRIPTIONS: typeof import('@/lib/ai-letter-generator').REASON_CODE_DESCRIPTIONS;
@@ -25,5 +26,15 @@ describe('reason code descriptions', () => {
 
     expect(missingEscalationCodes).toEqual([]);
     expect(missingDisputeCodes).toEqual([]);
+  });
+
+  it('cites only allowlisted statutes', () => {
+    const findings = Object.entries(REASON_CODE_DESCRIPTIONS).flatMap(([code, description]) =>
+      lintGeneratedLetter(description, { reasonCodes: [code], items: [] }).findings
+        .filter(finding => finding.code === 'statute_not_allowlisted')
+        .map(finding => `${code}: ${finding.message}`),
+    );
+
+    expect(findings).toEqual([]);
   });
 });

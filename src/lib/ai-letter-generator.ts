@@ -192,7 +192,7 @@ function buildNeutralFallbackLetter(params: GenerateLetterParams): string {
   const actionRequest = params.round >= 3
     ? 'Please review this dispute as a direct furnisher investigation request under FCRA Section 623(a)(8) and provide a written response with the results of your review.'
     : params.round === 2
-      ? 'Please provide the method of verification used in the prior investigation, including how the disputed information was reviewed and with whom.'
+      ? 'Under FCRA Section 611(a)(7), please provide a description of the procedure used in the prior reinvestigation, including the business name, address, and telephone number of any furnisher you contacted.'
       : 'Please investigate the disputed information and confirm whether each reported detail is complete and accurate.';
   let metro2ViolationsText = '';
   if (metro2ViolationsRaw.length > 0) {
