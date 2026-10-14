@@ -574,18 +574,16 @@ export const creditAccounts = pgTable('credit_accounts', {
   paymentStatus: text('payment_status'), // 'current' | '30_days_late' | '60_days_late' | '90_days_late' | '120_days_late' | 'collection'
   dateOpened: timestamp('date_opened'),
   dateReported: timestamp('date_reported'),
-  bureau: text('bureau'), // Legacy field for backward compatibility
-  // Per-bureau presence fields - accurate tracking of which bureaus report this account
-  onTransunion: boolean('on_transunion').default(false),
-  onExperian: boolean('on_experian').default(false),
-  onEquifax: boolean('on_equifax').default(false),
-  transunionDate: timestamp('transunion_date'), // Date reported on TransUnion
-  experianDate: timestamp('experian_date'), // Date reported on Experian
-  equifaxDate: timestamp('equifax_date'), // Date reported on Equifax
-  transunionBalance: integer('transunion_balance'), // Balance per bureau (may differ)
-  experianBalance: integer('experian_balance'),
-  equifaxBalance: integer('equifax_balance'),
+  // Each row is one bureau's view of the account (ADR 0005): 'transunion' | 'experian' | 'equifax', or null when unknown.
+  bureau: text('bureau'),
   paymentHistoryGrid: text('payment_history_grid'), // JSON map of bureau -> month->code grid
+  // Groups one pull's rows that are the same account on different bureaus.
+  tradelineKey: text('tradeline_key'),
+  originalCreditor: text('original_creditor'),
+  dateOfFirstDelinquency: timestamp('date_of_first_delinquency'),
+  bureauStatedRemovalDate: timestamp('bureau_stated_removal_date'),
+  dateOfLastPayment: timestamp('date_of_last_payment'),
+  dateOfLastActivity: timestamp('date_of_last_activity'),
   isNegative: boolean('is_negative').default(false),
   riskLevel: text('risk_level'), // 'low' | 'medium' | 'high' | 'severe'
   completenessScore: integer('completeness_score'),

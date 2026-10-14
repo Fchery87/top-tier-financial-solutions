@@ -100,6 +100,10 @@ export interface ParsedAccount {
   originalCreditor?: string;
   dateOfFirstDelinquency?: Date;
   bureauStatedRemovalDate?: Date;
+  dateOfLastPayment?: Date;
+  dateOfLastActivity?: Date;
+  /** Shared by the per-bureau accounts a combined report shows as one tradeline. */
+  tradelineGroup?: string;
   isNegative: boolean;
   riskLevel?: string;
   remarks?: string;

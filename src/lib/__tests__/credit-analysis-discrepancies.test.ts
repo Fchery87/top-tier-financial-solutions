@@ -1,49 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { buildAccountBalanceDiscrepancies } from '@/lib/credit-analysis-discrepancies';
 
+const opened = new Date('2020-01-15T00:00:00.000Z');
+
 describe('buildAccountBalanceDiscrepancies', () => {
-  it('does not create a discrepancy for the same account across different pulls when each row only has one bureau value', () => {
+  it('compares balances across the per-bureau rows of one tradeline', () => {
     const discrepancies = buildAccountBalanceDiscrepancies('client-1', 'report-1', [
-      {
-        creditReportId: 'report-1',
-        creditorName: 'Capital Bank',
-        accountNumber: '***1111',
-        onTransunion: true,
-        onExperian: false,
-        onEquifax: false,
-        transunionBalance: 500,
-        experianBalance: null,
-        equifaxBalance: null,
-      },
-      {
-        creditReportId: 'report-1',
-        creditorName: 'Capital Bank',
-        accountNumber: '***1111',
-        onTransunion: false,
-        onExperian: true,
-        onEquifax: false,
-        transunionBalance: null,
-        experianBalance: 900,
-        equifaxBalance: null,
-      },
-    ]);
-
-    expect(discrepancies).toEqual([]);
-  });
-
-  it('creates a discrepancy when a single pull stores different per-bureau balances on one account row', () => {
-    const discrepancies = buildAccountBalanceDiscrepancies('client-1', 'report-1', [
-      {
-        creditReportId: 'report-1',
-        creditorName: 'Capital Bank',
-        accountNumber: '***1111',
-        onTransunion: true,
-        onExperian: true,
-        onEquifax: false,
-        transunionBalance: 500,
-        experianBalance: 900,
-        equifaxBalance: null,
-      },
+      { creditorName: 'Capital Bank', accountNumber: '***1111', bureau: 'transunion', tradelineKey: 'report-1:identityiq-0', dateOpened: opened, balance: 500 },
+      { creditorName: 'Capital Bank', accountNumber: '***2222', bureau: 'experian', tradelineKey: 'report-1:identityiq-0', dateOpened: opened, balance: 900 },
     ]);
 
     expect(discrepancies).toHaveLength(1);
@@ -53,15 +17,25 @@ describe('buildAccountBalanceDiscrepancies', () => {
       discrepancyType: 'account_balance',
       field: 'balance',
       creditorName: 'Capital Bank',
-      accountNumber: '***1111',
       valueTransunion: '500',
       valueExperian: '900',
       valueEquifax: null,
       severity: 'medium',
       isDisputable: true,
     });
-    expect(discrepancies[0].disputeRecommendation).toContain('within this report pull');
-    expect(discrepancies[0].id).toBeTypeOf('string');
-    expect(discrepancies[0].createdAt).toBeInstanceOf(Date);
+  });
+
+  it('does not compare rows it cannot confidently match', () => {
+    expect(buildAccountBalanceDiscrepancies('client-1', 'report-1', [
+      { creditorName: 'Capital Bank', accountNumber: '***1111', bureau: 'transunion', tradelineKey: null, dateOpened: null, balance: 500 },
+      { creditorName: 'Capital Bank', accountNumber: '***1111', bureau: 'experian', tradelineKey: null, dateOpened: null, balance: 900 },
+    ])).toEqual([]);
+  });
+
+  it('does not flag matching balances', () => {
+    expect(buildAccountBalanceDiscrepancies('client-1', 'report-1', [
+      { creditorName: 'Capital Bank', accountNumber: '1234****', bureau: 'transunion', tradelineKey: null, dateOpened: opened, balance: 500 },
+      { creditorName: 'Capital Bank', accountNumber: 'XXXX1234', bureau: 'equifax', tradelineKey: null, dateOpened: opened, balance: 500 },
+    ])).toEqual([]);
   });
 });

@@ -658,6 +658,7 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
   const accounts: ParsedAccount[] = [];
   const derogatoryAccounts: DerogatoryAccount[] = [];
   const processedCreditors = new Set<string>();
+  let tradelineIndex = 0;
 
   // Find all account tables within address-history elements
   $(IIQ_SELECTORS.accountHistorySection).each((_, historyEl) => {
@@ -749,6 +750,22 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
               accountData.transunion.pastDue = tuValue;
               accountData.experian.pastDue = expValue;
               accountData.equifax.pastDue = eqValue;
+            } else if (labelText.includes('last reported')) {
+              accountData.transunion.lastReported = tuValue;
+              accountData.experian.lastReported = expValue;
+              accountData.equifax.lastReported = eqValue;
+            } else if (labelText.includes('date last active')) {
+              accountData.transunion.lastActive = tuValue;
+              accountData.experian.lastActive = expValue;
+              accountData.equifax.lastActive = eqValue;
+            } else if (labelText.includes('last payment')) {
+              accountData.transunion.lastPayment = tuValue;
+              accountData.experian.lastPayment = expValue;
+              accountData.equifax.lastPayment = eqValue;
+            } else if (labelText.includes('comments')) {
+              accountData.transunion.comments = tuValue;
+              accountData.experian.comments = expValue;
+              accountData.equifax.comments = eqValue;
             }
           }
         });
@@ -796,10 +813,13 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
       const { creditorName: cleanCreditorName, originalCreditor } = extractOriginalCreditor(creditorName);
 
       // Create parsed accounts for each bureau that has data
+      const tradelineGroup = `identityiq-${tradelineIndex++}`;
       for (const bureau of ['transunion', 'experian', 'equifax'] as const) {
         const data = accountData[bureau];
-        if (Object.keys(data).length > 0) {
+        // A bureau column of dashes means the account is not on that bureau.
+        if (Object.values(data).some(value => cleanText(value) !== undefined)) {
           const account = createParsedAccount(cleanCreditorName, data, bureau, accountSourceText);
+          account.tradelineGroup = tradelineGroup;
           account.bureauEvidence = {
             [bureau]: buildBureauEvidence(data, accountSourceText),
           };
@@ -815,7 +835,8 @@ function extractIIQAccounts($: cheerio.CheerioAPI): {
           } else if (originalCreditor) {
             account.remarks = `Original Creditor: ${originalCreditor}`;
           }
-          applyExtractedAccountFields(account, accountSourceText);
+          // Each bureau reports its own dates; reading the whole block would give every bureau the first one found.
+          applyExtractedAccountFields(account, extractBureauSegment(accountSourceText, bureau));
           accounts.push(account);
         }
       }
@@ -893,6 +914,7 @@ function buildBureauEvidence(data: Record<string, string>, sourceText?: string):
     pastDueAmount: parseMoneyValue(data.pastDue),
     paymentStatus: data.paymentStatus ? cleanText(data.paymentStatus) : undefined,
     dateOpened: parseDate(data.dateOpened),
+    dateReported: parseDate(data.lastReported),
     sourceText,
   };
 }
@@ -943,6 +965,10 @@ function createParsedAccount(
     pastDueAmount: parseMoneyValue(data.pastDue),
     paymentStatus: paymentStatus || undefined,
     dateOpened: parseDate(data.dateOpened),
+    dateReported: parseDate(data.lastReported),
+    dateOfLastPayment: parseDate(data.lastPayment),
+    dateOfLastActivity: parseDate(data.lastActive),
+    remarks: data.comments ? cleanText(data.comments) : undefined,
     bureau,
     isNegative: false,
     riskLevel: 'low',

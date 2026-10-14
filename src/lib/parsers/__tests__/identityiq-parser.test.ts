@@ -123,7 +123,7 @@ describe('parseIdentityIQReport negative item clock extraction', () => {
     const transunionAccount = result.accounts.find(account => account.bureau === 'transunion');
     const equifaxAccount = result.accounts.find(account => account.bureau === 'equifax');
 
-    expect(result.accounts).toHaveLength(3);
+    expect(result.accounts.map(account => account.bureau)).toEqual(['transunion', 'equifax']);
     expect(transunionAccount?.bureauEvidence?.transunion).toMatchObject({
       accountNumber: '***1111',
       accountType: 'Revolving',
@@ -141,5 +141,46 @@ describe('parseIdentityIQReport negative item clock extraction', () => {
       creditLimit: 250000,
     });
     expect(equifaxAccount?.bureauEvidence?.equifax?.dateOpened?.toISOString()).toBe('2021-02-20T00:00:00.000Z');
+  });
+
+  it("keeps each bureau's own dates and comments on its account and groups the bureaus", () => {
+    const html = `
+      <div id="CreditScore"></div>
+      <address-history>
+        <div class="sub_header ng-binding ng-scope">Collection Agency</div>
+        <table class="crPrint ng-scope">
+          <tr>
+            <td>
+              <table class="rpt_content_table rpt_table4column">
+                <tr><td>Account #</td><td>***1111</td><td>***2222</td><td>-</td></tr>
+                <tr><td>Account Type</td><td>Collection</td><td>Collection</td><td>-</td></tr>
+                <tr><td>Last Reported:</td><td>09/01/2026</td><td>08/15/2026</td><td>-</td></tr>
+                <tr><td>Date Last Active:</td><td>01/10/2019</td><td>02/10/2019</td><td>-</td></tr>
+                <tr><td>Date of Last Payment:</td><td>12/01/2018</td><td>-</td><td>-</td></tr>
+                <tr><td>Comments:</td><td>Account information disputed by consumer</td><td>-</td><td>-</td></tr>
+              </table>
+              <div>
+                TransUnion Date of First Delinquency: 01/15/2018
+                Experian Date of First Delinquency: 02/20/2018
+              </div>
+            </td>
+          </tr>
+        </table>
+      </address-history>
+    `;
+
+    const result = parseIdentityIQReport(html);
+    const transunion = result.accounts.find(account => account.bureau === 'transunion');
+    const experian = result.accounts.find(account => account.bureau === 'experian');
+
+    expect(transunion?.dateOfFirstDelinquency?.toISOString()).toBe('2018-01-15T00:00:00.000Z');
+    expect(experian?.dateOfFirstDelinquency?.toISOString()).toBe('2018-02-20T00:00:00.000Z');
+    expect(transunion?.dateReported?.toISOString()).toBe('2026-09-01T00:00:00.000Z');
+    expect(experian?.dateOfLastActivity?.toISOString()).toBe('2019-02-10T00:00:00.000Z');
+    expect(transunion?.dateOfLastPayment?.toISOString()).toBe('2018-12-01T00:00:00.000Z');
+    expect(experian?.dateOfLastPayment).toBeUndefined();
+    expect(transunion?.remarks).toBe('Account information disputed by consumer');
+    expect(transunion?.tradelineGroup).toBeDefined();
+    expect(experian?.tradelineGroup).toBe(transunion?.tradelineGroup);
   });
 });

@@ -96,3 +96,17 @@ export function getAccountPresence(account: ParsedAccount, reportBureau: string 
     equifaxBalance: undefined,
   };
 }
+
+/**
+ * The bureaus a parsed account becomes stored tradelines for. Each stored row is one
+ * bureau's view of the account (ADR 0005), so an account that carries evidence from
+ * several bureaus is split. An account with no identifiable bureau is stored once.
+ */
+export function getAccountBureaus(account: ParsedAccount, reportBureau: string | null): Array<ParsedAccountBureau | null> {
+  const presence = getAccountPresence(account, reportBureau);
+  const bureaus = SPECIFIC_BUREAUS.filter(bureau =>
+    (bureau === 'transunion' && presence.onTransunion)
+    || (bureau === 'experian' && presence.onExperian)
+    || (bureau === 'equifax' && presence.onEquifax));
+  return bureaus.length > 0 ? bureaus : [null];
+}

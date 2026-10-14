@@ -1,55 +1,42 @@
 import { bureauDiscrepancies, creditAccounts } from '@/db/schema';
 import { randomUUID } from 'crypto';
+import { groupAcrossBureaus } from '@/lib/tradeline-matching';
 
-type BureauAccountSnapshot = Pick<
+type BureauAccountRow = Pick<
   typeof creditAccounts.$inferSelect,
-  | 'creditReportId'
-  | 'creditorName'
-  | 'accountNumber'
-  | 'onTransunion'
-  | 'onExperian'
-  | 'onEquifax'
-  | 'transunionBalance'
-  | 'experianBalance'
-  | 'equifaxBalance'
+  'creditorName' | 'accountNumber' | 'bureau' | 'tradelineKey' | 'dateOpened' | 'balance'
 >;
 
+/** Each stored row is one bureau's view of an account, so balances are compared across rows. */
 export function buildAccountBalanceDiscrepancies(
   clientId: string,
   creditReportId: string,
-  accounts: BureauAccountSnapshot[]
+  accounts: BureauAccountRow[]
 ): Array<typeof bureauDiscrepancies.$inferInsert> {
   const discrepancies: Array<typeof bureauDiscrepancies.$inferInsert> = [];
 
-  for (const account of accounts) {
-    const bureauBalances = [
-      account.onTransunion ? account.transunionBalance : null,
-      account.onExperian ? account.experianBalance : null,
-      account.onEquifax ? account.equifaxBalance : null,
-    ].filter((balance): balance is number => balance !== null);
+  for (const group of groupAcrossBureaus(accounts)) {
+    const balances = [...group.values()].map(row => row.balance).filter((balance): balance is number => balance !== null);
+    if (balances.length < 2 || new Set(balances).size === 1) continue;
 
-    if (bureauBalances.length < 2) {
-      continue;
-    }
-
-    if (new Set(bureauBalances).size > 1) {
-      discrepancies.push({
-        id: randomUUID(),
-        clientId,
-        creditReportId,
-        discrepancyType: 'account_balance',
-        field: 'balance',
-        creditorName: account.creditorName,
-        accountNumber: account.accountNumber,
-        valueTransunion: account.onTransunion ? account.transunionBalance?.toString() || null : null,
-        valueExperian: account.onExperian ? account.experianBalance?.toString() || null : null,
-        valueEquifax: account.onEquifax ? account.equifaxBalance?.toString() || null : null,
-        severity: 'medium',
-        isDisputable: true,
-        disputeRecommendation: 'Balance differs across bureaus within this report pull. Request verification from the reporting bureaus.',
-        createdAt: new Date(),
-      });
-    }
+    const anyRow = [...group.values()][0];
+    const valueFor = (bureau: 'transunion' | 'experian' | 'equifax') => group.get(bureau)?.balance?.toString() ?? null;
+    discrepancies.push({
+      id: randomUUID(),
+      clientId,
+      creditReportId,
+      discrepancyType: 'account_balance',
+      field: 'balance',
+      creditorName: anyRow.creditorName,
+      accountNumber: anyRow.accountNumber,
+      valueTransunion: valueFor('transunion'),
+      valueExperian: valueFor('experian'),
+      valueEquifax: valueFor('equifax'),
+      severity: 'medium',
+      isDisputable: true,
+      disputeRecommendation: 'Balance differs across bureaus within this report pull. Request verification from the reporting bureaus.',
+      createdAt: new Date(),
+    });
   }
 
   return discrepancies;

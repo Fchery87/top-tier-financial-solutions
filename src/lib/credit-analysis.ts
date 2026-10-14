@@ -29,7 +29,7 @@ import {
 } from './parsers/metro2-mapping';
 import { buildFcraComplianceStatus, daysUntilExpiration as daysUntilClockExpiration, getObsolescenceClock, getReportingLimitYears } from './fcra-clock';
 import { buildCreditAccountDerivedFields } from './credit-account-ingest';
-import { getAccountPresence } from './credit-account-bureau-presence';
+import { getAccountBureaus } from './credit-account-bureau-presence';
 import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
 import { buildAccountBalanceDiscrepancies } from './credit-analysis-discrepancies';
 import { normalizeCreditReport } from './credit-report-normalization/normalize-report';
@@ -99,6 +99,19 @@ function findDerogatoryMatch(
   return { match: best.da, confidence: best.score >= 100 ? 'high' : best.score >= 45 ? 'medium' : 'low' };
 }
 
+/** Parses a stored report file the same way analysis does. */
+export async function parseStoredCreditReport(report: Pick<typeof creditReports.$inferSelect, 'fileUrl' | 'fileType'>): Promise<ParsedCreditData> {
+  const fileBuffer = await getFileFromR2(report.fileUrl);
+  if (report.fileType === 'pdf') {
+    return parsePdfCreditReport(fileBuffer);
+  }
+  if (report.fileType === 'html') {
+    return parseHtmlCreditReport(fileBuffer.toString('utf-8'));
+  }
+  // Plain text - try to parse as best we can
+  return parseHtmlCreditReport(`<pre>${fileBuffer.toString('utf-8')}</pre>`);
+}
+
 export async function analyzeCreditReport(reportId: string): Promise<void> {
   // Get the report
   const [report] = await db
@@ -138,22 +151,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     await db.delete(personalInfoDisputes).where(eq(personalInfoDisputes.creditReportId, reportId));
     await db.delete(inquiryDisputes).where(eq(inquiryDisputes.creditReportId, reportId));
 
-    // Get file from R2
-    const fileBuffer = await getFileFromR2(report.fileUrl);
-    
-    // Parse based on file type
-    let parsedData: ParsedCreditData;
-    
-    if (report.fileType === 'pdf') {
-      parsedData = await parsePdfCreditReport(fileBuffer);
-    } else if (report.fileType === 'html') {
-      const htmlContent = fileBuffer.toString('utf-8');
-      parsedData = parseHtmlCreditReport(htmlContent);
-    } else {
-      // Plain text - try to parse as best we can
-      const textContent = fileBuffer.toString('utf-8');
-      parsedData = parseHtmlCreditReport(`<pre>${textContent}</pre>`);
-    }
+    const parsedData = await parseStoredCreditReport(report);
 
     const normalization = normalizeCreditReport({
       parsed: parsedData,
@@ -180,13 +178,6 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
     const completenessScores: number[] = [];
     
     for (const { account } of normalization.accounts) {
-      const accountId = randomUUID();
-      storedAccountIds.push(accountId);
-      
-      // Create lookup key for linking negative items later
-      const lookupKey = `${account.creditorName}|${account.accountNumber || ''}`.toLowerCase();
-      accountIdMap.set(lookupKey, accountId);
-      
       const accountStatus = account.accountStatus as StandardizedAccount['accountStatus'] | undefined;
       const paymentStatus = account.paymentStatus as StandardizedAccount['paymentStatus'] | undefined;
       const accountCategory = account.accountType as StandardizedAccount['accountCategory'] | undefined;
@@ -204,7 +195,7 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         paymentStatus: account.paymentStatus,
         remarks: account.remarks,
       });
-      
+
       completenessScores.push(completenessScore);
 
       // Re-calculate negative status and risk using metro2 functions
@@ -218,44 +209,47 @@ export async function analyzeCreditReport(reportId: string): Promise<void> {
         paymentStatus,
         accountCategory,
       });
-      
-      const accountPresence = getAccountPresence(account, report.bureau);
-      
-      await db.insert(creditAccounts).values({
-        id: accountId,
-        creditReportId: reportId,
-        clientId: report.clientId,
-        creditorName: account.creditorName,
-        accountNumber: account.accountNumber,
-        accountType: account.accountType,
-        accountStatus: account.accountStatus,
-        balance: account.balance,
-        creditLimit: account.creditLimit,
-        highCredit: account.highCredit,
-        monthlyPayment: account.monthlyPayment,
-        pastDueAmount: account.pastDueAmount,
-        paymentStatus: account.paymentStatus,
-        dateOpened: account.dateOpened,
-        dateReported: account.dateReported,
-        bureau: report.bureau, // Legacy field for backward compatibility
-        // Per-bureau presence fields
-        onTransunion: accountPresence.onTransunion,
-        onExperian: accountPresence.onExperian,
-        onEquifax: accountPresence.onEquifax,
-        transunionDate: accountPresence.transunionDate,
-        experianDate: accountPresence.experianDate,
-        equifaxDate: accountPresence.equifaxDate,
-        transunionBalance: accountPresence.transunionBalance,
-        experianBalance: accountPresence.experianBalance,
-        equifaxBalance: accountPresence.equifaxBalance,
-        isNegative: isNegativeCalc,
-        riskLevel: riskLevelCalc,
-        completenessScore,
-        missingFields,
-        paymentHistoryGrid: account.paymentHistoryGrid ? JSON.stringify(account.paymentHistoryGrid) : null,
-        remarks,
-        createdAt: new Date(),
-      });
+
+      // One stored row per bureau's view of the account (ADR 0005).
+      for (const bureau of getAccountBureaus(account, report.bureau)) {
+        const evidence = bureau ? account.bureauEvidence?.[bureau] : undefined;
+        const accountNumber = evidence?.accountNumber ?? account.accountNumber;
+        const accountId = randomUUID();
+        storedAccountIds.push(accountId);
+        accountIdMap.set(`${account.creditorName}|${accountNumber || ''}`.toLowerCase(), accountId);
+
+        await db.insert(creditAccounts).values({
+          id: accountId,
+          creditReportId: reportId,
+          clientId: report.clientId,
+          creditorName: account.creditorName,
+          accountNumber,
+          accountType: evidence?.accountType ?? account.accountType,
+          accountStatus: account.accountStatus,
+          balance: evidence?.balance ?? account.balance,
+          creditLimit: evidence?.creditLimit ?? account.creditLimit,
+          highCredit: evidence?.highCredit ?? account.highCredit,
+          monthlyPayment: evidence?.monthlyPayment ?? account.monthlyPayment,
+          pastDueAmount: evidence?.pastDueAmount ?? account.pastDueAmount,
+          paymentStatus: account.paymentStatus,
+          dateOpened: evidence?.dateOpened ?? account.dateOpened,
+          dateReported: evidence?.dateReported ?? account.dateReported,
+          bureau,
+          tradelineKey: account.tradelineGroup ? `${reportId}:${account.tradelineGroup}` : null,
+          originalCreditor: account.originalCreditor,
+          dateOfFirstDelinquency: account.dateOfFirstDelinquency,
+          bureauStatedRemovalDate: account.bureauStatedRemovalDate,
+          dateOfLastPayment: account.dateOfLastPayment,
+          dateOfLastActivity: account.dateOfLastActivity,
+          isNegative: isNegativeCalc,
+          riskLevel: riskLevelCalc,
+          completenessScore,
+          missingFields,
+          paymentHistoryGrid: account.paymentHistoryGrid ? JSON.stringify(account.paymentHistoryGrid) : null,
+          remarks,
+          createdAt: new Date(),
+        });
+      }
     }
 
     const parserReview = determineParserReviewStatus({
