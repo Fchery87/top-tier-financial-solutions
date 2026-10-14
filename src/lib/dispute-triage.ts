@@ -79,10 +79,9 @@ function determineStrategy(
   if (round >= 2) {
     return {
       strategy: 'method_of_verification',
-      description: 'Request proof of investigation method from prior dispute',
+      description: 'Request a description of the prior reinvestigation procedure',
       legalBasis: [
-        'FCRA § 611(a)(6)(B)(iii) - Right to description of verification method',
-        'FCRA § 611(a)(7) - Reinvestigation procedures',
+        'FCRA § 611(a)(7) - Description of the reinvestigation procedure, on request',
       ],
     };
   }

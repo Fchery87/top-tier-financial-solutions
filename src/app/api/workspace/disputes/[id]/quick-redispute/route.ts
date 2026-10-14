@@ -12,6 +12,7 @@ import { decideHighRiskClaims, highRiskConfirmationRequiredBody } from '@/lib/hi
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
+import { loadNewFacts } from '@/lib/new-facts';
 import { logServerEvent } from '@/lib/server-logger';
 import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
@@ -48,10 +49,14 @@ export async function POST(
       }
     }
 
+    const newFacts = currentDispute.outcome === 'verified' && currentDispute.negativeItemId
+      ? await loadNewFacts({ clientId: currentDispute.clientId, negativeItemId: currentDispute.negativeItemId })
+      : [];
     const recommendation = getResponseReviewRecommendation({
       outcome: currentDispute.outcome,
       currentRound: currentDispute.round || 1,
       bureau: currentDispute.bureau,
+      newFacts: newFacts.map(fact => fact.description),
     });
     if (recommendation.kind !== 'create_next_draft') {
       return NextResponse.json({ error: 'This response outcome does not recommend a next-cycle draft' }, { status: 400 });
@@ -179,7 +184,9 @@ export async function POST(
       }],
       selection: librarySelection,
       actorUserId: adminUser.id,
-      evidencePacketIds,
+      evidencePacketIds: escalationPlan.disputeType === 'new_evidence'
+        ? [...new Set([...evidencePacketIds, ...newFacts.map(fact => fact.evidencePacketId)])]
+        : evidencePacketIds,
     });
 
     const [created] = await db.select().from(disputes).where(eq(disputes.id, persistedDraft.disputeId)).limit(1);

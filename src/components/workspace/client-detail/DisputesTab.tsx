@@ -182,7 +182,7 @@ export function DisputesTab({
                   <select value={disputeType} onChange={(e) => setDisputeType(e.target.value)} className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
                     <option value="standard">Standard Dispute</option>
                     <option value="method_of_verification">Method of Verification</option>
-                    <option value="direct_creditor">Direct to Creditor</option>
+                    <option value="direct_creditor">Direct to Creditor (courtesy)</option>
                     <option value="goodwill">Goodwill Letter</option>
                   </select>
                 </div>

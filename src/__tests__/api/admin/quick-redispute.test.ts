@@ -10,6 +10,7 @@ const selectLibraryForGenerationMock = vi.hoisted(() => vi.fn());
 const requireLatestApprovedReportForClientMock = vi.hoisted(() => vi.fn());
 const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const persistGeneratedDisputeDraftMock = vi.hoisted(() => vi.fn());
+const loadNewFactsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
@@ -17,6 +18,7 @@ vi.mock('@/lib/letter-generation-library', () => ({ selectLibraryForGeneration: 
 vi.mock('@/lib/parser-review-gate', () => ({ requireLatestApprovedReportForClient: requireLatestApprovedReportForClientMock }));
 vi.mock('@/lib/ai-letter-generator', () => ({ generateUniqueDisputeLetter: generateUniqueDisputeLetterMock }));
 vi.mock('@/lib/dispute-draft-generator', () => ({ persistGeneratedDisputeDraft: persistGeneratedDisputeDraftMock }));
+vi.mock('@/lib/new-facts', () => ({ loadNewFacts: loadNewFactsMock }));
 vi.mock('@/lib/dispute-escalation-decision', () => ({
   decideEscalation: vi.fn(),
   loadDisputeChain: vi.fn(),
@@ -40,6 +42,50 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     selectLibraryForGenerationMock.mockResolvedValue({ selection: 'fixture' });
     generateUniqueDisputeLetterMock.mockResolvedValue({ letter: 'Generated letter', source: 'ai' });
     persistGeneratedDisputeDraftMock.mockResolvedValue({ disputeId: 'draft-1' });
+    loadNewFactsMock.mockResolvedValue([]);
+  });
+
+  it('creates a Round 3 new-evidence bureau draft when the verified item has unused evidence', async () => {
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/quick-redispute/route');
+    loadNewFactsMock.mockResolvedValue([{ description: 'client-supplied payment record evidence (1 document) not included in an earlier dispute', evidencePacketId: 'packet-9' }]);
+    dbMock.select
+      .mockReturnValueOnce(selectResult([{
+        id: 'dispute-2',
+        clientId: 'client-1',
+        negativeItemId: 'item-1',
+        bureau: 'experian',
+        round: 2,
+        outcome: 'verified',
+        responseDeadline: new Date('2026-02-01T00:00:00.000Z'),
+        responseReceivedAt: new Date('2026-02-01T00:00:00.000Z'),
+        responseDocumentUrl: 'https://files.example/verified.pdf',
+        analysisConfidence: null,
+        autoSelected: false,
+      }]))
+      .mockReturnValueOnce(selectResult([]))
+      .mockReturnValueOnce(selectResult([{ id: 'client-1', firstName: 'Test', lastName: 'Client' }]))
+      .mockReturnValueOnce(selectResult([{ id: 'item-1', creditorName: 'Fixture Bank', originalCreditor: null, creditAccountId: null, itemType: 'collection', amount: null, dateReported: null }]))
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) })
+      .mockReturnValueOnce(selectResult([{ firstName: 'Test', lastName: 'Client', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zipCode: '12207', dateOfBirth: null, ssnLast4: null }]))
+      .mockReturnValueOnce(selectResult([{ id: 'draft-1', round: 3, disputeType: 'new_evidence', status: 'draft' }]));
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-2/quick-redispute', { method: 'POST' }),
+      { params: Promise.resolve({ id: 'dispute-2' }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(loadNewFactsMock).toHaveBeenCalledWith({ clientId: 'client-1', negativeItemId: 'item-1' });
+    expect(generateUniqueDisputeLetterMock).toHaveBeenCalledWith(expect.objectContaining({
+      round: 3,
+      targetRecipient: 'bureau',
+      disputeType: 'new_evidence',
+      reasonCodes: ['previously_disputed', 'new_evidence'],
+    }));
+    expect(persistGeneratedDisputeDraftMock).toHaveBeenCalledWith(expect.objectContaining({
+      escalationPath: 'bureau',
+      evidencePacketIds: ['packet-9'],
+    }));
   });
 
   it('rejects a no-response draft before the response deadline', async () => {

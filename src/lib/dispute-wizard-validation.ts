@@ -114,10 +114,9 @@ export function validateStep3(
     errors.push('Dispute round must be between 1 and 3');
   }
 
-  // Warn if Round 3 (regulatory escalation)
   if (disputeRound === 3) {
     warnings.push(
-      'Round 3 disputes are escalated to regulatory bodies - ensure all evidence is included'
+      'Round 3 bureau disputes must include information no earlier letter on the item cited. Without it, file a regulator complaint instead.'
     );
   }
 

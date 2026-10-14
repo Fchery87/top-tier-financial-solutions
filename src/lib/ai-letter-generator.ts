@@ -189,8 +189,10 @@ function buildNeutralFallbackLetter(params: GenerateLetterParams): string {
   const maskedAccountNumber = params.itemData.accountNumber
     ? `****${params.itemData.accountNumber.slice(-4)}`
     : '';
-  const actionRequest = params.round >= 3
-    ? 'Please review this dispute as a direct furnisher investigation request under FCRA Section 623(a)(8) and provide a written response with the results of your review.'
+  const actionRequest = params.targetRecipient !== 'bureau' && params.targetRecipient !== 'cfpb'
+    ? 'Please review your reporting of this account and correct anything that is inaccurate or incomplete.'
+    : params.round >= 3
+    ? 'Please conduct a new reinvestigation that considers the information above, which my earlier disputes did not include, and send me the results in writing.'
     : params.round === 2
       ? 'Under FCRA Section 611(a)(7), please provide a description of the procedure used in the prior reinvestigation, including the business name, address, and telephone number of any furnisher you contacted.'
       : 'Please investigate the disputed information and confirm whether each reported detail is complete and accurate.';
@@ -764,8 +766,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
 
   if (round >= 3) {
     methodology = 'factual';
-    fcraIssues.push('FCRA § 623(a)(8): Consumer may dispute directly with the furnisher');
-    notes.push('Round 3+: Escalating to direct furnisher investigation based on prior unresolved reporting concerns');
+    notes.push('Round 3+: Another bureau dispute needs information no earlier letter on this item cited');
   }
 
   // ---- P3.5: ENHANCED CONFIDENCE CALCULATION ----

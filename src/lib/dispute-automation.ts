@@ -1,15 +1,17 @@
 export type EscalationTrigger = 'verified' | 'no_response';
 
-export interface EscalationPlanInput {
-  currentRound: number;
-  trigger: EscalationTrigger;
-  currentBureau: string;
-}
+/**
+ * A verified item can only go back to a bureau with a New Fact: something no
+ * earlier letter on the item cited. No-response escalations never need one.
+ */
+export type EscalationPlanInput =
+  | { currentRound: number; trigger: 'verified'; currentBureau: string; newFacts: string[] }
+  | { currentRound: number; trigger: 'no_response'; currentBureau: string };
 
 export interface EscalationPlan {
   nextRound: number;
-  targetRecipient: 'bureau' | 'creditor' | 'cfpb';
-  disputeType: 'method_of_verification' | 'direct_creditor' | 'fcra_violation_notice';
+  targetRecipient: 'bureau' | 'cfpb';
+  disputeType: 'method_of_verification' | 'new_evidence' | 'fcra_violation_notice';
   methodology: 'method_of_verification' | 'factual';
   reasonCodes: string[];
   customReason: string;
@@ -38,6 +40,8 @@ export function calculateDisputeDeadlines(sentAt: Date, escalationPath?: string 
   return { responseDeadline, escalationReadyAt };
 }
 
+// Never a Direct Dispute: a furnisher may ignore one this business prepares
+// (12 CFR 1022.43(b)(2)). See ADR 0004.
 export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan {
   const nextRound = Math.min((input.currentRound || 1) + 1, 4);
 
@@ -53,14 +57,14 @@ export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan 
       };
     }
 
-    if (nextRound === 3) {
+    if (input.newFacts.length > 0) {
       return {
         nextRound,
-        targetRecipient: 'creditor',
-        disputeType: 'direct_creditor',
+        targetRecipient: 'bureau',
+        disputeType: 'new_evidence',
         methodology: 'factual',
-        reasonCodes: ['verification_required', 'metro2_violation'],
-        customReason: `Item remained verified after method-of-verification in Round ${input.currentRound}. Escalating to creditor directly under FCRA Section 623(a)(8).`,
+        reasonCodes: ['previously_disputed', 'new_evidence'],
+        customReason: `Item still verified after Round ${input.currentRound}. Disputing again with ${input.currentBureau} on information the earlier disputes did not include: ${input.newFacts.join('; ')}.`,
       };
     }
 
@@ -70,11 +74,11 @@ export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan 
       disputeType: 'fcra_violation_notice',
       methodology: 'factual',
       reasonCodes: ['repeat_verification', 'fcra_non_compliance'],
-      customReason: `Repeated verification without sufficient documentation by Round ${input.currentRound}. Preparing regulatory escalation for manual review.`,
+      customReason: `Item still verified after Round ${input.currentRound} and there is no new information for another bureau dispute. Preparing a regulator complaint for manual review.`,
     };
   }
 
-  if (nextRound <= 2) {
+  if (nextRound === 2) {
     return {
       nextRound,
       targetRecipient: 'bureau',
@@ -82,17 +86,6 @@ export function buildEscalationPlan(input: EscalationPlanInput): EscalationPlan 
       methodology: 'method_of_verification',
       reasonCodes: ['no_response', 'request_verification_method'],
       customReason: `No timely response to Round ${input.currentRound}. Requesting verification method and reinvestigation.`,
-    };
-  }
-
-  if (nextRound === 3) {
-    return {
-      nextRound,
-      targetRecipient: 'creditor',
-      disputeType: 'direct_creditor',
-      methodology: 'factual',
-      reasonCodes: ['no_response', 'verification_required'],
-      customReason: `No timely response after prior rounds. Escalating directly to the furnisher/creditor under FCRA Section 623(a)(8).`,
     };
   }
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StepConfigure } from '../StepConfigure';
 
 const useWizardContextMock = vi.hoisted(() => vi.fn());
@@ -66,8 +66,20 @@ describe('StepConfigure direct-dispute advisory', () => {
     render(<StepConfigure />);
 
     expect(screen.getByTestId('direct-dispute-advisory')).toHaveTextContent('Regulation V');
-    expect(screen.getByTestId('direct-dispute-advisory')).toHaveTextContent('advisory; you can continue');
+    expect(screen.getByTestId('direct-dispute-advisory')).toHaveTextContent('creates no duty to investigate');
     expect(screen.queryByText('CFPB complaint packet selected')).not.toBeInTheDocument();
+  });
+
+  it('keeps round 2 and round 3 escalations with the bureau', () => {
+    const context = buildContext('bureau');
+    useWizardContextMock.mockReturnValue(context);
+
+    render(<StepConfigure />);
+    fireEvent.click(screen.getByText('Round 2 - Method of Verification'));
+    fireEvent.click(screen.getByText('Round 3 - New-Evidence Bureau Dispute'));
+
+    expect(context.setDisputeRound.mock.calls).toEqual([[2], [3]]);
+    expect(context.setTargetRecipient.mock.calls).toEqual([['bureau'], ['bureau']]);
   });
 
   it('does not show the direct-dispute advisory for a bureau recipient', () => {

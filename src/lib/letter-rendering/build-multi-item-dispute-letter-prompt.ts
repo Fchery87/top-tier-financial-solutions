@@ -68,8 +68,10 @@ export function buildMultiItemDisputeLetterPrompt(params: MultiItemDisputeLetter
     const maskedAccountNumber = item.accountNumber ? `****${item.accountNumber.slice(-4)}` : '';
     return `Account ${index + 1}:\n- Creditor: ${item.creditorName}\n${item.originalCreditor ? `- Original Creditor: ${item.originalCreditor}\n` : ''}${maskedAccountNumber ? `- Account Number: ${maskedAccountNumber}\n` : ''}- Type: ${formatItemType(item.itemType)}\n${item.amount ? `- Amount: ${formatCurrency(item.amount)}\n` : ''}${item.dateReported ? `- Date Reported: ${formatCalendarDate(item.dateReported)}` : ''}`.trim();
   }).join('\n\n');
-  const defaultStrategy = params.round >= 3
-    ? 'This is a direct furnisher escalation. Keep the tone factual and request investigation under FCRA Section 623(a)(8).'
+  const defaultStrategy = params.targetRecipient !== 'bureau' && params.targetRecipient !== 'cfpb'
+    ? 'This is a courtesy request sent directly to the furnisher. Ask it to review and correct its reporting. Do not claim the furnisher is legally required to investigate.'
+    : params.round >= 3
+    ? 'This is a repeat bureau dispute that raises information the earlier disputes did not include. Lead with that new information and request a new reinvestigation that considers it.'
     : params.round === 2
       ? 'This is a method-of-verification follow-up. Request a description of the prior reinvestigation procedure under FCRA Section 611(a)(7).'
       : 'This is an initial factual dispute. Request investigation and correction or removal if unverifiable.';
@@ -101,7 +103,7 @@ ${metro2Section || 'No specific Metro 2 issue list was provided. Request verific
 DISPUTED ACCOUNTS
 ${itemsList}
 
-If this is Round 2, request the method of verification. If this is Round 3 or later, keep the focus on a direct furnisher investigation request where applicable.
+If this is Round 2, request the method of verification. If this is Round 3 or later, lead with the information the earlier disputes did not include.
 
 ROUND STRATEGY
 ${strategy}

@@ -31,6 +31,14 @@ describe('lintGeneratedLetter', () => {
     }));
   });
 
+  it('warns when a letter relies on the direct-dispute section a furnisher may ignore', () => {
+    const result = lintGeneratedLetter('Please investigate under FCRA Section 623(a)(8).', baseContext);
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: 'statute_not_allowlisted',
+      message: 'Letter cites statutes outside the allowlist: 623(a)(8)',
+    }));
+  });
+
   it('warns on statute citations outside the allowlist', () => {
     const result = lintGeneratedLetter('This violates FCRA Section 999.', baseContext);
     expect(result.blocked).toBe(false);

@@ -13,18 +13,6 @@ export interface LegalCitation {
   description: string;
 }
 
-export interface EscalationTriggers {
-  verified?: string;
-  updated?: string;
-  no_response?: string;
-  deleted?: string | null;
-  no_documentation?: string;
-  no_validation?: string;
-  validated?: string;
-  denied?: string;
-  approved?: string | null;
-}
-
 export interface Metro2Field {
   field: string;
   codes?: string[];
@@ -43,13 +31,11 @@ export interface Methodology {
     primary: LegalCitation[];
     secondary?: LegalCitation[];
   };
-  escalation_triggers: EscalationTriggers;
   success_indicators?: string[];
   metro2_fields?: {
     base_segment: Metro2Field[];
     k_segment?: Metro2Field[];
   };
-  required_demands?: string[];
   required_documentation?: string[];
   approach?: string;
   key_elements?: string[];
@@ -102,41 +88,14 @@ export interface DisputeStrategiesConfig {
   methodologies: Record<string, Methodology>;
   bureaus: Record<string, BureauConfig>;
   reason_codes: ReasonCodeCategory;
-  escalation_paths: Record<string, Record<string, unknown>>;
   outcomes: DisputeOutcome[];
   item_types: Record<string, ItemTypeConfig>;
 }
 
-export interface PromptConfig {
-  methodology: string;
-  version: string;
-  system_context: string;
-  writing_guidelines: {
-    tone: string;
-    reading_level: string;
-    avoid: string[];
-    include: string[];
-    [key: string]: unknown;
-  };
-  prompt_template: string;
-  round_variations?: Record<string, {
-    additional_context: string;
-    escalation_warning: string;
-  }>;
-  target_variations?: Record<string, {
-    addressee: string;
-    opening: string;
-    legal_focus: string[];
-  }>;
-  [key: string]: unknown;
-}
-
 // Cache for loaded configs
 let strategiesConfig: DisputeStrategiesConfig | null = null;
-const promptConfigs: Map<string, PromptConfig> = new Map();
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
-const PROMPTS_DIR = path.join(CONFIG_DIR, 'prompts');
 
 // Embedded fallback configuration for serverless environments
 const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
@@ -155,7 +114,6 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
         ],
         secondary: [{ section: 'FCRA Section 609', code: '15 U.S.C. § 1681g', description: 'Disclosures to consumers' }],
       },
-      escalation_triggers: { verified: 'method_of_verification', updated: 're_dispute', no_response: 'cfpb_complaint', deleted: null },
       success_indicators: ['Account deleted from credit report', 'Information corrected to accurate status'],
     },
     metro2_compliance: {
@@ -170,7 +128,6 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
           { section: 'FCRA Section 623(a)(1)', code: '15 U.S.C. § 1681s-2(a)(1)', description: 'Duty to provide accurate information' },
         ],
       },
-      escalation_triggers: { verified: 'direct_creditor', no_response: 'fcra_violation_notice', deleted: null },
     },
     factual_escalation: {
       name: 'Factual Escalation',
@@ -184,7 +141,6 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
           { section: 'FDCPA Section 809', code: '15 U.S.C. § 1692g', description: 'Validation of debts' },
         ],
       },
-      escalation_triggers: { verified: 'direct_creditor', no_response: 'cfpb_complaint', deleted: null },
     },
     method_of_verification: {
       name: '611 Method of Verification',
@@ -194,11 +150,9 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
       best_for: ['Items verified without documentation', 'Sparse reinvestigation responses', 'Follow-up to prior verified disputes'],
       legal_citations: {
         primary: [
-          { section: 'FCRA Section 611(a)(6)(B)(iii)', code: '15 U.S.C. § 1681i(a)(6)(B)(iii)', description: 'Consumer right to description of reinvestigation procedure' },
+          { section: 'FCRA Section 611(a)(7)', code: '15 U.S.C. § 1681i(a)(7)', description: 'Description of the reinvestigation procedure, on request' },
         ],
       },
-      escalation_triggers: { no_documentation: 'fcra_violation_notice', verified: 'direct_creditor', deleted: null },
-      required_demands: ['Name, address, telephone of furnisher', 'Method used to verify', 'Documentation obtained', 'Name of investigator'],
     },
     debt_validation: {
       name: 'Debt Validation (FDCPA)',
@@ -211,7 +165,6 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
           { section: 'FDCPA Section 809(b)', code: '15 U.S.C. § 1692g(b)', description: 'Validation of debts - cease collection until validated' },
         ],
       },
-      escalation_triggers: { no_validation: 'cease_reporting_demand', validated: 'factual_dispute', deleted: null },
       required_documentation: ['Complete payment history', 'Original signed contract', 'Chain of assignment', 'Calculation of amount'],
     },
     goodwill: {
@@ -221,7 +174,6 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
       target_recipients: ['creditor'],
       best_for: ['Single late payment on otherwise perfect history', 'Paid collections', 'Hardship circumstances'],
       legal_citations: { primary: [] },
-      escalation_triggers: { denied: 'factual_dispute', approved: null },
       approach: 'non_adversarial',
       key_elements: ['Acknowledge the debt/late payment', 'Explain circumstances', 'Highlight positive payment history'],
     },
@@ -327,7 +279,6 @@ const EMBEDDED_STRATEGIES_CONFIG: DisputeStrategiesConfig = {
       { code: 'unauthorized_inquiry', label: 'Unauthorized Inquiry', description: 'This inquiry was made without my authorization.', methodology_fit: ['factual', 'factual_escalation'], fcra_section: '604', dispute_strength: 'medium' },
     ],
   },
-  escalation_paths: {},
   outcomes: [
     { code: 'deleted', label: 'Item Deleted', description: 'Negative item successfully removed', next_action: null, is_success: true },
     { code: 'verified', label: 'Verified as Accurate', description: 'Bureau claims item was verified', next_action: 'escalate', is_success: false },
@@ -361,230 +312,6 @@ export function loadStrategiesConfig(): DisputeStrategiesConfig {
     strategiesConfig = EMBEDDED_STRATEGIES_CONFIG;
     return strategiesConfig;
   }
-}
-
-// Embedded fallback prompts for serverless
-const EMBEDDED_PROMPTS: Record<string, PromptConfig> = {
-  factual: {
-    methodology: 'factual',
-    version: '1.0',
-    system_context: 'You are an expert credit repair specialist writing a formal dispute letter that challenges the ACCURACY of information reported on a consumer\'s credit report.',
-    writing_guidelines: {
-      tone: 'Professional, assertive, knowledgeable consumer',
-      reading_level: '12th grade',
-      avoid: ['Repetitive phrases', 'Robotic language', 'Overly aggressive language'],
-      include: ['Specific account details', 'Clear statement of inaccuracy', 'Relevant FCRA citations', '30-day response deadline'],
-    },
-    prompt_template: `You are writing a FACTUAL DISPUTE letter. This methodology challenges the accuracy of reported information based on documented facts.
-
-## LEGAL FRAMEWORK
-{legal_citations}
-
-## LETTER DETAILS
-- Target Recipient: {target_recipient}
-- Bureau: {bureau}
-- Dispute Round: {round}
-- Client Name: {client_name}
-
-## DISPUTED ACCOUNT(S)
-{account_details}
-
-## DISPUTE REASONS
-{reason_description}
-
-{custom_reason}
-
-## REQUIRED STRUCTURE
-1. Current date and properly formatted recipient address
-2. Clear RE: line with a factual dispute subject requesting investigation and correction/removal if unverifiable
-3. Opening: State this is a formal dispute under FCRA Section 611
-4. Account Details: List each disputed account with specifics
-5. Inaccuracies: Clearly explain WHY each item is inaccurate
-6. Legal Basis: Cite FCRA sections 611, 623, and relevant provisions
-7. Requests: investigate the disputed information, correct inaccuracies, or remove data if unverifiable, and provide investigation documentation
-8. Deadline: 30 days per FCRA Section 611(a)(1)
-9. Keep the tone factual and avoid damages or threat language
-10. Signature block with enclosures list
-
-Generate a unique, professional dispute letter. Output plain text only - no markdown.`,
-  },
-  metro2_compliance: {
-    methodology: 'metro2_compliance',
-    version: '1.0',
-    system_context: 'You are an expert credit repair specialist writing a Metro 2 COMPLIANCE dispute letter that challenges data format violations under Metro 2 reporting standards.',
-    writing_guidelines: {
-      tone: 'Technical, authoritative, compliance-focused',
-      reading_level: '12th grade',
-      avoid: ['Vague compliance claims', 'Generic dispute language'],
-      include: ['Specific Metro 2 field references', 'CDIA Credit Reporting Resource Guide citations', 'Field code violations'],
-    },
-    prompt_template: `You are writing a METRO 2 COMPLIANCE dispute letter challenging data format violations.
-
-## LEGAL FRAMEWORK
-- FCRA Section 607(b): "Maximum possible accuracy"
-- FCRA Section 623(a)(1): Furnisher duty to report accurate information
-- CDIA Credit Reporting Resource Guide: Metro 2 Format compliance
-
-## LETTER DETAILS
-- Target: {target_recipient} ({bureau})
-- Round: {round}
-- Client: {client_name}
-
-## DISPUTED ACCOUNT(S)
-{account_details}
-
-## METRO 2 VIOLATIONS
-{metro2_violations}
-
-Generate a technically precise, professional dispute letter. Output plain text only.`,
-  },
-  method_of_verification: {
-    methodology: 'method_of_verification',
-    version: '1.0',
-    system_context: 'You are an expert credit repair specialist writing a 611 METHOD OF VERIFICATION letter demanding the bureau disclose HOW they verified disputed information.',
-    writing_guidelines: {
-      tone: 'Assertive, demanding, legally sophisticated',
-      reading_level: '12th grade',
-      avoid: ['Being vague about requested information', 'Failing to cite specific FCRA sections'],
-      include: ['Reference to prior dispute', 'Specific demands for verification documentation', 'Request for description of reinvestigation procedure'],
-    },
-    prompt_template: `You are writing a 611 METHOD OF VERIFICATION letter demanding disclosure of verification procedures.
-
-## CRITICAL LEGAL CITATION
-FCRA Section 611(a)(6)(B)(iii) - Consumer's right to receive "a description of the procedure used to determine the accuracy and completeness of the information."
-
-## PRIOR DISPUTE CONTEXT
-{prior_dispute_details}
-
-## LETTER DETAILS
-- Target: {bureau}
-- Round: {round}
-- Client: {client_name}
-
-## ACCOUNT(S) PREVIOUSLY DISPUTED
-{account_details}
-
-## SPECIFIC DEMANDS (include in letter)
-1. Name, address, and telephone number of furnisher contacted
-2. Copy of all documentation obtained from furnisher
-3. Name and title of employee who conducted investigation
-4. Description of verification procedure used
-5. Copy of ACDV form transmitted
-6. Furnisher's complete response
-
-Generate a demanding, legally sophisticated letter. Output plain text only.`,
-  },
-  debt_validation: {
-    methodology: 'debt_validation',
-    version: '1.0',
-    system_context: 'You are an expert credit repair specialist writing a DEBT VALIDATION letter under FDCPA Section 809.',
-    writing_guidelines: {
-      tone: 'Firm, legally precise, demanding',
-      reading_level: '12th grade',
-      avoid: ['Acknowledging the debt is valid', 'Making payment promises'],
-      include: ['Clear FDCPA 809 citation', 'Specific documentation demands', 'Cease collection demand until validation'],
-    },
-    prompt_template: `You are writing a DEBT VALIDATION letter under FDCPA Section 809.
-
-## LEGAL FRAMEWORK
-- FDCPA Section 809(b): Upon written dispute within 30 days, collector must CEASE all collection until validated
-- FDCPA Section 807: Prohibition on false/misleading representations
-
-## LETTER DETAILS
-- Collector: {creditor_name}
-- Client: {client_name}
-
-## DISPUTED ACCOUNT
-{account_details}
-
-## VALIDATION DEMANDS
-1. Proof you are licensed to collect in client's state
-2. Name, address, phone of original creditor
-3. Original signed contract bearing consumer's signature
-4. Complete payment history from account opening
-5. Final account statement from original creditor
-6. Complete chain of assignment showing ownership
-7. Itemized accounting showing how amount was calculated
-
-## IMPORTANT DISCLAIMERS
-- "This is not an acknowledgment of debt"
-- "I am requesting validation as permitted by law"
-
-Generate a firm, legally precise debt validation letter. Output plain text only.`,
-  },
-  factual_escalation: {
-    methodology: 'factual_escalation',
-    version: '1.0',
-    system_context: 'You are an expert credit repair specialist writing a factual escalation letter grounded in documented inaccuracies, prior dispute history, and allowed statutory references.',
-    writing_guidelines: {
-      tone: 'Authoritative, professional, evidence-grounded',
-      reading_level: '12th grade',
-      avoid: ['Threat language', 'Speculative legal claims', 'Vague legal references'],
-      include: ['Relevant statutory citations', 'Specific documented issues', 'Clear request for investigation or correction'],
-    },
-    prompt_template: `You are writing a FACTUAL ESCALATION dispute letter using only documented consumer protection issues.
-
-## LEGAL FRAMEWORK TO CITE
-- FCRA Section 605(a): 7-year reporting limitation
-- FCRA Section 611(a)(5): Deletion of unverifiable information
-- FCRA Section 623(a)(1): Furnisher accuracy duty
-- FDCPA Section 807: False/misleading representations
-
-## LETTER DETAILS
-- Target: {target_recipient} ({bureau_or_creditor})
-- Round: {round}
-- Client: {client_name}
-
-## DISPUTED ACCOUNT(S)
-{account_details}
-
-## DOCUMENTED ISSUES
-{violation_descriptions}
-
-Generate an authoritative but factual dispute letter. Output plain text only.`,
-  },
-};
-
-// Load methodology-specific prompt config
-export function loadPromptConfig(methodology: string): PromptConfig | null {
-  if (promptConfigs.has(methodology)) {
-    return promptConfigs.get(methodology)!;
-  }
-
-  const promptFileName = getPromptFileName(methodology);
-  const promptPath = path.join(PROMPTS_DIR, promptFileName);
-
-  try {
-    if (fs.existsSync(promptPath)) {
-      const fileContents = fs.readFileSync(promptPath, 'utf8');
-      const config = yaml.load(fileContents) as PromptConfig;
-      promptConfigs.set(methodology, config);
-      return config;
-    }
-  } catch {
-    logServerEvent({ level: 'warn', event: 'server.lib.dispute.config.loader.warn', error: `File system error loading prompt for ${methodology}, using embedded config` });
-  }
-
-  // Fall back to embedded prompts
-  if (EMBEDDED_PROMPTS[methodology]) {
-    promptConfigs.set(methodology, EMBEDDED_PROMPTS[methodology]);
-    return EMBEDDED_PROMPTS[methodology];
-  }
-
-  logServerEvent({ level: 'warn', event: 'server.lib.dispute.config.loader.warn', error: `Prompt config not found for methodology: ${methodology}` });
-  return null;
-}
-
-function getPromptFileName(methodology: string): string {
-  const fileMap: Record<string, string> = {
-    factual: 'factual-dispute.yaml',
-    metro2_compliance: 'metro2-compliance.yaml',
-    factual_escalation: 'consumer-law.yaml',
-    method_of_verification: 'method-of-verification.yaml',
-    debt_validation: 'debt-validation.yaml',
-    goodwill: 'goodwill.yaml',
-  };
-  return fileMap[methodology] || `${methodology}.yaml`;
 }
 
 // Get methodology details
@@ -658,46 +385,13 @@ export function getRecommendedMethodology(itemType: string, round: number = 1): 
   return 'factual'; // Default to factual
 }
 
-// Get escalation suggestion based on outcome
-export function getEscalationSuggestion(
-  methodology: string,
-  outcome: string
-): string | null {
-  const methodologyConfig = getMethodology(methodology);
-  if (!methodologyConfig) return null;
-  
-  const triggers = methodologyConfig.escalation_triggers;
-  return (triggers as Record<string, string | null>)[outcome] || null;
-}
-
 // Get outcomes configuration
 export function getOutcomes(): DisputeOutcome[] {
   const config = loadStrategiesConfig();
   return config.outcomes;
 }
 
-// Build legal citations string for a methodology
-export function buildLegalCitationsString(methodology: string): string {
-  const methodologyConfig = getMethodology(methodology);
-  if (!methodologyConfig) return '';
-  
-  const citations: string[] = [];
-  
-  for (const citation of methodologyConfig.legal_citations.primary) {
-    citations.push(`${citation.section} (${citation.code}): ${citation.description}`);
-  }
-  
-  if (methodologyConfig.legal_citations.secondary) {
-    for (const citation of methodologyConfig.legal_citations.secondary) {
-      citations.push(`${citation.section} (${citation.code}): ${citation.description}`);
-    }
-  }
-  
-  return citations.join('\n');
-}
-
 // Clear caches (useful for development/testing)
 export function clearConfigCache(): void {
   strategiesConfig = null;
-  promptConfigs.clear();
 }
