@@ -229,3 +229,22 @@ describe('analyzeNegativeItem medical debt', () => {
     expect(result.analysisNotes).toContain('Possible medical debt: only the creditor name suggests it. Confirm with the client before using medical-debt rules.');
   });
 });
+
+describe('analyzeNegativeItem single-tradeline contradictions', () => {
+  it('puts an objective contradiction in the letter and holds an interpretive one', () => {
+    const result = analyzeNegativeItem({
+      id: 'neg-st-1',
+      creditorName: 'Example Bank',
+      itemType: 'charge_off',
+      accountStatus: 'charge_off',
+      dateOpened: '2019-06-15',
+      dateOfFirstDelinquency: '2019-02-01',
+      monthlyPayment: 4500,
+    });
+
+    expect(result.metro2Violations).toContain('The date of first delinquency (2/2019) is earlier than the date the account was opened (6/2019). An account cannot become delinquent before it exists.');
+    expect(result.autoReasonCodes).toContain('wrong_dates');
+    expect(result.interpretiveFindings).toEqual(['The account is reported as charge_off but still shows a scheduled monthly payment of $45.00. A closed or charged-off account has no scheduled payment.']);
+    expect(result.metro2Violations.join(' ')).not.toContain('scheduled monthly payment');
+  });
+});
