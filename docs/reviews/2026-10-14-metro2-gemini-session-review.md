@@ -36,8 +36,10 @@ Legal points here are research notes. Have counsel confirm them before you chang
 - **Identity theft block.** Under § 605B (15 U.S.C. § 1681c-2), a bureau must block identity-theft items within four business days of receiving an identity theft report. That path is faster than a dispute when the client has a real FTC report.
 - **Reinsertion notice.** If a deleted item comes back, § 611(a)(5)(B) requires written notice within five business days of the reinsertion.
 
-## Open decisions
+## Decisions (resolved October 14, 2026)
 
-1. **Round 3 targets the furnisher directly** (`dispute-automation.ts`, prompt strategy text). Because of the credit repair carve-out above, these letters carry no duty to investigate when the firm prepares them. Options: keep them as a low-cost nudge, have the client send their own letter, or replace round 3 with a second bureau dispute that carries new evidence, followed by the CFPB complaint path. This is a business call, so the code is unchanged.
-2. **NJ is missing from `STATE_MEDICAL_RESTRICTIONS`** in `medical-dispute-rules.ts`, and the NY and CT entries only say "may apply". The NY ban covers bureaus directly. The NJ bureau rule covers paid debt and debt under $500. Adding exact rules is a policy change counsel should approve.
-3. **Cross-bureau DOFD comparison is the biggest unbuilt check.** A detector that groups one account's tradelines across bureaus and flags DOFDs more than a month apart would produce the objectively verifiable findings the Second Circuit asks for. It needs a decision on where it surfaces: a triage quick action, per-item `metro2Violations`, or both.
+The terms below are defined in `CONTEXT.md`.
+
+1. **Round 3 no longer goes to the furnisher.** It is a New-Evidence Bureau Dispute when the item has a New Fact, and a Regulator Complaint when it does not. See ADR 0004.
+2. **Medical Debt State Rules** cover NY, NJ and CT exactly, cite the state statutes, and carry a "not yet counsel-reviewed" note. The state is the Client's current residence. The other five vague state entries are removed. National limits are framed as Bureau Reporting Policy.
+3. **Cross-bureau comparison covers every field each bureau reports**, not only the DOFD. Each bureau's tradeline becomes its own record (ADR 0005). Single-tradeline checks and Item Timeline checks (DOFD drift, Reinsertion, changes after a Verified response) are added too. Findings are split into objective and interpretive. Items whose findings are all interpretive are held for staff review.
