@@ -33,6 +33,8 @@ export const REASON_CODE_DESCRIPTIONS: Record<string, string> = {
   status_inconsistency: 'The account status conflicts with the payment rating and payment history reported for the same account. These fields cannot all be accurate at the same time.',
   balance_discrepancy: 'The reported balance information is inaccurate or inconsistent with other account data fields. This discrepancy indicates a data integrity failure.',
   verification_required: 'I am requesting a reasonable reinvestigation of this account under FCRA Section 611. Please confirm each disputed detail with the furnisher and correct or delete anything that cannot be verified.',
+  medical_state_rule: 'This account is medical debt, and the law of the state where I live limits how medical debt may be reported.',
+  medical_bureau_policy: "This medical collection should not appear under the credit bureaus' own published medical debt policy.",
   new_evidence: 'Since my last dispute I have information about this account that the earlier reinvestigation did not consider. Please conduct a new reinvestigation that takes it into account.',
   previously_disputed: 'This item has already been disputed previously and remains under challenge because the prior response did not resolve the reporting concerns.',
   request_verification_method: 'Please provide the specific method of verification used in your prior investigation, including how the disputed information was verified and with whom.',

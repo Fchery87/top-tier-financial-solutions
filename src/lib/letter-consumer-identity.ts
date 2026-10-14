@@ -120,3 +120,14 @@ export async function tryLoadLetterConsumerIdentity(clientId: string): Promise<L
     throw error;
   }
 }
+
+/** The Client's current state of residence, or null when it is missing or cannot be decrypted. */
+export async function loadClientResidenceState(clientId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ state: clients.state })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  const state = text(decryptClientData({ state: row?.state ?? null }).state);
+  return state && !state.includes(DECRYPTION_FAILED) ? state : null;
+}

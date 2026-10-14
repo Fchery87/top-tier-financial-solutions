@@ -64,3 +64,30 @@ describe('dispute-triage bureau presence', () => {
     expect(summary.byBureau).toEqual({});
   });
 });
+
+describe('dispute-triage medical debt', () => {
+  it('lists medical items in a quick action and counts the ones awaiting confirmation', () => {
+    const summary = triageItems([
+      { ...baseItem, id: 'med-confirmed', accountType: 'medical', onEquifax: true },
+      { ...baseItem, id: 'med-possible', creditorName: 'Medical Data Systems', onEquifax: true },
+      { ...baseItem, id: 'not-medical', onEquifax: true },
+    ]);
+
+    expect(summary.quickActions.find(action => action.id === 'medical-debt')).toEqual({
+      id: 'medical-debt',
+      label: 'Medical Debt',
+      description: '2 items look like medical debt; 1 needs client confirmation because only the creditor name suggests it',
+      itemIds: ['med-confirmed', 'med-possible'],
+      count: 2,
+    });
+  });
+
+  it('does not give a whole batch a medical strategy because of its first item', () => {
+    const summary = triageItems([
+      { ...baseItem, id: 'med-first', accountType: 'medical', onEquifax: true },
+      { ...baseItem, id: 'card-collection', onEquifax: true },
+    ]);
+
+    expect(summary.batches[0].strategyDescription).not.toContain('Medical');
+  });
+});

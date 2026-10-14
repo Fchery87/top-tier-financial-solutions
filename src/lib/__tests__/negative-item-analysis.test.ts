@@ -193,3 +193,39 @@ describe('analyzeNegativeItem obsolescence', () => {
     expect(result.fcraIssues.join(' ')).not.toContain('605(a)(3)');
   });
 });
+
+describe('analyzeNegativeItem medical debt', () => {
+  it("states the client's state rule as a finding for a medical collection", () => {
+    const result = analyzeNegativeItem({
+      id: 'neg-med-1',
+      creditorName: 'Apex Recovery',
+      originalCreditor: 'Northwell Health',
+      itemType: 'collection',
+      accountStatus: 'collection',
+      amount: 120000,
+      dateOfFirstDelinquency: '2023-01-15',
+      clientState: 'NY',
+    });
+
+    expect(result.metro2Violations).toContain(
+      'This account is medical debt and I live in New York. New York General Business Law § 380-j bars consumer reporting agencies from reporting medical debt.',
+    );
+    expect(result.autoReasonCodes).toContain('medical_state_rule');
+    expect(result.analysisNotes).toContain('Medical Debt State Rule wording has not been reviewed by counsel yet');
+  });
+
+  it('holds a creditor-name-only medical match for client confirmation', () => {
+    const result = analyzeNegativeItem({
+      id: 'neg-med-2',
+      creditorName: 'Medical Data Systems',
+      itemType: 'collection',
+      accountStatus: 'collection',
+      amount: 120000,
+      dateOfFirstDelinquency: '2023-01-15',
+      clientState: 'NY',
+    });
+
+    expect(result.autoReasonCodes).not.toContain('medical_state_rule');
+    expect(result.analysisNotes).toContain('Possible medical debt: only the creditor name suggests it. Confirm with the client before using medical-debt rules.');
+  });
+});

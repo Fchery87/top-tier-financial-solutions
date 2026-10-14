@@ -2,7 +2,7 @@
 
 import { daysUntilExpiration, getObsolescenceClock } from './fcra-clock';
 import { detectDuplicateLiability, detectReaging } from './negative-item-detectors';
-import { getMedicalRuleRecommendation } from './medical-dispute-rules';
+import { classifyMedicalDebt } from './medical-dispute-rules';
 import type { CreditorStrategySummary } from './creditor-strategy-insights';
 import { getRecommendedMethodologyForCreditor } from './creditor-strategy-insights';
 
@@ -82,22 +82,6 @@ function determineStrategy(
       description: 'Request a description of the prior reinvestigation procedure',
       legalBasis: [
         'FCRA § 611(a)(7) - Description of the reinvestigation procedure, on request',
-      ],
-    };
-  }
-
-  const medicalRecommendation = getMedicalRuleRecommendation({
-    accountType: items[0]?.accountType,
-    itemType,
-    amount: items[0]?.amount,
-  });
-  if (medicalRecommendation) {
-    return {
-      strategy: 'factual',
-      description: medicalRecommendation.description,
-      legalBasis: [
-        'FCRA § 607(b) - Maximum possible accuracy',
-        'Medical debt reporting policies require factual verification before continued reporting',
       ],
     };
   }
@@ -375,6 +359,21 @@ export function triageItems(
       description: `${itemIds.length} items may reflect the same debt reporting on multiple tradelines`,
       itemIds,
       count: itemIds.length,
+    });
+  }
+
+  // Medical findings are per item, so they belong to the analyzer and the letter, not to a batch strategy.
+  const medicalItems = items.filter(item => classifyMedicalDebt(item) !== 'not_medical');
+  if (medicalItems.length > 0) {
+    const unconfirmed = medicalItems.filter(item => classifyMedicalDebt(item) === 'possible').length;
+    quickActions.push({
+      id: 'medical-debt',
+      label: 'Medical Debt',
+      description: unconfirmed > 0
+        ? `${medicalItems.length} items look like medical debt; ${unconfirmed} ${unconfirmed === 1 ? 'needs' : 'need'} client confirmation because only the creditor name suggests it`
+        : `${medicalItems.length} medical debt items to check against state rules and the bureaus' medical debt policy`,
+      itemIds: medicalItems.map(item => item.id),
+      count: medicalItems.length,
     });
   }
 
