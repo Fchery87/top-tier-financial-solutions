@@ -9,6 +9,7 @@ describe('response-review recommendations', () => {
       outcome: 'deleted',
       currentRound: 1,
       bureau: 'experian',
+      newFacts: [],
     })).toMatchObject({ kind: 'close' });
   });
 
@@ -17,6 +18,7 @@ describe('response-review recommendations', () => {
       outcome: 'updated',
       currentRound: 1,
       bureau: 'experian',
+      newFacts: [],
     })).toMatchObject({ kind: 'refresh_item' });
   });
 
@@ -25,6 +27,7 @@ describe('response-review recommendations', () => {
       outcome: 'frivolous',
       currentRound: 1,
       bureau: 'experian',
+      newFacts: [],
     })).toMatchObject({ kind: 'no_further_action' });
   });
 
@@ -33,6 +36,7 @@ describe('response-review recommendations', () => {
       outcome: 'verified',
       currentRound: 1,
       bureau: 'experian',
+      newFacts: [],
     });
 
     expect(recommendation).toMatchObject({
@@ -50,15 +54,31 @@ describe('response-review recommendations', () => {
       outcome: 'no_response',
       currentRound: 2,
       bureau: 'equifax',
+      newFacts: [],
     });
 
     expect(recommendation).toMatchObject({
       kind: 'create_next_draft',
       plan: {
         nextRound: 3,
-        targetRecipient: 'creditor',
+        targetRecipient: 'cfpb',
         reasonCodes: expect.arrayContaining(['no_response']),
       },
+    });
+  });
+
+  it('recommends a new-evidence bureau dispute after a verified second round with a new fact', () => {
+    const recommendation = getResponseReviewRecommendation({
+      outcome: 'verified',
+      currentRound: 2,
+      bureau: 'transunion',
+      newFacts: ['client-supplied payment record evidence (1 document) not included in an earlier dispute'],
+    });
+
+    expect(recommendation).toMatchObject({
+      kind: 'create_next_draft',
+      title: 'Create Round 3 draft',
+      plan: { nextRound: 3, targetRecipient: 'bureau', disputeType: 'new_evidence' },
     });
   });
 });

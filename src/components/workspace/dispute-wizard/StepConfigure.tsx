@@ -17,6 +17,14 @@ interface CfpbEligibilityPreview {
   message: string;
 }
 
+const ROUND_OPTIONS = [
+  { key: 'bureau-1', round: 1, target: 'bureau', label: 'Round 1 - Bureau Dispute', desc: 'Initial dispute sent to the credit bureaus' },
+  { key: 'bureau-2', round: 2, target: 'bureau', label: 'Round 2 - Method of Verification', desc: 'Ask the bureau how it verified an item it reported as Verified' },
+  { key: 'bureau-3', round: 3, target: 'bureau', label: 'Round 3 - New-Evidence Bureau Dispute', desc: 'Dispute again with the bureau, only with information no earlier letter cited' },
+  { key: 'cfpb-3', round: 3, target: 'cfpb', label: 'Regulator Complaint (CFPB)', desc: 'Complaint packet when a Verified item has no new information' },
+  { key: 'direct', round: 2, target: 'creditor', label: 'Direct Dispute to Furnisher (courtesy)', desc: 'Manual letter only. The furnisher may ignore it because we prepared it' },
+] as const;
+
 export function StepConfigure() {
   const ctx = useWizardContext();
   const {
@@ -186,8 +194,8 @@ export function StepConfigure() {
           </div>
         ) : targetRecipient !== 'bureau' ? (
           <div data-testid="direct-dispute-advisory" className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-sm text-foreground">
-            Enhanced creditor/furnisher letters enabled. This escalation will cite prior verification attempts and request direct investigation from the data furnisher.
-            <p className="mt-2 text-xs text-muted-foreground">Under Regulation V, a furnisher may decline the direct-dispute investigation process when it reasonably believes a credit repair organization prepared or supplied the dispute. This is advisory; you can continue.</p>
+            Courtesy letter to the furnisher. It asks the furnisher to review its reporting and does not claim a duty to investigate.
+            <p className="mt-2 text-xs text-muted-foreground">Under Regulation V, a furnisher may ignore a direct dispute that a credit repair organization prepared or supplied, so this letter creates no duty to investigate. A bureau dispute is the path that does.</p>
           </div>
         ) : null}
 
@@ -195,18 +203,19 @@ export function StepConfigure() {
         <div className="space-y-3">
           <label className="text-sm font-medium">Dispute Round</label>
           <div className="space-y-2">
-            {[
-              { round: 1, label: 'Round 1 - Bureau Disputes', desc: 'Initial dispute sent to credit bureaus' },
-              { round: 2, label: 'Round 2 - Direct to Creditor/Furnisher', desc: 'Escalation after bureau verification' },
-              { round: 3, label: 'Round 3+ - CFPB / Direct Escalation', desc: 'CFPB complaint packet or direct furnisher follow-up' },
-            ].map(({ round, label, desc }) => (
-              <div key={round} className={`p-4 rounded-lg border cursor-pointer transition-all ${disputeRound === round ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'}`} onClick={() => { setDisputeRound(round); if (round === 1) setTargetRecipient('bureau'); else if (round === 2) setTargetRecipient('creditor'); else setTargetRecipient('cfpb'); }}>
+            {ROUND_OPTIONS.map(({ key, round, target, label, desc }) => {
+              const selected = disputeRound === round && (target === 'creditor'
+                ? targetRecipient !== 'bureau' && targetRecipient !== 'cfpb'
+                : targetRecipient === target);
+              return (
+              <div key={key} className={`p-4 rounded-lg border cursor-pointer transition-all ${selected ? 'border-secondary bg-secondary/10' : 'border-border hover:border-secondary/50'}`} onClick={() => { setDisputeRound(round); setTargetRecipient(target); }}>
                 <div className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full border-2 ${disputeRound === round ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'}`} />
+                  <div className={`w-4 h-4 rounded-full border-2 ${selected ? 'border-secondary bg-secondary' : 'border-muted-foreground/30'}`} />
                   <div><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{desc}</p></div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

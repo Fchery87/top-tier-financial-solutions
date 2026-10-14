@@ -209,17 +209,17 @@ describe('buildEscalationLetterParams', () => {
       creditAccount: { accountNumber: '123456789' },
       plan: {
         nextRound: 3,
-        targetRecipient: 'creditor',
-        disputeType: 'direct_creditor',
+        targetRecipient: 'bureau',
+        disputeType: 'new_evidence',
         methodology: 'factual',
-        reasonCodes: ['verification_required'],
-        customReason: 'Prior verification was insufficient',
+        reasonCodes: ['previously_disputed', 'new_evidence'],
+        customReason: 'Disputing again with new information',
       },
     });
 
     expect(result).toMatchObject({
       round: 3,
-      targetRecipient: 'creditor',
+      targetRecipient: 'bureau',
       clientData: { fullName: 'Jane Client' },
       itemData: {
         creditorName: 'Example Bank',
@@ -227,7 +227,7 @@ describe('buildEscalationLetterParams', () => {
         accountNumber: '123456789',
         bureau: 'experian',
       },
-      reasonCodes: ['verification_required'],
+      reasonCodes: ['previously_disputed', 'new_evidence'],
     });
   });
 });

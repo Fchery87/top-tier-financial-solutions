@@ -1463,12 +1463,12 @@ export function generateCreditAnalysisReportHTML(data: CreditAnalysisReportData)
         </tr>
         <tr>
           <td><strong>Round 2</strong></td>
-          <td>Follow-up disputes - items not removed in Round 1</td>
+          <td>Method of verification - ask how items not removed in Round 1 were verified</td>
           <td>30-45 days</td>
         </tr>
         <tr>
           <td><strong>Round 3+</strong></td>
-          <td>Advanced strategies - method of verification, creditor direct</td>
+          <td>A new bureau dispute when there is new information, otherwise a regulator complaint</td>
           <td>30-45 days each</td>
         </tr>
       </tbody>

@@ -466,7 +466,7 @@ export async function GET() {
     dispute_types: [
       { code: 'standard', label: 'Standard Bureau Dispute' },
       { code: 'method_of_verification', label: 'Method of Verification' },
-      { code: 'direct_creditor', label: 'Direct to Creditor' },
+      { code: 'direct_creditor', label: 'Direct to Creditor (courtesy)' },
       { code: 'debt_validation', label: 'Debt Validation' },
       { code: 'goodwill', label: 'Goodwill Request' },
       { code: 'cease_desist', label: 'Cease and Desist' },

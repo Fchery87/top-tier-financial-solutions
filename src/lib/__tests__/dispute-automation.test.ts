@@ -29,6 +29,7 @@ describe('dispute automation helpers', () => {
       currentRound: 1,
       trigger: 'verified',
       currentBureau: 'equifax',
+      newFacts: [],
     });
 
     expect(plan).toMatchObject({
@@ -58,20 +59,46 @@ describe('dispute automation helpers', () => {
     expect(plan.reasonCodes).toContain('no_response');
   });
 
-  it('uses a factual direct-furnisher escalation at round 3 for verified items', () => {
+  it('disputes again with the bureau at round 3 when the item has a new fact', () => {
     const plan = buildEscalationPlan({
       currentRound: 2,
       trigger: 'verified',
       currentBureau: 'equifax',
+      newFacts: ['Client-supplied payment record (1 document) not included in an earlier dispute'],
     });
 
-    expect(plan).toMatchObject({
+    expect(plan).toEqual({
       nextRound: 3,
-      targetRecipient: 'creditor',
-      disputeType: 'direct_creditor',
+      targetRecipient: 'bureau',
+      disputeType: 'new_evidence',
       methodology: 'factual',
+      reasonCodes: ['previously_disputed', 'new_evidence'],
+      customReason: 'Item still verified after Round 2. Disputing again with equifax on information the earlier disputes did not include: Client-supplied payment record (1 document) not included in an earlier dispute.',
     });
-    expect(plan.customReason).toContain('623(a)(8)');
+  });
+
+  it('goes to a regulator complaint at round 3 when a verified item has no new fact', () => {
+    const plan = buildEscalationPlan({ currentRound: 2, trigger: 'verified', currentBureau: 'equifax', newFacts: [] });
+
+    expect(plan).toMatchObject({ nextRound: 3, targetRecipient: 'cfpb', disputeType: 'fcra_violation_notice' });
+    expect(plan.reasonCodes).toEqual(['repeat_verification', 'fcra_non_compliance']);
+  });
+
+  it('goes to a regulator complaint at round 3 when the bureau did not respond twice', () => {
+    const plan = buildEscalationPlan({ currentRound: 2, trigger: 'no_response', currentBureau: 'experian' });
+
+    expect(plan).toMatchObject({ nextRound: 3, targetRecipient: 'cfpb', disputeType: 'fcra_violation_notice' });
+  });
+
+  it('never sends an escalation to the furnisher', () => {
+    const plans = [1, 2, 3].flatMap(currentRound => [
+      buildEscalationPlan({ currentRound, trigger: 'verified', currentBureau: 'transunion', newFacts: [] }),
+      buildEscalationPlan({ currentRound, trigger: 'verified', currentBureau: 'transunion', newFacts: ['new document'] }),
+      buildEscalationPlan({ currentRound, trigger: 'no_response', currentBureau: 'transunion' }),
+    ]);
+
+    expect(plans.map(plan => plan.targetRecipient).filter(target => target !== 'bureau' && target !== 'cfpb')).toEqual([]);
+    expect(plans.filter(plan => plan.customReason.includes('623(a)(8)'))).toEqual([]);
   });
 
   it('builds deterministic dispute SLA instance IDs', () => {

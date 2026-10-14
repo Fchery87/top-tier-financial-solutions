@@ -13,9 +13,10 @@ beforeAll(async () => {
 describe('reason code descriptions', () => {
   it('covers every code produced by escalation plans and dispute reason codes', () => {
     const escalationCodes = new Set<string>([
-      ...buildEscalationPlan({ currentRound: 1, trigger: 'verified', currentBureau: 'equifax' }).reasonCodes,
-      ...buildEscalationPlan({ currentRound: 2, trigger: 'verified', currentBureau: 'equifax' }).reasonCodes,
-      ...buildEscalationPlan({ currentRound: 3, trigger: 'verified', currentBureau: 'equifax' }).reasonCodes,
+      ...buildEscalationPlan({ currentRound: 1, trigger: 'verified', currentBureau: 'equifax', newFacts: [] }).reasonCodes,
+      ...buildEscalationPlan({ currentRound: 2, trigger: 'verified', currentBureau: 'equifax', newFacts: [] }).reasonCodes,
+      ...buildEscalationPlan({ currentRound: 2, trigger: 'verified', currentBureau: 'equifax', newFacts: ['a new document'] }).reasonCodes,
+      ...buildEscalationPlan({ currentRound: 3, trigger: 'verified', currentBureau: 'equifax', newFacts: [] }).reasonCodes,
       ...buildEscalationPlan({ currentRound: 1, trigger: 'no_response', currentBureau: 'equifax' }).reasonCodes,
       ...buildEscalationPlan({ currentRound: 2, trigger: 'no_response', currentBureau: 'equifax' }).reasonCodes,
       ...buildEscalationPlan({ currentRound: 3, trigger: 'no_response', currentBureau: 'equifax' }).reasonCodes,

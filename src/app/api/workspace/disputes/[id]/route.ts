@@ -17,6 +17,7 @@ import {
   getResponseReviewRecommendation,
   type ResponseReviewOutcome,
 } from '@/lib/response-review-recommendation';
+import { loadNewFacts } from '@/lib/new-facts';
 import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { logServerEvent } from '@/lib/server-logger';
@@ -584,6 +585,9 @@ export async function PUT(
           outcome,
           currentRound: currentDispute.round || 1,
           bureau: currentDispute.bureau,
+          newFacts: outcome === 'verified' && currentDispute.negativeItemId
+            ? (await loadNewFacts({ clientId: currentDispute.clientId, negativeItemId: currentDispute.negativeItemId })).map(fact => fact.description)
+            : [],
         })
         : null,
       message: 'Dispute updated successfully',

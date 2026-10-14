@@ -28,6 +28,8 @@ export function getResponseReviewRecommendation(input: {
   outcome: ResponseReviewOutcome;
   currentRound: number;
   bureau: string;
+  /** New Facts for the item; only a verified outcome uses them. */
+  newFacts: string[];
 }): ResponseReviewRecommendation {
   switch (input.outcome) {
     case 'deleted':
@@ -50,11 +52,9 @@ export function getResponseReviewRecommendation(input: {
       };
     case 'verified':
     case 'no_response': {
-      const plan = buildEscalationPlan({
-        currentRound: input.currentRound,
-        trigger: input.outcome,
-        currentBureau: input.bureau,
-      });
+      const plan = input.outcome === 'verified'
+        ? buildEscalationPlan({ currentRound: input.currentRound, trigger: 'verified', currentBureau: input.bureau, newFacts: input.newFacts })
+        : buildEscalationPlan({ currentRound: input.currentRound, trigger: 'no_response', currentBureau: input.bureau });
       return {
         kind: 'create_next_draft',
         title: `Create Round ${plan.nextRound} draft`,
