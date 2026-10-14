@@ -9,6 +9,11 @@ const requireCapabilityMock = vi.hoisted(() => vi.fn());
 const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const generateMultiItemDisputeLetterMock = vi.hoisted(() => vi.fn());
 
+vi.mock('@/lib/cross-bureau-loader', () => ({
+  loadLetterCrossBureauFindings: async () => [],
+  loadItemCrossBureauFindings: async () => new Map(),
+  loadComparableTradelines: async () => [],
+}));
 vi.mock('@/db/client', () => ({
   db: dbMock,
 }));

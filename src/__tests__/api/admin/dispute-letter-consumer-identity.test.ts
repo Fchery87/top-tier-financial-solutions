@@ -14,6 +14,11 @@ const getLLMConfigMock = vi.hoisted(() => vi.fn());
 const generateLetterDraftMock = vi.hoisted(() => vi.fn());
 const decryptClientDataMock = vi.hoisted(() => vi.fn());
 
+vi.mock('@/lib/cross-bureau-loader', () => ({
+  loadLetterCrossBureauFindings: async () => [],
+  loadItemCrossBureauFindings: async () => new Map(),
+  loadComparableTradelines: async () => [],
+}));
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/parser-review-gate', () => ({ requireLatestApprovedReportForClient: requireLatestApprovedReportForClientMock }));

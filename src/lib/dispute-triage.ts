@@ -230,7 +230,9 @@ function getItemBureaus(item: NegativeItemForTriage): string[] {
 export function triageItems(
   items: NegativeItemForTriage[],
   round: number = 1,
-  historicalSummary?: CreditorStrategySummary
+  historicalSummary?: CreditorStrategySummary,
+  /** Items with an objective Cross-Bureau Mismatch, decided from stored per-bureau tradelines. */
+  crossBureauItemIds: string[] = [],
 ): TriageSummary {
   const batches: TriagedBatch[] = [];
   const batchMap = new Map<string, NegativeItemForTriage[]>();
@@ -359,6 +361,17 @@ export function triageItems(
       description: `${itemIds.length} items may reflect the same debt reporting on multiple tradelines`,
       itemIds,
       count: itemIds.length,
+    });
+  }
+
+  const crossBureauItems = items.filter(item => crossBureauItemIds.includes(item.id));
+  if (crossBureauItems.length > 0) {
+    quickActions.push({
+      id: 'cross-bureau-mismatch',
+      label: 'Cross-Bureau Mismatches',
+      description: `${crossBureauItems.length} items are reported differently by different bureaus, so at most one version can be accurate`,
+      itemIds: crossBureauItems.map(item => item.id),
+      count: crossBureauItems.length,
     });
   }
 

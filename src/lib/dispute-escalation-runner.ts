@@ -11,6 +11,8 @@ import { decideHighRiskClaims } from '@/lib/high-risk-claim-gate';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { tryLoadLetterConsumerIdentity, type LetterConsumerIdentity, type LetterIdentityField } from '@/lib/letter-consumer-identity';
 import { logServerEvent } from '@/lib/server-logger';
+import { applyCrossBureauFindings } from '@/lib/cross-bureau-findings';
+import { loadLetterCrossBureauFindings } from '@/lib/cross-bureau-loader';
 
 export const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run';
 
@@ -193,16 +195,22 @@ export async function runDisputeEscalationAutomation(
       creditAccount: creditAccount || null,
       plan,
     });
+    const letterReasons = plan.targetRecipient === 'bureau'
+      ? applyCrossBureauFindings(
+        await loadLetterCrossBureauFindings({ clientId: dispute.clientId, negativeItemIds: [negativeItem.id], bureau: dispute.bureau }),
+        { reasonCodes: letterParams.reasonCodes },
+      )
+      : { reasonCodes: letterParams.reasonCodes, metro2Violations: undefined };
     const librarySelection = await selectLibraryForGeneration({
       round: letterParams.round,
       targetRecipient: letterParams.targetRecipient,
       bureau: letterParams.itemData.bureau,
       itemType: letterParams.itemData.itemType,
-      reasonCodes: letterParams.reasonCodes,
+      reasonCodes: letterReasons.reasonCodes,
       methodology: letterParams.methodology,
     });
 
-    const generation = await generateUniqueDisputeLetter({ ...letterParams, librarySelection });
+    const generation = await generateUniqueDisputeLetter({ ...letterParams, ...letterReasons, librarySelection });
 
     const createdAt = new Date();
     const persistedDraft = await persistGeneratedDisputeDraft({
@@ -219,7 +227,7 @@ export async function runDisputeEscalationAutomation(
       generatedByAi: generation.source === 'ai',
       methodology: plan.methodology,
       priorDisputeId: dispute.id,
-      reasonCodes: plan.reasonCodes,
+      reasonCodes: letterReasons.reasonCodes,
       policyDecision,
       evidencePacketIds,
       items: [{

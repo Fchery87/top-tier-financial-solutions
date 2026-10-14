@@ -13,6 +13,8 @@ import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-dec
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
 import { loadNewFacts } from '@/lib/new-facts';
+import { applyCrossBureauFindings } from '@/lib/cross-bureau-findings';
+import { loadLetterCrossBureauFindings } from '@/lib/cross-bureau-loader';
 import { logServerEvent } from '@/lib/server-logger';
 import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
@@ -103,10 +105,16 @@ export async function POST(
         return NextResponse.json({ error: decision.message, reason: decision.eligibility.reason, eligible_at: decision.eligibility.eligibleAt?.toISOString() || null }, { status: 409 });
       }
     }
+    const letterReasons = escalationPlan.targetRecipient === 'bureau'
+      ? applyCrossBureauFindings(
+        await loadLetterCrossBureauFindings({ clientId: currentDispute.clientId, negativeItemIds: [negativeItem.id], bureau: currentDispute.bureau }),
+        { reasonCodes: escalationPlan.reasonCodes },
+      )
+      : { reasonCodes: escalationPlan.reasonCodes, metro2Violations: undefined };
     // A high-risk code needs the item's client-confirmed packet (ADR 0001).
     const claimDecision = await decideHighRiskClaims({
       clientId: currentDispute.clientId,
-      reasonCodes: escalationPlan.reasonCodes,
+      reasonCodes: letterReasons.reasonCodes,
       items: [{ kind: 'tradeline', id: negativeItem.id }],
     });
     if (claimDecision.kind === 'confirmation_required') {
@@ -130,7 +138,7 @@ export async function POST(
       targetRecipient: escalationPlan.targetRecipient,
       bureau: currentDispute.bureau,
       itemType: negativeItem.itemType,
-      reasonCodes: escalationPlan.reasonCodes,
+      reasonCodes: letterReasons.reasonCodes,
       methodology: escalationPlan.methodology,
     });
 
@@ -149,8 +157,9 @@ export async function POST(
         dateReported: negativeItem.dateReported?.toISOString(),
         bureau: currentDispute.bureau,
       },
-      reasonCodes: escalationPlan.reasonCodes,
+      reasonCodes: letterReasons.reasonCodes,
       customReason: escalationPlan.customReason,
+      metro2Violations: letterReasons.metro2Violations,
       librarySelection,
     });
 
@@ -167,7 +176,7 @@ export async function POST(
       creditorName: negativeItem.creditorName,
       accountNumber: negativeItem.creditAccountId ? null : negativeItem.id.slice(-4),
       methodology: escalationPlan.methodology,
-      reasonCodes: escalationPlan.reasonCodes,
+      reasonCodes: letterReasons.reasonCodes,
       policyDecision,
       priorDisputeId: currentDispute.id,
       analysisConfidence: currentDispute.analysisConfidence,

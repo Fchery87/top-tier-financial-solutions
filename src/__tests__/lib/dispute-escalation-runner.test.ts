@@ -11,6 +11,11 @@ const decideEscalationMock = vi.hoisted(() => vi.fn());
 const loadDisputeChainMock = vi.hoisted(() => vi.fn());
 const buildEscalationPlanMock = vi.hoisted(() => vi.fn());
 
+vi.mock('@/lib/cross-bureau-loader', () => ({
+  loadLetterCrossBureauFindings: async () => [],
+  loadItemCrossBureauFindings: async () => new Map(),
+  loadComparableTradelines: async () => [],
+}));
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/settings-service', () => ({ setSetting: setSettingMock }));
 vi.mock('@/lib/dispute-escalation-decision', () => ({

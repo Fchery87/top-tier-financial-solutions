@@ -91,3 +91,20 @@ describe('dispute-triage medical debt', () => {
     expect(summary.batches[0].strategyDescription).not.toContain('Medical');
   });
 });
+
+describe('dispute-triage cross-bureau mismatches', () => {
+  it('lists the items with an objective cross-bureau mismatch', () => {
+    const summary = triageItems([
+      { ...baseItem, id: 'mismatch', onEquifax: true },
+      { ...baseItem, id: 'clean', onEquifax: true },
+    ], 1, undefined, ['mismatch']);
+
+    expect(summary.quickActions.find(action => action.id === 'cross-bureau-mismatch')).toEqual({
+      id: 'cross-bureau-mismatch',
+      label: 'Cross-Bureau Mismatches',
+      description: '1 items are reported differently by different bureaus, so at most one version can be accurate',
+      itemIds: ['mismatch'],
+      count: 1,
+    });
+  });
+});

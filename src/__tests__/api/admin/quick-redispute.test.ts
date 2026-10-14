@@ -12,6 +12,8 @@ const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const persistGeneratedDisputeDraftMock = vi.hoisted(() => vi.fn());
 const loadNewFactsMock = vi.hoisted(() => vi.fn());
 
+const loadLetterCrossBureauFindingsMock = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/cross-bureau-loader', () => ({ loadLetterCrossBureauFindings: loadLetterCrossBureauFindingsMock }));
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/letter-generation-library', () => ({ selectLibraryForGeneration: selectLibraryForGenerationMock }));
@@ -43,6 +45,7 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     generateUniqueDisputeLetterMock.mockResolvedValue({ letter: 'Generated letter', source: 'ai' });
     persistGeneratedDisputeDraftMock.mockResolvedValue({ disputeId: 'draft-1' });
     loadNewFactsMock.mockResolvedValue([]);
+    loadLetterCrossBureauFindingsMock.mockResolvedValue([]);
   });
 
   it('creates a Round 3 new-evidence bureau draft when the verified item has unused evidence', async () => {
@@ -85,6 +88,41 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     expect(persistGeneratedDisputeDraftMock).toHaveBeenCalledWith(expect.objectContaining({
       escalationPath: 'bureau',
       evidencePacketIds: ['packet-9'],
+    }));
+  });
+
+  it("adds the bureau's own cross-bureau finding to a method-of-verification letter", async () => {
+    const { POST } = await import('@/app/api/workspace/disputes/[id]/quick-redispute/route');
+    loadLetterCrossBureauFindingsMock.mockResolvedValue([{
+      field: 'date_of_first_delinquency',
+      tier: 'objective',
+      accountIds: ['acct-ex'],
+      values: { experian: '3/2019', transunion: '1/2018' },
+      letterText: { experian: 'You report the date of first delinquency of this account as 3/2019, but TransUnion reports 1/2018.' },
+    }]);
+    dbMock.select
+      .mockReturnValueOnce(selectResult([{
+        id: 'dispute-1', clientId: 'client-1', negativeItemId: 'item-1', bureau: 'experian', round: 1, outcome: 'verified',
+        responseDeadline: new Date('2026-02-01T00:00:00.000Z'), responseReceivedAt: new Date('2026-02-01T00:00:00.000Z'),
+        responseDocumentUrl: 'https://files.example/verified.pdf', analysisConfidence: null, autoSelected: false,
+      }]))
+      .mockReturnValueOnce(selectResult([]))
+      .mockReturnValueOnce(selectResult([{ id: 'client-1', firstName: 'Test', lastName: 'Client' }]))
+      .mockReturnValueOnce(selectResult([{ id: 'item-1', creditorName: 'Fixture Bank', originalCreditor: null, creditAccountId: 'acct-ex', itemType: 'collection', amount: null, dateReported: null }]))
+      .mockReturnValueOnce({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) })
+      .mockReturnValueOnce(selectResult([{ firstName: 'Test', lastName: 'Client', streetAddress: '100 Main St', city: 'Albany', state: 'NY', zipCode: '12207', dateOfBirth: null, ssnLast4: null }]))
+      .mockReturnValueOnce(selectResult([{ id: 'draft-1', round: 2, disputeType: 'method_of_verification', status: 'draft' }]));
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/workspace/disputes/dispute-1/quick-redispute', { method: 'POST' }),
+      { params: Promise.resolve({ id: 'dispute-1' }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(loadLetterCrossBureauFindingsMock).toHaveBeenCalledWith({ clientId: 'client-1', negativeItemIds: ['item-1'], bureau: 'experian' });
+    expect(generateUniqueDisputeLetterMock).toHaveBeenCalledWith(expect.objectContaining({
+      reasonCodes: ['previously_disputed', 'request_verification_method', 'cross_bureau_mismatch', 'dofd_cross_bureau_mismatch'],
+      metro2Violations: ['You report the date of first delinquency of this account as 3/2019, but TransUnion reports 1/2018.'],
     }));
   });
 

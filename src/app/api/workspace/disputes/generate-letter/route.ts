@@ -13,6 +13,8 @@ import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { logServerEvent } from '@/lib/server-logger';
+import { applyCrossBureauFindings } from '@/lib/cross-bureau-findings';
+import { loadLetterCrossBureauFindings } from '@/lib/cross-bureau-loader';
 import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
 import type { DisputeItemKind } from '@/lib/high-risk-claim-registry';
@@ -73,11 +75,11 @@ export async function POST(request: NextRequest) {
       disputeType,
       round,
       targetRecipient,
-      reasonCodes,
+      reasonCodes: requestedReasonCodes,
       customReason,
       combineItems, // Flag to indicate combined letter mode
       methodology, // NEW: Dispute methodology (factual, metro2_compliance, etc.)
-      metro2Violations, // NEW: Specific Metro 2 field violations
+      metro2Violations: requestedMetro2Violations, // NEW: Specific Metro 2 field violations
       priorDisputeDate, // NEW: For method of verification letters
       priorDisputeResult, // NEW: Result of prior dispute
       evidenceDocumentIds, // Optional: enclosures (clientDocuments IDs); never evidence of a claim
@@ -91,12 +93,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!reasonCodes || reasonCodes.length === 0) {
+    if (!requestedReasonCodes || requestedReasonCodes.length === 0) {
       return NextResponse.json(
         { error: 'At least one reason code is required' },
         { status: 400 }
       );
     }
+
+    // Cross-Bureau Mismatches are decided here from stored tradelines, for this bureau only.
+    const crossBureau = (targetRecipient || 'bureau') === 'bureau'
+      ? applyCrossBureauFindings(await loadLetterCrossBureauFindings({
+        clientId,
+        negativeItemIds: letterItemRefs(body).filter(ref => ref.kind === 'tradeline').map(ref => ref.id),
+        bureau,
+      }), { reasonCodes: requestedReasonCodes, metro2Violations: requestedMetro2Violations })
+      : { reasonCodes: requestedReasonCodes, metro2Violations: requestedMetro2Violations };
+    const { reasonCodes, metro2Violations } = crossBureau;
 
     // Policy is decided here from the database; a caller-supplied
     // `policyDecision` or confirmation flag is never trusted (ADR 0001).
