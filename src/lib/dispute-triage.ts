@@ -1,6 +1,6 @@
 // Dispute Triage System - Auto-grouping and strategy recommendation
 
-import { getObsolescenceBaseDate as getSharedObsolescenceBaseDate } from './fcra-clock';
+import { daysUntilExpiration, getObsolescenceClock } from './fcra-clock';
 import { detectDuplicateLiability, detectReaging } from './negative-item-detectors';
 import { getMedicalRuleRecommendation } from './medical-dispute-rules';
 import type { CreditorStrategySummary } from './creditor-strategy-insights';
@@ -64,11 +64,6 @@ export interface QuickAction {
   count: number;
   bureau?: string;
   itemType?: string;
-}
-
-// Best available date for the FCRA obsolescence clock: DOFD > last activity > date reported
-export function getObsolescenceBaseDate(item: NegativeItemForTriage): Date | null {
-  return getSharedObsolescenceBaseDate(item);
 }
 
 // Strategy determination based on item type and characteristics
@@ -331,18 +326,15 @@ export function triageItems(
     }
   }
 
-  // Quick action: Items approaching 7-year limit (6+ years since first delinquency)
   const oldItems = items.filter(item => {
-    const baseDate = getObsolescenceBaseDate(item);
-    if (!baseDate) return false;
-    const yearsOld = (Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
-    return yearsOld >= 6;
+    const clock = getObsolescenceClock(item);
+    return clock !== null && daysUntilExpiration(clock) <= 365;
   });
   if (oldItems.length > 0) {
     quickActions.push({
       id: 'approaching-obsolete',
       label: 'Items Approaching 7-Year Limit',
-      description: `${oldItems.length} items are 6+ years old and approaching FCRA obsolescence`,
+      description: `${oldItems.length} items are within a year of FCRA obsolescence or past it`,
       itemIds: oldItems.map(i => i.id),
       count: oldItems.length,
     });

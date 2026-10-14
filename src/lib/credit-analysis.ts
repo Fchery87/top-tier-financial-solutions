@@ -23,12 +23,11 @@ import {
 } from './parsers/pdf-parser';
 import { parseHtmlCreditReport } from './parsers/html-parser';
 import {
-  FCRA_REPORTING_LIMITS,
   isAccountNegative,
   calculateRiskLevel,
   type StandardizedAccount,
 } from './parsers/metro2-mapping';
-import { buildFcraComplianceStatus, getObsolescenceClock } from './fcra-clock';
+import { buildFcraComplianceStatus, daysUntilExpiration as daysUntilClockExpiration, getObsolescenceClock, getReportingLimitYears } from './fcra-clock';
 import { buildCreditAccountDerivedFields } from './credit-account-ingest';
 import { getAccountPresence } from './credit-account-bureau-presence';
 import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
@@ -673,52 +672,22 @@ async function saveFcraComplianceItem(
   },
   bureau: string | null
 ): Promise<void> {
-  // Determine reporting limit based on item type
-  let reportingLimitYears = FCRA_REPORTING_LIMITS.general;
-  const itemTypeLower = item.itemType.toLowerCase();
-  
-  if (itemTypeLower.includes('bankruptcy')) {
-    reportingLimitYears = itemTypeLower.includes('chapter_7') || itemTypeLower.includes('chapter7')
-      ? FCRA_REPORTING_LIMITS.bankruptcy_chapter7
-      : FCRA_REPORTING_LIMITS.bankruptcy_chapter13;
-  } else if (itemTypeLower === 'collection') {
-    reportingLimitYears = FCRA_REPORTING_LIMITS.collections;
-  } else if (itemTypeLower === 'charge_off') {
-    reportingLimitYears = FCRA_REPORTING_LIMITS.charge_offs;
-  } else if (itemTypeLower === 'late_payment') {
-    reportingLimitYears = FCRA_REPORTING_LIMITS.late_payments;
-  } else if (itemTypeLower === 'foreclosure') {
-    reportingLimitYears = FCRA_REPORTING_LIMITS.foreclosures;
-  } else if (itemTypeLower === 'repossession') {
-    reportingLimitYears = FCRA_REPORTING_LIMITS.repossessions;
-  }
-  
-  // Calculate FCRA expiration date from the best available source.
   const obsolescenceClock = getObsolescenceClock({
+    itemType: item.itemType,
     bureauStatedRemovalDate: item.bureauStatedRemovalDate,
     dateOfFirstDelinquency: item.dateOfFirstDelinquency,
     dateOfLastActivity: item.dateOfLastActivity,
     dateReported: item.dateReported,
   });
-  const dateOfFirstDelinquency = obsolescenceClock.baseDate;
-  let fcraExpirationDate: Date | null = null;
-  let daysUntilExpiration: number | null = null;
-  let isPastLimit = false;
-  
-  if (dateOfFirstDelinquency) {
-    fcraExpirationDate = new Date(dateOfFirstDelinquency);
-    fcraExpirationDate.setFullYear(fcraExpirationDate.getFullYear() + reportingLimitYears);
-    
-    const now = new Date();
-    daysUntilExpiration = Math.ceil((fcraExpirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  }
+  const reportingLimitYears = getReportingLimitYears(item.itemType);
+  const fcraExpirationDate = obsolescenceClock?.expiresOn ?? null;
+  const daysUntilExpiration = obsolescenceClock ? daysUntilClockExpiration(obsolescenceClock) : null;
 
   const complianceStatus = buildFcraComplianceStatus({
-    confidence: obsolescenceClock.confidence,
+    confidence: obsolescenceClock?.confidence ?? null,
     reportingLimitYears,
     daysUntilExpiration,
   });
-  isPastLimit = complianceStatus.isPastLimit;
   
   await db.insert(fcraComplianceItems).values({
     id: randomUUID(),
@@ -726,12 +695,12 @@ async function saveFcraComplianceItem(
     negativeItemId,
     itemType: item.itemType,
     creditorName: item.creditorName,
-    dateOfFirstDelinquency,
-    dofdConfidence: obsolescenceClock.confidence,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency ?? null,
+    dofdConfidence: obsolescenceClock?.confidence ?? null,
     fcraExpirationDate,
     reportingLimitYears,
     daysUntilExpiration,
-    isPastLimit,
+    isPastLimit: complianceStatus.isPastLimit,
     bureau,
     disputeStatus: complianceStatus.disputeStatus,
     notes: complianceStatus.notes,

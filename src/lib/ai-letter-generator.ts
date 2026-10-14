@@ -1,4 +1,4 @@
-import { getObsolescenceClock } from './fcra-clock';
+import { daysUntilExpiration, getObsolescenceClock, type ObsolescenceClockConfidence } from './fcra-clock';
 import { getLLMConfig, type LLMConfig } from './settings-service';
 import { lintGeneratedLetter } from './letter-lint';
 import type { Selection } from './letter-library-selector';
@@ -488,6 +488,13 @@ interface AnalyzeItemParams {
   remarks?: string | null;
 }
 
+const OBSOLESCENCE_SOURCE_LABELS: Record<ObsolescenceClockConfidence, string> = {
+  bureau_removal_date: "the bureau's own stated removal date",
+  dofd: 'measured from the date of first delinquency',
+  last_activity: 'measured from the date of last activity',
+  date_reported: 'estimated from the report date',
+};
+
 /**
  * P3.5 Enhanced: Analyze a negative item using Metro 2 compliance checklist
  *
@@ -627,38 +634,40 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
 
   const reportDate = item.dateReported ? new Date(item.dateReported) : null;
   const lastActivityDate = item.dateOfLastActivity ? new Date(item.dateOfLastActivity) : null;
-  const dofdDate = item.dateOfFirstDelinquency ? new Date(item.dateOfFirstDelinquency) : null;
-  const bureauRemovalDate = item.bureauStatedRemovalDate ? new Date(item.bureauStatedRemovalDate) : null;
   const openedDate = item.dateOpened ? new Date(item.dateOpened) : null;
-  const effectiveDate = bureauRemovalDate || dofdDate || lastActivityDate || reportDate;
 
-  if (effectiveDate) {
-    const yearsSinceActivity = (now.getTime() - effectiveDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+  const obsolescenceClock = itemType === 'inquiry' ? null : getObsolescenceClock({
+    itemType,
+    bureauStatedRemovalDate: item.bureauStatedRemovalDate,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency,
+    dateOfLastActivity: item.dateOfLastActivity,
+    dateReported: item.dateReported,
+  });
 
-    const isBankruptcy = itemType === 'bankruptcy';
-    const reportingLimit = isBankruptcy ? 10 : 7;
+  if (obsolescenceClock) {
+    const daysLeft = daysUntilExpiration(obsolescenceClock, now);
+    const expiry = formatCalendarDate(obsolescenceClock.expiresOn);
 
-    if (yearsSinceActivity >= reportingLimit) {
-      metro2Violations.push(`This ${itemType} has been reporting for ${Math.floor(yearsSinceActivity)} years - exceeds FCRA ${reportingLimit}-year limit (last activity: ${formatCalendarDate(effectiveDate)})`);
-      fcraIssues.push(`FCRA § 605(a): Negative information exceeds ${reportingLimit}-year reporting limit`);
+    if (daysLeft <= 0 && obsolescenceClock.confidence !== 'date_reported') {
+      metro2Violations.push(`This ${itemType} is still reporting after its reporting period ended on ${expiry} (${OBSOLESCENCE_SOURCE_LABELS[obsolescenceClock.confidence]})`);
+      fcraIssues.push(`FCRA § 605(a): Adverse information may not be reported beyond the ${obsolescenceClock.reportingLimitYears}-year period`);
       reasonCodes.push('obsolete');
-      notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - past FCRA reporting limit`);
-      violationSeverities.push(0.95); // Extremely high severity - clear FCRA violation
-    } else if (yearsSinceActivity >= (reportingLimit - 1)) {
-      notes.push(`Item is ${Math.floor(yearsSinceActivity)} years old - approaching ${reportingLimit}-year limit`);
+      notes.push(`Reporting period ended ${expiry}`);
+      violationSeverities.push(0.95);
+    } else if (daysLeft <= 0) {
+      notes.push('Item may be past its reporting period, but only the report date is available. Confirm the date of first delinquency before disputing it as obsolete');
+    } else if (daysLeft <= 365) {
+      notes.push(`Reporting period ends ${expiry}`);
     }
+  }
 
-    if (itemType === 'inquiry' && yearsSinceActivity >= 2) {
-      metro2Violations.push(`Hard inquiry from ${formatCalendarDate(effectiveDate)} exceeds 2-year reporting limit`);
-      fcraIssues.push('FCRA § 605(a)(3): Hard inquiries exceeding 2-year period must be removed');
+  const inquiryDate = reportDate ?? lastActivityDate;
+  if (itemType === 'inquiry' && inquiryDate) {
+    const yearsSinceInquiry = (now.getTime() - inquiryDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    if (yearsSinceInquiry >= 2) {
+      metro2Violations.push(`Hard inquiry dated ${formatCalendarDate(inquiryDate)} is still displayed more than two years later, past the bureaus' two-year inquiry display period`);
       reasonCodes.push('obsolete');
-      violationSeverities.push(0.85); // Very high severity
-    }
-
-    const monthsSinceActivity = yearsSinceActivity * 12;
-    if (itemType === 'collection' && monthsSinceActivity > (reportingLimit * 12)) {
-      notes.push(`P3.5: Collection item is ${Math.floor(monthsSinceActivity)} months old - significantly exceeds reporting period`);
-      violationSeverities.push(0.3);
+      violationSeverities.push(0.85);
     }
   }
 
@@ -672,8 +681,8 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   const isThirdPartyCollector = itemType === 'collection' && isLikelyCollectionAgency(item.creditorName);
   
   if (isThirdPartyCollector && !item.originalCreditor) {
-    metro2Violations.push(`Third-party collection agency "${item.creditorName}" is not reporting Original Creditor Name in the K1 segment - required for debt validation`);
-    fcraIssues.push('FCRA § 623(a)(2): Debt collectors must identify the original creditor upon request');
+    metro2Violations.push(`Collection account reported by "${item.creditorName}" does not name the original creditor, so the tradeline is incomplete`);
+    fcraIssues.push('FCRA § 607(b): Reporting must be complete enough to be accurate, and a collection tradeline without its original creditor is not');
     reasonCodes.push('incomplete_data');
     notes.push('Collection agency account missing required original creditor information');
     violationSeverities.push(0.2); // Medium severity - required field missing
@@ -749,7 +758,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   // ---- ROUND-BASED STRATEGY SHIFT ----
   if (round >= 2) {
     methodology = 'method_of_verification';
-    fcraIssues.push('FCRA § 611(a)(6)(B)(iii): Consumer entitled to description of method of verification');
+    fcraIssues.push('FCRA § 611(a)(7): The bureau must describe its verification procedure within 15 days of the request');
     notes.push(`Round ${round}: Requesting method of verification from prior investigation`);
   }
 
@@ -1314,18 +1323,6 @@ export function convertToMetro2Format(item: {
   paymentHistory?: Record<string, string>;
   paymentHistoryGrid?: Record<string, string>;
 }, bureau: string): Metro2NegativeItem {
-  const obsolescenceClock = getObsolescenceClock({
-    bureauStatedRemovalDate: item.bureauStatedRemovalDate,
-    dateOfFirstDelinquency: item.dateOfFirstDelinquency,
-    dateOfLastActivity: item.dateOfLastActivity,
-    dateReported: item.dateReported,
-  });
-
-  const dateOfFirstDelinquency =
-    obsolescenceClock.confidence === 'dofd' || obsolescenceClock.confidence === 'last_activity'
-      ? item.dateOfFirstDelinquency || item.dateOfLastActivity || undefined
-      : undefined;
-
   return {
     itemId: item.id,
     bureauName: bureau,
@@ -1334,7 +1331,7 @@ export function convertToMetro2Format(item: {
     accountType: item.itemType,
     currentBalance: item.amount ?? undefined,
     accountStatusCode: item.accountStatus || item.paymentStatus || 'unknown',
-    dateOfFirstDelinquency,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency || undefined,
     paymentHistory: item.paymentHistory || item.paymentHistoryGrid,
   };
 }

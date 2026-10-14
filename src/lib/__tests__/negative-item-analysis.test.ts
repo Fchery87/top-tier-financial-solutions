@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 let analyzeNegativeItem: typeof import('@/lib/ai-letter-generator').analyzeNegativeItem;
 
@@ -133,5 +133,63 @@ describe('analyzeNegativeItem balance rules', () => {
         expect.stringContaining('Payment history grid shows late or derogatory codes while the current status remains current'),
       ]),
     );
+  });
+});
+
+describe('analyzeNegativeItem obsolescence', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-14T00:00:00.000Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('flags an item still reporting after the bureau stated removal date', () => {
+    const result = analyzeNegativeItem({
+      id: 'neg-8',
+      creditorName: 'Midland Credit Management',
+      itemType: 'collection',
+      dateOfFirstDelinquency: '2018-01-15',
+      bureauStatedRemovalDate: '2025-02-01',
+    });
+
+    expect(result.autoReasonCodes).toContain('obsolete');
+    expect(result.metro2Violations).toContain(
+      "This collection is still reporting after its reporting period ended on 2/1/2025 (the bureau's own stated removal date)",
+    );
+  });
+
+  it('does not call a collection obsolete inside the 180-day grace of 1681c(c)', () => {
+    const collection = analyzeNegativeItem({
+      id: 'neg-9',
+      creditorName: 'Example Creditor',
+      originalCreditor: 'Example Bank',
+      itemType: 'collection',
+      dateOfFirstDelinquency: '2019-06-01',
+    });
+    const latePayment = analyzeNegativeItem({
+      id: 'neg-10',
+      creditorName: 'Example Bank',
+      itemType: 'late_payment',
+      dateOfFirstDelinquency: '2019-06-01',
+    });
+
+    expect(collection.autoReasonCodes).not.toContain('obsolete');
+    expect(latePayment.autoReasonCodes).toContain('obsolete');
+  });
+
+  it('flags a stale inquiry without citing a statute the FCRA does not contain', () => {
+    const result = analyzeNegativeItem({
+      id: 'neg-11',
+      creditorName: 'Example Lender',
+      itemType: 'inquiry',
+      dateReported: '2023-09-01',
+    });
+
+    expect(result.metro2Violations).toContain(
+      "Hard inquiry dated 9/1/2023 is still displayed more than two years later, past the bureaus' two-year inquiry display period",
+    );
+    expect(result.fcraIssues.join(' ')).not.toContain('605(a)(3)');
   });
 });

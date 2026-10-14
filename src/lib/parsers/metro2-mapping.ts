@@ -40,95 +40,6 @@ export const PAYMENT_RATING_CODES: Record<string, { code: string; description: s
   'L': { code: 'L', description: 'Charge-off', daysLate: 180 },
 };
 
-// Account Type Codes (Field 6)
-export const ACCOUNT_TYPE_CODES: Record<string, { code: string; description: string; category: string }> = {
-  '00': { code: '00', description: 'Unknown', category: 'other' },
-  '01': { code: '01', description: 'Unsecured', category: 'personal_loan' },
-  '02': { code: '02', description: 'Secured', category: 'personal_loan' },
-  '03': { code: '03', description: 'Credit card', category: 'credit_card' },
-  '04': { code: '04', description: 'Installment sales contract', category: 'personal_loan' },
-  '05': { code: '05', description: 'Revolving charge', category: 'credit_card' },
-  '06': { code: '06', description: 'Auto loan', category: 'auto_loan' },
-  '07': { code: '07', description: 'Real estate mortgage', category: 'mortgage' },
-  '08': { code: '08', description: 'Home equity', category: 'mortgage' },
-  '10': { code: '10', description: 'Retail', category: 'credit_card' },
-  '11': { code: '11', description: 'Check credit', category: 'credit_card' },
-  '12': { code: '12', description: 'Home improvement', category: 'personal_loan' },
-  '13': { code: '13', description: 'Manufactured housing', category: 'mortgage' },
-  '15': { code: '15', description: 'Medical debt', category: 'medical' },
-  '17': { code: '17', description: 'Lease', category: 'auto_loan' },
-  '18': { code: '18', description: 'Credit line secured', category: 'credit_card' },
-  '19': { code: '19', description: 'Debit card', category: 'other' },
-  '20': { code: '20', description: 'Educational', category: 'student_loan' },
-  '25': { code: '25', description: 'Collection', category: 'collection' },
-  '26': { code: '26', description: 'Utility company', category: 'other' },
-  '29': { code: '29', description: 'Business credit card', category: 'credit_card' },
-  '47': { code: '47', description: 'Government', category: 'other' },
-  '48': { code: '48', description: 'Government student loan', category: 'student_loan' },
-  '89': { code: '89', description: 'Rental agreement', category: 'other' },
-  '90': { code: '90', description: 'Medical debt - VA', category: 'medical' },
-  '91': { code: '91', description: 'Debt buyer', category: 'collection' },
-  '9A': { code: '9A', description: 'Collection agency/attorney', category: 'collection' },
-  '9B': { code: '9B', description: 'Purchased', category: 'collection' },
-};
-
-// Special Comment Codes (Field 19)
-export const SPECIAL_COMMENT_CODES: Record<string, string> = {
-  'AC': 'Account closed at consumer request',
-  'AD': 'Account closed at credit grantor request',
-  'AH': 'Account previously in dispute - now resolved',
-  'AI': 'Account information disputed by consumer',
-  'AM': 'Account acquired by another company',
-  'AN': 'Account closed - may reopen',
-  'AO': 'Account closed - will not reopen',
-  'AU': 'Account transferred',
-  'AW': 'Account written off',
-  'B': 'Account payments managed by financial counseling',
-  'BL': 'Credit line suspended',
-  'C': 'Consumer deceased',
-  'CL': 'Credit limit',
-  'CO': 'Closed',
-  'D': 'Dispute resolved - consumer disagrees',
-  'DA': 'Dispute resolved - reported by grantor',
-  'M': 'Account merged',
-  'O': 'Account in dispute - investigation in progress',
-  'PD': 'Paid by dealer',
-  'PL': 'Placed for collection',
-  'R': 'Refinanced',
-  'S': 'Special handling',
-  'V': 'Voluntary surrender',
-  'XA': 'Account closed at consumer request',
-  'XB': 'Account closed at credit grantor request',
-};
-
-// Compliance Indicator Codes
-export const COMPLIANCE_CODES: Record<string, string> = {
-  'XA': 'Account closed at consumer request',
-  'XB': 'Account closed at credit grantor request',
-  'XC': 'Account closed - paid in full, was a collection account',
-  'XD': 'Account closed - paid in full, was a charge-off',
-  'XF': 'Account information disputed under FCRA',
-  'XH': 'Account previously in dispute - now resolved',
-  'XR': 'Meets requirements for reporting',
-};
-
-// FCRA Reporting Periods (in years)
-export const FCRA_REPORTING_LIMITS = {
-  general: 7, // Most negative items
-  bankruptcy_chapter7: 10,
-  bankruptcy_chapter13: 7,
-  tax_liens_paid: 7,
-  tax_liens_unpaid: 0, // Removed from credit reports as of 2018
-  civil_judgments: 0, // Removed from credit reports as of 2017
-  collections: 7,
-  charge_offs: 7,
-  late_payments: 7,
-  foreclosures: 7,
-  repossessions: 7,
-  inquiries_hard: 2,
-  inquiries_soft: 0, // Not visible to third parties
-};
-
 // Standard internal schema for parsed credit data
 export interface StandardizedAccount {
   // Identification
@@ -282,24 +193,6 @@ export function mapAccountTypeToCategory(type: string): StandardizedAccount['acc
     return 'personal_loan';
   }
   return 'other';
-}
-
-export function calculateFcraComplianceDate(item: { itemType: string; dateFirstDelinquency?: Date; filingDate?: Date }): Date | undefined {
-  const baseDate = item.dateFirstDelinquency || item.filingDate;
-  if (!baseDate) return undefined;
-
-  let yearsToAdd = FCRA_REPORTING_LIMITS.general;
-  
-  const itemTypeLower = item.itemType?.toLowerCase() || '';
-  if (itemTypeLower.includes('bankruptcy') && itemTypeLower.includes('chapter 7')) {
-    yearsToAdd = FCRA_REPORTING_LIMITS.bankruptcy_chapter7;
-  } else if (itemTypeLower.includes('bankruptcy') && itemTypeLower.includes('chapter 13')) {
-    yearsToAdd = FCRA_REPORTING_LIMITS.bankruptcy_chapter13;
-  }
-
-  const complianceDate = new Date(baseDate);
-  complianceDate.setFullYear(complianceDate.getFullYear() + yearsToAdd);
-  return complianceDate;
 }
 
 export function calculateCompletenessScore(account: Partial<StandardizedAccount>): { score: number; missingFields: string[] } {
