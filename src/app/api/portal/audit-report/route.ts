@@ -7,6 +7,7 @@ import { eq, desc } from 'drizzle-orm';
 
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -62,7 +63,7 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json({
       has_report: hasReport,
-      client_name: `${client.firstName} ${client.lastName}`,
+      client_name: decryptClientName(client.firstName, client.lastName).fullName,
       report_date: savedReport?.generatedAt?.toISOString() || analysis?.createdAt?.toISOString(),
       scores: analysis ? {
         transunion: analysis.scoreTransunion,

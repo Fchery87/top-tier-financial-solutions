@@ -20,6 +20,8 @@ import {
 import { isClientOwnedEvidenceDocument } from '@/lib/evidence-documents';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { logServerEvent } from '@/lib/server-logger';
+import { formatLetterDate } from '@/lib/letter-rendering/letter-dates';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 const STRUCTURED_RESPONSE_OUTCOMES: ReadonlySet<string> = new Set([
   'deleted',
@@ -78,7 +80,7 @@ export async function GET(
       dispute: {
         id: dispute.id,
         client_id: dispute.clientId,
-        client_name: client ? `${client.firstName} ${client.lastName}` : 'Unknown',
+        client_name: client ? decryptClientName(client.firstName, client.lastName).fullName || 'Unknown' : 'Unknown',
         negative_item_id: dispute.negativeItemId,
         bureau: dispute.bureau,
         dispute_reason: dispute.disputeReason,
@@ -518,7 +520,7 @@ export async function PUT(
       // Dispute marked as sent
       if (sentAt && currentDispute.sentAt === null) {
         const responseDeadlineDate = updatedDispute.responseDeadline 
-          ? new Date(updatedDispute.responseDeadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+          ? formatLetterDate(new Date(updatedDispute.responseDeadline))
           : 'within 30 days';
         
         await triggerAutomation('dispute_sent', currentDispute.clientId, {

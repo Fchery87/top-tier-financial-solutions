@@ -13,6 +13,7 @@ import {
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { sensitiveLimiter } from '@/lib/rate-limit';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -84,10 +85,7 @@ async function getHandler(request: NextRequest) {
 
     const searchableDisputes = disputeRows.map((row) => {
       const decrypted = decryptDisputeData({ creditorName: row.creditorName });
-      const clientName = [row.clientFirstName, row.clientLastName]
-        .filter((value): value is string => Boolean(value))
-        .map((value) => String(value))
-        .join(' ');
+      const clientName = decryptClientName(row.clientFirstName, row.clientLastName).fullName;
 
       return {
         id: row.id,

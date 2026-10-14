@@ -6,6 +6,7 @@ import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq } from 'drizzle-orm';
 import { triggerAutomation } from '@/lib/email-service';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 export async function POST(
   request: NextRequest,
@@ -72,8 +73,8 @@ export async function POST(
     // Best-effort: fire a progress report automation as a "stalled client" reminder
     try {
       await triggerAutomation('progress_report', id, {
-        client_name: `${client.firstName} ${client.lastName}`,
-        client_first_name: client.firstName,
+        client_name: decryptClientName(client.firstName, client.lastName).fullName,
+        client_first_name: decryptClientName(client.firstName, client.lastName).firstName,
         client_email: client.email,
         blocking_task_count: blockingTasks.length,
         primary_task_title: blockingTasks[0]?.title || '',

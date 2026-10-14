@@ -5,6 +5,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 export async function GET(
   request: NextRequest,
@@ -65,7 +66,7 @@ export async function GET(
       visible_to_client: t.visibleToClient,
       is_blocking: t.isBlocking,
       client_name: t.clientFirstName && t.clientLastName 
-        ? `${t.clientFirstName} ${t.clientLastName}` 
+        ? decryptClientName(t.clientFirstName, t.clientLastName).fullName 
         : null,
       assignee_name: t.assigneeName,
     });

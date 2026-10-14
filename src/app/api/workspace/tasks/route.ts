@@ -9,6 +9,7 @@ import { desc, asc, count, eq, or, ilike, and, gte, lte, isNull } from 'drizzle-
 import { randomUUID } from 'crypto';
 import { triggerAutomation } from '@/lib/email-service';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 async function validateAdmin(capability: Capability) {
   const session = await auth.api.getSession({
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest) {
         visible_to_client: t.visibleToClient,
         is_blocking: t.isBlocking,
         client_name: t.clientFirstName && t.clientLastName 
-          ? `${t.clientFirstName} ${t.clientLastName}` 
+          ? decryptClientName(t.clientFirstName, t.clientLastName).fullName 
           : null,
         assignee_name: t.assigneeName,
       })),

@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 // Calculate business days (excludes weekends)
 function addBusinessDays(date: Date, days: number): Date {
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
         <table style="width: 100%; font-size: 12px;">
           <tr>
             <td style="padding: 5px 0;"><strong>Signed By:</strong></td>
-            <td>${client.firstName} ${client.lastName}</td>
+            <td>${decryptClientName(client.firstName, client.lastName).fullName}</td>
           </tr>
           <tr>
             <td style="padding: 5px 0;"><strong>Email:</strong></td>

@@ -5,6 +5,7 @@ import { eq, desc, sql, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 // GET - List message threads or messages in a thread
 export async function GET(request: NextRequest) {
@@ -82,7 +83,8 @@ export async function GET(request: NextRequest) {
           unread_by_admin: messageThreads.unreadByAdmin,
           unread_by_client: messageThreads.unreadByClient,
           created_at: messageThreads.createdAt,
-          client_name: sql<string>`${clients.firstName} || ' ' || ${clients.lastName}`,
+          client_first_name: clients.firstName,
+          client_last_name: clients.lastName,
           client_email: clients.email,
         })
         .from(messageThreads)
@@ -95,7 +97,10 @@ export async function GET(request: NextRequest) {
         baseQuery = baseQuery.where(eq(messageThreads.clientId, clientId)) as typeof baseQuery;
       }
 
-      const items = await baseQuery;
+      const items = (await baseQuery).map(({ client_first_name, client_last_name, ...item }) => ({
+        ...item,
+        client_name: decryptClientName(client_first_name, client_last_name).fullName,
+      }));
 
       // Get total unread count
       const unreadResult = await db

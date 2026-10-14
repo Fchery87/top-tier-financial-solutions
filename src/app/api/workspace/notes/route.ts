@@ -6,6 +6,7 @@ import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { desc, count, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 export async function GET(request: NextRequest) {
   const adminUser = await requireCapability('clients:read');
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
         created_at: n.createdAt?.toISOString(),
         updated_at: n.updatedAt?.toISOString(),
         client_name: n.clientFirstName && n.clientLastName 
-          ? `${n.clientFirstName} ${n.clientLastName}` 
+          ? decryptClientName(n.clientFirstName, n.clientLastName).fullName 
           : null,
         author_name: n.authorName,
       })),

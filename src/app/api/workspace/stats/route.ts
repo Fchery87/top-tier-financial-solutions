@@ -17,6 +17,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { count, eq, and, or, desc, isNull, lt, gte, lte } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 export async function GET() {
   const user = await requireCapability('clients:read');
@@ -174,7 +175,7 @@ export async function GET() {
       ...recentDisputesResult.map(d => ({
         type: 'dispute' as const,
         id: d.id,
-        clientName: `${d.clientFirstName || ''} ${d.clientLastName || ''}`.trim() || 'Unknown',
+        clientName: decryptClientName(d.clientFirstName, d.clientLastName).fullName || 'Unknown',
         action: d.status === 'sent' ? 'Dispute sent' : `Dispute ${d.status}`,
         detail: d.bureau?.toUpperCase() || '',
         timestamp: d.createdAt,
@@ -182,7 +183,7 @@ export async function GET() {
       ...recentReportsResult.map(r => ({
         type: 'report' as const,
         id: r.id,
-        clientName: `${r.clientFirstName || ''} ${r.clientLastName || ''}`.trim() || 'Unknown',
+        clientName: decryptClientName(r.clientFirstName, r.clientLastName).fullName || 'Unknown',
         action: r.parseStatus === 'completed' ? 'Report analyzed' : 'Report uploaded',
         detail: '',
         timestamp: r.uploadedAt,

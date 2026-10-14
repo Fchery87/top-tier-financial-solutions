@@ -10,6 +10,7 @@ import { parseIdentityIQReport } from '@/lib/parsers/identityiq-parser';
 import { getFileFromR2 } from '@/lib/r2-storage';
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -97,8 +98,8 @@ export async function GET(request: NextRequest) {
 
           const comprehensiveData: CreditAnalysisReportData = {
             client: {
-              firstName: client.firstName,
-              lastName: client.lastName,
+              firstName: decryptClientName(client.firstName, client.lastName).firstName,
+              lastName: decryptClientName(client.firstName, client.lastName).lastName,
               email: client.email,
               phone: client.phone,
             },
@@ -188,7 +189,7 @@ export async function GET(request: NextRequest) {
 
     const reportData: AuditReportData = {
       client: {
-        name: `${client.firstName} ${client.lastName}`,
+        name: decryptClientName(client.firstName, client.lastName).fullName,
         email: client.email,
         phone: client.phone,
       },

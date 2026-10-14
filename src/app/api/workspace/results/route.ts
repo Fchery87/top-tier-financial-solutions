@@ -5,6 +5,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq, and, gte, desc } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 function toISOStringSafe(value: unknown): string | null {
   if (!value) return null;
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest) {
     const recentWins = filteredDisputes.slice(0, 10).map(d => ({
       id: d.dispute.id,
       client_id: d.dispute.clientId,
-      client_name: d.client ? `${d.client.firstName} ${d.client.lastName}` : 'Unknown',
+      client_name: d.client ? decryptClientName(d.client.firstName, d.client.lastName).fullName : 'Unknown',
       creditor_name: d.negativeItem?.creditorName || d.dispute.creditorName || 'Unknown',
       item_type: d.negativeItem?.itemType || 'unknown',
       bureau: d.dispute.bureau,
@@ -171,7 +172,7 @@ export async function GET(request: NextRequest) {
       if (!clientDeletionCounts[clientId]) {
         clientDeletionCounts[clientId] = {
           client_id: clientId,
-          client_name: d.client ? `${d.client.firstName} ${d.client.lastName}` : 'Unknown',
+          client_name: d.client ? decryptClientName(d.client.firstName, d.client.lastName).fullName : 'Unknown',
           deletions_count: 0,
           score_increase: 0,
         };

@@ -12,6 +12,7 @@ import { getFileFromR2 } from '@/lib/r2-storage';
 import type { BureauSummary, BureauCreditUtilization } from '@/lib/parsers/pdf-parser';
 import { logServerEvent } from '@/lib/server-logger';
 import { recordSensitiveRead } from '@/lib/sensitive-read-audit';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 // GET - Generate and return report HTML (preview)
 // Query params: ?type=comprehensive (default) | simple
@@ -67,8 +68,8 @@ export async function GET(
           // Build comprehensive report data
           const comprehensiveData: CreditAnalysisReportData = {
             client: {
-              firstName: client.firstName,
-              lastName: client.lastName,
+              firstName: decryptClientName(client.firstName, client.lastName).firstName,
+              lastName: decryptClientName(client.firstName, client.lastName).lastName,
               email: client.email,
               phone: client.phone,
             },
@@ -145,7 +146,7 @@ export async function GET(
 
     const reportData: AuditReportData = {
       client: {
-        name: `${client.firstName} ${client.lastName}`,
+        name: decryptClientName(client.firstName, client.lastName).fullName,
         email: client.email,
         phone: client.phone,
       },
@@ -289,7 +290,7 @@ export async function POST(
     // Build report data
     const reportData: AuditReportData = {
       client: {
-        name: `${client.firstName} ${client.lastName}`,
+        name: decryptClientName(client.firstName, client.lastName).fullName,
         email: client.email,
         phone: client.phone,
       },

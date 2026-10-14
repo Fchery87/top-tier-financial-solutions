@@ -2,6 +2,7 @@
 // Comprehensive report matching the PHP Twig template format
 // Includes: Cover Page, Welcome Letter, Credit Basics, Scores Summary, Account Analysis, Process Overview, Client Role
 
+import { BUSINESS_TIME_ZONE } from './letter-rendering/letter-dates';
 import type { BureauSummary, BureauPersonalInfo, DerogatoryAccount, PublicRecord, BureauCreditUtilization, PersonalInfoDisputeItem, InquiryDisputeItem } from './parsers/pdf-parser';
 
 export interface CreditAnalysisReportData {
@@ -64,10 +65,13 @@ function formatCurrency(cents: number | null | undefined): string {
   }).format(cents / 100);
 }
 
+const REPORT_DATE_FORMAT = { month: '2-digit', day: '2-digit', year: 'numeric' } as const;
+
+/** Stored report dates are calendar dates (UTC midnight); the fallback is today in New York. */
 function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  if (!date) return new Date().toLocaleDateString('en-US', { ...REPORT_DATE_FORMAT, timeZone: BUSINESS_TIME_ZONE });
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { ...REPORT_DATE_FORMAT, timeZone: 'UTC' });
 }
 
 function getUtilizationImage(percent: number): string {

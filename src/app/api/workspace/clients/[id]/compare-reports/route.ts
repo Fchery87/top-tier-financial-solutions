@@ -6,6 +6,7 @@ import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq, desc } from 'drizzle-orm';
 import { compareApprovedCreditReportPulls } from '@/lib/credit-report-pull-comparison';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 export async function GET(
   request: NextRequest,
@@ -153,7 +154,7 @@ export async function GET(
     return NextResponse.json({
       client: {
         id: client.id,
-        name: `${client.firstName} ${client.lastName}`,
+        name: decryptClientName(client.firstName, client.lastName).fullName,
       },
       older_report: {
         id: olderReport.id,

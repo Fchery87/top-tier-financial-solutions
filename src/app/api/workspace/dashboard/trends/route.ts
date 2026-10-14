@@ -5,6 +5,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { gte } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 interface TrendPoint {
   date: string;
@@ -122,7 +123,7 @@ export async function GET() {
       : [];
 
     const clientNameMap = new Map(
-      clientDetails.map(c => [c.id, `${c.firstName} ${c.lastName}`])
+      clientDetails.map(c => [c.id, decryptClientName(c.firstName, c.lastName).fullName])
     );
 
     // Calculate improvements and get top 5

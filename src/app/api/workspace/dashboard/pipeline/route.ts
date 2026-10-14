@@ -5,6 +5,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { eq, desc, sql } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 interface PipelineClient {
   id: string;
@@ -120,8 +121,8 @@ export async function GET(_request: NextRequest) {
 
       const pipelineClient: PipelineClient = {
         id: client.id,
-        firstName: client.firstName,
-        lastName: client.lastName,
+        firstName: decryptClientName(client.firstName, client.lastName).firstName,
+        lastName: decryptClientName(client.firstName, client.lastName).lastName,
         email: client.email,
         stage: stage,
         assignedTo: client.assignedTo,

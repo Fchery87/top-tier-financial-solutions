@@ -19,6 +19,7 @@ import {
 } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 export type EmailTriggerType = 
   | 'welcome'
@@ -314,8 +315,8 @@ export async function sendAutomatedEmail(
   
   // Build variables
   const variables: EmailVariables = {
-    client_name: `${client.firstName} ${client.lastName}`,
-    client_first_name: client.firstName,
+    client_name: decryptClientName(client.firstName, client.lastName).fullName,
+    client_first_name: decryptClientName(client.firstName, client.lastName).firstName,
     client_email: client.email,
     ...additionalVariables,
   };

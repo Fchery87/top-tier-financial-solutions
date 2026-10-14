@@ -5,6 +5,7 @@ import { requireCapability } from '@/lib/admin-session';
 import { capabilityDeniedResponse } from '@/lib/capability-denial';
 import { and, gte, lte, eq, isNull, or } from 'drizzle-orm';
 import { logServerEvent } from '@/lib/server-logger';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 interface CalendarEvent {
   id: string;
@@ -68,7 +69,7 @@ export async function GET(_request: NextRequest) {
         type: 'deadline',
         title: `${deadline.bureau} Response ${isOverdue ? 'OVERDUE' : 'Due'}`,
         date: deadline.responseDeadline.toISOString(),
-        clientName: `${deadline.clientFirstName} ${deadline.clientLastName}`,
+        clientName: decryptClientName(deadline.clientFirstName, deadline.clientLastName).fullName,
         clientId: deadline.clientId,
         priority: isOverdue ? 'high' : daysUntil <= 3 ? 'high' : daysUntil <= 7 ? 'medium' : 'low',
       });
@@ -105,8 +106,8 @@ export async function GET(_request: NextRequest) {
         type: 'task',
         title: task.title,
         date: task.dueDate.toISOString(),
-        clientName: task.clientFirstName && task.clientLastName 
-          ? `${task.clientFirstName} ${task.clientLastName}` 
+        clientName: task.clientFirstName && task.clientLastName
+          ? decryptClientName(task.clientFirstName, task.clientLastName).fullName
           : undefined,
         clientId: task.clientId || undefined,
         priority: isOverdue ? 'high' : task.priority === 'urgent' ? 'high' : task.priority === 'high' ? 'high' : 'medium',
@@ -142,7 +143,7 @@ export async function GET(_request: NextRequest) {
         type: 'agreement',
         title: 'Agreement Expires',
         date: agreement.expiresAt.toISOString(),
-        clientName: `${agreement.clientFirstName} ${agreement.clientLastName}`,
+        clientName: decryptClientName(agreement.clientFirstName, agreement.clientLastName).fullName,
         clientId: agreement.clientId,
         priority: daysUntil <= 2 ? 'high' : 'medium',
       });

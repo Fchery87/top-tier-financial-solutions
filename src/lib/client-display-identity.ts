@@ -20,3 +20,11 @@ export function formatClientDisplayIdentity(input: ClientDisplayIdentityInput) {
     client_email: input.email,
   };
 }
+
+/** Decrypted display name for a stored (possibly encrypted) first and last name. */
+export function decryptClientName(firstName: string | null | undefined, lastName: string | null | undefined) {
+  const decrypted = decryptClientData({ firstName: firstName || '', lastName: lastName || '' });
+  const first = String(decrypted.firstName || '').trim();
+  const last = String(decrypted.lastName || '').trim();
+  return { firstName: first, lastName: last, fullName: [first, last].filter(Boolean).join(' ') };
+}

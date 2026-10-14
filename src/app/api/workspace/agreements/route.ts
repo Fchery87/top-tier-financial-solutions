@@ -9,6 +9,7 @@ import { logServerEvent } from '@/lib/server-logger';
 import { loadFeePlan } from '@/lib/billing-facts';
 import { DECRYPTION_FAILED, decryptClientData } from '@/lib/db-encryption';
 import { feeTermsHtml, fillAgreementTemplate, renderFeeTerms } from '@/lib/agreement-content';
+import { decryptClientName } from '@/lib/client-display-identity';
 
 // GET - List agreement templates or client agreements
 export async function GET(request: NextRequest) {
@@ -58,7 +59,8 @@ export async function GET(request: NextRequest) {
           sent_at: clientAgreements.sentAt,
           expires_at: clientAgreements.expiresAt,
           created_at: clientAgreements.createdAt,
-          client_name: sql<string>`${clients.firstName} || ' ' || ${clients.lastName}`,
+          client_first_name: clients.firstName,
+          client_last_name: clients.lastName,
           client_email: clients.email,
         })
         .from(clientAgreements)
@@ -71,7 +73,10 @@ export async function GET(request: NextRequest) {
         query = query.where(eq(clientAgreements.clientId, clientId)) as typeof query;
       }
 
-      const items = await query;
+      const items = (await query).map(({ client_first_name, client_last_name, ...item }) => ({
+        ...item,
+        client_name: decryptClientName(client_first_name, client_last_name).fullName,
+      }));
 
       return NextResponse.json({
         items,
