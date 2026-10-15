@@ -35,6 +35,8 @@ export const REASON_CODE_DESCRIPTIONS: Record<string, string> = {
   verification_required: 'I am requesting a reasonable reinvestigation of this account under FCRA Section 611. Please confirm each disputed detail with the furnisher and correct or delete anything that cannot be verified.',
   medical_state_rule: 'This account is medical debt, and the law of the state where I live limits how medical debt may be reported.',
   medical_bureau_policy: "This medical collection should not appear under the credit bureaus' own published medical debt policy.",
+  cross_bureau_mismatch: 'The credit bureaus report this same account with different details. They cannot all be accurate, so the information you report must be reinvestigated and corrected.',
+  dofd_cross_bureau_mismatch: 'The date of first delinquency you report for this account is later than the date another credit bureau reports for the same account. The reporting period runs from that date, so it must be verified and corrected.',
   new_evidence: 'Since my last dispute I have information about this account that the earlier reinvestigation did not consider. Please conduct a new reinvestigation that takes it into account.',
   previously_disputed: 'This item has already been disputed previously and remains under challenge because the prior response did not resolve the reporting concerns.',
   request_verification_method: 'Please provide the specific method of verification used in your prior investigation, including how the disputed information was verified and with whom.',

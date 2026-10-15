@@ -31,7 +31,8 @@ import { buildFcraComplianceStatus, daysUntilExpiration as daysUntilClockExpirat
 import { buildCreditAccountDerivedFields } from './credit-account-ingest';
 import { getAccountBureaus } from './credit-account-bureau-presence';
 import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
-import { buildAccountBalanceDiscrepancies } from './credit-analysis-discrepancies';
+import { buildCrossBureauDiscrepancies } from './credit-analysis-discrepancies';
+import { loadComparableTradelines } from './cross-bureau-loader';
 import { normalizeCreditReport } from './credit-report-normalization/normalize-report';
 import { requiresNormalizationReview } from './credit-report-normalization/review-gate';
 import { logServerEvent } from '@/lib/server-logger';
@@ -708,10 +709,7 @@ async function saveFcraComplianceItem(
 // ============================================
 
 async function detectBureauDiscrepancies(clientId: string, creditReportId: string): Promise<void> {
-  const allAccounts = await db
-    .select()
-    .from(creditAccounts)
-    .where(and(eq(creditAccounts.clientId, clientId), eq(creditAccounts.creditReportId, creditReportId)));
+  const comparableAccounts = await loadComparableTradelines(clientId, creditReportId);
 
   const allProfiles = await db
     .select()
@@ -721,7 +719,7 @@ async function detectBureauDiscrepancies(clientId: string, creditReportId: strin
   // Clear existing discrepancies for this report before writing the latest pull snapshot.
   await db.delete(bureauDiscrepancies).where(eq(bureauDiscrepancies.creditReportId, creditReportId));
 
-  const accountDiscrepancies = buildAccountBalanceDiscrepancies(clientId, creditReportId, allAccounts);
+  const accountDiscrepancies = buildCrossBureauDiscrepancies(clientId, creditReportId, comparableAccounts);
   if (accountDiscrepancies.length > 0) {
     await db.insert(bureauDiscrepancies).values(accountDiscrepancies);
   }

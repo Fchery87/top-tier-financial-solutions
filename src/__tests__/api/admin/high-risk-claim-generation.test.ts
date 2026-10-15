@@ -21,6 +21,11 @@ const holder = vi.hoisted(() => ({ db: null as unknown as FakeDb }));
 const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const generateMultiItemDisputeLetterMock = vi.hoisted(() => vi.fn());
 
+vi.mock('@/lib/cross-bureau-loader', () => ({
+  loadLetterCrossBureauFindings: async () => [],
+  loadItemCrossBureauFindings: async () => new Map(),
+  loadComparableTradelines: async () => [],
+}));
 vi.mock('@/db/client', () => ({
   db: {
     select: (...args: unknown[]) => holder.db.select(...args),

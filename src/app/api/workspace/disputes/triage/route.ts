@@ -7,6 +7,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { triageItems } from '@/lib/dispute-triage';
 import { buildCreditorStrategyInsights } from '@/lib/creditor-strategy-insights';
 import { logServerEvent } from '@/lib/server-logger';
+import { loadItemCrossBureauFindings } from '@/lib/cross-bureau-loader';
 
 export async function POST(request: NextRequest) {
   const admin = await requireCapability('disputes:write');
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
     const items = await db
       .select({
         id: negativeItems.id,
+        creditReportId: negativeItems.creditReportId,
+        creditAccountId: negativeItems.creditAccountId,
         creditorName: negativeItems.creditorName,
         originalCreditor: negativeItems.originalCreditor,
         accountNumber: creditAccounts.accountNumber,
@@ -106,7 +109,12 @@ export async function POST(request: NextRequest) {
       logServerEvent({ level: 'error', event: 'server.app.api.admin.disputes.triage.error', error: insightError });
     }
 
-    const summary = triageItems(triageReady, round, insights);
+    const crossBureauFindings = await loadItemCrossBureauFindings(clientId, items);
+    const crossBureauItemIds = [...crossBureauFindings.entries()]
+      .filter(([, findings]) => findings.some(finding => finding.tier === 'objective'))
+      .map(([itemId]) => itemId);
+
+    const summary = triageItems(triageReady, round, insights, crossBureauItemIds);
 
     return NextResponse.json({
       success: true,
