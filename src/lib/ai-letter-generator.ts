@@ -1,4 +1,5 @@
 import { assessMedicalDebt } from './medical-dispute-rules';
+import { checkSingleTradeline } from './single-tradeline-checks';
 import { daysUntilExpiration, getObsolescenceClock, type ObsolescenceClockConfidence } from './fcra-clock';
 import { getLLMConfig, type LLMConfig } from './settings-service';
 import { lintGeneratedLetter } from './letter-lint';
@@ -462,6 +463,8 @@ export interface ItemAnalysisResult {
   fcraIssues: string[];
   confidence: number;
   analysisNotes: string;
+  /** Interpretive findings: held for staff review, never added to a letter automatically. */
+  interpretiveFindings: string[];
 }
 
 interface AnalyzeItemParams {
@@ -489,6 +492,8 @@ interface AnalyzeItemParams {
   paymentHistoryGrid?: Record<string, string> | null;
   dateOpened?: string | null;
   remarks?: string | null;
+  monthlyPayment?: number | null;
+  dateOfLastPayment?: string | null;
   /** The Client's current state of residence, for Medical Debt State Rules. */
   clientState?: string | null;
 }
@@ -526,6 +531,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
   const fcraIssues: string[] = [];
   const reasonCodes: string[] = [];
   const notes: string[] = [];
+  const interpretiveFindings: string[] = [];
   let methodology = 'factual';
   let confidence = 0.5;
   
@@ -723,6 +729,36 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     notes.push('Possible medical debt: only the creditor name suggests it. Confirm with the client before using medical-debt rules.');
   }
 
+  // ---- CHECK 4C: Contradictions inside this tradeline ----
+  const SINGLE_TRADELINE_REASON_CODES = {
+    impossible_dates: 'wrong_dates',
+    scheduled_payment_after_chargeoff: 'metro2_violation',
+    lates_after_chargeoff: 'status_inconsistency',
+    balance_after_bankruptcy: 'balance_discrepancy',
+    balance_after_transfer: 'balance_discrepancy',
+  } as const;
+  for (const finding of checkSingleTradeline({
+    accountStatus: item.accountStatus,
+    paymentStatus: item.paymentStatus,
+    balance: amount,
+    pastDueAmount: pastDue,
+    monthlyPayment: item.monthlyPayment,
+    dateOpened: item.dateOpened,
+    dateReported: item.dateReported,
+    dateOfFirstDelinquency: item.dateOfFirstDelinquency,
+    dateOfLastPayment: item.dateOfLastPayment,
+    remarks: item.remarks,
+    paymentHistory,
+  })) {
+    if (finding.tier === 'interpretive') {
+      interpretiveFindings.push(finding.text);
+      continue;
+    }
+    metro2Violations.push(finding.text);
+    reasonCodes.push(SINGLE_TRADELINE_REASON_CODES[finding.code]);
+    violationSeverities.push(0.8);
+  }
+
   // ---- CHECK 5: Data Completeness ----
   // Check for missing critical fields based on item type
   
@@ -833,6 +869,7 @@ export function analyzeNegativeItem(item: AnalyzeItemParams, round: number = 1, 
     fcraIssues: uniqueFcra,
     confidence: Math.min(Math.max(confidence, 0.3), 1), // Clamp between 0.3 and 1.0
     analysisNotes: notes.join('. '),
+    interpretiveFindings: [...new Set(interpretiveFindings)],
   };
 }
 

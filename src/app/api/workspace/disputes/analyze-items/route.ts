@@ -73,6 +73,8 @@ export async function POST(request: Request) {
         paymentStatus: creditAccounts.paymentStatus,
         dateOpened: creditAccounts.dateOpened,
         remarks: creditAccounts.remarks,
+        monthlyPayment: creditAccounts.monthlyPayment,
+        dateOfLastPayment: creditAccounts.dateOfLastPayment,
       })
       .from(negativeItems)
       .leftJoin(creditAccounts, eq(negativeItems.creditAccountId, creditAccounts.id))
@@ -111,6 +113,8 @@ export async function POST(request: Request) {
       paymentStatus: item.paymentStatus,
       dateOpened: item.dateOpened?.toISOString() || null,
       remarks: item.remarks,
+      monthlyPayment: item.monthlyPayment,
+      dateOfLastPayment: item.dateOfLastPayment?.toISOString() || null,
     }));
 
     // P3.5: Run AI analysis on all items with aggressiveness parameter
