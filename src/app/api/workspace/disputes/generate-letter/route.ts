@@ -13,8 +13,7 @@ import { persistGeneratedDisputeDraft, type DraftItemSnapshotInput } from '@/lib
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { logServerEvent } from '@/lib/server-logger';
-import { applyCrossBureauFindings } from '@/lib/cross-bureau-findings';
-import { loadLetterCrossBureauFindings } from '@/lib/cross-bureau-loader';
+import { applyLetterFindings, loadLetterFindings } from '@/lib/letter-findings';
 import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
 import type { DisputeItemKind } from '@/lib/high-risk-claim-registry';
@@ -100,9 +99,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cross-Bureau Mismatches are decided here from stored tradelines, for this bureau only.
+    // Cross-Bureau Mismatches and Item Timeline findings are decided here from stored tradelines, for this bureau only.
     const crossBureau = (targetRecipient || 'bureau') === 'bureau'
-      ? applyCrossBureauFindings(await loadLetterCrossBureauFindings({
+      ? applyLetterFindings(await loadLetterFindings({
         clientId,
         negativeItemIds: letterItemRefs(body).filter(ref => ref.kind === 'tradeline').map(ref => ref.id),
         bureau,

@@ -57,6 +57,7 @@ const ALLOWED_STATUTE_TOKENS = new Set([
   '611',
   '611(a)(1)',
   '611(a)(6)(b)(iii)',
+  '611(a)(5)(b)',
   '611(a)(7)',
   '607',
   '607(b)',

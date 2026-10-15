@@ -1,9 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { creditAccounts, creditReports, negativeItems } from '@/db/schema';
+import { creditAccounts, creditReports } from '@/db/schema';
 import { decryptCreditAccountData } from '@/lib/db-encryption';
 import { findCrossBureauMismatches, type CrossBureauFinding, type CrossBureauRow } from '@/lib/cross-bureau-findings';
-import type { SpecificBureau } from '@/lib/tradeline-matching';
 
 const COMPARABLE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const SPECIFIC_BUREAUS = ['transunion', 'experian', 'equifax'];
@@ -70,20 +69,4 @@ export async function loadItemCrossBureauFindings(clientId: string, items: ItemR
     }
   }
   return byItem;
-}
-
-/** Cross-bureau findings a letter to one bureau should carry for the negative items it covers. */
-export async function loadLetterCrossBureauFindings(input: {
-  clientId: string;
-  negativeItemIds: string[];
-  bureau: string;
-}): Promise<CrossBureauFinding[]> {
-  if (input.negativeItemIds.length === 0 || !SPECIFIC_BUREAUS.includes(input.bureau)) return [];
-  const items = await db
-    .select({ id: negativeItems.id, creditReportId: negativeItems.creditReportId, creditAccountId: negativeItems.creditAccountId })
-    .from(negativeItems)
-    .where(and(eq(negativeItems.clientId, input.clientId), inArray(negativeItems.id, input.negativeItemIds)));
-  const byItem = await loadItemCrossBureauFindings(input.clientId, items);
-  const findings = [...new Set([...byItem.values()].flat())];
-  return findings.filter(finding => finding.letterText[input.bureau as SpecificBureau]);
 }

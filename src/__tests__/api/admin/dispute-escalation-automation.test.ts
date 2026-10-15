@@ -6,10 +6,9 @@ const runDisputeEscalationAutomationMock = vi.hoisted(() => vi.fn());
 const writeDisputeEscalationFailureMock = vi.hoisted(() => vi.fn());
 const dbMock = vi.hoisted(() => ({ transaction: vi.fn() }));
 
-vi.mock('@/lib/cross-bureau-loader', () => ({
-  loadLetterCrossBureauFindings: async () => [],
-  loadItemCrossBureauFindings: async () => new Map(),
-  loadComparableTradelines: async () => [],
+vi.mock('@/lib/letter-findings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/letter-findings')>()),
+  loadLetterFindings: async () => [],
 }));
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));

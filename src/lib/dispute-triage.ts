@@ -231,8 +231,8 @@ export function triageItems(
   items: NegativeItemForTriage[],
   round: number = 1,
   historicalSummary?: CreditorStrategySummary,
-  /** Items with an objective Cross-Bureau Mismatch, decided from stored per-bureau tradelines. */
-  crossBureauItemIds: string[] = [],
+  /** Items with objective findings decided from stored per-bureau tradelines. */
+  reportFindings: { crossBureauItemIds?: string[]; reagedItemIds?: string[]; reinsertedItemIds?: string[] } = {},
 ): TriageSummary {
   const batches: TriagedBatch[] = [];
   const batchMap = new Map<string, NegativeItemForTriage[]>();
@@ -364,15 +364,15 @@ export function triageItems(
     });
   }
 
-  const crossBureauItems = items.filter(item => crossBureauItemIds.includes(item.id));
-  if (crossBureauItems.length > 0) {
-    quickActions.push({
-      id: 'cross-bureau-mismatch',
-      label: 'Cross-Bureau Mismatches',
-      description: `${crossBureauItems.length} items are reported differently by different bureaus, so at most one version can be accurate`,
-      itemIds: crossBureauItems.map(item => item.id),
-      count: crossBureauItems.length,
-    });
+  const findingActions = [
+    { id: 'cross-bureau-mismatch', label: 'Cross-Bureau Mismatches', ids: reportFindings.crossBureauItemIds, describe: (count: number) => `${count} items are reported differently by different bureaus, so at most one version can be accurate` },
+    { id: 'reaged-over-time', label: 'Re-aged Since an Earlier Report', ids: reportFindings.reagedItemIds, describe: (count: number) => `${count} items now report a later date of first delinquency than an earlier report showed` },
+    { id: 'reinserted', label: 'Reinserted Items', ids: reportFindings.reinsertedItemIds, describe: (count: number) => `${count} items were deleted and have reappeared; ask the client about the reinsertion notice` },
+  ];
+  for (const action of findingActions) {
+    const matched = items.filter(item => action.ids?.includes(item.id));
+    if (matched.length === 0) continue;
+    quickActions.push({ id: action.id, label: action.label, description: action.describe(matched.length), itemIds: matched.map(item => item.id), count: matched.length });
   }
 
   // Medical findings are per item, so they belong to the analyzer and the letter, not to a batch strategy.

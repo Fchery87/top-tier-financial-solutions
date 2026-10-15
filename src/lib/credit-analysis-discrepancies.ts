@@ -1,6 +1,7 @@
 import { bureauDiscrepancies } from '@/db/schema';
 import { randomUUID } from 'crypto';
 import { findCrossBureauMismatches, type CrossBureauField, type CrossBureauRow } from '@/lib/cross-bureau-findings';
+import type { TimelineFinding } from '@/lib/item-timeline';
 
 const DISCREPANCY_TYPES: Record<CrossBureauField, string> = {
   date_of_first_delinquency: 'date_mismatch',
@@ -48,4 +49,35 @@ export function buildCrossBureauDiscrepancies(
       createdAt: new Date(),
     };
   });
+}
+
+const TIMELINE_LABELS: Record<TimelineFinding['kind'], string> = {
+  reaged: 'date of first delinquency moved later',
+  reinserted: 'deleted item reappeared',
+  changed_after_verification: 'changed after a Verified response',
+  missing_dispute_flag: 'not marked as disputed while still disputed',
+};
+
+/** Stores each Item Timeline finding for review against the bureau it happened on. */
+export function buildTimelineDiscrepancies(
+  clientId: string,
+  creditReportId: string,
+  findings: TimelineFinding[],
+): Array<typeof bureauDiscrepancies.$inferInsert> {
+  return findings.map(finding => ({
+    id: randomUUID(),
+    clientId,
+    creditReportId,
+    discrepancyType: `timeline_${finding.kind}`,
+    field: finding.kind,
+    creditorName: finding.creditorName,
+    accountNumber: null,
+    valueTransunion: finding.bureau === 'transunion' ? TIMELINE_LABELS[finding.kind] : null,
+    valueExperian: finding.bureau === 'experian' ? TIMELINE_LABELS[finding.kind] : null,
+    valueEquifax: finding.bureau === 'equifax' ? TIMELINE_LABELS[finding.kind] : null,
+    severity: finding.tier === 'objective' ? 'medium' : 'low',
+    isDisputable: true,
+    disputeRecommendation: `${finding.tier === 'objective' ? 'Objective' : 'Interpretive (staff review before use)'} Item Timeline finding. ${finding.text}`,
+    createdAt: new Date(),
+  }));
 }

@@ -8,6 +8,7 @@ import { triageItems } from '@/lib/dispute-triage';
 import { buildCreditorStrategyInsights } from '@/lib/creditor-strategy-insights';
 import { logServerEvent } from '@/lib/server-logger';
 import { loadItemCrossBureauFindings } from '@/lib/cross-bureau-loader';
+import { loadTimelineFindings } from '@/lib/item-timeline-loader';
 
 export async function POST(request: NextRequest) {
   const admin = await requireCapability('disputes:write');
@@ -114,7 +115,18 @@ export async function POST(request: NextRequest) {
       .filter(([, findings]) => findings.some(finding => finding.tier === 'objective'))
       .map(([itemId]) => itemId);
 
-    const summary = triageItems(triageReady, round, insights, crossBureauItemIds);
+    const reagedItemIds: string[] = [];
+    const reinsertedItemIds: string[] = [];
+    for (const reportId of new Set(items.map(item => item.creditReportId))) {
+      const timeline = await loadTimelineFindings(clientId, reportId);
+      for (const item of items.filter(candidate => candidate.creditReportId === reportId && candidate.creditAccountId)) {
+        const mine = timeline.filter(finding => finding.accountIds.includes(item.creditAccountId as string));
+        if (mine.some(finding => finding.kind === 'reaged')) reagedItemIds.push(item.id);
+        if (mine.some(finding => finding.kind === 'reinserted')) reinsertedItemIds.push(item.id);
+      }
+    }
+
+    const summary = triageItems(triageReady, round, insights, { crossBureauItemIds, reagedItemIds, reinsertedItemIds });
 
     return NextResponse.json({
       success: true,

@@ -18,10 +18,9 @@ const requireLatestApprovedReportForClientMock = vi.hoisted(() => vi.fn());
 const decideEscalationMock = vi.hoisted(() => vi.fn());
 const loadDisputeChainMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/cross-bureau-loader', () => ({
-  loadLetterCrossBureauFindings: async () => [],
-  loadItemCrossBureauFindings: async () => new Map(),
-  loadComparableTradelines: async () => [],
+vi.mock('@/lib/letter-findings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/letter-findings')>()),
+  loadLetterFindings: async () => [],
 }));
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));

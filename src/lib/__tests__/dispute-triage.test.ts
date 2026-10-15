@@ -97,7 +97,7 @@ describe('dispute-triage cross-bureau mismatches', () => {
     const summary = triageItems([
       { ...baseItem, id: 'mismatch', onEquifax: true },
       { ...baseItem, id: 'clean', onEquifax: true },
-    ], 1, undefined, ['mismatch']);
+    ], 1, undefined, { crossBureauItemIds: ['mismatch'] });
 
     expect(summary.quickActions.find(action => action.id === 'cross-bureau-mismatch')).toEqual({
       id: 'cross-bureau-mismatch',
@@ -106,5 +106,19 @@ describe('dispute-triage cross-bureau mismatches', () => {
       itemIds: ['mismatch'],
       count: 1,
     });
+  });
+});
+
+describe('dispute-triage Item Timeline findings', () => {
+  it('lists re-aged and reinserted items', () => {
+    const summary = triageItems([
+      { ...baseItem, id: 'reaged', onEquifax: true },
+      { ...baseItem, id: 'back', onEquifax: true },
+    ], 1, undefined, { reagedItemIds: ['reaged'], reinsertedItemIds: ['back'] });
+
+    expect(summary.quickActions.filter(action => ['reaged-over-time', 'reinserted'].includes(action.id)).map(action => [action.id, action.itemIds])).toEqual([
+      ['reaged-over-time', ['reaged']],
+      ['reinserted', ['back']],
+    ]);
   });
 });

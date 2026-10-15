@@ -11,8 +11,7 @@ import { decideHighRiskClaims } from '@/lib/high-risk-claim-gate';
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { tryLoadLetterConsumerIdentity, type LetterConsumerIdentity, type LetterIdentityField } from '@/lib/letter-consumer-identity';
 import { logServerEvent } from '@/lib/server-logger';
-import { applyCrossBureauFindings } from '@/lib/cross-bureau-findings';
-import { loadLetterCrossBureauFindings } from '@/lib/cross-bureau-loader';
+import { applyLetterFindings, loadLetterFindings } from '@/lib/letter-findings';
 
 export const ESCALATION_LAST_RUN_SETTING_KEY = 'automation.dispute_escalations.last_run';
 
@@ -196,8 +195,8 @@ export async function runDisputeEscalationAutomation(
       plan,
     });
     const letterReasons = plan.targetRecipient === 'bureau'
-      ? applyCrossBureauFindings(
-        await loadLetterCrossBureauFindings({ clientId: dispute.clientId, negativeItemIds: [negativeItem.id], bureau: dispute.bureau }),
+      ? applyLetterFindings(
+        await loadLetterFindings({ clientId: dispute.clientId, negativeItemIds: [negativeItem.id], bureau: dispute.bureau }),
         { reasonCodes: letterParams.reasonCodes },
       )
       : { reasonCodes: letterParams.reasonCodes, metro2Violations: undefined };
