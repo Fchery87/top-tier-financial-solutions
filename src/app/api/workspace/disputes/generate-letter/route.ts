@@ -309,6 +309,7 @@ export async function POST(request: NextRequest) {
       });
 
       const persistedDraft = await persistGeneratedDisputeDraft({
+        citedFindings: metro2Violations,
         clientId,
         bureau,
         negativeItemId: validItems.length === 1 && validItems[0]?.kind === 'tradeline' ? validItems[0].id : null,
@@ -421,6 +422,7 @@ export async function POST(request: NextRequest) {
       dateReported: payloadData.dateReported,
     };
     const persistedDraft = await persistGeneratedDisputeDraft({
+      citedFindings: metro2Violations,
       clientId,
       bureau,
       negativeItemId: snapshotItem.kind === 'tradeline' ? negativeItemId || snapshotItem.id : null,

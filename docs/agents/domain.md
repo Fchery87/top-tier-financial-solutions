@@ -20,6 +20,9 @@ This repo uses a single-context domain documentation layout.
 - `src/lib/medical-dispute-rules.ts` provides medical-debt-specific recommendation logic and state restriction notes.
 - Factual verification and Metro 2 issue framing are the default posture; escalation rounds change strategy, not evidentiary confidence.
 - CFPB escalation should be modeled as a complaint-packet / regulator flow, not as a bureau-addressed dispute letter.
+- `src/lib/letter-findings.ts` collects every Finding the server can decide for a negative item and is the only path findings take into letters. It draws on `cross-bureau-findings.ts` (Cross-Bureau Mismatches between one pull's per-bureau tradelines), `item-timeline.ts` (re-aging, Reinsertion and changes across the Service Engagement's pulls) and `single-tradeline-checks.ts` (contradictions inside one tradeline). Objective findings enter letters automatically; Interpretive Findings enter only after staff approve them in Held Findings.
+- `src/lib/new-facts.ts` decides whether a verified item has a New Fact: unused client evidence, or a citable Finding no letter in the dispute chain cited (`disputes.cited_findings`).
+- Each `credit_accounts` row is one bureau's view of an account (ADR 0005). Round 3 never goes to the furnisher by default (ADR 0004).
 
 ## Consumer Rules
 

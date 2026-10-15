@@ -23,7 +23,7 @@ vi.mock('@/lib/letter-generation-library', () => ({ selectLibraryForGeneration: 
 vi.mock('@/lib/parser-review-gate', () => ({ requireLatestApprovedReportForClient: requireLatestApprovedReportForClientMock }));
 vi.mock('@/lib/ai-letter-generator', () => ({ generateUniqueDisputeLetter: generateUniqueDisputeLetterMock }));
 vi.mock('@/lib/dispute-draft-generator', () => ({ persistGeneratedDisputeDraft: persistGeneratedDisputeDraftMock }));
-vi.mock('@/lib/new-facts', () => ({ loadNewFacts: loadNewFactsMock }));
+vi.mock('@/lib/new-facts', () => ({ loadNewFacts: loadNewFactsMock, citedInChain: () => new Set<string>() }));
 vi.mock('@/lib/dispute-escalation-decision', () => ({
   decideEscalation: vi.fn(),
   loadDisputeChain: vi.fn(),
@@ -81,7 +81,7 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(loadNewFactsMock).toHaveBeenCalledWith({ clientId: 'client-1', negativeItemId: 'item-1' });
+    expect(loadNewFactsMock).toHaveBeenCalledWith({ clientId: 'client-1', negativeItemId: 'item-1', bureau: 'experian', cited: new Set() });
     expect(generateUniqueDisputeLetterMock).toHaveBeenCalledWith(expect.objectContaining({
       round: 3,
       targetRecipient: 'bureau',
