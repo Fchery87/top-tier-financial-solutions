@@ -280,11 +280,9 @@ export async function GET(
         recommendations,
       } : null,
       credit_accounts: accountsResult.map(a => {
-        // Compute bureaus array from per-bureau booleans
-        const bureaus: string[] = [];
-        if (a.onTransunion) bureaus.push('transunion');
-        if (a.onExperian) bureaus.push('experian');
-        if (a.onEquifax) bureaus.push('equifax');
+        // Each stored account row is one bureau's view (ADR 0005); the per-bureau fields keep the response shape.
+        const onBureau = (bureau: string) => a.bureau === bureau;
+        const bureaus = ['transunion', 'experian', 'equifax'].filter(onBureau);
 
         // Decrypt credit account data
         const decrypted = decryptCreditAccountData({
@@ -314,18 +312,17 @@ export async function GET(
           payment_status: a.paymentStatus,
           payment_history_grid: paymentHistoryGrid,
           date_opened: toISOStringSafe(a.dateOpened),
-          bureau: a.bureau, // Legacy field
-          // Per-bureau presence data
-          bureaus, // Computed array of bureau names
-          on_transunion: a.onTransunion ?? false,
-          on_experian: a.onExperian ?? false,
-          on_equifax: a.onEquifax ?? false,
-          transunion_date: toISOStringSafe(a.transunionDate),
-          experian_date: toISOStringSafe(a.experianDate),
-          equifax_date: toISOStringSafe(a.equifaxDate),
-          transunion_balance: a.transunionBalance,
-          experian_balance: a.experianBalance,
-          equifax_balance: a.equifaxBalance,
+          bureau: a.bureau,
+          bureaus,
+          on_transunion: onBureau('transunion'),
+          on_experian: onBureau('experian'),
+          on_equifax: onBureau('equifax'),
+          transunion_date: onBureau('transunion') ? toISOStringSafe(a.dateReported) : null,
+          experian_date: onBureau('experian') ? toISOStringSafe(a.dateReported) : null,
+          equifax_date: onBureau('equifax') ? toISOStringSafe(a.dateReported) : null,
+          transunion_balance: onBureau('transunion') ? a.balance : null,
+          experian_balance: onBureau('experian') ? a.balance : null,
+          equifax_balance: onBureau('equifax') ? a.balance : null,
           is_negative: a.isNegative,
           risk_level: a.riskLevel,
         };

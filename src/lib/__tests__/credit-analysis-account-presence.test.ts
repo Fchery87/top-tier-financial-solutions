@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAccountPresence } from '@/lib/credit-account-bureau-presence';
+import { getAccountBureaus, getAccountPresence } from '@/lib/credit-account-bureau-presence';
 import type { ParsedAccount } from '@/lib/parsers/pdf-parser';
 
 describe('credit account ingest bureau presence', () => {
@@ -108,5 +108,24 @@ describe('credit account ingest bureau presence', () => {
       experianBalance: 12345,
       equifaxBalance: undefined,
     });
+  });
+});
+
+describe('getAccountBureaus', () => {
+  const base: ParsedAccount = { creditorName: 'Capital Bank', accountNumber: '***1111', isNegative: false };
+
+  it('stores one tradeline per bureau with evidence', () => {
+    expect(getAccountBureaus({
+      ...base,
+      bureauEvidence: { transunion: { balance: 100 }, equifax: { balance: 200 } },
+    }, 'combined')).toEqual(['transunion', 'equifax']);
+  });
+
+  it('uses the report bureau for a single-bureau report', () => {
+    expect(getAccountBureaus(base, 'experian')).toEqual(['experian']);
+  });
+
+  it('stores an account with no identifiable bureau once, without a bureau', () => {
+    expect(getAccountBureaus(base, 'combined')).toEqual([null]);
   });
 });
