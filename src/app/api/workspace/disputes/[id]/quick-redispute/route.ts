@@ -13,8 +13,7 @@ import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-dec
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
 import { loadNewFacts } from '@/lib/new-facts';
-import { applyCrossBureauFindings } from '@/lib/cross-bureau-findings';
-import { loadLetterCrossBureauFindings } from '@/lib/cross-bureau-loader';
+import { applyLetterFindings, loadLetterFindings } from '@/lib/letter-findings';
 import { logServerEvent } from '@/lib/server-logger';
 import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
 
@@ -106,8 +105,8 @@ export async function POST(
       }
     }
     const letterReasons = escalationPlan.targetRecipient === 'bureau'
-      ? applyCrossBureauFindings(
-        await loadLetterCrossBureauFindings({ clientId: currentDispute.clientId, negativeItemIds: [negativeItem.id], bureau: currentDispute.bureau }),
+      ? applyLetterFindings(
+        await loadLetterFindings({ clientId: currentDispute.clientId, negativeItemIds: [negativeItem.id], bureau: currentDispute.bureau }),
         { reasonCodes: escalationPlan.reasonCodes },
       )
       : { reasonCodes: escalationPlan.reasonCodes, metro2Violations: undefined };

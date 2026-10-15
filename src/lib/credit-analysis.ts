@@ -10,6 +10,7 @@ import {
   fcraComplianceItems,
   personalInfoDisputes,
   inquiryDisputes,
+  tasks,
 } from '@/db/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -31,7 +32,9 @@ import { buildFcraComplianceStatus, daysUntilExpiration as daysUntilClockExpirat
 import { buildCreditAccountDerivedFields } from './credit-account-ingest';
 import { getAccountBureaus } from './credit-account-bureau-presence';
 import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
-import { buildCrossBureauDiscrepancies } from './credit-analysis-discrepancies';
+import { buildCrossBureauDiscrepancies, buildTimelineDiscrepancies } from './credit-analysis-discrepancies';
+import { loadTimelineFindings } from './item-timeline-loader';
+import { bureauName, type TimelineFinding } from './item-timeline';
 import { loadComparableTradelines } from './cross-bureau-loader';
 import { normalizeCreditReport } from './credit-report-normalization/normalize-report';
 import { requiresNormalizationReview } from './credit-report-normalization/review-gate';
@@ -719,12 +722,39 @@ async function detectBureauDiscrepancies(clientId: string, creditReportId: strin
   // Clear existing discrepancies for this report before writing the latest pull snapshot.
   await db.delete(bureauDiscrepancies).where(eq(bureauDiscrepancies.creditReportId, creditReportId));
 
-  const accountDiscrepancies = buildCrossBureauDiscrepancies(clientId, creditReportId, comparableAccounts);
+  const timelineFindings = await loadTimelineFindings(clientId, creditReportId);
+  const accountDiscrepancies = [
+    ...buildCrossBureauDiscrepancies(clientId, creditReportId, comparableAccounts),
+    ...buildTimelineDiscrepancies(clientId, creditReportId, timelineFindings),
+  ];
   if (accountDiscrepancies.length > 0) {
     await db.insert(bureauDiscrepancies).values(accountDiscrepancies);
   }
+  await createReinsertionWorkItems(clientId, timelineFindings);
 
   await detectPiiDiscrepancies(clientId, creditReportId, allProfiles);
+}
+
+/** A Reinsertion needs staff to ask the client whether the bureau's written notice arrived. */
+async function createReinsertionWorkItems(clientId: string, findings: TimelineFinding[]): Promise<void> {
+  for (const finding of findings.filter(item => item.kind === 'reinserted')) {
+    const title = `Reinsertion on ${bureauName(finding.bureau)}: ${finding.creditorName}`;
+    const [existing] = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.clientId, clientId), eq(tasks.title, title)))
+      .limit(1);
+    if (existing) continue;
+    await db.insert(tasks).values({
+      id: randomUUID(),
+      clientId,
+      title,
+      description: `${finding.creditorName} was deleted from ${bureauName(finding.bureau)} and has reappeared. Ask the client whether they received a written reinsertion notice within five business days (FCRA Section 611(a)(5)(B)). The next letter asks the bureau for the furnisher's certification and a copy of the notice.`,
+      priority: 'high',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
 }
 
 async function detectPiiDiscrepancies(

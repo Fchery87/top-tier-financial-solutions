@@ -12,8 +12,11 @@ const generateUniqueDisputeLetterMock = vi.hoisted(() => vi.fn());
 const persistGeneratedDisputeDraftMock = vi.hoisted(() => vi.fn());
 const loadNewFactsMock = vi.hoisted(() => vi.fn());
 
-const loadLetterCrossBureauFindingsMock = vi.hoisted(() => vi.fn());
-vi.mock('@/lib/cross-bureau-loader', () => ({ loadLetterCrossBureauFindings: loadLetterCrossBureauFindingsMock }));
+const loadLetterFindingsMock = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/letter-findings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/letter-findings')>()),
+  loadLetterFindings: loadLetterFindingsMock,
+}));
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/admin-session', () => ({ requireCapability: requireCapabilityMock }));
 vi.mock('@/lib/letter-generation-library', () => ({ selectLibraryForGeneration: selectLibraryForGenerationMock }));
@@ -45,7 +48,7 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     generateUniqueDisputeLetterMock.mockResolvedValue({ letter: 'Generated letter', source: 'ai' });
     persistGeneratedDisputeDraftMock.mockResolvedValue({ disputeId: 'draft-1' });
     loadNewFactsMock.mockResolvedValue([]);
-    loadLetterCrossBureauFindingsMock.mockResolvedValue([]);
+    loadLetterFindingsMock.mockResolvedValue([]);
   });
 
   it('creates a Round 3 new-evidence bureau draft when the verified item has unused evidence', async () => {
@@ -93,12 +96,10 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
 
   it("adds the bureau's own cross-bureau finding to a method-of-verification letter", async () => {
     const { POST } = await import('@/app/api/workspace/disputes/[id]/quick-redispute/route');
-    loadLetterCrossBureauFindingsMock.mockResolvedValue([{
-      field: 'date_of_first_delinquency',
+    loadLetterFindingsMock.mockResolvedValue([{
       tier: 'objective',
-      accountIds: ['acct-ex'],
-      values: { experian: '3/2019', transunion: '1/2018' },
-      letterText: { experian: 'You report the date of first delinquency of this account as 3/2019, but TransUnion reports 1/2018.' },
+      reasonCode: 'dofd_cross_bureau_mismatch',
+      text: 'You report the date of first delinquency of this account as 3/2019, but TransUnion reports 1/2018.',
     }]);
     dbMock.select
       .mockReturnValueOnce(selectResult([{
@@ -119,9 +120,9 @@ describe('POST /api/workspace/disputes/[id]/quick-redispute', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(loadLetterCrossBureauFindingsMock).toHaveBeenCalledWith({ clientId: 'client-1', negativeItemIds: ['item-1'], bureau: 'experian' });
+    expect(loadLetterFindingsMock).toHaveBeenCalledWith({ clientId: 'client-1', negativeItemIds: ['item-1'], bureau: 'experian' });
     expect(generateUniqueDisputeLetterMock).toHaveBeenCalledWith(expect.objectContaining({
-      reasonCodes: ['previously_disputed', 'request_verification_method', 'cross_bureau_mismatch', 'dofd_cross_bureau_mismatch'],
+      reasonCodes: ['previously_disputed', 'request_verification_method', 'dofd_cross_bureau_mismatch'],
       metro2Violations: ['You report the date of first delinquency of this account as 3/2019, but TransUnion reports 1/2018.'],
     }));
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyCrossBureauFindings, findCrossBureauMismatches, type CrossBureauRow } from '@/lib/cross-bureau-findings';
+import { findCrossBureauMismatches, type CrossBureauRow } from '@/lib/cross-bureau-findings';
 
 const SEPT = new Date('2026-09-01T00:00:00.000Z');
 
@@ -125,31 +125,5 @@ describe('findCrossBureauMismatches', () => {
       row({ id: 'tu', bureau: 'transunion', tradelineKey: null, dateOpened: null, balance: 1 }),
       row({ id: 'ex', bureau: 'experian', tradelineKey: null, dateOpened: null, balance: 2 }),
     ])).toEqual([]);
-  });
-});
-
-describe('applyCrossBureauFindings', () => {
-  it('adds the objective sentences and reason codes for the date of first delinquency', () => {
-    const findings = findCrossBureauMismatches([
-      row({ id: 'tu', bureau: 'transunion', highCredit: 100 }),
-      row({ id: 'ex', bureau: 'experian', highCredit: 900, dateOfFirstDelinquency: new Date('2019-03-10T00:00:00.000Z') }),
-    ]).filter(item => item.letterText.experian);
-
-    expect(applyCrossBureauFindings(findings, { reasonCodes: ['inaccurate_reporting'], metro2Violations: ['existing'] })).toEqual({
-      reasonCodes: ['inaccurate_reporting', 'cross_bureau_mismatch', 'dofd_cross_bureau_mismatch'],
-      metro2Violations: [
-        'existing',
-        'You report the date of first delinquency of this account as 3/2019, but TransUnion reports 1/2018. A later date makes this account look newer than it is and extends how long it can be reported. Only one date can be accurate.',
-      ],
-    });
-  });
-
-  it('leaves the letter unchanged when only interpretive findings exist', () => {
-    const findings = findCrossBureauMismatches([
-      row({ id: 'tu', bureau: 'transunion', highCredit: 100 }),
-      row({ id: 'ex', bureau: 'experian', highCredit: 900 }),
-    ]);
-
-    expect(applyCrossBureauFindings(findings, { reasonCodes: ['inaccurate_reporting'] })).toEqual({ reasonCodes: ['inaccurate_reporting'] });
   });
 });

@@ -162,13 +162,6 @@ function buildEnclosuresSection(enclosures?: EvidenceEnclosure[]): string {
 ${enclosureLines.join('\n')}`;
 }
 
-function buildMetro2ViolationsSection(violations?: string[]): string {
-  if (!violations || violations.length === 0) return '';
-  const uniqueViolations = [...new Set(violations.filter(Boolean))];
-  if (uniqueViolations.length === 0) return '';
-  return ['=== METRO 2 COMPLIANCE VIOLATIONS (MUST CITE THESE IN LETTER BODY) ===', 'The AI analysis identified the following specific Metro 2 violations.', 'You MUST integrate these into your dispute explanation section.', '', ...uniqueViolations.map((v, i) => `${i + 1}. ${v}`), '', '=== END OF VIOLATIONS - CITE ALL OF THESE IN YOUR LETTER ==='].join('\n');
-}
-
 export function getReasonDescriptions(reasonCodes: string[]): string {
   return reasonCodes
     .map(code => REASON_CODE_DESCRIPTIONS[code] || code)

@@ -291,21 +291,3 @@ function groupFindings(group: Group): CrossBureauFinding[] {
 export function findCrossBureauMismatches(rows: CrossBureauRow[]): CrossBureauFinding[] {
   return groupAcrossBureaus(rows).flatMap(groupFindings);
 }
-
-/**
- * Adds the objective findings for one bureau to a letter's reasons. Interpretive
- * findings wait for staff review and never enter a letter here.
- */
-export function applyCrossBureauFindings(
-  findings: CrossBureauFinding[],
-  letter: { reasonCodes: string[]; metro2Violations?: string[] },
-): { reasonCodes: string[]; metro2Violations?: string[] } {
-  const objective = findings.filter(item => item.tier === 'objective');
-  if (objective.length === 0) return letter;
-  const sentences = objective.flatMap(item => Object.values(item.letterText));
-  const codes = ['cross_bureau_mismatch', ...(objective.some(item => item.field === 'date_of_first_delinquency') ? ['dofd_cross_bureau_mismatch'] : [])];
-  return {
-    reasonCodes: [...new Set([...letter.reasonCodes, ...codes])],
-    metro2Violations: [...new Set([...(letter.metro2Violations ?? []), ...sentences])],
-  };
-}
