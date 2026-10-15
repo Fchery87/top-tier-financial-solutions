@@ -16,6 +16,7 @@ import type { NegativeItem, Dispute } from './types';
 import { getRiskSeverityColor } from './types';
 import { formatCurrency, formatItemType } from '@/lib/format';
 import { buildCreateDisputeRequestBody, CREATE_DISPUTE_REASON_OPTIONS } from './buildCreateDisputeRequestBody';
+import { HeldFindingsPanel } from './HeldFindingsPanel';
 
 interface DisputesTabProps {
   clientId: string;
@@ -124,6 +125,8 @@ export function DisputesTab({
             </CardContent>
           </Card>
         )}
+
+        <HeldFindingsPanel clientId={clientId} />
 
         <Card className="bg-card border border-border">
           <CardHeader className="flex flex-row items-center justify-between">

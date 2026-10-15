@@ -213,6 +213,7 @@ export async function runDisputeEscalationAutomation(
 
     const createdAt = new Date();
     const persistedDraft = await persistGeneratedDisputeDraft({
+      citedFindings: letterReasons.metro2Violations,
       clientId: dispute.clientId,
       negativeItemId: dispute.negativeItemId,
       bureau: dispute.bureau,

@@ -7,7 +7,7 @@ vi.mock('@/db/client', () => ({ db: {} }));
 function entry(overrides: Partial<DisputeHistoryEntry> = {}): DisputeHistoryEntry {
   return {
     id: 'current', clientId: 'client-1', negativeItemId: 'item-1', priorDisputeId: null,
-    targetRecipient: 'creditor', status: 'sent', sentAt: new Date('2026-01-01T00:00:00Z'), responseReceivedAt: null,
+    targetRecipient: 'creditor', status: 'sent', sentAt: new Date('2026-01-01T00:00:00Z'), responseReceivedAt: null, citedFindings: null,
     ...overrides,
   };
 }

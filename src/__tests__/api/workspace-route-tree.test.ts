@@ -23,6 +23,7 @@ client-outcome-analytics/route.ts
 clients/[id]/audit-report/route.ts
 clients/[id]/billing/route.ts
 clients/[id]/compare-reports/route.ts
+clients/[id]/held-findings/route.ts
 clients/[id]/nudge/route.ts
 clients/[id]/route.ts
 clients/documents/route.ts

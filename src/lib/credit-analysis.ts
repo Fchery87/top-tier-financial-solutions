@@ -34,6 +34,7 @@ import { getAccountBureaus } from './credit-account-bureau-presence';
 import { getNegativeItemPresence } from './credit-negative-item-bureau-presence';
 import { buildCrossBureauDiscrepancies, buildTimelineDiscrepancies } from './credit-analysis-discrepancies';
 import { loadTimelineFindings } from './item-timeline-loader';
+import { collectItemFindings } from './letter-findings';
 import { bureauName, type TimelineFinding } from './item-timeline';
 import { loadComparableTradelines } from './cross-bureau-loader';
 import { normalizeCreditReport } from './credit-report-normalization/normalize-report';
@@ -731,8 +732,40 @@ async function detectBureauDiscrepancies(clientId: string, creditReportId: strin
     await db.insert(bureauDiscrepancies).values(accountDiscrepancies);
   }
   await createReinsertionWorkItems(clientId, timelineFindings);
+  await createHeldFindingWorkItems(clientId, creditReportId);
 
   await detectPiiDiscrepancies(clientId, creditReportId, allProfiles);
+}
+
+/** An item whose only Findings are interpretive waits for staff review before any letter cites it. */
+async function createHeldFindingWorkItems(clientId: string, creditReportId: string): Promise<void> {
+  const items = await db
+    .select({ id: negativeItems.id, creditorName: negativeItems.creditorName })
+    .from(negativeItems)
+    .where(eq(negativeItems.creditReportId, creditReportId));
+  const findings = await collectItemFindings(clientId, items.map(item => item.id));
+  for (const item of items) {
+    const mine = findings.filter(finding => finding.itemId === item.id);
+    if (mine.length === 0 || mine.some(finding => finding.tier === 'objective')) continue;
+    const pending = mine.filter(finding => finding.review === null);
+    if (pending.length === 0) continue;
+    const title = `Review held findings: ${item.creditorName}`;
+    const [existing] = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.clientId, clientId), eq(tasks.title, title), eq(tasks.status, 'todo')))
+      .limit(1);
+    if (existing) continue;
+    await db.insert(tasks).values({
+      id: randomUUID(),
+      clientId,
+      title,
+      description: `${item.creditorName} has ${pending.length} interpretive ${pending.length === 1 ? 'finding' : 'findings'} and no objective one. Approve or drop each in the client's Disputes tab under Held Findings before generating a letter for it.`,
+      priority: 'medium',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
 }
 
 /** A Reinsertion needs staff to ask the client whether the bureau's written notice arrived. */

@@ -12,7 +12,7 @@ import { decideHighRiskClaims, highRiskConfirmationRequiredBody } from '@/lib/hi
 import { decideEscalation, loadDisputeChain } from '@/lib/dispute-escalation-decision';
 import { findAwaitingClientConfirmation } from '@/lib/dispute-evidence';
 import { getResponseReviewRecommendation } from '@/lib/response-review-recommendation';
-import { loadNewFacts } from '@/lib/new-facts';
+import { citedInChain, loadNewFacts } from '@/lib/new-facts';
 import { applyLetterFindings, loadLetterFindings } from '@/lib/letter-findings';
 import { logServerEvent } from '@/lib/server-logger';
 import { letterIdentityIncompleteBody, tryLoadLetterConsumerIdentity } from '@/lib/letter-consumer-identity';
@@ -51,7 +51,12 @@ export async function POST(
     }
 
     const newFacts = currentDispute.outcome === 'verified' && currentDispute.negativeItemId
-      ? await loadNewFacts({ clientId: currentDispute.clientId, negativeItemId: currentDispute.negativeItemId })
+      ? await loadNewFacts({
+        clientId: currentDispute.clientId,
+        negativeItemId: currentDispute.negativeItemId,
+        bureau: currentDispute.bureau,
+        cited: citedInChain(await loadDisputeChain(currentDispute.id)),
+      })
       : [];
     const recommendation = getResponseReviewRecommendation({
       outcome: currentDispute.outcome,
@@ -163,6 +168,7 @@ export async function POST(
     });
 
     const persistedDraft = await persistGeneratedDisputeDraft({
+      citedFindings: letterReasons.metro2Violations,
       clientId: currentDispute.clientId,
       negativeItemId: currentDispute.negativeItemId,
       bureau: currentDispute.bureau,
@@ -193,7 +199,7 @@ export async function POST(
       selection: librarySelection,
       actorUserId: adminUser.id,
       evidencePacketIds: escalationPlan.disputeType === 'new_evidence'
-        ? [...new Set([...evidencePacketIds, ...newFacts.map(fact => fact.evidencePacketId)])]
+        ? [...new Set([...evidencePacketIds, ...newFacts.flatMap(fact => fact.evidencePacketId ? [fact.evidencePacketId] : [])])]
         : evidencePacketIds,
     });
 

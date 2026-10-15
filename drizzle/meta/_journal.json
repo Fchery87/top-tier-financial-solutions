@@ -372,6 +372,13 @@
       "when": 1792016618575,
       "tag": "0052_credit_account_one_bureau_per_row",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792022982653,
+      "tag": "0053_finding_reviews_and_cited_findings",
+      "breakpoints": true
     }
   ]
 }

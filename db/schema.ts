@@ -873,6 +873,7 @@ export const disputes = pgTable('disputes', {
   // NEW: Response clock & evidence tracking
   escalationReadyAt: timestamp('escalation_ready_at'), // When escalation becomes available (30/45 days after sent)
   evidenceDocumentIds: text('evidence_document_ids'), // JSON array of clientDocuments IDs attached as evidence
+  citedFindings: text('cited_findings'), // JSON array of the Finding sentences this letter cited, for New Fact checks
   submissionMethod: text('submission_method'), // certified_mail | online | fax | manual
   submissionRecipient: text('submission_recipient'),
   submissionProofDocumentUrl: text('submission_proof_document_url'),
@@ -982,6 +983,20 @@ export const evidencePackets = pgTable('evidence_packets', {
   index('evidence_packets_createdById_idx').on(table.createdById),
   index('evidence_packets_client_item_idx').on(table.clientId, table.itemKind, table.itemId),
   check('evidence_packets_item_link_check', sql`(${table.itemKind} IS NULL) = (${table.itemId} IS NULL)`),
+]);
+
+// Staff decisions on Interpretive Findings, which enter a letter only once approved.
+export const findingReviews = pgTable('finding_reviews', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  negativeItemId: text('negative_item_id').notNull().references(() => negativeItems.id, { onDelete: 'cascade' }),
+  findingText: text('finding_text').notNull(),
+  decision: text('decision').notNull(), // 'approved' | 'dropped'
+  decidedById: text('decided_by_id').references(() => user.id, { onDelete: 'set null' }),
+  decidedAt: timestamp('decided_at').defaultNow().notNull(),
+}, (table) => [
+  index('finding_reviews_clientId_idx').on(table.clientId),
+  uniqueIndex('finding_reviews_item_text_idx').on(table.negativeItemId, table.findingText),
 ]);
 
 // Deprecated placeholder table. Use disputeLetterLibrary for generation

@@ -50,6 +50,8 @@ export interface PersistGeneratedDisputeDraftInput {
   revisionSource?: LetterRevisionSource;
   /** Confirmed high-risk packets the letter relies on. Unlinked ones are linked to this dispute. */
   evidencePacketIds?: string[];
+  /** The Finding sentences the letter cites; a later letter needs a New Fact beyond these. */
+  citedFindings?: string[];
 }
 
 export interface PersistedDisputeDraft {
@@ -104,6 +106,7 @@ function draftValues(input: PersistGeneratedDisputeDraftInput, now: Date) {
     status: input.status || 'draft',
     round: input.round,
     reasonCodes: JSON.stringify(input.reasonCodes),
+    citedFindings: input.citedFindings && input.citedFindings.length > 0 ? JSON.stringify(input.citedFindings) : null,
     policyDecision: JSON.stringify(input.policyDecision),
     escalationPath: input.escalationPath || null,
     letterContent: input.letterContent,

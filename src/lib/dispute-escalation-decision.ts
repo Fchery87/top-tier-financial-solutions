@@ -13,6 +13,7 @@ export interface DisputeHistoryEntry {
   status: string | null;
   sentAt: Date | null;
   responseReceivedAt: Date | null;
+  citedFindings: string | null;
 }
 
 export type EscalationDecision =
@@ -74,6 +75,7 @@ export async function loadDisputeChain(startDisputeId: string): Promise<DisputeH
         status: disputes.status,
         sentAt: disputes.sentAt,
         responseReceivedAt: disputes.responseReceivedAt,
+        citedFindings: disputes.citedFindings,
       })
       .from(disputes)
       .where(eq(disputes.id, disputeId))

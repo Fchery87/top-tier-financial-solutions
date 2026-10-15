@@ -22,3 +22,15 @@ describe('describeUnusedEvidence', () => {
     ])).toEqual([]);
   });
 });
+
+describe('citedInChain', () => {
+  it('collects every finding cited anywhere in the dispute chain and skips unreadable entries', async () => {
+    const { citedInChain } = await import('@/lib/new-facts');
+    expect(citedInChain([
+      { citedFindings: JSON.stringify(['finding A', 'finding B']) },
+      { citedFindings: null },
+      { citedFindings: 'not json' },
+      { citedFindings: JSON.stringify(['finding B', 'finding C']) },
+    ])).toEqual(new Set(['finding A', 'finding B', 'finding C']));
+  });
+});
