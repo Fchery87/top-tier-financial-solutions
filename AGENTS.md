@@ -48,7 +48,7 @@ This repo uses a single-context domain documentation layout. See `docs/agents/do
 ## JIT Index - Directory Map
 
 ### Package Structure
-- Admin Dashboard: `src/app/admin/` → [see src/app/admin/AGENTS.md](src/app/admin/AGENTS.md)
+- Staff Workspace (casework) and admin config routes: `src/app/workspace/` and `src/app/admin/` → [see src/app/workspace/AGENTS.md](src/app/workspace/AGENTS.md)
 - Client Portal: `src/app/portal/` → [see src/app/portal/AGENTS.md](src/app/portal/AGENTS.md)
 - API Routes: `src/app/api/` → [see src/app/api/AGENTS.md](src/app/api/AGENTS.md)
 - React Components: `src/components/` → [see src/components/AGENTS.md](src/components/AGENTS.md)
