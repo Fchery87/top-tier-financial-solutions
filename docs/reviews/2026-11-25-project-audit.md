@@ -15,7 +15,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **High:** remaining vulnerabilities: 2 high (`undici`, `vite`), 13 moderate, `zod` < 4.6.6 (#1). Now 0 critical, 0 high; 5 moderate left, all in the `@sentry/nextjs` 10.x tree (`glob`/`minimatch`), fixable only by the major Sentry 11 upgrade
 - [x] **High:** newsletter unsubscribe has no auth or rate limit, and it leaks whether an email is subscribed (#2). Now signed token + uniform response + rate limit + zod; new `/unsubscribe` page. Note: no email in the code sends an unsubscribe link yet; use `buildUnsubscribeUrl()` when one is added
 - [x] **High:** no CI pipeline (#3). `.github/workflows/ci.yml` runs lint, typecheck, test and build on PRs and pushes to `main`. Coverage and the Playwright E2E specs are not in CI yet (items 8 and 9)
-- [ ] **High:** all 27 DisputeWizard tests skipped (#4)
+- [x] **High:** all 27 DisputeWizard tests skipped (#4). The skipped tests were stale (old API shapes, loose assertions), not hiding bugs; rewritten as 23 accurate tests for steps 1-2 and navigation. Steps 3-4 remain covered by the existing StepConfigure/StepReview/WizardGenerateControls tests
 - [x] **Medium:** Sentry client reporting likely inactive under Turbopack; `onRequestError` and `global-error.tsx` missing (#5). Client init moved to `instrumentation-client.ts`, `onRequestError` and `global-error.tsx` added, `error.tsx` now reports. Session Replay left off on purpose (PII). Needs a live check that events reach Sentry after deploy
 - [ ] **Medium:** rate limiting not configured locally, so `npm run start` throws (#6)
 - [ ] **Medium:** `env.example` missing 5 variables the code reads (#7)
