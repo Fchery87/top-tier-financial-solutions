@@ -50,7 +50,7 @@ jobs:
       CI: 'true'
       NODE_ENV: development
       # The app reaches Postgres through the proxy using the service hostname.
-      DATABASE_URL: postgresql://e2e:e2e@postgres:5432/e2e
+      DATABASE_URL: postgresql://e2e:e2e@postgres:5432/e2e?sslmode=disable
       NEON_WS_PROXY: localhost:5433/v1
       BETTER_AUTH_SECRET: ci-only-e2e-secret-not-used-anywhere-else-0000
       BETTER_AUTH_URL: http://localhost:3000
