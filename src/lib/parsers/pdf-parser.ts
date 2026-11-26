@@ -1,4 +1,4 @@
-// PDF parsing utility - using pdf-parse v1.x simple API
+// PDF parsing utility - using pdf-parse v2 (PDFParse.getText)
 import { applyExtractedAccountFields } from './account-fields';
 import { detectPdfSource, type SourceDetectionResult } from './detect-source';
 import { parseReportDate } from './report-date';
@@ -6,10 +6,21 @@ import { logServerEvent } from '@/lib/server-logger';
 
 async function parsePdf(buffer: Buffer): Promise<{ text: string; numpages: number }> {
   // Dynamic require to avoid build-time bundling issues
+  // The worker entry must load first: it makes the pdf.js worker statically traceable, so
+  // serverless bundles (Vercel) include it. Without it production fails with
+  // "Setting up fake worker failed" even though local runs work.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse');
-  const result = await pdfParse(buffer);
-  return { text: result.text, numpages: result.numpages };
+  require('pdf-parse/worker');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PDFParse } = require('pdf-parse');
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    // pageJoiner '' stops v2 from inserting "-- n of N --" markers between pages.
+    const result = await parser.getText({ pageJoiner: '' });
+    return { text: result.text, numpages: result.total };
+  } finally {
+    await parser.destroy();
+  }
 }
 
 export interface ParsedCreditData {
