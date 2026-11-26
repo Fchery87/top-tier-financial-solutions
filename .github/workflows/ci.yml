@@ -83,3 +83,12 @@ jobs:
 
       - name: Replay all journaled migrations (strict)
         run: node scripts/replay-migrations.mjs
+
+      - name: Snapshot the replayed schema
+        run: psql -t -A -q -f scripts/schema-snapshot.sql -o replayed-schema.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replayed-schema
+          path: replayed-schema.json
+          retention-days: 14
