@@ -74,8 +74,13 @@ test.describe('workspace command-palette record search', () => {
     await expect(page).toHaveURL(/\/workspace\/clients\/e2e-client-record$/);
 
     await page.goto('/workspace', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Search (open command palette)' }).click();
-    await page.getByRole('textbox', { name: 'Workspace record search' }).fill('fixture');
+    const paletteInput = page.getByRole('textbox', { name: 'Workspace record search' });
+    // The trigger can be clicked before React hydrates; retry until the palette opens.
+    await expect(async () => {
+      await page.getByRole('button', { name: 'Search (open command palette)' }).click();
+      await expect(paletteInput).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20000 });
+    await paletteInput.fill('fixture');
     await page.getByRole('link', { name: /Portal Fixture — Fixture Card Services/ }).click();
     await expect(page).toHaveURL(/\/workspace\/disputes\?dispute=e2e-dispute-record$/);
   });
