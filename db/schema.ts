@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, serial, text, timestamp, boolean, integer, index, uniqueIndex, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, serial, text, timestamp, boolean, integer, index, uniqueIndex, check, uuid, varchar, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations, sql } from "drizzle-orm";
 
 // Enums
@@ -152,80 +152,95 @@ export const adminActivityLog = pgTable('admin_activity_log', {
 ]);
 
 // Consultation requests (contact/lead form submissions)
+// The six tables below predate the migration journal. They are declared to match
+// the shape production actually has: uuid ids, varchar columns, NOT NULL without
+// database defaults (writers must supply every value), and the ix_* indexes.
 export const consultationRequests = pgTable('consultation_requests', {
-  id: text('id').primaryKey(), // UUID
-  firstName: text('first_name').notNull(),
-  lastName: text('last_name').notNull(),
-  email: text('email').notNull(),
-  phoneNumber: text('phone_number'),
-  message: text('message'),
-  sourcePageSlug: text('source_page_slug'),
-  status: consultationStatusEnum('status').default('new'), // 'new' | 'contacted' | 'qualified' | 'archived'
-  requestedAt: timestamp('requested_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
+  id: uuid('id').primaryKey(),
+  firstName: varchar('first_name', { length: 255 }).notNull(),
+  lastName: varchar('last_name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phoneNumber: varchar('phone_number', { length: 50 }),
+  message: varchar('message'),
+  sourcePageSlug: varchar('source_page_slug', { length: 255 }),
+  status: consultationStatusEnum('status'), // 'new' | 'contacted' | 'qualified' | 'archived'
+  requestedAt: timestamp('requested_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+}, (table) => [
+  index('ix_consultation_requests_email').on(table.email),
+  index('ix_consultation_requests_status').on(table.status),
+]);
 
 // Testimonials
 export const testimonials = pgTable('testimonials', {
-  id: text('id').primaryKey(), // UUID
-  authorName: text('author_name').notNull(),
-  authorLocation: text('author_location'),
-  quote: text('quote').notNull(),
-  orderIndex: integer('order_index').default(0),
-  isApproved: boolean('is_approved').default(false),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
+  id: uuid('id').primaryKey(),
+  authorName: varchar('author_name', { length: 255 }).notNull(),
+  authorLocation: varchar('author_location', { length: 255 }),
+  quote: varchar('quote').notNull(),
+  orderIndex: integer('order_index').notNull(),
+  isApproved: boolean('is_approved').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+}, (table) => [
+  index('ix_testimonials_order_index').on(table.orderIndex),
+]);
 
 // FAQ Items
 export const faqItems = pgTable('faq_items', {
-  id: text('id').primaryKey(), // UUID
-  question: text('question').notNull(),
-  answer: text('answer').notNull(),
-  displayOrder: integer('display_order').default(0),
-  isPublished: boolean('is_published').default(true),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
+  id: uuid('id').primaryKey(),
+  question: varchar('question', { length: 500 }).notNull(),
+  answer: varchar('answer').notNull(),
+  displayOrder: integer('display_order').notNull(),
+  isPublished: boolean('is_published').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+}, (table) => [
+  index('ix_faq_items_display_order').on(table.displayOrder),
+]);
 
 // Site pages/content
 export const pages = pgTable('pages', {
-  id: text('id').primaryKey(), // UUID
-  slug: text('slug').notNull(),
-  title: text('title').notNull(),
-  heroHeadline: text('hero_headline'),
-  heroSubheadline: text('hero_subheadline'),
-  mainContentJson: text('main_content_json'),
-  ctaText: text('cta_text'),
-  ctaLink: text('cta_link'),
-  metaTitle: text('meta_title'),
-  metaDescription: text('meta_description'),
-  isPublished: boolean('is_published').default(true),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
+  id: uuid('id').primaryKey(),
+  slug: varchar('slug', { length: 255 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  heroHeadline: varchar('hero_headline', { length: 500 }),
+  heroSubheadline: varchar('hero_subheadline'),
+  mainContentJson: varchar('main_content_json'),
+  ctaText: varchar('cta_text', { length: 255 }),
+  ctaLink: varchar('cta_link', { length: 2048 }),
+  metaTitle: varchar('meta_title', { length: 255 }),
+  metaDescription: varchar('meta_description'),
+  isPublished: boolean('is_published').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+}, (table) => [
+  uniqueIndex('ix_pages_slug').on(table.slug),
+]);
 
 // Legal disclaimers
 export const disclaimers = pgTable('disclaimers', {
-  id: text('id').primaryKey(), // UUID
-  name: text('name').notNull(),
-  content: text('content').notNull(),
-  displayHint: text('display_hint'),
-  isActive: boolean('is_active').default(true),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
+  id: uuid('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  content: varchar('content').notNull(),
+  displayHint: varchar('display_hint', { length: 255 }),
+  isActive: boolean('is_active').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+}, (table) => [
+  uniqueIndex('ix_disclaimers_name').on(table.name),
+]);
 
 // Services
 export const services = pgTable('services', {
-  id: text('id').primaryKey(), // UUID
-  name: text('name').notNull(),
-  description: text('description'),
-  orderIndex: integer('order_index').default(0),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
-
+  id: uuid('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: varchar('description').notNull(),
+  orderIndex: integer('order_index').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+}, (table) => [
+  uniqueIndex('ix_services_name').on(table.name),
+]);
 // Consultation bookings (for tracking Cal.com bookings)
 export const bookings = pgTable('bookings', {
   id: serial('id').primaryKey(),
@@ -450,7 +465,7 @@ export const identityDocTypeEnum = pgEnum('identity_doc_type', [
 export const clients = pgTable('clients', {
   id: text('id').primaryKey(),
   userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
-  leadId: text('lead_id').references(() => consultationRequests.id, { onDelete: 'set null' }),
+  leadId: uuid('lead_id').references(() => consultationRequests.id, { onDelete: 'set null' }),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   email: text('email').notNull(),

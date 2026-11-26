@@ -379,6 +379,13 @@
       "when": 1792022982653,
       "tag": "0053_finding_reviews_and_cited_findings",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1795724484944,
+      "tag": "0054_align_legacy_tables",
+      "breakpoints": true
     }
   ]
 }
