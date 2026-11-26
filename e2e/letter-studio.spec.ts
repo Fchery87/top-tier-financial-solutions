@@ -78,7 +78,9 @@ test.describe('Letter Studio browser journeys', () => {
 
     await textarea.fill('I will pursue legal action if needed.');
     await expect(page.getByText('Review warnings before saving')).toBeVisible();
-    await page.getByLabel('I reviewed these warnings and want to save this letter.').check({ force: true });
+    const acknowledge = page.getByLabel('I reviewed these warnings and want to save this letter.');
+    await acknowledge.scrollIntoViewIfNeeded();
+    await acknowledge.check();
     await page.getByRole('button', { name: 'Save letter' }).click({ force: true });
     await expect.poll(() => state.saveRequests.length).toBe(1);
     expect(state.saveRequests[0]).toMatchObject({ acknowledgeWarnings: true });
