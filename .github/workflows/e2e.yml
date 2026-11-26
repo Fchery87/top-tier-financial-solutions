@@ -82,6 +82,24 @@ jobs:
             psql -h localhost -U e2e -d e2e -q -f "drizzle/$tag.sql" 2>> /tmp/migration-errors.txt || true
           done < /tmp/migrations.txt
           grep 'ERROR' /tmp/migration-errors.txt | grep -v 'already exists' && { echo 'Unexpected migration errors above'; exit 1; } || echo 'Migrations applied (ignoring already-exists)'
+      - name: Probe database connectivity through wsproxy
+        continue-on-error: true
+        run: |
+          node -e "
+          const { Pool, neonConfig } = require('@neondatabase/serverless');
+          neonConfig.wsProxy = () => process.env.NEON_WS_PROXY;
+          neonConfig.useSecureWebSocket = false;
+          neonConfig.pipelineTLS = false;
+          neonConfig.pipelineConnect = false;
+          console.log('global WebSocket:', typeof WebSocket);
+          const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+          pool.on('error', e => console.log('pool error:', e && e.message));
+          pool.query('select 1 as ok, count(*) as tables from information_schema.tables where table_schema = \'public\'')
+            .then(r => { console.log('probe OK', JSON.stringify(r.rows)); return pool.end(); })
+            .catch(e => { console.log('probe FAILED:', e && (e.message || e), e && e.code); process.exit(0); });
+          "
+          docker ps --format '{{.Names}} {{.Image}}'
+          for c in $(docker ps --format '{{.Names}}' | grep -i wsproxy); do echo "--- logs $c"; docker logs "$c" 2>&1 | tail -30; done
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
