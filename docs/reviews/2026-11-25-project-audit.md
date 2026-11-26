@@ -14,7 +14,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 **Still open from the audit** (details in [section 3](#3-open-items-prioritized)):
 - [x] **High:** remaining vulnerabilities: 2 high (`undici`, `vite`), 13 moderate, `zod` < 4.6.6 (#1). Now 0 critical, 0 high; 5 moderate left, all in the `@sentry/nextjs` 10.x tree (`glob`/`minimatch`), fixable only by the major Sentry 11 upgrade
 - [x] **High:** newsletter unsubscribe has no auth or rate limit, and it leaks whether an email is subscribed (#2). Now signed token + uniform response + rate limit + zod; new `/unsubscribe` page. Note: no email in the code sends an unsubscribe link yet; use `buildUnsubscribeUrl()` when one is added
-- [ ] **High:** no CI pipeline (#3)
+- [x] **High:** no CI pipeline (#3). `.github/workflows/ci.yml` runs lint, typecheck, test and build on PRs and pushes to `main`. Coverage and the Playwright E2E specs are not in CI yet (items 8 and 9)
 - [ ] **High:** all 27 DisputeWizard tests skipped (#4)
 - [ ] **Medium:** Sentry client reporting likely inactive under Turbopack; `onRequestError` and `global-error.tsx` missing (#5)
 - [ ] **Medium:** rate limiting not configured locally, so `npm run start` throws (#6)
