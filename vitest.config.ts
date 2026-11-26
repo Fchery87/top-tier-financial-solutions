@@ -17,7 +17,20 @@ export default defineConfig({
     exclude: ['node_modules', '.next', 'dist'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'json-summary'],
+      // Count every source file, not only the ones a test happens to import,
+      // so the percentages are honest.
+      include: ['src/**/*.{ts,tsx}'],
+      // Ratchet: set a few points below the measured baseline (2026-11-25:
+      // statements 42.3, branches 38.5, functions 42.7, lines 43.8) so coverage
+      // cannot regress. Raise these as coverage grows; the long-term goal in
+      // validation.config.json is 70 minimum / 80 target.
+      thresholds: {
+        statements: 40,
+        branches: 36,
+        functions: 40,
+        lines: 41,
+      },
       exclude: [
         'node_modules/',
         '.next/',
