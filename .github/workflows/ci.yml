@@ -84,6 +84,13 @@ jobs:
       - name: Replay all journaled migrations (strict)
         run: node scripts/replay-migrations.mjs
 
+      - name: Re-applying the latest migration on the aligned schema is a no-op
+        run: |
+          psql -t -A -q -f scripts/schema-snapshot.sql -o before.json
+          psql -v ON_ERROR_STOP=1 -q -f drizzle/0054_align_legacy_tables.sql
+          psql -t -A -q -f scripts/schema-snapshot.sql -o after.json
+          diff before.json after.json && echo 'No schema change on re-apply'
+
       - name: Snapshot the replayed schema
         run: psql -t -A -q -f scripts/schema-snapshot.sql -o replayed-schema.json
 
