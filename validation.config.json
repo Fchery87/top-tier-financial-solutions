@@ -42,6 +42,5 @@
     "unused-vars": "low",
     "missing-types": "medium"
   },
-  "taskHub": "VALIDATION_TASKS.md",
   "reportOutput": "validation-report.json"
 }
