@@ -21,7 +21,7 @@ CREATE TABLE "client_identity_documents" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "inquiry_disputes" (
+CREATE TABLE IF NOT EXISTS "inquiry_disputes" (
 	"id" text PRIMARY KEY NOT NULL,
 	"client_id" text NOT NULL,
 	"credit_report_id" text,
@@ -51,7 +51,7 @@ CREATE TABLE "letter_approvals" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "personal_info_disputes" (
+CREATE TABLE IF NOT EXISTS "personal_info_disputes" (
 	"id" text PRIMARY KEY NOT NULL,
 	"client_id" text NOT NULL,
 	"credit_report_id" text,
@@ -100,27 +100,27 @@ ALTER TABLE "tasks" ADD COLUMN "is_blocking" boolean DEFAULT false;--> statement
 ALTER TABLE "client_feedback" ADD CONSTRAINT "client_feedback_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "client_identity_documents" ADD CONSTRAINT "client_identity_documents_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "client_identity_documents" ADD CONSTRAINT "client_identity_documents_uploaded_by_id_user_id_fk" FOREIGN KEY ("uploaded_by_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "inquiry_disputes" ADD CONSTRAINT "inquiry_disputes_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "inquiry_disputes" ADD CONSTRAINT "inquiry_disputes_credit_report_id_credit_reports_id_fk" FOREIGN KEY ("credit_report_id") REFERENCES "public"."credit_reports"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "inquiry_disputes" ADD CONSTRAINT "inquiry_disputes_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "inquiry_disputes" ADD CONSTRAINT "inquiry_disputes_credit_report_id_credit_reports_id_fk" FOREIGN KEY ("credit_report_id") REFERENCES "public"."credit_reports"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
 ALTER TABLE "letter_approvals" ADD CONSTRAINT "letter_approvals_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "letter_approvals" ADD CONSTRAINT "letter_approvals_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "public"."disputes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "letter_approvals" ADD CONSTRAINT "letter_approvals_batch_id_dispute_batches_id_fk" FOREIGN KEY ("batch_id") REFERENCES "public"."dispute_batches"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_info_disputes" ADD CONSTRAINT "personal_info_disputes_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_info_disputes" ADD CONSTRAINT "personal_info_disputes_credit_report_id_credit_reports_id_fk" FOREIGN KEY ("credit_report_id") REFERENCES "public"."credit_reports"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "personal_info_disputes" ADD CONSTRAINT "personal_info_disputes_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "personal_info_disputes" ADD CONSTRAINT "personal_info_disputes_credit_report_id_credit_reports_id_fk" FOREIGN KEY ("credit_report_id") REFERENCES "public"."credit_reports"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
 ALTER TABLE "sla_instances" ADD CONSTRAINT "sla_instances_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sla_instances" ADD CONSTRAINT "sla_instances_definition_id_sla_definitions_id_fk" FOREIGN KEY ("definition_id") REFERENCES "public"."sla_definitions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "client_feedback_clientId_idx" ON "client_feedback" USING btree ("client_id");--> statement-breakpoint
 CREATE INDEX "client_feedback_context_idx" ON "client_feedback" USING btree ("context");--> statement-breakpoint
 CREATE INDEX "client_identity_documents_clientId_idx" ON "client_identity_documents" USING btree ("client_id");--> statement-breakpoint
-CREATE INDEX "inquiry_disputes_clientId_idx" ON "inquiry_disputes" USING btree ("client_id");--> statement-breakpoint
-CREATE INDEX "inquiry_disputes_creditReportId_idx" ON "inquiry_disputes" USING btree ("credit_report_id");--> statement-breakpoint
-CREATE INDEX "inquiry_disputes_bureau_idx" ON "inquiry_disputes" USING btree ("bureau");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "inquiry_disputes_clientId_idx" ON "inquiry_disputes" USING btree ("client_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "inquiry_disputes_creditReportId_idx" ON "inquiry_disputes" USING btree ("credit_report_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "inquiry_disputes_bureau_idx" ON "inquiry_disputes" USING btree ("bureau");--> statement-breakpoint
 CREATE INDEX "letter_approvals_clientId_idx" ON "letter_approvals" USING btree ("client_id");--> statement-breakpoint
 CREATE INDEX "letter_approvals_disputeId_idx" ON "letter_approvals" USING btree ("dispute_id");--> statement-breakpoint
 CREATE INDEX "letter_approvals_batchId_idx" ON "letter_approvals" USING btree ("batch_id");--> statement-breakpoint
-CREATE INDEX "personal_info_disputes_clientId_idx" ON "personal_info_disputes" USING btree ("client_id");--> statement-breakpoint
-CREATE INDEX "personal_info_disputes_creditReportId_idx" ON "personal_info_disputes" USING btree ("credit_report_id");--> statement-breakpoint
-CREATE INDEX "personal_info_disputes_bureau_idx" ON "personal_info_disputes" USING btree ("bureau");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "personal_info_disputes_clientId_idx" ON "personal_info_disputes" USING btree ("client_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "personal_info_disputes_creditReportId_idx" ON "personal_info_disputes" USING btree ("credit_report_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "personal_info_disputes_bureau_idx" ON "personal_info_disputes" USING btree ("bureau");--> statement-breakpoint
 CREATE INDEX "sla_definitions_stage_idx" ON "sla_definitions" USING btree ("stage");--> statement-breakpoint
 CREATE INDEX "sla_definitions_isActive_idx" ON "sla_definitions" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "sla_instances_clientId_idx" ON "sla_instances" USING btree ("client_id");--> statement-breakpoint
