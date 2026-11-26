@@ -61,6 +61,8 @@ export function TwoFactorSettings({ enabled, required, enrollmentRequired, conti
       if (action === 'enable') {
         const result = await twoFactor.enable({ password });
         if (result.error || !result.data) return setError(describeTwoFactorError(result.error));
+        // better-auth 1.7+ can also return an email-OTP result; this app only enrolls TOTP authenticator apps.
+        if (result.data.method !== 'totp') return setError('Authenticator setup is unavailable. Please contact support.');
         setStep({ kind: 'scan', totpURI: result.data.totpURI, backupCodes: result.data.backupCodes });
       } else if (action === 'regenerate') {
         const result = await twoFactor.generateBackupCodes({ password });
