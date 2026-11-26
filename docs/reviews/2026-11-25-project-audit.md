@@ -16,7 +16,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **High:** newsletter unsubscribe has no auth or rate limit, and it leaks whether an email is subscribed (#2). Now signed token + uniform response + rate limit + zod; new `/unsubscribe` page. Note: no email in the code sends an unsubscribe link yet; use `buildUnsubscribeUrl()` when one is added
 - [x] **High:** no CI pipeline (#3). `.github/workflows/ci.yml` runs lint, typecheck, test and build on PRs and pushes to `main`. Coverage and the Playwright E2E specs are not in CI yet (items 8 and 9)
 - [ ] **High:** all 27 DisputeWizard tests skipped (#4)
-- [ ] **Medium:** Sentry client reporting likely inactive under Turbopack; `onRequestError` and `global-error.tsx` missing (#5)
+- [x] **Medium:** Sentry client reporting likely inactive under Turbopack; `onRequestError` and `global-error.tsx` missing (#5). Client init moved to `instrumentation-client.ts`, `onRequestError` and `global-error.tsx` added, `error.tsx` now reports. Session Replay left off on purpose (PII). Needs a live check that events reach Sentry after deploy
 - [ ] **Medium:** rate limiting not configured locally, so `npm run start` throws (#6)
 - [ ] **Medium:** `env.example` missing 5 variables the code reads (#7)
 - [ ] **Medium:** 6 Playwright E2E specs not run (#8)
