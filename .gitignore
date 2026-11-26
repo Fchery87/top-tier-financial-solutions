@@ -202,3 +202,10 @@ drizzle-kit.log
 /*.jpeg
 /*.gif
 /*.svg
+
+# Local agent/tool artifacts (never commit)
+.pi-subagents/
+.harness/
+.audit/
+.scans/
+.codex
