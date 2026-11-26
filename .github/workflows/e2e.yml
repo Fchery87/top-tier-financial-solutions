@@ -21,7 +21,8 @@ concurrency:
 jobs:
   e2e:
     name: Playwright (chromium)
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.58 does not support the Ubuntu 26.04 that ubuntu-latest now maps to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     services:
       postgres:
