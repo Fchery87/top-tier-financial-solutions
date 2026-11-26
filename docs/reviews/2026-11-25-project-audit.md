@@ -17,7 +17,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **High:** no CI pipeline (#3). `.github/workflows/ci.yml` runs lint, typecheck, test and build on PRs and pushes to `main`. Coverage and the Playwright E2E specs are not in CI yet (items 8 and 9)
 - [x] **High:** all 27 DisputeWizard tests skipped (#4). The skipped tests were stale (old API shapes, loose assertions), not hiding bugs; rewritten as 23 accurate tests for steps 1-2 and navigation. Steps 3-4 remain covered by the existing StepConfigure/StepReview/WizardGenerateControls tests
 - [x] **Medium:** Sentry client reporting likely inactive under Turbopack; `onRequestError` and `global-error.tsx` missing (#5). Client init moved to `instrumentation-client.ts`, `onRequestError` and `global-error.tsx` added, `error.tsx` now reports. Session Replay left off on purpose (PII). Needs a live check that events reach Sentry after deploy
-- [ ] **Medium:** rate limiting not configured locally, so `npm run start` throws (#6)
+- [x] **Medium:** rate limiting not configured locally, so `npm run start` throws (#6). The throw is an intentional production guard, so code is unchanged; `env.example` now documents the local opt-in. Production (Vercel) still needs the Upstash keys, which I cannot verify from here
 - [x] **Medium:** `env.example` missing 5 variables the code reads (#7). Actually 4 were missing (`RATE_LIMIT_DISABLED` was already documented, commented out): added `CRON_SECRET`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ZHIPU_API_KEY`, plus the `GOOGLE_AI_API_KEY`/`GEMINI_API_KEY` fallback
 - [ ] **Medium:** 6 Playwright E2E specs not run (#8)
 - [ ] **Medium:** coverage thresholds not enforced (#9)
