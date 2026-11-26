@@ -51,3 +51,35 @@ jobs:
 
       - name: Build
         run: npm run build
+  migrations:
+    name: Migrations replay on an empty database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: ci
+      PGPASSWORD: ci
+      PGDATABASE: ci
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Replay all journaled migrations (strict)
+        run: node scripts/replay-migrations.mjs
