@@ -37,8 +37,8 @@ CREATE TABLE "service_engagements" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "disputes" ADD COLUMN "analysis_confidence" integer;--> statement-breakpoint
-ALTER TABLE "disputes" ADD COLUMN "auto_selected" boolean DEFAULT false;--> statement-breakpoint
+ALTER TABLE "disputes" ADD COLUMN IF NOT EXISTS "analysis_confidence" integer;--> statement-breakpoint
+ALTER TABLE "disputes" ADD COLUMN IF NOT EXISTS "auto_selected" boolean DEFAULT false;--> statement-breakpoint
 ALTER TABLE "disputes" ADD COLUMN "response_channel" text;--> statement-breakpoint
 ALTER TABLE "disputes" ADD COLUMN "score_impact" integer;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "dispute_outcomes" ADD CONSTRAINT "dispute_outcomes_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "public"."disputes"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
