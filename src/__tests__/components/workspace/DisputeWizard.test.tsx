@@ -1,666 +1,369 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DisputeWizardPage from '@/app/workspace/disputes/wizard/page';
 
 /**
- * Comprehensive component tests for Dispute Wizard
- * Tests cover: rendering, step navigation, validation, user interactions, and complete flows
+ * Component tests for the Dispute Wizard page (steps 1 and 2 plus navigation).
  *
- * Coverage areas:
- * - Component rendering and initialization
- * - Step 1: Client selection with search
- * - Step 2: Item selection (tradelines, personal info, inquiries)
- * - Step 3: Configuration (bureaus, methodologies, reason codes)
- * - Step 4: Review and submission
- * - Validation at each step
- * - Error handling and recovery
- * - Draft save/load functionality
- * - AI analysis integration
+ * The wizard talks to these endpoints, which are stubbed by URL below:
+ *  - GET /api/workspace/clients?...            -> { items: Client[] }
+ *  - GET /api/workspace/clients/:id            -> { negative_items, personal_info_disputes, inquiry_disputes, credit_reports }
+ * Everything else the wizard fetches on load (reason codes, methodologies,
+ * triage, discrepancies, evidence) gets an empty `{}` response.
+ *
+ * Steps 3 and 4 are covered by StepConfigure, StepReview and
+ * WizardGenerateControls tests in src/components/workspace/dispute-wizard/__tests__.
  */
 
-// Mock fetch for API calls
-global.fetch = vi.fn();
-
-// Mock data
 const mockClients = [
-  {
-    id: 'client-1',
-    first_name: 'John',
-    last_name: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '555-1234',
-    status: 'active',
-  },
-  {
-    id: 'client-2',
-    first_name: 'Jane',
-    last_name: 'Smith',
-    email: 'jane.smith@example.com',
-    phone: '555-5678',
-    status: 'active',
-  },
-  {
-    id: 'client-3',
-    first_name: 'Bob',
-    last_name: 'Johnson',
-    email: 'bob.johnson@example.com',
-    phone: '555-9012',
-    status: 'inactive',
-  },
+  { id: 'client-1', first_name: 'John', last_name: 'Doe', email: 'john.doe@example.com', status: 'active' },
+  { id: 'client-2', first_name: 'Jane', last_name: 'Smith', email: 'jane.smith@example.com', status: 'active' },
 ];
 
 const mockNegativeItems = [
   {
     id: 'item-1',
     creditor_name: 'Capital One',
-    original_creditor: null,
-    account_number: '****1234',
     item_type: 'delinquency',
-    amount: 5000,
-    date_reported: '2023-01-15',
-    bureau: 'transunion',
+    amount: 500000, // amounts are stored in cents; the UI formats them as dollars
+    risk_severity: 'high',
     on_transunion: true,
     on_experian: false,
     on_equifax: false,
-    risk_severity: 'high',
-    recommended_action: 'dispute',
   },
   {
     id: 'item-2',
     creditor_name: 'Chase',
-    original_creditor: null,
-    account_number: '****5678',
     item_type: 'collection',
-    amount: 1500,
-    date_reported: '2023-06-20',
-    bureau: 'experian',
+    amount: 150000,
+    risk_severity: 'medium',
     on_transunion: false,
     on_experian: true,
     on_equifax: true,
-    risk_severity: 'medium',
-    recommended_action: 'dispute',
   },
 ];
 
-const mockInquiries = [
-  {
-    id: 'inq-1',
-    creditor_name: 'Discover',
-    bureau: 'transunion',
-    inquiry_date: '2025-01-10',
-    inquiry_type: 'hard',
-    is_past_fcra_limit: false,
-    days_since_inquiry: 12,
-  },
-];
+const mockClientDetail = {
+  negative_items: mockNegativeItems,
+  personal_info_disputes: [{ id: 'pi-1', bureau: 'transunion', type: 'address', value: '123 Main St' }],
+  inquiry_disputes: [],
+  credit_reports: [],
+};
 
-const mockPersonalInfo = [
-  {
-    id: 'pi-1',
-    bureau: 'transunion',
-    type: 'address',
-    value: '123 Main St, Anytown, CA 90210',
-  },
-];
+type Responder = (url: string) => { ok: boolean; status?: number; body: unknown };
 
-const _mockAIAnalysisResults = [
-  {
-    itemId: 'item-1',
-    creditorName: 'Capital One',
-    itemType: 'delinquency',
-    suggestedMethodology: 'metro2_compliance',
-    autoReasonCodes: ['metro2_violation', 'verification_required'],
-    metro2Violations: ['Missing Date of First Delinquency'],
-    fcraIssues: ['Incomplete reporting'],
-    confidence: 0.85,
-    analysisNotes: 'High confidence Metro 2 violation detected',
-  },
-];
+const fetchMock = vi.fn();
 
-describe.skip('DisputeWizard - Component Rendering', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock successful API response for clients
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: mockClients }),
-    });
+function jsonResponse({ ok, status = ok ? 200 : 500, body }: ReturnType<Responder>) {
+  return Promise.resolve({ ok, status, json: async () => body });
+}
+
+function stubApi(overrides: Responder = () => ({ ok: true, body: {} })) {
+  fetchMock.mockImplementation((input: string) => {
+    const url = String(input);
+    if (/\/api\/workspace\/clients\/[^/?]+$/.test(url)) return jsonResponse({ ok: true, body: mockClientDetail });
+    if (url.startsWith('/api/workspace/clients?')) return jsonResponse({ ok: true, body: { items: mockClients } });
+    return jsonResponse(overrides(url));
   });
+}
 
-  it('should render the wizard with step 1 (Client Selection) by default', async () => {
-    render(<DisputeWizardPage />);
+function clientRequests() {
+  return fetchMock.mock.calls.map(([url]) => String(url)).filter((url) => url.startsWith('/api/workspace/clients?'));
+}
 
-    await waitFor(() => {
-      expect(screen.getByText(/Select Client/i)).toBeInTheDocument();
-    });
-  });
+async function selectClientAndContinue(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByTestId('wizard-client-client-1'));
+  await user.click(screen.getByRole('button', { name: /next/i }));
+  await screen.findByText(/Select Dispute Items/i);
+}
 
-  it('should display all 4 wizard steps in progress bar', async () => {
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Client/i)).toBeInTheDocument();
-      expect(screen.getByText(/Items/i)).toBeInTheDocument();
-      expect(screen.getByText(/Configure/i)).toBeInTheDocument();
-      expect(screen.getByText(/Review/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should load clients from API on mount', async () => {
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/workspace/clients'),
-        expect.any(Object)
-      );
-    });
-  });
-
-  it('should display loading state while fetching clients', () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
-      () => new Promise(() => {}) // Never resolves
-    );
-
-    render(<DisputeWizardPage />);
-
-    expect(screen.getByText(/Loading/i) || screen.getByRole('status')).toBeInTheDocument();
-  });
-
-  it('should handle API error gracefully', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      json: async () => ({ error: 'Failed to fetch clients' }),
-    });
-
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/error/i) || screen.getByText(/failed/i)).toBeInTheDocument();
-    });
-  });
+beforeEach(() => {
+  fetchMock.mockReset();
+  vi.stubGlobal('fetch', fetchMock);
+  window.localStorage.clear();
+  stubApi();
+  vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
-describe.skip('DisputeWizard - Step 1: Client Selection', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: mockClients }),
-    });
-  });
-
-  it('should render client list with name, email, and status', async () => {
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-      expect(screen.getByText(/john.doe@example.com/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should display search input for filtering clients', async () => {
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      const searchInput = screen.getByPlaceholderText(/search/i);
-      expect(searchInput).toBeInTheDocument();
-    });
-  });
-
-  it('should filter clients by name when searching', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-    });
-
-    const searchInput = screen.getByPlaceholderText(/search/i);
-    await user.type(searchInput, 'jane');
-
-    await waitFor(() => {
-      expect(screen.getByText(/Jane Smith/i)).toBeInTheDocument();
-      expect(screen.queryByText(/John Doe/i)).not.toBeInTheDocument();
-    });
-  });
-
-  it('should filter clients by email when searching', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-    });
-
-    const searchInput = screen.getByPlaceholderText(/search/i);
-    await user.type(searchInput, 'bob.johnson');
-
-    await waitFor(() => {
-      expect(screen.getByText(/Bob Johnson/i)).toBeInTheDocument();
-      expect(screen.queryByText(/John Doe/i)).not.toBeInTheDocument();
-    });
-  });
-
-  it('should select a client when clicked', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-    });
-
-    // Click on client card
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) {
-      await user.click(clientCard);
-    }
-
-    // Should highlight selected client (check for visual indicator)
-    await waitFor(() => {
-      expect(clientCard).toHaveClass(/selected|ring|border-primary/);
-    });
-  });
-
-  it('should disable Next button when no client is selected', async () => {
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      expect(nextButton).toBeDisabled();
-    });
-  });
-
-  it('should enable Next button when client is selected', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-    });
-
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) {
-      await user.click(clientCard);
-    }
-
-    await waitFor(() => {
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      expect(nextButton).not.toBeDisabled();
-    });
-  });
-
-  it('should proceed to step 2 when Next is clicked', async () => {
-    const user = userEvent.setup();
-
-    // Mock items API call
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      if (url.includes('/clients')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockClients }),
-        });
-      }
-      if (url.includes('/negative-items')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockNegativeItems }),
-        });
-      }
-      if (url.includes('/inquiries')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockInquiries }),
-        });
-      }
-      if (url.includes('/personal-info')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockPersonalInfo }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-    });
-
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) {
-      await user.click(clientCard);
-    }
-
-    const nextButton = screen.getByRole('button', { name: /next/i });
-    await user.click(nextButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Select Items/i) || screen.getByText(/Tradelines/i)).toBeInTheDocument();
-    });
-  });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
-describe.skip('DisputeWizard - Step 2: Item Selection', () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-
-    // Mock API responses
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      if (url.includes('/clients')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockClients }),
-        });
-      }
-      if (url.includes('/negative-items')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockNegativeItems }),
-        });
-      }
-      if (url.includes('/inquiries')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockInquiries }),
-        });
-      }
-      if (url.includes('/personal-info')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockPersonalInfo }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-  });
-
-  it('should display tabs for tradelines, personal info, and inquiries', async () => {
-    const user = userEvent.setup();
+describe('DisputeWizard - Component Rendering', () => {
+  it('starts on step 1 (Select Client)', async () => {
     render(<DisputeWizardPage />);
 
-    // Navigate to step 2
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Tradelines/i) || screen.getByRole('tab', { name: /tradelines/i })).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Select Client')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Dispute Wizard/i })).toBeInTheDocument();
   });
 
-  it('should load negative items for selected client', async () => {
-    const user = userEvent.setup();
+  it('shows all 4 wizard steps in the progress bar', async () => {
     render(<DisputeWizardPage />);
+    await screen.findByText('Select Client');
 
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/negative-items'),
-        expect.any(Object)
-      );
-    });
-  });
-
-  it('should display negative items with creditor name and amount', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Capital One/i)).toBeInTheDocument();
-      expect(screen.getByText(/5000/i) || screen.getByText(/\$5,000/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should allow selecting multiple items via checkboxes', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Capital One/i)).toBeInTheDocument();
-    });
-
-    const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes.length).toBeGreaterThan(0);
-
-    await user.click(checkboxes[0]);
-    expect(checkboxes[0]).toBeChecked();
-  });
-
-  it('should disable Next button when no items are selected', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Capital One/i)).toBeInTheDocument();
-    });
-
-    const nextButton = screen.getByRole('button', { name: /next/i });
-    expect(nextButton).toBeDisabled();
-  });
-
-  it('should show selected item count', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Capital One/i)).toBeInTheDocument();
-    });
-
-    const checkboxes = screen.getAllByRole('checkbox').filter(cb => !cb.hasAttribute('aria-label'));
-    await user.click(checkboxes[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText(/1.*selected/i) || screen.getByText(/selected.*1/i)).toBeInTheDocument();
-    });
-  });
-});
-
-describe.skip('DisputeWizard - Validation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: mockClients }),
-    });
-  });
-
-  it('should validate step 1 before allowing progression', async () => {
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      expect(nextButton).toBeDisabled();
-    });
-  });
-
-  it('should show validation error if trying to proceed without selection', async () => {
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
-    });
-
-    const nextButton = screen.getByRole('button', { name: /next/i });
-
-    // Button should be disabled, so clicking it should not trigger navigation
-    expect(nextButton).toBeDisabled();
-  });
-});
-
-describe.skip('DisputeWizard - Error Handling', () => {
-  it('should display error message when client fetch fails', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('Network error')
-    );
-
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/error/i) || screen.getByText(/failed/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should allow retry after error', async () => {
-    const user = userEvent.setup();
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new Error('Network error')
-    ).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ data: mockClients }),
-    });
-
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/error/i) || screen.getByText(/failed/i)).toBeInTheDocument();
-    });
-
-    const retryButton = screen.queryByRole('button', { name: /retry/i });
-    if (retryButton) {
-      await user.click(retryButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-      });
+    for (const name of ['Client', 'Items', 'Configure', 'Review']) {
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
   });
-});
 
-describe.skip('DisputeWizard - Navigation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      if (url.includes('/clients')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockClients }),
-        });
-      }
-      if (url.includes('/negative-items')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: mockNegativeItems }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ data: [] }) });
+  it('loads active clients from the API on mount', async () => {
+    render(<DisputeWizardPage />);
+
+    await waitFor(() => {
+      expect(clientRequests()).toContain('/api/workspace/clients?page=1&limit=50&status=active');
     });
   });
 
-  it('should allow navigating back to previous step', async () => {
-    const user = userEvent.setup();
+  it('shows a loading indicator and no client rows while clients load', async () => {
+    fetchMock.mockImplementation(() => new Promise(() => {}));
     render(<DisputeWizardPage />);
 
-    // Navigate to step 2
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Select Items/i) || screen.getByText(/Tradelines/i)).toBeInTheDocument();
-    });
-
-    // Click Back button
-    const backButton = screen.getByRole('button', { name: /back/i });
-    await user.click(backButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Select Client/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should preserve selected client when navigating back', async () => {
-    const user = userEvent.setup();
-    render(<DisputeWizardPage />);
-
-    await waitFor(() => expect(screen.getByText(/John Doe/i)).toBeInTheDocument());
-    const clientCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-    if (clientCard) await user.click(clientCard);
-    await user.click(screen.getByRole('button', { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Select Items/i) || screen.getByText(/Tradelines/i)).toBeInTheDocument();
-    });
-
-    const backButton = screen.getByRole('button', { name: /back/i });
-    await user.click(backButton);
-
-    await waitFor(() => {
-      const selectedCard = screen.getByText(/John Doe/i).closest('div[role="button"]');
-      expect(selectedCard).toHaveClass(/selected|ring|border-primary/);
-    });
+    expect(await screen.findByText('Select Client')).toBeInTheDocument();
+    expect(screen.queryByTestId('wizard-client-client-1')).not.toBeInTheDocument();
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
   });
 });
 
-describe.skip('DisputeWizard - Accessibility', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: mockClients }),
-    });
-  });
-
-  it('should have accessible step indicators', async () => {
+describe('DisputeWizard - Step 1: Client Selection', () => {
+  it('renders each client with name and email', async () => {
     render(<DisputeWizardPage />);
 
+    const row = await screen.findByTestId('wizard-client-client-1');
+    expect(row).toHaveTextContent('John Doe');
+    expect(row).toHaveTextContent('john.doe@example.com');
+    expect(screen.getByTestId('wizard-client-client-2')).toHaveTextContent('Jane Smith');
+  });
+
+  it('searches clients server-side by passing the term to the API', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await screen.findByTestId('wizard-client-client-1');
+
+    await user.type(screen.getByPlaceholderText(/search clients/i), 'jane');
+
     await waitFor(() => {
-      const stepIndicators = screen.getAllByRole('button').filter(
-        btn => btn.textContent?.includes('Client') ||
-               btn.textContent?.includes('Items') ||
-               btn.textContent?.includes('Configure') ||
-               btn.textContent?.includes('Review')
-      );
-      expect(stepIndicators.length).toBeGreaterThan(0);
+      expect(clientRequests().some((url) => url.includes('&search=jane'))).toBe(true);
     });
   });
 
-  it('should support keyboard navigation', async () => {
+  it('disables Next until a client is selected, then enables it', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await screen.findByTestId('wizard-client-client-1');
+
+    const next = screen.getByRole('button', { name: /next/i });
+    expect(next).toBeDisabled();
+
+    await user.click(screen.getByTestId('wizard-client-client-1'));
+
+    await waitFor(() => expect(next).toBeEnabled());
+    expect(screen.queryByText('(Required)')).not.toBeInTheDocument();
+  });
+
+  it('proceeds to step 2 and loads the selected client\'s items', async () => {
     const user = userEvent.setup();
     render(<DisputeWizardPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
+    await selectClientAndContinue(user);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/workspace/clients/client-1');
+    expect(await screen.findByTestId('wizard-item-item-1')).toHaveTextContent('Capital One');
+  });
+});
+
+describe('DisputeWizard - Step 2: Item Selection', () => {
+  it('lists tradelines with creditor and amount, and tab counts', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await selectClientAndContinue(user);
+
+    const first = await screen.findByTestId('wizard-item-item-1');
+    expect(first).toHaveTextContent('Capital One');
+    expect(first).toHaveTextContent('$5,000.00');
+    expect(screen.getByTestId('wizard-item-item-2')).toHaveTextContent('Chase');
+    expect(screen.getByRole('button', { name: 'Tradelines (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Personal Info (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inquiries (0)' })).toBeInTheDocument();
+  });
+
+  it('keeps Next disabled until at least one item is selected', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await selectClientAndContinue(user);
+    await screen.findByTestId('wizard-item-item-1');
+
+    const next = screen.getByRole('button', { name: /next/i });
+    expect(next).toBeDisabled();
+    expect(screen.getByText('(Select at least one)')).toBeInTheDocument();
+
+    await user.click(within(screen.getByTestId('wizard-item-item-1')).getByText('Capital One'));
+    await waitFor(() => expect(next).toBeEnabled());
+  });
+
+  it('selects multiple items and shows the selected count', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await selectClientAndContinue(user);
+
+    await user.click(within(await screen.findByTestId('wizard-item-item-1')).getByText('Capital One'));
+    await user.click(within(screen.getByTestId('wizard-item-item-2')).getByText('Chase'));
+
+    expect(screen.getByText('Selected: 2')).toBeInTheDocument();
+    expect(screen.getByText('2 of 2 items selected')).toBeInTheDocument();
+  });
+
+  it('deselects an item when clicked again', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await selectClientAndContinue(user);
+
+    const row = within(await screen.findByTestId('wizard-item-item-1'));
+    await user.click(row.getByText('Capital One'));
+    expect(screen.getByText('Selected: 1')).toBeInTheDocument();
+    await user.click(row.getByText('Capital One'));
+    expect(screen.getByText('Selected: 0')).toBeInTheDocument();
+  });
+
+  it('shows an empty state when the client has no negative items', async () => {
+    fetchMock.mockImplementation((input: string) => {
+      const url = String(input);
+      if (/\/api\/workspace\/clients\/[^/?]+$/.test(url)) {
+        return jsonResponse({ ok: true, body: { ...mockClientDetail, negative_items: [] } });
+      }
+      if (url.startsWith('/api/workspace/clients?')) return jsonResponse({ ok: true, body: { items: mockClients } });
+      return jsonResponse({ ok: true, body: {} });
     });
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await screen.findByTestId('wizard-client-client-1');
+    await user.click(screen.getByTestId('wizard-client-client-1'));
+    await user.click(screen.getByRole('button', { name: /next/i }));
 
-    // Tab to first client
-    await user.keyboard('{Tab}');
+    expect(await screen.findByText(/No negative items found for this client/i)).toBeInTheDocument();
+  });
+});
 
-    // Should be able to select with Enter
+describe('DisputeWizard - Validation', () => {
+  it('blocks progress from step 1 without a client', async () => {
+    render(<DisputeWizardPage />);
+    await screen.findByTestId('wizard-client-client-1');
+
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+    expect(screen.getByText('(Required)')).toBeInTheDocument();
+  });
+
+  it('stays on step 1 when the disabled Next button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await screen.findByTestId('wizard-client-client-1');
+
+    await user.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByText('Select Client')).toBeInTheDocument();
+    expect(screen.queryByText(/Select Dispute Items/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('DisputeWizard - Error Handling', () => {
+  it('shows an alert with a retry control when the client fetch fails', async () => {
+    fetchMock.mockImplementation((input: string) => {
+      const url = String(input);
+      if (url.startsWith('/api/workspace/clients?')) return jsonResponse({ ok: false, status: 500, body: { error: 'boom' } });
+      return jsonResponse({ ok: true, body: {} });
+    });
+    render(<DisputeWizardPage />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Error loading clients. Please retry.');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByTestId('wizard-client-client-1')).not.toBeInTheDocument();
+  });
+
+  it('recovers when Retry succeeds', async () => {
+    let failing = true;
+    fetchMock.mockImplementation((input: string) => {
+      const url = String(input);
+      if (url.startsWith('/api/workspace/clients?')) {
+        return failing
+          ? jsonResponse({ ok: false, status: 500, body: {} })
+          : jsonResponse({ ok: true, body: { items: mockClients } });
+      }
+      return jsonResponse({ ok: true, body: {} });
+    });
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await screen.findByRole('alert');
+
+    failing = false;
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByTestId('wizard-client-client-1')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('DisputeWizard - Navigation', () => {
+  it('disables Back on the first step', async () => {
+    render(<DisputeWizardPage />);
+    await screen.findByText('Select Client');
+
+    expect(screen.getByRole('button', { name: /back(?! to clients)/i })).toBeDisabled();
+  });
+
+  it('goes back from step 2 and keeps the selected client', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await selectClientAndContinue(user);
+
+    await user.click(screen.getByRole('button', { name: /^back(?! to clients)/i }));
+
+    expect(await screen.findByText('Select Client')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next/i })).toBeEnabled();
+    expect(screen.queryByText('(Required)')).not.toBeInTheDocument();
+  });
+
+  it('keeps the selected items after going back and forward again', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await selectClientAndContinue(user);
+    await user.click(within(await screen.findByTestId('wizard-item-item-1')).getByText('Capital One'));
+
+    await user.click(screen.getByRole('button', { name: /^back(?! to clients)/i }));
+    await user.click(await screen.findByRole('button', { name: /next/i }));
+
+    await screen.findByText(/Select Dispute Items/i);
+    expect(screen.getByText('Selected: 1')).toBeInTheDocument();
+  });
+});
+
+describe('DisputeWizard - Accessibility', () => {
+  it('gives navigation controls accessible names', async () => {
+    render(<DisputeWizardPage />);
+    await screen.findByText('Select Client');
+
+    expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^back(?! to clients)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to clients/i })).toBeInTheDocument();
+  });
+
+  it('labels the client search field', async () => {
+    render(<DisputeWizardPage />);
+
+    expect(await screen.findByPlaceholderText(/search clients by name or email/i)).toBeInTheDocument();
+  });
+
+  it('supports keyboard navigation: Enter advances and Escape goes back', async () => {
+    const user = userEvent.setup();
+    render(<DisputeWizardPage />);
+    await user.click(await screen.findByTestId('wizard-client-client-1'));
+    await waitFor(() => expect(screen.getByRole('button', { name: /next/i })).toBeEnabled());
+
     await user.keyboard('{Enter}');
+    expect(await screen.findByText(/Select Dispute Items/i)).toBeInTheDocument();
 
-    // Tab to Next button
-    await user.keyboard('{Tab}');
-
-    // Should be able to proceed with Enter
-    await user.keyboard('{Enter}');
+    await user.keyboard('{Escape}');
+    expect(await screen.findByText('Select Client')).toBeInTheDocument();
   });
 });
