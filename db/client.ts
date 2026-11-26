@@ -8,7 +8,7 @@ import * as schema from './schema';
 // redirect real traffic.
 if (process.env.NEON_WS_PROXY && process.env.NODE_ENV !== 'production') {
   const proxy = process.env.NEON_WS_PROXY;
-  neonConfig.wsProxy = () => proxy;
+  neonConfig.wsProxy = (host, port) => `${proxy}?address=${host}:${port}`;
   neonConfig.useSecureWebSocket = false;
   neonConfig.pipelineTLS = false;
   neonConfig.pipelineConnect = false;

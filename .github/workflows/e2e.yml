@@ -87,7 +87,7 @@ jobs:
         run: |
           node -e "
           const { Pool, neonConfig } = require('@neondatabase/serverless');
-          neonConfig.wsProxy = () => process.env.NEON_WS_PROXY;
+          neonConfig.wsProxy = (host, port) => process.env.NEON_WS_PROXY + `?address=${host}:${port}`;
           neonConfig.useSecureWebSocket = false;
           neonConfig.pipelineTLS = false;
           neonConfig.pipelineConnect = false;
