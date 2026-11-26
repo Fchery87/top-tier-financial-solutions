@@ -1,0 +1,91 @@
+name: E2E
+
+# Playwright specs run against a THROWAWAY Postgres created for this job.
+# They sign up users and grant roles, so they must never see a real database:
+# nothing here reads repository secrets, and DATABASE_URL points at the service
+# container below. Run manually or weekly rather than on every PR.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright (chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U e2e -d e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      # The app uses Neon's WebSocket driver; wsproxy lets it speak to plain Postgres.
+      wsproxy:
+        image: ghcr.io/neondatabase/wsproxy:latest
+        env:
+          ALLOW_ADDR_REGEX: '.*'
+          LOG_TRAFFIC: 'true'
+        ports:
+          - 5433:80
+    env:
+      CI: 'true'
+      NODE_ENV: development
+      # The app reaches Postgres through the proxy using the service hostname.
+      DATABASE_URL: postgresql://e2e:e2e@postgres:5432/e2e
+      NEON_WS_PROXY: localhost:5433/v1
+      BETTER_AUTH_SECRET: ci-only-e2e-secret-not-used-anywhere-else-0000
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+      RATE_LIMIT_DISABLED: 'true'
+      E2E_PASSWORD: E2e-ci-Passw0rd-Not-Real!
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply migrations to the throwaway database
+        env:
+          PGPASSWORD: e2e
+        run: |
+          node -e "const j=require('./drizzle/meta/_journal.json');console.log(j.entries.map(e=>e.tag).join('\n'))" > /tmp/migrations.txt
+          while read -r tag; do
+            echo "applying $tag"
+            psql -h localhost -U e2e -d e2e -v ON_ERROR_STOP=1 -q -f "drizzle/$tag.sql"
+          done < /tmp/migrations.txt
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: npx playwright test --project=chromium --reporter=list,html
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
