@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const FAST_LANE_EXCLUDED_SUITES = [
@@ -23,8 +25,23 @@ export function buildFastLaneCommands() {
   }));
 }
 
-function runVitest(command, args) {
-  const result = spawnSync('npx', [command, ...args], { stdio: 'inherit' });
+// Run vitest's CLI with the current node binary. Spawning `npx` fails on
+// Windows (it is `npx.cmd`, which spawnSync cannot run without a shell).
+export function resolveVitestLauncher() {
+  const require = createRequire(import.meta.url);
+  const packageJsonPath = require.resolve('vitest/package.json');
+  const { bin } = require(packageJsonPath);
+  const cliRelativePath = typeof bin === 'string' ? bin : bin.vitest;
+
+  return {
+    executable: process.execPath,
+    cliPath: join(dirname(packageJsonPath), cliRelativePath),
+  };
+}
+
+function runVitest(_command, args) {
+  const { executable, cliPath } = resolveVitestLauncher();
+  const result = spawnSync(executable, [cliPath, ...args], { stdio: 'inherit' });
   return result.status ?? 1;
 }
 
