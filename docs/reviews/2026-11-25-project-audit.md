@@ -21,7 +21,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **Medium:** `env.example` missing 5 variables the code reads (#7). Actually 4 were missing (`RATE_LIMIT_DISABLED` was already documented, commented out): added `CRON_SECRET`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ZHIPU_API_KEY`, plus the `GOOGLE_AI_API_KEY`/`GEMINI_API_KEY` fallback
 - [ ] **Medium:** 6 Playwright E2E specs not run (#8)
 - [ ] **Medium:** coverage thresholds not enforced (#9)
-- [ ] **Medium:** no tests for the 2FA settings UI or the public newsletter and contact routes (#10)
+- [x] **Medium:** no tests for the 2FA settings UI or the public newsletter and contact routes (#10). Added 16 `TwoFactorSettings` tests; newsletter subscribe/unsubscribe and contact-forms routes already have tests (the unsubscribe ones came with item 3)
 - [x] **Low:** committed agent artifacts (`.pi-subagents/` and others) (#11). Untracked and git-ignored; files stay on disk, history still contains them
 - [x] **Low:** orphan migration `drizzle/0014_client_visible_tasks.sql` (#12)
 - [x] **Low:** stale docs (Python backend references, old plans) (#13). Deleted (history keeps them); dropped the dangling `taskHub` key from `validation.config.json`
