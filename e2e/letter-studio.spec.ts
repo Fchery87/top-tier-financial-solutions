@@ -64,7 +64,10 @@ test.describe('Letter Studio browser journeys', () => {
     const tones = ['professional', 'concerned', 'annoyed', 'disappointed', 'demanding'];
     for (const [index, tone] of tones.entries()) {
       await toneSelect.selectOption(tone);
-      await page.getByRole('button', { name: 'Rewrite' }).click({ force: true });
+      const rewrite = page.getByRole('button', { name: 'Rewrite' });
+      // Wait for the previous rewrite to finish; a forced click on a disabled button is dropped.
+      await expect(rewrite).toBeEnabled();
+      await rewrite.click();
       await expect.poll(() => state.toneRequests.length).toBe(index + 1);
     }
 
@@ -78,7 +81,10 @@ test.describe('Letter Studio browser journeys', () => {
 
     await textarea.fill('I will pursue legal action if needed.');
     await expect(page.getByText('Review warnings before saving')).toBeVisible();
-    await page.getByLabel('I reviewed these warnings and want to save this letter.').check({ force: true });
+    const acknowledge = page.getByLabel('I reviewed these warnings and want to save this letter.');
+    // The input is visually hidden behind a custom control, so click it directly.
+    await acknowledge.dispatchEvent('click');
+    await expect(acknowledge).toBeChecked();
     await page.getByRole('button', { name: 'Save letter' }).click({ force: true });
     await expect.poll(() => state.saveRequests.length).toBe(1);
     expect(state.saveRequests[0]).toMatchObject({ acknowledgeWarnings: true });

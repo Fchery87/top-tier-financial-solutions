@@ -119,7 +119,7 @@ test.describe('Dispute Wizard E2E Flow', () => {
     await expect(page.getByText('Selected: 1', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^Next/ }).click({ force: true });
 
-    await page.getByText('Round 2 - Direct to Creditor/Furnisher').click({ force: true });
+    await page.getByText('Direct Dispute to Furnisher (courtesy)').click({ force: true });
     await expect(page.getByTestId('direct-dispute-advisory')).toBeVisible();
     await expect(page.locator('[data-generate-button]')).toBeEnabled();
   });
@@ -131,7 +131,7 @@ test.describe('Dispute Wizard E2E Flow', () => {
     await expect(page.getByText('Selected: 1', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^Next/ }).click({ force: true });
 
-    await page.getByText('Round 3+ - CFPB / Direct Escalation').click({ force: true });
+    await page.getByText('Regulator Complaint (CFPB)').click({ force: true });
     const priorDisputeInput = page.getByLabel('Prior CRA dispute ID');
     await expect(priorDisputeInput).toBeVisible();
     await priorDisputeInput.fill('e2e-prior-dispute');
@@ -162,7 +162,7 @@ test.describe('Dispute Wizard E2E Flow', () => {
     await expect(page.getByText('Selected: 1', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^Next/ }).click({ force: true });
 
-    await page.getByText('Round 3+ - CFPB / Direct Escalation').click({ force: true });
+    await page.getByText('Regulator Complaint (CFPB)').click({ force: true });
     await page.getByLabel('Prior CRA dispute ID').fill('e2e-prior-dispute');
 
     const eligibilityPreview = page.getByTestId('cfpb-eligibility-preview');
