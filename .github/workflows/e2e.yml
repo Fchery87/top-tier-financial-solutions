@@ -5,8 +5,6 @@ name: E2E
 # nothing here reads repository secrets, and DATABASE_URL points at the service
 # container below. Run manually or weekly rather than on every PR.
 on:
-  push:
-    branches: [test/e2e-in-ci] # TEMPORARY: remove before merge
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * 1'
