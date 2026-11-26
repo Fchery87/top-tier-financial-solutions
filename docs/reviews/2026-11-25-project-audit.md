@@ -12,7 +12,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] Project moved from exFAT E: to NTFS `C:\Coding-Projects\top-tier-financial-solutions`
 
 **Still open from the audit** (details in [section 3](#3-open-items-prioritized)):
-- [x] **High:** remaining vulnerabilities: 2 high (`undici`, `vite`), 13 moderate, `zod` < 4.6.6 (#1). Now 0 critical, 0 high; 5 moderate left, all in the `@sentry/nextjs` 10.x tree (`glob`/`minimatch`), fixable only by the major Sentry 11 upgrade
+- [x] **High:** remaining vulnerabilities: 2 high (`undici`, `vite`), 13 moderate, `zod` < 4.6.6 (#1). Now 0 critical, 0 high; the last 5 moderate were in the `@sentry/nextjs` 10.x tree and cleared by the Sentry 11 upgrade: `npm audit` now reports 0 vulnerabilities
 - [x] **High:** newsletter unsubscribe has no auth or rate limit, and it leaks whether an email is subscribed (#2). Now signed token + uniform response + rate limit + zod; new `/unsubscribe` page. Note: no email in the code sends an unsubscribe link yet; use `buildUnsubscribeUrl()` when one is added
 - [x] **High:** no CI pipeline (#3). `.github/workflows/ci.yml` runs lint, typecheck, test and build on PRs and pushes to `main`. Coverage and the Playwright E2E specs are not in CI yet (items 8 and 9)
 - [x] **High:** all 27 DisputeWizard tests skipped (#4). The skipped tests were stale (old API shapes, loose assertions), not hiding bugs; rewritten as 23 accurate tests for steps 1-2 and navigation. Steps 3-4 remain covered by the existing StepConfigure/StepReview/WizardGenerateControls tests
@@ -27,7 +27,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **Low:** stale docs (Python backend references, old plans) (#13). Deleted (history keeps them); dropped the dangling `taskHub` key from `validation.config.json`
 - [x] **Low:** broken `src/app/admin/AGENTS.md` link (#14). Root index now points at `src/app/workspace/AGENTS.md`, which covers both surfaces
 - [x] **Low:** stray `console.log` calls in `useAIAnalysis.ts` (#15). Removed (client component, so no server logger)
-- [ ] **Planned:** major dependency upgrades, one PR each (see the table in section 3)
+- [x] **Planned:** major dependency upgrades, one PR each (see the table in section 3). Done: in-range updates (#26) and `@sentry/nextjs` 11 (`enableLogs` removed; logs are opt-in by usage now). Deliberately not done, each needs its own migration PR with a manual review: typescript 7, eslint 10, vitest/coverage 5, `@anthropic-ai/sdk` 1.x, openai 7, `@google/genai` 3, pdf-parse 2, lucide-react 1, framer-motion 14, jsdom 29, `@vitejs/plugin-react` 6, `@testing-library/jest-dom` 8, dotenv 18, js-yaml 5, react 19.3
 
 ---
 

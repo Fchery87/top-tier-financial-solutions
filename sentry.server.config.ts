@@ -5,7 +5,6 @@ Sentry.init({
   environment: process.env.NODE_ENV || 'development',
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
   debug: false,
-  enableLogs: true,
 
   // Ignore specific errors that are not important
   ignoreErrors: [
