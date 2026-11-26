@@ -18,7 +18,7 @@ try {
   await client.query('BEGIN READ ONLY');
   const { rows } = await client.query(sql);
   await client.query('ROLLBACK');
-  writeFileSync(out, JSON.stringify(rows[0].snapshot, null, 1));
+  writeFileSync(out, rows[0].snapshot);
   console.log('Snapshot written to', out);
 } finally {
   client.release();
