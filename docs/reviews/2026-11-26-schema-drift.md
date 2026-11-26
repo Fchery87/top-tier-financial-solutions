@@ -18,3 +18,8 @@ Bookkeeping is in sync: production has 54 rows in `drizzle.__drizzle_migrations`
 ## Suggested follow-ups (each needs your approval before touching production)
 - Decide whether `admin_users` should be dropped (check it is empty first).
 - Either align `db/schema.ts` to the production types for the legacy tables, or migrate production to match. Not urgent.
+
+## Update (2026-11-26, later)
+- The legacy-table differences (items 3 and 4) were resolved by aligning `db/schema.ts` to production and adding the guarded, idempotent migration `0054_align_legacy_tables` (#31). It was applied to production with `db:migrate`: production now has 55 applied migrations, and its schema was byte-identical before and after (the migration was a no-op there, as designed).
+- A replay of all 55 migrations now matches production in every table, column, constraint and index, ignoring foreign-key names and index-name casing. The one remaining difference is `admin_users`.
+- `admin_users` was **not** dropped: it holds 1 row (an active legacy admin account from 2025-11-30 with no matching user in the app's auth table). Dropping needs your decision; back the row up first.
