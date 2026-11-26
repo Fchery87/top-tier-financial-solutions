@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { request as playwrightRequest, test as setup } from '@playwright/test';
 import { config as loadEnv } from 'dotenv';
+import { secretFromTotpUri, totpCode } from './totp';
 
 loadEnv({ path: '.env.local', quiet: true });
 loadEnv({ path: '.env', quiet: true });
@@ -39,6 +40,23 @@ async function signUpOrSignIn(context: Awaited<ReturnType<typeof playwrightReque
   if (!signUp.ok()) await signIn(context, email, userPassword);
 }
 
+/**
+ * Team roles must have two-factor authentication before the workspace APIs (including
+ * set-role) will answer. Enroll TOTP through the real better-auth endpoints; the
+ * verified session stays in the context's cookies, so the saved storage state is
+ * already past the second factor.
+ */
+async function enrollTotp(context: Awaited<ReturnType<typeof playwrightRequest.newContext>>, userPassword: string, email: string) {
+  const enable = await context.post('/api/auth/two-factor/enable', { data: { password: userPassword } });
+  await assertResponse(enable, `starting two-factor enrollment for ${email}`);
+  const body = (await enable.json()) as { totpURI?: string };
+  if (!body.totpURI) throw new Error(`E2E auth setup: no TOTP URI returned while enrolling ${email}`);
+  const verify = await context.post('/api/auth/two-factor/verify-totp', {
+    data: { code: totpCode(secretFromTotpUri(body.totpURI)) },
+  });
+  await assertResponse(verify, `verifying two-factor enrollment for ${email}`);
+}
+
 setup('create deterministic role-authenticated storage states', async () => {
   setup.setTimeout(120_000);
   if (!password) throw new Error('E2E_PASSWORD must be set; refusing to run authenticated browser tests without deterministic credentials.');
@@ -61,6 +79,7 @@ setup('create deterministic role-authenticated storage states', async () => {
   } else {
     await assertResponse(bootstrap, 'bootstrapping the first super admin');
   }
+  await enrollTotp(superContext, password, users[0].email);
   await superContext.storageState({ path: users[0].stateFile });
 
   for (const user of users.slice(1)) {
@@ -70,6 +89,7 @@ setup('create deterministic role-authenticated storage states', async () => {
       const roleResponse = await roleManagerContext.post('/api/workspace/set-role', { data: { email: user.email, role: user.role } });
       await assertResponse(roleResponse, `assigning ${user.role} to ${user.email}`);
     }
+    if (user.role !== 'user') await enrollTotp(context, password, user.email);
     await context.storageState({ path: user.stateFile });
     await context.dispose();
   }
