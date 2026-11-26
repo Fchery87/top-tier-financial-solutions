@@ -1,10 +1,30 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { basename } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   FAST_LANE_EXCLUDED_SUITES,
   buildFastLaneCommands,
+  resolveVitestLauncher,
   runFastLane,
 } from '../../scripts/test-fast-lane.mjs';
+
+describe('cross-platform scripts', () => {
+  it('launches vitest through the current node binary, not a shell shim like npx', () => {
+    const launcher = resolveVitestLauncher();
+
+    expect(launcher.executable).toBe(process.execPath);
+    expect(basename(launcher.cliPath)).toBe('vitest.mjs');
+    expect(existsSync(launcher.cliPath)).toBe(true);
+  });
+
+  it('keeps npm lifecycle scripts free of POSIX-only commands', async () => {
+    const { scripts } = JSON.parse(await readFile('package.json', 'utf8'));
+
+    expect(scripts.pretypecheck).not.toMatch(/\brm\s+-rf\b/);
+    expect(scripts.pretypecheck).toContain('.next/dev');
+  });
+});
 
 describe('test fast lane', () => {
   it('runs both non-serial shards and excludes only the documented serial suites', () => {

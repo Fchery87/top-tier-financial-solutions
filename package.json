@@ -18,7 +18,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "pretypecheck": "rm -rf .next/dev",
+    "pretypecheck": "node -e \"require('fs').rmSync('.next/dev',{recursive:true,force:true})\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=1/2 && vitest run --pool=threads --maxWorkers=4 --exclude=src/__tests__/api/admin/dispute-submission-tracking.test.ts --exclude=src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx --shard=2/2 && vitest run --pool=threads --maxWorkers=1 src/__tests__/api/admin/dispute-submission-tracking.test.ts src/components/workspace/__tests__/AdminAnalyticsPanel.test.tsx",
     "test:fast": "node scripts/test-fast-lane.mjs",

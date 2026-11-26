@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { existsSync, readdirSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const appRoot = join(process.cwd(), 'src', 'app', 'api');
@@ -106,6 +106,7 @@ function collectRoutePaths(root: string): string[] {
   const entries = readdirSync(root, { recursive: true, withFileTypes: true });
   return entries
     .filter((entry) => entry.isFile() && entry.name === 'route.ts')
-    .map((entry) => relative(root, join(entry.parentPath, entry.name)))
+    // Normalize to POSIX separators so expectations hold on Windows too.
+    .map((entry) => relative(root, join(entry.parentPath, entry.name)).split(sep).join('/'))
     .sort();
 }
