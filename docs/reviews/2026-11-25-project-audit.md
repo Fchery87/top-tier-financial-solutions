@@ -22,7 +22,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [ ] **Medium:** 6 Playwright E2E specs not run (#8)
 - [ ] **Medium:** coverage thresholds not enforced (#9)
 - [ ] **Medium:** no tests for the 2FA settings UI or the public newsletter and contact routes (#10)
-- [ ] **Low:** committed agent artifacts (`.pi-subagents/` and others) (#11)
+- [x] **Low:** committed agent artifacts (`.pi-subagents/` and others) (#11). Untracked and git-ignored; files stay on disk, history still contains them
 - [ ] **Low:** orphan migration `drizzle/0014_client_visible_tasks.sql` (#12)
 - [ ] **Low:** stale docs (Python backend references, old plans) (#13)
 - [ ] **Low:** broken `src/app/admin/AGENTS.md` link (#14)
