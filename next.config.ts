@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-import { withSentryConfig } from '@sentry/nextjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 // Routes moved from /admin/* to /workspace/* in a prior restructuring task.
 // This list is closed and short by design: enumerate explicitly rather than
