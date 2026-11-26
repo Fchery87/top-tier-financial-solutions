@@ -1,0 +1,21 @@
+# Schema drift: production vs. replayed migrations (2026-11-26)
+
+Method: `scripts/schema-snapshot.sql` (structure only, one `READ ONLY` transaction) was run against production and against an empty Postgres after a strict replay of all 54 journaled migrations (CI artifact `replayed-schema`). No data and no writes.
+
+Bookkeeping is in sync: production has 54 rows in `drizzle.__drizzle_migrations` and its latest timestamp equals the journal's last entry.
+
+## Equivalent (noise)
+- All 185 constraints match by definition. 53 foreign keys differ only by name (`*_fkey` in production, `*_fk` in the replay).
+- 16 indexes differ only by name casing (production lowercase, replay camelCase, e.g. `tasks_clientid_idx` vs `tasks_clientId_idx`). Same columns.
+- All 20 enums match.
+
+## Real differences
+1. **Four indexes are missing in production** (they exist in the journal and `db/schema.ts`): `disputes_escalationReadyAt_idx`, `bureau_discrepancies_type_idx`, `fcra_compliance_items_expiration_idx`, `email_send_log_triggerType_idx`. Performance only; nothing breaks without them.
+2. **`admin_users` exists only in production** (8 columns, primary key, unique-email index). Not in `db/schema.ts` and not referenced in `src/`. A leftover from before the journal.
+3. **`clients.lead_id` is `uuid` in production, `text` in the replay and in `db/schema.ts`.** It references `consultation_requests.id`, which is also `uuid` in production. Fine while ids are UUIDs; a non-UUID id would fail on production only.
+4. **Legacy public-site tables** (`pages`, `services`, `faq_items`, `testimonials`, `disclaimers`, `consultation_requests`) have a different shape in production: `uuid` ids and `varchar(n)` instead of `text`, `NOT NULL` without `DEFAULT`s (the schema has defaults and nullable columns), plus extra `ix_*` indexes. This is the pre-journal origin of those tables; the app works against it today.
+
+## Suggested follow-ups (each needs your approval before touching production)
+- Create the four missing indexes with `CREATE INDEX CONCURRENTLY IF NOT EXISTS`.
+- Decide whether `admin_users` should be dropped (check it is empty first).
+- Either align `db/schema.ts` to the production types for the legacy tables, or migrate production to match. Not urgent.
