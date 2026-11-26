@@ -91,11 +91,11 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.13",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20",
+    "@types/node": "^22.20.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.2.0",
-    "@vitest/coverage-v8": "^4.1.12",
+    "@vitest/coverage-v8": "^5.1.2",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.4.6",
@@ -104,7 +104,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "typescript": "^5",
-    "vitest": "^4.1.12",
+    "vitest": "^5.1.2",
     "vitest-fetch-mock": "^0.4.5"
   }
 }
