@@ -23,7 +23,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [ ] **Medium:** coverage thresholds not enforced (#9)
 - [ ] **Medium:** no tests for the 2FA settings UI or the public newsletter and contact routes (#10)
 - [x] **Low:** committed agent artifacts (`.pi-subagents/` and others) (#11). Untracked and git-ignored; files stay on disk, history still contains them
-- [ ] **Low:** orphan migration `drizzle/0014_client_visible_tasks.sql` (#12)
+- [x] **Low:** orphan migration `drizzle/0014_client_visible_tasks.sql` (#12)
 - [x] **Low:** stale docs (Python backend references, old plans) (#13). Deleted (history keeps them); dropped the dangling `taskHub` key from `validation.config.json`
 - [x] **Low:** broken `src/app/admin/AGENTS.md` link (#14). Root index now points at `src/app/workspace/AGENTS.md`, which covers both surfaces
 - [ ] **Low:** stray `console.log` calls in `useAIAnalysis.ts` (#15)
