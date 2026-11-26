@@ -23,7 +23,6 @@ async function retryWithBackoff<T>(
       onRetry?.(attempt, lastError);
       if (attempt < maxRetries) {
         const delayMs = Math.pow(2, attempt) * 500;
-        console.log(`Retrying in ${delayMs}ms...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
@@ -121,7 +120,6 @@ export function useAIAnalysis({
           return response.json();
         },
         3,
-        (attempt) => console.log(`Analysis retry attempt ${attempt}/3...`),
       );
 
       clearInterval(progressInterval);
