@@ -20,7 +20,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **Medium:** rate limiting not configured locally, so `npm run start` throws (#6). The throw is an intentional production guard, so code is unchanged; `env.example` now documents the local opt-in. Production (Vercel) still needs the Upstash keys, which I cannot verify from here
 - [x] **Medium:** `env.example` missing 5 variables the code reads (#7). Actually 4 were missing (`RATE_LIMIT_DISABLED` was already documented, commented out): added `CRON_SECRET`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ZHIPU_API_KEY`, plus the `GOOGLE_AI_API_KEY`/`GEMINI_API_KEY` fallback
 - [ ] **Medium:** 6 Playwright E2E specs not run (#8)
-- [ ] **Medium:** coverage thresholds not enforced (#9)
+- [x] **Medium:** coverage thresholds not enforced (#9). Enforced as a ratchet just under the measured baseline (statements 40, branches 36, functions 40, lines 41; baseline was 42.3/38.5/42.7/43.8 once untested files were counted) and run in CI. The 70% minimum in `validation.config.json` is still a long-term goal, not reality
 - [x] **Medium:** no tests for the 2FA settings UI or the public newsletter and contact routes (#10). Added 16 `TwoFactorSettings` tests; newsletter subscribe/unsubscribe and contact-forms routes already have tests (the unsubscribe ones came with item 3)
 - [x] **Low:** committed agent artifacts (`.pi-subagents/` and others) (#11). Untracked and git-ignored; files stay on disk, history still contains them
 - [x] **Low:** orphan migration `drizzle/0014_client_visible_tasks.sql` (#12)
