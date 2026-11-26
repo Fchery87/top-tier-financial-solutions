@@ -47,12 +47,13 @@ async function signUpOrSignIn(context: Awaited<ReturnType<typeof playwrightReque
  * already past the second factor.
  */
 async function enrollTotp(context: Awaited<ReturnType<typeof playwrightRequest.newContext>>, userPassword: string, email: string) {
-  const enable = await context.post('/api/auth/two-factor/enable', { data: { password: userPassword } });
+  const enable = await context.post('/api/auth/two-factor/enable', { data: { password: userPassword }, headers: { origin: baseURL } });
   await assertResponse(enable, `starting two-factor enrollment for ${email}`);
   const body = (await enable.json()) as { totpURI?: string };
   if (!body.totpURI) throw new Error(`E2E auth setup: no TOTP URI returned while enrolling ${email}`);
   const verify = await context.post('/api/auth/two-factor/verify-totp', {
     data: { code: totpCode(secretFromTotpUri(body.totpURI)) },
+    headers: { origin: baseURL },
   });
   await assertResponse(verify, `verifying two-factor enrollment for ${email}`);
 }
