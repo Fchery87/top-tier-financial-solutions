@@ -81,7 +81,9 @@
     "@esbuild-kit/core-utils": {
       "esbuild": "^0.28.1"
     },
-    "brace-expansion": "^1.1.13",
+    "minimatch@3": {
+      "brace-expansion": "^1.1.13"
+    },
     "eslint-plugin-react-hooks": "7.0.1"
   },
   "devDependencies": {
@@ -97,7 +99,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^5.1.2",
     "drizzle-kit": "^0.31.11",
-    "eslint": "^9.39.4",
+    "eslint": "^10.15.0",
     "eslint-config-next": "^16.4.6",
     "jsdom": "^27.2.0",
     "next-test-api-route-handler": "^5.0.7",
