@@ -18,7 +18,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **High:** all 27 DisputeWizard tests skipped (#4). The skipped tests were stale (old API shapes, loose assertions), not hiding bugs; rewritten as 23 accurate tests for steps 1-2 and navigation. Steps 3-4 remain covered by the existing StepConfigure/StepReview/WizardGenerateControls tests
 - [x] **Medium:** Sentry client reporting likely inactive under Turbopack; `onRequestError` and `global-error.tsx` missing (#5). Client init moved to `instrumentation-client.ts`, `onRequestError` and `global-error.tsx` added, `error.tsx` now reports. Session Replay left off on purpose (PII). Needs a live check that events reach Sentry after deploy
 - [ ] **Medium:** rate limiting not configured locally, so `npm run start` throws (#6)
-- [ ] **Medium:** `env.example` missing 5 variables the code reads (#7)
+- [x] **Medium:** `env.example` missing 5 variables the code reads (#7). Actually 4 were missing (`RATE_LIMIT_DISABLED` was already documented, commented out): added `CRON_SECRET`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ZHIPU_API_KEY`, plus the `GOOGLE_AI_API_KEY`/`GEMINI_API_KEY` fallback
 - [ ] **Medium:** 6 Playwright E2E specs not run (#8)
 - [ ] **Medium:** coverage thresholds not enforced (#9)
 - [ ] **Medium:** no tests for the 2FA settings UI or the public newsletter and contact routes (#10)
@@ -26,7 +26,7 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **Low:** orphan migration `drizzle/0014_client_visible_tasks.sql` (#12)
 - [x] **Low:** stale docs (Python backend references, old plans) (#13). Deleted (history keeps them); dropped the dangling `taskHub` key from `validation.config.json`
 - [x] **Low:** broken `src/app/admin/AGENTS.md` link (#14). Root index now points at `src/app/workspace/AGENTS.md`, which covers both surfaces
-- [ ] **Low:** stray `console.log` calls in `useAIAnalysis.ts` (#15)
+- [x] **Low:** stray `console.log` calls in `useAIAnalysis.ts` (#15). Removed (client component, so no server logger)
 - [ ] **Planned:** major dependency upgrades, one PR each (see the table in section 3)
 
 ---
