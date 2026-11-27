@@ -31,7 +31,7 @@ export default function SubscribersAdminPage() {
   const [subscribers, setSubscribers] = React.useState<Subscriber[]>([]);
   const [stats, setStats] = React.useState<Stats>({ total: 0, active: 0, unsubscribed: 0 });
   const [loading, setLoading] = React.useState(true);
-  const [filter, setFilter] = React.useState<'all' | 'active' | 'unsubscribed'>('all');
+  const [filter, setFilter] = React.useState<'all' | 'active' | 'pending' | 'unsubscribed'>('all');
 
   const fetchSubscribers = async () => {
     setLoading(true);
@@ -92,7 +92,7 @@ export default function SubscribersAdminPage() {
       <span className="text-sm capitalize">{sub.source.replace('_', ' ')}</span>
     )},
     { key: 'status', header: 'Status', render: (sub: Subscriber) => (
-      <StatusBadge status={sub.status as 'active' | 'unsubscribed'} />
+      <StatusBadge status={sub.status} />
     )},
     { key: 'subscribed_at', header: 'Subscribed', render: (sub: Subscriber) => (
       <span className="text-sm text-muted-foreground">
@@ -131,7 +131,7 @@ export default function SubscribersAdminPage() {
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2">
-        {(['all', 'active', 'unsubscribed'] as const).map((status) => (
+        {(['all', 'active', 'pending', 'unsubscribed'] as const).map((status) => (
           <Button
             key={status}
             variant={filter === status ? 'secondary' : 'outline'}

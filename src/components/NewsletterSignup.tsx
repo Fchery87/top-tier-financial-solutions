@@ -73,7 +73,7 @@ export function NewsletterSignup({
         {isSuccess ? (
           <div className="flex items-center gap-2 text-success">
             <CheckCircle className="size-5" />
-            <span className="text-sm">Thank you for subscribing!</span>
+            <span className="text-sm">Almost done! Check your email to confirm.</span>
           </div>
         ) : !mounted ? (
           <div className="flex flex-col gap-3">
@@ -124,7 +124,7 @@ export function NewsletterSignup({
         {isSuccess ? (
           <div className="flex items-center gap-2 text-success">
             <CheckCircle className="w-5 h-5" />
-            <span>Thank you for subscribing!</span>
+            <span>Almost done! Check your email to confirm.</span>
           </div>
         ) : !mounted ? (
           <div className="flex gap-2">
@@ -176,8 +176,8 @@ export function NewsletterSignup({
               <div className="flex items-center justify-center gap-3 p-6 rounded-xl bg-success/10 border border-success/30">
                 <CheckCircle className="w-6 h-6 text-success" />
                 <div>
-                  <p className="font-medium text-success">You&apos;re subscribed!</p>
-                  <p className="text-sm text-muted-foreground">Check your inbox for updates.</p>
+                  <p className="font-medium text-success">Almost done!</p>
+                  <p className="text-sm text-muted-foreground">Check your inbox and click the link to confirm your subscription.</p>
                 </div>
               </div>
             ) : !mounted ? (
