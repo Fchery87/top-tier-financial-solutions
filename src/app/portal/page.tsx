@@ -49,8 +49,6 @@ export default function PortalPage() {
     () => letters.filter((l) => l.status === 'pending'), [letters],
   );
 
-  React.useEffect(() => { void fetchData(); }, []);
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -75,6 +73,8 @@ export default function PortalPage() {
       if (tasksRes.ok) { const d = await tasksRes.json(); setTasks(d.tasks || []); }
     } catch (e) { console.error('Error fetching portal data:', e); } finally { setLoading(false); }
   };
+
+  React.useEffect(() => { void fetchData(); }, []);
 
   const handleApproveLetters = async () => {
     if (pendingLetters.length === 0) return;

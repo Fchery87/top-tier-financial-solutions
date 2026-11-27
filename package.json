@@ -83,8 +83,7 @@
     },
     "minimatch@3": {
       "brace-expansion": "^1.1.13"
-    },
-    "eslint-plugin-react-hooks": "7.0.1"
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

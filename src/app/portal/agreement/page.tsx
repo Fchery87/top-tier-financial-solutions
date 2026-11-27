@@ -55,9 +55,6 @@ export default function AgreementPage() {
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [hasDrawnSignature, setHasDrawnSignature] = React.useState(false);
 
-  React.useEffect(() => {
-    void fetchAgreement();
-  }, []);
 
   const fetchAgreement = async () => {
     setLoading(true);
@@ -86,6 +83,10 @@ export default function AgreementPage() {
       setLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    void fetchAgreement();
+  }, []);
 
   // Canvas drawing handlers
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
