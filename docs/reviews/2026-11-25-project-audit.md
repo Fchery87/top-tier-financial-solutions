@@ -28,6 +28,8 @@ Full audit run after cloning the project onto a new Windows 11 machine. This fil
 - [x] **Low:** broken `src/app/admin/AGENTS.md` link (#14). Root index now points at `src/app/workspace/AGENTS.md`, which covers both surfaces
 - [x] **Low:** stray `console.log` calls in `useAIAnalysis.ts` (#15). Removed (client component, so no server logger)
 - [x] **Planned:** major dependency upgrades, one PR each (see the table in section 3). Merged: in-range updates (#26), `@sentry/nextjs` 11 (#27), vitest/coverage 5 + @types/node 22 (#34), eslint 10 (#35), jsdom 29 + jest-dom 8 (#36), dotenv 18 + js-yaml 5 (#38), `@anthropic-ai/sdk` 1 (#39), openai 7 (#40), `@google/genai` 3 (#41), lucide-react 1 (#42), framer-motion 14 (#43), react/react-dom 19.3.1 (#44, E2E green), `@vitejs/plugin-react` 6 (#45). Open: pdf-parse 2 (#37), waiting on a comparison against a real credit report. Blocked: typescript 7, because typescript-eslint 8.74 (latest) supports only TypeScript <6.1 and lint crashes on load, `next build` fails its type-check step, and `server-logging-source-audit.test.ts` uses the removed JS compiler API; revisit when typescript-eslint and eslint-config-next support 7. None of the AI SDK upgrades were exercised against the live providers.
+- [x] **Follow-up:** `eslint-plugin-react-hooks` unpinned (#47, now 7.1.1). Fixed 3 `immutability` errors; the new `react-hooks/set-state-in-effect` rule (42 hits in 35 files, all the load-on-mount pattern) is switched off in `eslint.config.mjs` until those screens move to a data layer.
+- [x] **Follow-up:** `POST /api/newsletter/subscribe` no longer reveals whether an address is already subscribed (#48): one uniform 201 response. Remaining: a timing difference, and unsubscribed addresses are reactivated by anyone who submits them (no double opt-in).
 
 ---
 
@@ -144,7 +146,7 @@ The two PRs are independent and can merge in any order. Both edit `package.json`
 | @types/node | 20 | should match Node 22 in use |
 | react / react-dom | 19.2.0 (pinned exact) | 19.3.1 |
 
-Also: `npm ci` warns that 8 packages have install scripts not covered by `allowScripts` (esbuild, @sentry/cli, core-js, protobufjs, unrs-resolver). Review them with `npm approve-scripts`.
+Install scripts (reviewed 2026-11-27): npm 11 warns that 5 packages (esbuild x3, core-js, protobufjs) have install scripts not covered by `allowScripts`. All are benign (esbuild verifies its binary, core-js prints a funding banner, protobufjs checks its version scheme) and nothing is blocked today. No policy was added: `allowScripts` is npm 11 only and CI runs npm 10, which ignores it, so it could not be verified there. Revisit if npm starts blocking scripts by default.
 
 ---
 
