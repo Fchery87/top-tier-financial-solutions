@@ -50,9 +50,6 @@ export default function EmailTemplatesPage() {
   const [showPreview, setShowPreview] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'all' | 'transactional' | 'marketing'>('all');
 
-  React.useEffect(() => {
-    fetchTemplates();
-  }, []);
 
   const fetchTemplates = async () => {
     try {
@@ -67,6 +64,10 @@ export default function EmailTemplatesPage() {
       setLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    fetchTemplates();
+  }, []);
 
   const isTransactional = (triggerType: string) => TRANSACTIONAL_TRIGGERS.includes(triggerType);
 
