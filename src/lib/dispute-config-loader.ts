@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import yaml from 'js-yaml';
+import { load as loadYaml } from 'js-yaml';
 import { logServerEvent } from '@/lib/server-logger';
 
 // Check if running in serverless environment (no file system access)
@@ -304,7 +304,7 @@ export function loadStrategiesConfig(): DisputeStrategiesConfig {
   try {
     const configPath = path.join(CONFIG_DIR, 'dispute-strategies.yaml');
     const fileContents = fs.readFileSync(configPath, 'utf8');
-    strategiesConfig = yaml.load(fileContents) as DisputeStrategiesConfig;
+    strategiesConfig = loadYaml(fileContents) as DisputeStrategiesConfig;
     return strategiesConfig;
   } catch {
     // Fall back to embedded config for serverless environments
