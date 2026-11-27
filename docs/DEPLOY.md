@@ -26,9 +26,14 @@ Roll back the deployment before you consider rolling back a migration. A migrati
 
 ## Cron checks
 
-These two routes reject any request whose `Authorization` header is not `Bearer $CRON_SECRET`.
+These routes reject any request whose `Authorization` header is not `Bearer $CRON_SECRET`.
 
 - `POST /api/cron/dispute-escalations`
 - `POST /api/cron/nudge-stalled-clients`
+- `POST /api/cron/purge-stale-subscribers` (daily is plenty)
 
-Schedule both from Vercel cron or an external scheduler. A missed run is a failed check. Confirm each route returned 200 in the last interval after a production deploy. The escalation route also writes its failure into the last-run setting when the job throws.
+Schedule all of them from Vercel cron or an external scheduler. A missed run is a failed check. Confirm each route returned 200 in the last interval after a production deploy. The escalation route also writes its failure into the last-run setting when the job throws.
+
+### Stale newsletter signups
+
+`purge-stale-subscribers` cleans up newsletter signups that never confirmed (double opt-in). Rows still `pending` 30 days after their last activity are deleted, unless they were previously unsubscribed: those go back to `unsubscribed` so the opt-out is never lost. The response reports `deleted` and `restored_to_unsubscribed`. Active and unsubscribed subscribers are never touched. Until it is scheduled, stale rows simply accumulate; nothing breaks.
