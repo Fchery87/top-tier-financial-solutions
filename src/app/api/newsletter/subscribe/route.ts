@@ -20,6 +20,16 @@ const FIRST_NAME_LENGTH_ERROR = 'First name must be 100 characters or fewer';
 const LAST_NAME_LENGTH_ERROR = 'Last name must be 100 characters or fewer';
 const SOURCE_LENGTH_ERROR = 'Source must be 120 characters or fewer';
 
+// Every valid request gets this exact response (status and body), whether the
+// address is new, already active, or previously unsubscribed. Differing replies
+// would let anyone probe the list for a given email address.
+function subscribedResponse() {
+  return NextResponse.json({
+    success: true,
+    message: 'Thank you for subscribing!',
+  }, { status: 201 });
+}
+
 const newsletterFieldErrors = new Set([
   EMAIL_REQUIRED_ERROR,
   EMAIL_LENGTH_ERROR,
@@ -65,7 +75,7 @@ async function postHandler(request: NextRequest) {
 
     const { email, first_name: firstName, last_name: lastName, source } = parsed.data;
 
-    // Check if already subscribed
+    // Existing subscribers are handled silently; see subscribedResponse().
     const existing = await db
       .select()
       .from(emailSubscribers)
@@ -81,16 +91,8 @@ async function postHandler(request: NextRequest) {
           unsubscribedAt: null,
           updatedAt: new Date(),
         }).where(eq(emailSubscribers.email, email.toLowerCase()));
-
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Welcome back! You have been resubscribed.' 
-        });
       }
-      return NextResponse.json({ 
-        success: true, 
-        message: 'You are already subscribed!' 
-      });
+      return subscribedResponse();
     }
 
     const id = randomUUID();
@@ -108,10 +110,7 @@ async function postHandler(request: NextRequest) {
       updatedAt: now,
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Thank you for subscribing!' 
-    }, { status: 201 });
+    return subscribedResponse();
   } catch (error) {
     logServerEvent({ level: 'error', event: 'server.app.api.newsletter.subscribe.error', error: error });
     return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });

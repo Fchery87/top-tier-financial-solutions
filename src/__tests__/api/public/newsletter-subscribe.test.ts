@@ -42,6 +42,46 @@ describe('POST /api/newsletter/subscribe', () => {
     expect(dbMock.insert).toHaveBeenCalledTimes(1);
   });
 
+  describe('does not reveal whether an address is already on the list', () => {
+    async function subscribe(existing: Array<{ status: string }>) {
+      dbMock.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue(existing) }),
+        }),
+      });
+      dbMock.update.mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });
+      const { POST } = await import('@/app/api/newsletter/subscribe/route');
+      const response = await POST(new NextRequest('http://localhost/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'x-forwarded-for': '203.0.113.30' },
+        body: JSON.stringify({ email: 'subscriber@example.com' }),
+      }));
+      return { status: response.status, body: await response.json() };
+    }
+
+    it('answers identically for new, already-active and previously-unsubscribed addresses', async () => {
+      const fresh = await subscribe([]);
+      const active = await subscribe([{ status: 'active' }]);
+      const unsubscribed = await subscribe([{ status: 'unsubscribed' }]);
+
+      expect(active).toEqual(fresh);
+      expect(unsubscribed).toEqual(fresh);
+      expect(fresh.status).toBe(201);
+    });
+
+    it('still reactivates a previously-unsubscribed address and does not insert a duplicate', async () => {
+      await subscribe([{ status: 'unsubscribed' }]);
+      expect(dbMock.update).toHaveBeenCalledTimes(1);
+      expect(dbMock.insert).not.toHaveBeenCalled();
+    });
+
+    it('does not write anything for an already-active address', async () => {
+      await subscribe([{ status: 'active' }]);
+      expect(dbMock.update).not.toHaveBeenCalled();
+      expect(dbMock.insert).not.toHaveBeenCalled();
+    });
+  });
+
   it('rejects malformed JSON after rate limiting and before querying subscribers', async () => {
     const { POST } = await import('@/app/api/newsletter/subscribe/route');
     const response = await POST(new NextRequest('http://localhost/api/newsletter/subscribe', {
