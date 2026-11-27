@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { db } from '@/db/client';
 import { emailSubscribers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -7,6 +7,10 @@ import { publicLimiter } from '@/lib/rate-limit';
 import { rateLimited } from '@/lib/rate-limit-middleware';
 import { readJsonBody } from '@/lib/request-validation';
 import { logServerEvent } from '@/lib/server-logger';
+import {
+  CONFIRMATION_RESEND_COOLDOWN_MS,
+  sendNewsletterConfirmationEmail,
+} from '@/lib/newsletter-confirmation-email';
 import { z } from 'zod';
 
 const MAX_EMAIL_LENGTH = 254;
@@ -21,13 +25,20 @@ const LAST_NAME_LENGTH_ERROR = 'Last name must be 100 characters or fewer';
 const SOURCE_LENGTH_ERROR = 'Source must be 120 characters or fewer';
 
 // Every valid request gets this exact response (status and body), whether the
-// address is new, already active, or previously unsubscribed. Differing replies
+// address is new, pending, active, or previously unsubscribed. Differing replies
 // would let anyone probe the list for a given email address.
 function subscribedResponse() {
   return NextResponse.json({
     success: true,
-    message: 'Thank you for subscribing!',
+    message: 'Almost done! Check your email and click the link to confirm your subscription.',
   }, { status: 201 });
+}
+
+// Double opt-in: nobody becomes 'active' from this endpoint. The confirmation
+// email is sent after the response so new and existing addresses take about
+// the same time to answer.
+function sendConfirmationAfterResponse(subscriberId: string, email: string) {
+  after(() => sendNewsletterConfirmationEmail(subscriberId, email));
 }
 
 const newsletterFieldErrors = new Set([
@@ -82,16 +93,30 @@ async function postHandler(request: NextRequest) {
       .where(eq(emailSubscribers.email, email.toLowerCase()))
       .limit(1);
 
+    const normalizedEmail = email.toLowerCase();
+
     if (existing.length > 0) {
-      if (existing[0].status === 'unsubscribed') {
-        // Resubscribe
+      const subscriber = existing[0];
+      const now = new Date();
+
+      if (subscriber.status === 'unsubscribed') {
+        // Coming back needs a fresh confirmation; the address is not reactivated
+        // just because someone submitted it.
         await db.update(emailSubscribers).set({
-          status: 'active',
-          subscribedAt: new Date(),
-          unsubscribedAt: null,
-          updatedAt: new Date(),
-        }).where(eq(emailSubscribers.email, email.toLowerCase()));
+          status: 'pending',
+          updatedAt: now,
+        }).where(eq(emailSubscribers.id, subscriber.id));
+        sendConfirmationAfterResponse(subscriber.id, normalizedEmail);
+      } else if (subscriber.status === 'pending') {
+        // Resend, but not often enough to be used to flood an inbox.
+        const lastSent = subscriber.updatedAt?.getTime() ?? 0;
+        if (now.getTime() - lastSent >= CONFIRMATION_RESEND_COOLDOWN_MS) {
+          await db.update(emailSubscribers).set({ updatedAt: now })
+            .where(eq(emailSubscribers.id, subscriber.id));
+          sendConfirmationAfterResponse(subscriber.id, normalizedEmail);
+        }
       }
+      // 'active' and 'bounced': nothing to do, and nothing to reveal.
       return subscribedResponse();
     }
 
@@ -100,15 +125,15 @@ async function postHandler(request: NextRequest) {
 
     await db.insert(emailSubscribers).values({
       id,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       firstName,
       lastName,
       source: source || 'website',
-      status: 'active',
-      subscribedAt: now,
+      status: 'pending',
       createdAt: now,
       updatedAt: now,
     });
+    sendConfirmationAfterResponse(id, normalizedEmail);
 
     return subscribedResponse();
   } catch (error) {

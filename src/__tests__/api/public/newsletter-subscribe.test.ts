@@ -5,6 +5,22 @@ import { NextRequest } from 'next/server';
 
 const dbMock = vi.hoisted(() => ({ select: vi.fn(), insert: vi.fn(), update: vi.fn() }));
 const publicLimiterLimitMock = vi.hoisted(() => vi.fn());
+const sendConfirmationMock = vi.hoisted(() => vi.fn());
+const afterCallbacks = vi.hoisted(() => [] as Array<() => unknown>);
+
+// `after()` only works inside a real request, so collect the callbacks and run them by hand.
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/server')>()),
+  after: (callback: () => unknown) => { afterCallbacks.push(callback); },
+}));
+vi.mock('@/lib/newsletter-confirmation-email', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/newsletter-confirmation-email')>()),
+  sendNewsletterConfirmationEmail: sendConfirmationMock,
+}));
+
+async function flushAfter() {
+  while (afterCallbacks.length) await afterCallbacks.shift()!();
+}
 
 vi.mock('@/db/client', () => ({ db: dbMock }));
 vi.mock('@/lib/rate-limit', async (importOriginal) => ({
@@ -15,6 +31,8 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => ({
 describe('POST /api/newsletter/subscribe', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    afterCallbacks.length = 0;
+    sendConfirmationMock.mockResolvedValue(undefined);
     publicLimiterLimitMock.mockResolvedValue({
       success: true,
       limit: 30,
@@ -42,43 +60,100 @@ describe('POST /api/newsletter/subscribe', () => {
     expect(dbMock.insert).toHaveBeenCalledTimes(1);
   });
 
-  describe('does not reveal whether an address is already on the list', () => {
-    async function subscribe(existing: Array<{ status: string }>) {
+  describe('double opt-in', () => {
+    const MINUTE = 60 * 1000;
+
+    type Existing = { id: string; status: string; updatedAt?: Date };
+
+    function setUpdate() {
+      const setMock = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
+      dbMock.update.mockReturnValue({ set: setMock });
+      return setMock;
+    }
+
+    async function subscribe(existing: Existing[]) {
       dbMock.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue(existing) }),
         }),
       });
-      dbMock.update.mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });
       const { POST } = await import('@/app/api/newsletter/subscribe/route');
       const response = await POST(new NextRequest('http://localhost/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'x-forwarded-for': '203.0.113.30' },
-        body: JSON.stringify({ email: 'subscriber@example.com' }),
+        body: JSON.stringify({ email: 'Subscriber@Example.com' }),
       }));
+      await flushAfter();
       return { status: response.status, body: await response.json() };
     }
 
-    it('answers identically for new, already-active and previously-unsubscribed addresses', async () => {
-      const fresh = await subscribe([]);
-      const active = await subscribe([{ status: 'active' }]);
-      const unsubscribed = await subscribe([{ status: 'unsubscribed' }]);
+    it('stores a new address as pending (never active) and emails a confirmation link', async () => {
+      const values = vi.fn().mockResolvedValue(undefined);
+      dbMock.insert.mockReturnValue({ values });
 
-      expect(active).toEqual(fresh);
-      expect(unsubscribed).toEqual(fresh);
+      const { status } = await subscribe([]);
+
+      expect(status).toBe(201);
+      const row = values.mock.calls[0][0];
+      expect(row.status).toBe('pending');
+      expect(row.email).toBe('subscriber@example.com');
+      expect(sendConfirmationMock).toHaveBeenCalledWith(row.id, 'subscriber@example.com');
+    });
+
+    it('does not send the confirmation inside the request, only after the response', async () => {
+      dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+      const { POST } = await import('@/app/api/newsletter/subscribe/route');
+      await POST(new NextRequest('http://localhost/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'x-forwarded-for': '203.0.113.31' },
+        body: JSON.stringify({ email: 'late@example.com' }),
+      }));
+      expect(sendConfirmationMock).not.toHaveBeenCalled();
+      await flushAfter();
+      expect(sendConfirmationMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('answers identically for new, pending, active, unsubscribed and bounced addresses', async () => {
+      dbMock.insert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+      setUpdate();
+      const old = new Date(Date.now() - 60 * MINUTE);
+
+      const fresh = await subscribe([]);
+      for (const status of ['pending', 'active', 'unsubscribed', 'bounced']) {
+        expect(await subscribe([{ id: 'x', status, updatedAt: old }])).toEqual(fresh);
+      }
       expect(fresh.status).toBe(201);
     });
 
-    it('still reactivates a previously-unsubscribed address and does not insert a duplicate', async () => {
-      await subscribe([{ status: 'unsubscribed' }]);
-      expect(dbMock.update).toHaveBeenCalledTimes(1);
+    it('moves an unsubscribed address back to pending, not active, and asks it to confirm', async () => {
+      const setMock = setUpdate();
+      await subscribe([{ id: 'sub-1', status: 'unsubscribed', updatedAt: new Date(0) }]);
+
+      expect(setMock).toHaveBeenCalledTimes(1);
+      expect(setMock.mock.calls[0][0].status).toBe('pending');
       expect(dbMock.insert).not.toHaveBeenCalled();
+      expect(sendConfirmationMock).toHaveBeenCalledWith('sub-1', 'subscriber@example.com');
     });
 
-    it('does not write anything for an already-active address', async () => {
-      await subscribe([{ status: 'active' }]);
-      expect(dbMock.update).not.toHaveBeenCalled();
+    it('resends to a pending address only after the cooldown', async () => {
+      const setMock = setUpdate();
+
+      await subscribe([{ id: 'sub-2', status: 'pending', updatedAt: new Date(Date.now() - 1 * MINUTE) }]);
+      expect(sendConfirmationMock).not.toHaveBeenCalled();
+      expect(setMock).not.toHaveBeenCalled();
+
+      await subscribe([{ id: 'sub-2', status: 'pending', updatedAt: new Date(Date.now() - 11 * MINUTE) }]);
+      expect(sendConfirmationMock).toHaveBeenCalledWith('sub-2', 'subscriber@example.com');
+      expect(setMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does nothing for an active address', async () => {
+      const setMock = setUpdate();
+      await subscribe([{ id: 'sub-3', status: 'active', updatedAt: new Date(0) }]);
+
+      expect(setMock).not.toHaveBeenCalled();
       expect(dbMock.insert).not.toHaveBeenCalled();
+      expect(sendConfirmationMock).not.toHaveBeenCalled();
     });
   });
 
