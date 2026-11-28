@@ -127,6 +127,12 @@ export function TwoFactorSettings({ enabled, required, enrollmentRequired, conti
           </div>
         )}
 
+        {!enabled && !required && !enrollmentRequired && step.kind !== 'codes' && (
+          <div role="status" className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+            Two-factor authentication is optional, but we strongly recommend it. Without it, anyone who learns your password can sign in as you.
+          </div>
+        )}
+
         {error && (
           <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}

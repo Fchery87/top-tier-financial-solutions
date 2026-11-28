@@ -54,8 +54,9 @@ export function buildAuthOptions() {
           return;
         }
         if (ctx.path !== "/two-factor/disable") return;
-        // MFA is required for team roles, so they may never turn it off.
-        // Read the role from the database, not the session cookie cache.
+        // When MFA is mandatory for team roles (MFA_REQUIRED_FOR_TEAM=true) they
+        // may never turn it off; otherwise anyone may. Read the role from the
+        // database, not the session cookie cache.
         const session = await getSessionFromCtx(ctx);
         if (!session) return;
         const freshUser = await ctx.context.internalAdapter.findUserById(session.user.id);
@@ -63,7 +64,7 @@ export function buildAuthOptions() {
         if (isMfaRequiredForRole(role)) {
           throw APIError.from("FORBIDDEN", {
             code: "MFA_REQUIRED_FOR_ROLE",
-            message: "Two-factor authentication is required for team accounts and cannot be turned off.",
+            message: "Two-factor authentication cannot be turned off for team accounts right now.",
           });
         }
       }),

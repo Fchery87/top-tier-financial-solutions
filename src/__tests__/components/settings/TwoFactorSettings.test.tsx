@@ -86,6 +86,17 @@ describe('TwoFactorSettings - status and actions', () => {
     setup({ enrollmentRequired: true });
     expect(screen.getByRole('status')).toHaveTextContent(/team accounts must use two-factor/i);
   });
+
+  it('strongly recommends two-factor, without forcing it, when it is optional and off', () => {
+    setup({ enabled: false, required: false, enrollmentRequired: false });
+    expect(screen.getByRole('status')).toHaveTextContent(/optional, but we strongly recommend it/i);
+    expect(screen.getByRole('button', { name: /set up two-factor/i })).toBeEnabled();
+  });
+
+  it('shows no recommendation once two-factor is on', () => {
+    setup({ enabled: true, required: false });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
 });
 
 describe('TwoFactorSettings - enrolling', () => {
@@ -217,7 +228,7 @@ describe('TwoFactorSettings - managing', () => {
     await user.click(screen.getByRole('button', { name: /^turn off$/i }));
     await submitPassword(user, /^turn off$/i);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/team accounts must keep two-factor/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/cannot be turned off for team accounts/i);
     expect(refreshMock).not.toHaveBeenCalled();
   });
 });

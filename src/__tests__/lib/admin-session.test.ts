@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // One headers object per simulated request, as Next.js gives within a request.
 let requestHeaders = new Headers();
@@ -27,6 +27,9 @@ async function deniedBody() {
   const response = await capabilityDeniedResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 403 }));
   return { status: response.status, body: await response.json() };
 }
+
+// These tests cover the mandatory-MFA mode, which is opt-in (see src/lib/mfa.ts).
+vi.stubEnv('MFA_REQUIRED_FOR_TEAM', 'true');
 
 describe('requireCapability', () => {
   it('returns the user when the role holds the capability and MFA is enrolled', async () => {
@@ -105,5 +108,27 @@ describe('requireCapability', () => {
 
     expect(await requireCapability('disputes:read')).toBeNull();
     expect(getTwoFactorEnabled).not.toHaveBeenCalled();
+  });
+});
+
+describe('requireCapability when two-factor is optional (the default)', () => {
+  beforeEach(() => { vi.stubEnv('MFA_REQUIRED_FOR_TEAM', ''); });
+  afterEach(() => { vi.stubEnv('MFA_REQUIRED_FOR_TEAM', 'true'); });
+
+  it.each([false, null])('lets a team member without two-factor (flag %s) use the API', async (flag) => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(session as never);
+    vi.mocked(getUserRole).mockResolvedValue('staff');
+    vi.mocked(getTwoFactorEnabled).mockResolvedValue(flag);
+
+    expect(await requireCapability('disputes:write')).toEqual({ id: 'u1', email: 'a@b.com', role: 'staff' });
+  });
+
+  it('still enforces the role capability', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(session as never);
+    vi.mocked(getUserRole).mockResolvedValue('staff');
+    vi.mocked(getTwoFactorEnabled).mockResolvedValue(false);
+
+    expect(await requireCapability('templates:write')).toBeNull();
+    expect(await deniedBody()).toEqual({ status: 403, body: { error: 'Unauthorized' } });
   });
 });

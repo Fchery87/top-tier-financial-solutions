@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { betterAuth } from 'better-auth';
 import { memoryAdapter } from 'better-auth/adapters/memory';
 import { base32 } from '@better-auth/utils/base32';
@@ -111,6 +111,9 @@ async function signInExpectingChallenge(auth: TestAuth, email: string) {
   const signIn = await post(auth, jar, '/sign-in/email', { email, password: PASSWORD });
   return { jar, signIn };
 }
+
+// These tests cover the mandatory-MFA mode, which is opt-in (see src/lib/mfa.ts).
+vi.stubEnv('MFA_REQUIRED_FOR_TEAM', 'true');
 
 describe('two-factor authentication flow (real better-auth handler)', () => {
   it('enrolls with an encrypted secret and encrypted backup codes', async () => {
@@ -238,6 +241,23 @@ describe('two-factor authentication flow (real better-auth handler)', () => {
     expect(disable.data?.code).toBe('MFA_REQUIRED_FOR_ROLE');
     expect(store.user[0].twoFactorEnabled).toBe(true);
     expect(store.twoFactor).toHaveLength(1);
+  });
+
+  it.each(['staff', 'admin', 'super_admin'])('lets the %s role turn two-factor off when it is optional', async (role) => {
+    vi.stubEnv('MFA_REQUIRED_FOR_TEAM', '');
+    try {
+      const { auth, store, email, totpURI } = await enrolledUser('team@example.com');
+      const { jar } = await signInExpectingChallenge(auth, email);
+      await post(auth, jar, '/two-factor/verify-totp', { code: await totpFromUri(totpURI) });
+      store.user[0].role = role;
+
+      const disable = await post(auth, jar, '/two-factor/disable', { password: PASSWORD });
+
+      expect(disable.response.status).toBe(200);
+      expect(store.user[0].twoFactorEnabled).toBe(false);
+    } finally {
+      vi.stubEnv('MFA_REQUIRED_FOR_TEAM', 'true');
+    }
   });
 
   it('lets a portal client disable two-factor', async () => {
