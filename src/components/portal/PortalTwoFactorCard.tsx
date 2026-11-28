@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { MFA_ENROLLMENT_PATH } from '@/lib/mfa';
 
 /**
- * Optional two-factor prompt for portal clients. Never forced: it only links
+ * Two-factor prompt for portal clients. Strongly advised, never forced: it only links
  * to the shared enrollment page. The status comes from the session, which can
  * lag a few minutes behind a change; that is fine for a display hint, and the
  * enrollment page reads the authoritative value from the database.
@@ -31,7 +31,7 @@ export default function PortalTwoFactorCard() {
         <CardDescription>
           {enabled
             ? 'On. Your sign-in also needs a code from your authenticator app.'
-            : 'Optional. Add a code from an authenticator app to your sign-in for extra protection.'}
+            : 'Strongly recommended. Add a code from an authenticator app so your account stays safe even if your password is stolen.'}
         </CardDescription>
       </CardHeader>
       <CardContent>

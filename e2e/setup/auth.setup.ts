@@ -41,8 +41,9 @@ async function signUpOrSignIn(context: Awaited<ReturnType<typeof playwrightReque
 }
 
 /**
- * Team roles must have two-factor authentication before the workspace APIs (including
- * set-role) will answer. Enroll TOTP through the real better-auth endpoints; the
+ * Two-factor is optional by default, but the specs enroll TOTP anyway so they also pass
+ * when MFA_REQUIRED_FOR_TEAM=true (team roles then need it before the workspace APIs,
+ * including set-role, will answer). Enroll TOTP through the real better-auth endpoints; the
  * verified session stays in the context's cookies, so the saved storage state is
  * already past the second factor.
  */

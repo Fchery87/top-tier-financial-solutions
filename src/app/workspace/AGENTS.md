@@ -41,7 +41,7 @@ async function getHandler(request: NextRequest) {
 ```
 Team roles are `user`, `staff`, `admin`, and `super_admin`; use `isTeamRole()` for navigation and `can()`/`requireCapability()` for authorization. This per-request API guard is separate from the page-level auth in `src/app/workspace/layout.tsx` and `src/app/admin/layout.tsx`.
 
-MFA is required for team roles (`decideMfaRequirement` in `src/lib/mfa.ts`). `requireCapability()` returns null for a team member who has not enrolled; wrapping the denial in `capabilityDeniedResponse()` turns that case into 403 `{ code: 'MFA_ENROLLMENT_REQUIRED' }`. The workspace and admin layouts redirect such users to `/settings/security`, which must stay outside these layouts so enrollment is always reachable.
+Two-factor authentication is optional for everyone but strongly advised: unenrolled users see `MfaAdviceBanner` on every workspace, admin and portal page. Setting `MFA_REQUIRED_FOR_TEAM=true` makes it mandatory for team roles (`decideMfaRequirement` in `src/lib/mfa.ts`), and the rest of this paragraph then applies. `requireCapability()` returns null for a team member who has not enrolled; wrapping the denial in `capabilityDeniedResponse()` turns that case into 403 `{ code: 'MFA_ENROLLMENT_REQUIRED' }`. The workspace and admin layouts redirect such users to `/settings/security`, which must stay outside these layouts so enrollment is always reachable.
 
 ### Database Query Pattern
 Use Drizzle ORM with consistent error handling:

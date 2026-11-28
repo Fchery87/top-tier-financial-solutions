@@ -17,7 +17,7 @@ const MESSAGES: Record<string, string> = {
   INVALID_PASSWORD: "That password isn't correct.",
   TOTP_NOT_ENABLED: 'Two-factor setup was not started. Please start again.',
   TWO_FACTOR_NOT_ENABLED: 'Two-factor authentication is not turned on for this account.',
-  MFA_REQUIRED_FOR_ROLE: 'Team accounts must keep two-factor authentication turned on.',
+  MFA_REQUIRED_FOR_ROLE: 'Two-factor authentication cannot be turned off for team accounts right now.',
 };
 
 export function describeTwoFactorError(error: AuthErrorLike | null | undefined): string {

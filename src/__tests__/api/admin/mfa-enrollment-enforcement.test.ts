@@ -23,6 +23,9 @@ beforeEach(() => {
   vi.mocked(getUserRole).mockResolvedValue('staff');
 });
 
+// These tests cover the mandatory-MFA mode, which is opt-in (see src/lib/mfa.ts).
+vi.stubEnv('MFA_REQUIRED_FOR_TEAM', 'true');
+
 describe('workspace API MFA enforcement (real requireCapability + route)', () => {
   it('answers 403 MFA_ENROLLMENT_REQUIRED for a staff member without two-factor', async () => {
     vi.mocked(getTwoFactorEnabled).mockResolvedValue(false);

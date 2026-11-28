@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('next/headers', () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock('@/lib/auth', () => ({
@@ -34,6 +34,7 @@ import { auth } from '@/lib/auth';
 import { getUserRole } from '@/lib/admin-auth';
 import { getTwoFactorEnabled } from '@/lib/mfa-status';
 import WorkspaceLayout from '@/app/workspace/layout';
+import { MfaAdviceBanner } from '@/components/security/MfaAdviceBanner';
 
 const children = <div data-testid="child">child content</div>;
 
@@ -44,6 +45,9 @@ beforeEach(() => {
   });
   vi.mocked(getTwoFactorEnabled).mockResolvedValue(true);
 });
+
+// These tests cover the mandatory-MFA mode, which is opt-in (see src/lib/mfa.ts).
+vi.stubEnv('MFA_REQUIRED_FOR_TEAM', 'true');
 
 describe('WorkspaceLayout', () => {
   it('redirects to /sign-in?next=/workspace when there is no session', async () => {
@@ -116,5 +120,54 @@ describe('WorkspaceLayout', () => {
     vi.mocked(getTwoFactorEnabled).mockResolvedValue(null);
 
     await expect(WorkspaceLayout({ children })).rejects.toThrow('REDIRECT:/settings/security');
+  });
+});
+
+
+describe('WorkspaceLayout when two-factor is optional (the default)', () => {
+  beforeEach(() => {
+    vi.stubEnv('MFA_REQUIRED_FOR_TEAM', '');
+  });
+  afterEach(() => {
+    vi.stubEnv('MFA_REQUIRED_FOR_TEAM', 'true');
+  });
+
+  function signInAs() {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'u1', email: 'staff@example.com' },
+    } as never);
+    vi.mocked(getUserRole).mockResolvedValue('staff');
+  }
+
+  it('lets a team member without two-factor in and shows the recommendation banner', async () => {
+    signInAs();
+    vi.mocked(getTwoFactorEnabled).mockResolvedValue(false);
+
+    const element = await WorkspaceLayout({ children });
+
+    expect(redirect).not.toHaveBeenCalled();
+    const kids = [element.props.children].flat();
+    expect(kids).toContain(children);
+    const banner = kids.find((k: { type?: unknown }) => k && k.type === MfaAdviceBanner);
+    expect(banner?.props.audience).toBe('team');
+  });
+
+  it('still shows the banner when the two-factor flag cannot be read', async () => {
+    signInAs();
+    vi.mocked(getTwoFactorEnabled).mockResolvedValue(null);
+
+    const element = await WorkspaceLayout({ children });
+
+    expect(redirect).not.toHaveBeenCalled();
+    expect([element.props.children].flat().some((k: { type?: unknown }) => k && k.type === MfaAdviceBanner)).toBe(true);
+  });
+
+  it('shows no banner once two-factor is on', async () => {
+    signInAs();
+    vi.mocked(getTwoFactorEnabled).mockResolvedValue(true);
+
+    const element = await WorkspaceLayout({ children });
+
+    expect([element.props.children].flat().some((k: { type?: unknown }) => k && k.type === MfaAdviceBanner)).toBe(false);
   });
 });
